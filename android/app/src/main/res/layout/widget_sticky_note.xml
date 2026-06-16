@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg_sticky">
+
+    <!-- Color dots bar (white) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#FFFFFF"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp">
+
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:layout_marginEnd="10dp" android:src="@drawable/widget_dot_yellow" />
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:layout_marginEnd="10dp" android:src="@drawable/widget_dot_blue" />
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:layout_marginEnd="10dp" android:src="@drawable/widget_dot_green" />
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:layout_marginEnd="10dp" android:src="@drawable/widget_dot_pink" />
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/widget_dot_coral" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="14dp"
+        android:text="Title"
+        android:textColor="#6B5E2A"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+</LinearLayout>

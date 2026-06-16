@@ -1,0 +1,41 @@
+# Apple ki "commonly used third-party SDKs" list ke Pods jin ke liye
+# PrivacyInfo.xcprivacy manifest zaroori hai (ITMS-91061).
+# Har line ek Pod ka exact name. Comments (#) ignore hote hain.
+# Naya SDK add karte waqt yahan uska Pod name add karein.
+#
+# Ref: https://developer.apple.com/support/third-party-SDK-requirements/
+GoogleSignIn
+GTMSessionFetcher
+GTMAppAuth
+AppAuth
+GoogleUtilities
+nanopb
+FirebaseCore
+FirebaseAnalytics
+FirebaseCrashlytics
+FirebaseMessaging
+FirebaseAuth
+FirebaseFirestore
+FirebaseStorage
+FirebaseRemoteConfig
+FirebaseInstallations
+FirebaseDynamicLinks
+FBSDKCoreKit
+FBSDKLoginKit
+FBSDKShareKit
+FBAEMKit
+Adjust
+AppsFlyerFramework
+Branch
+Bugsnag
+OneSignal
+OneSignalXCFramework
+Mixpanel
+MixpanelSwift
+Amplitude
+Sentry
+SentrySwift
+SnapSDK
+Reachability
+ReachabilitySwift
+AFNetworking

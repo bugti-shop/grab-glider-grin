@@ -1,0 +1,89 @@
+require_relative '../../node_modules/@capacitor/ios/scripts/pods_helpers'
+
+platform :ios, '15.0'
+use_frameworks!
+
+# workaround to avoid Xcode caching of Pods that requires
+# Product -> Clean Build Folder after new Cordova plugins installed
+# Requires CocoaPods 1.6 or newer
+install! 'cocoapods', :disable_input_output_paths => true
+
+def capacitor_pods
+  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
+  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
+  pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
+  pod 'CapacitorBrowser', :path => '../../node_modules/@capacitor/browser'
+  pod 'CapacitorCamera', :path => '../../node_modules/@capacitor/camera'
+  pod 'CapacitorFilesystem', :path => '../../node_modules/@capacitor/filesystem'
+  pod 'CapacitorHaptics', :path => '../../node_modules/@capacitor/haptics'
+  pod 'CapacitorKeyboard', :path => '../../node_modules/@capacitor/keyboard'
+  pod 'CapacitorLocalNotifications', :path => '../../node_modules/@capacitor/local-notifications'
+  pod 'CapacitorPreferences', :path => '../../node_modules/@capacitor/preferences'
+  pod 'CapacitorShare', :path => '../../node_modules/@capacitor/share'
+  pod 'CapacitorSplashScreen', :path => '../../node_modules/@capacitor/splash-screen'
+  pod 'CapacitorStatusBar', :path => '../../node_modules/@capacitor/status-bar'
+  pod 'CapgoCapacitorSocialLogin', :path => '../../node_modules/@capgo/capacitor-social-login'
+  pod 'RevenuecatPurchasesCapacitor', :path => '../../node_modules/@revenuecat/purchases-capacitor'
+  pod 'PurchasesHybridCommon', '18.10.0'
+  pod 'RevenueCat', '5.76.0'
+  pod 'CapacitorNativeBiometric', :path => '../../node_modules/capacitor-native-biometric'
+end
+
+target 'App' do
+  capacitor_pods
+  # Add your Pods here
+end
+
+post_install do |installer|
+  assertDeploymentTarget(installer)
+
+  require 'fileutils'
+
+  privacy_root = File.expand_path('../../ios-privacy-patches', __dir__)
+  manifests = {
+    'GoogleSignIn'      => 'PrivacyInfo-GoogleSignIn.xcprivacy',
+    'GTMSessionFetcher' => 'PrivacyInfo-GTMSessionFetcher.xcprivacy',
+    'GTMAppAuth'        => 'PrivacyInfo-GTMAppAuth.xcprivacy',
+  }
+
+  installer.pods_project.targets.each do |target|
+    next unless manifests.key?(target.name)
+
+    src = File.join(privacy_root, manifests[target.name])
+    next unless File.exist?(src)
+
+    pod_dir = File.join(installer.sandbox.root, target.name)
+    dst = File.join(pod_dir, 'PrivacyInfo.xcprivacy')
+    FileUtils.mkdir_p(pod_dir)
+    FileUtils.cp(src, dst)
+
+    file_ref = installer.pods_project.files.find { |file| file.path == dst } || installer.pods_project.new_file(dst)
+    target.resources_build_phase.add_file_reference(file_ref, true) rescue nil
+
+    phase_name = '[Flowist] Embed Privacy Manifest'
+    phase = target.shell_script_build_phases.find { |p| p.name == phase_name } || target.new_shell_script_build_phase(phase_name)
+    phase.shell_script = <<~SCRIPT
+      set -e
+      SRC="${PODS_ROOT}/#{target.name}/PrivacyInfo.xcprivacy"
+      if [ -f "$SRC" ]; then
+        cp "$SRC" "${TARGET_BUILD_DIR}/${WRAPPER_NAME}/PrivacyInfo.xcprivacy"
+      fi
+    SCRIPT
+
+    puts "Embedded PrivacyInfo.xcprivacy into #{target.name}"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Privacy-manifest audit: fail `pod install` if any tracked third-party SDK
+  # is missing PrivacyInfo.xcprivacy and we don't ship a local patch for it.
+  # Prevents silent ITMS-91061 regressions when new SDKs are added.
+  # ---------------------------------------------------------------------------
+  audit_script = File.expand_path('../../ios-privacy-patches/audit-privacy-manifests.sh', __dir__)
+  pods_root_arg = __dir__ # -> ios/App (Podfile directory)
+  if File.exist?(audit_script)
+    puts "Running privacy-manifest audit..."
+    unless system('bash', audit_script, pods_root_arg)
+      raise "Privacy-manifest audit failed — see messages above. ITMS-91061 risk."
+    end
+  end
+end

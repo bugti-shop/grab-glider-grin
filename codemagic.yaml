@@ -1,0 +1,161 @@
+workflows:
+  ios-app-store:
+    name: Flowist
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: Codemagic
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.flowist.app
+      vars:
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        BUNDLE_ID: "com.flowist.app"
+        PROVISIONING_PROFILE_NAME: "Flowist_Distribution"
+        node: 22.11.0
+      xcode: 26.0
+      cocoapods: default
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+
+    scripts:
+      - name: Install Node dependencies
+        script: |
+          npm install
+
+      - name: Build web assets
+        script: |
+          npm run build
+
+      - name: Bump iOS deployment target to 15.0
+        script: |
+          # Ensure Podfile platform is 15.0
+          sed -i '' "s/platform :ios, '[0-9.]*'/platform :ios, '15.0'/g" ios/App/Podfile || true
+          # Bump IPHONEOS_DEPLOYMENT_TARGET in Xcode project
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/App/App.xcodeproj/project.pbxproj
+          echo "iOS deployment target set to 15.0"
+
+      - name: Capacitor sync
+        script: |
+          set -e
+          rm -f ios/App/Podfile.lock ios/App/Pods/Manifest.lock
+          npx cap copy ios
+          cd ios/App
+          pod install --repo-update
+          cd ../..
+          npx cap update ios
+
+      - name: Install CocoaPods
+        script: |
+          cd ios/App && pod install
+
+      - name: Verify privacy manifests
+        script: |
+          bash ios-privacy-patches/audit-privacy-manifests.sh ios/App
+
+      - name: Patch PurchasesHybridCommon
+        script: |
+          FILE="ios/App/Pods/PurchasesHybridCommon/ios/PurchasesHybridCommon/PurchasesHybridCommon/StoreProduct+HybridAdditions.swift"
+          sed -i '' 's/subscriptionPeriod: SubscriptionPeriod)/subscriptionPeriod: RevenueCat.SubscriptionPeriod)/g' "$FILE"
+          sed -i '' 's/subscriptionPeriodUnit: SubscriptionPeriod.Unit)/subscriptionPeriodUnit: RevenueCat.SubscriptionPeriod.Unit)/g' "$FILE"
+          echo "Patch applied!"
+
+      - name: App Store Connect preflight & version bump
+        script: |
+          set -e
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" ios/App/App/Info.plist
+
+          # Delegate version/build computation to a helper script so the YAML
+          # block stays clean (no embedded multi-line Python).
+          bash scripts/ci/asc-preflight.sh
+
+      - name: Check build number
+        script: |
+          set -e
+          INFO_PLIST="ios/App/App/Info.plist"
+          PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
+
+          SHORT_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$INFO_PLIST" 2>/dev/null || echo "unknown")
+          BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$INFO_PLIST" 2>/dev/null || echo "unknown")
+          MARKETING_VERSION=$(grep -m1 "MARKETING_VERSION = " "$PBXPROJ" | sed 's/.*MARKETING_VERSION = \([^;]*\);.*/\1/' || echo "unknown")
+          CURRENT_PROJECT_VERSION=$(grep -m1 "CURRENT_PROJECT_VERSION = " "$PBXPROJ" | sed 's/.*CURRENT_PROJECT_VERSION = \([^;]*\);.*/\1/' || echo "unknown")
+
+          echo "==================================================="
+          echo " BUILD NUMBER CHECK"
+          echo "==================================================="
+          echo " Bundle ID                  : $BUNDLE_ID"
+          echo " CFBundleShortVersionString : $SHORT_VERSION"
+          echo " CFBundleVersion (build #)  : $BUILD_NUMBER"
+          echo " MARKETING_VERSION (pbxproj): $MARKETING_VERSION"
+          echo " CURRENT_PROJECT_VERSION    : $CURRENT_PROJECT_VERSION"
+          echo "==================================================="
+
+          if [ "$BUILD_NUMBER" = "unknown" ] || [ -z "$BUILD_NUMBER" ]; then
+            echo "ERROR: CFBundleVersion is not set — App Store Connect upload will fail."
+            exit 1
+          fi
+          if [ "$SHORT_VERSION" = "unknown" ] || [ -z "$SHORT_VERSION" ]; then
+            echo "ERROR: CFBundleShortVersionString is not set — App Store Connect upload will fail."
+            exit 1
+          fi
+
+      - name: Set CODE_SIGN_ENTITLEMENTS in Xcode project
+        script: |
+          cd ios/App
+          PROJ="App.xcodeproj/project.pbxproj"
+          if grep -q "CODE_SIGN_ENTITLEMENTS" "$PROJ"; then
+            sed -i '' 's|CODE_SIGN_ENTITLEMENTS = .*;|CODE_SIGN_ENTITLEMENTS = App/App.entitlements;|g' "$PROJ"
+          else
+            sed -i '' '/PRODUCT_BUNDLE_IDENTIFIER/a\
+                    CODE_SIGN_ENTITLEMENTS = App\/App.entitlements;' "$PROJ"
+          fi
+
+      - name: Use Codemagic provisioning profiles
+        script: |
+          xcode-project use-profiles
+
+      - name: Build & Archive
+        script: |
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "App" \
+            -configuration Release \
+            -archivePath build/App.xcarchive \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_NAME" \
+            clean archive
+
+      - name: Export IPA
+        script: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/App.xcarchive \
+            -exportPath build/ios \
+            -exportOptionsPlist ios/App/ExportOptions.plist
+
+    artifacts:
+      - build/ios/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false
+
+      email:
+        recipients:
+          - bugtishop@gmail.com
+        notify:
+          success: true
+          failure: true

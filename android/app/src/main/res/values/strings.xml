@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Flowist</string>
+    <string name="title_activity_main">Flowist</string>
+    <string name="package_name">nota.npd.com</string>
+    <string name="custom_url_scheme">nota.npd.com</string>
+    <!-- Google Sign-In Web Client ID (for @capgo/capacitor-social-login) -->
+    <string name="server_client_id">425291387152-u06impgmsgg286jg7odo4f40fu6pjmb5.apps.googleusercontent.com</string>
+</resources>

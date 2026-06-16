@@ -1,0 +1,72 @@
+{
+  "name": "Flowist - Notes, To-Do Lists & Daily Planner",
+  "short_name": "Flowist",
+  "description": "Free all-in-one productivity app with smart notes, to-do lists, habit tracking, sketching & daily planner. Organize your life effortlessly.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#3c78f0",
+  "background_color": "#ffffff",
+  "categories": ["productivity", "utilities", "lifestyle"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icon-44.png",
+      "sizes": "44x44",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.webp",
+      "sizes": "64x64",
+      "type": "image/webp"
+    },
+    {
+      "src": "/icon-150.png",
+      "sizes": "150x150",
+      "type": "image/png"
+    },
+    {
+      "src": "/launcher-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-300.png",
+      "sizes": "300x300",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/og-image.jpg",
+      "sizes": "1200x630",
+      "type": "image/jpeg",
+      "label": "Flowist - Your Personal Productivity Hub"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Notes",
+      "url": "/notes",
+      "description": "Open your notes"
+    },
+    {
+      "name": "Today's Tasks",
+      "url": "/todo/today",
+      "description": "View today's to-do list"
+    },
+    {
+      "name": "Habits",
+      "url": "/todo/habits",
+      "description": "Track your habits"
+    }
+  ]
+}

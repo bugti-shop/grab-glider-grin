@@ -1,0 +1,52 @@
+package nota.npd.com;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Bundle;
+
+import com.getcapacitor.BridgeActivity;
+
+/**
+ * Main Activity for Npd App
+ * - Google + Apple Sign-In via @capgo/capacitor-social-login (auto-registered)
+ * - Edge-to-edge layout (Android 15+ / API 35)
+ * - Backend: Supabase (no Firebase)
+ * - Receives deep-link path from home screen widgets via "widget_path" intent extra
+ */
+public class MainActivity extends BridgeActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        storeWidgetPath(getIntent());
+        // Store the widget target BEFORE BridgeActivity boots the WebView so
+        // cold-start taps are available to JS on the first read.
+        super.onCreate(savedInstanceState);
+        storeWidgetPath(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        setIntent(intent);
+        storeWidgetPath(intent);
+        super.onNewIntent(intent);
+    }
+
+    /** Persist widget deep-link path so the web app can pick it up via Capacitor Preferences. */
+    private void storeWidgetPath(Intent intent) {
+        if (intent == null) return;
+        String path = intent.getStringExtra("widget_path");
+        Uri data = intent.getData();
+        if ((path == null || path.isEmpty()) && data != null && "codaib".equals(data.getScheme()) && "widget".equals(data.getHost())) {
+            path = data.getPath();
+            String query = data.getEncodedQuery();
+            if (path != null && query != null && !query.isEmpty()) path = path + "?" + query;
+        }
+        if (path == null || path.isEmpty()) return;
+        SharedPreferences sp = getSharedPreferences("CapacitorStorage", MODE_PRIVATE);
+        sp.edit()
+                .putString("widget_pending_path", path)
+                .putLong("widget_pending_path_ts", System.currentTimeMillis())
+                .commit();
+    }
+}
