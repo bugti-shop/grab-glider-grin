@@ -24,8 +24,8 @@ interface TodoLayoutProps {
 export const TodoLayout = ({ children, title, searchValue, onSearchChange }: TodoLayoutProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { isDarkMode, toggleDarkMode } = useDarkMode();
-  const { openPaywall, isPro } = useSubscription();
+  const { isDarkMode, toggleDarkMode, currentTheme } = useDarkMode();
+  const { openPaywall, isPro, requireFeature } = useSubscription();
 
 
   return (
@@ -51,7 +51,11 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
                 size="icon"
                 variant="ghost"
                 onClick={() => {
-                  toggleDarkMode();
+                  if (!isPro && currentTheme !== 'light' && currentTheme !== 'dark') {
+                    requireFeature('dark_mode');
+                    return;
+                  }
+                  toggleDarkMode(isPro);
                 }}
                 className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-transparent active:bg-transparent"
                 title={t('common.toggleDarkMode')}

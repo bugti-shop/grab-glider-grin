@@ -14,7 +14,8 @@ function useSafeNavigate() {
 import appLogo from '@/assets/app-logo.webp';
 import heroCrown from '@/assets/paywall-hero-crown.jpg';
 import { useTranslation } from 'react-i18next';
-import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock } from 'lucide-react';
+import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock, LayoutGrid, Blocks, Timer, BookOpen } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { useSubscription, ProductType } from '@/contexts/SubscriptionContext';
 import { Capacitor } from '@capacitor/core';
 import { PurchasesPackage, PACKAGE_TYPE } from '@revenuecat/purchases-capacitor';
@@ -397,13 +398,13 @@ function PaywallFooter({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
 const PRO_BLUE = '#3c78f0';
 
 const FEATURE_ROWS: { label: string; free: string | 'x' | 'check'; pro: string | 'check' }[] = [
-  { label: 'Duration', free: 'x', pro: 'check' },
-  { label: 'Constant Reminder', free: 'x', pro: 'check' },
+  { label: 'Eisenhower Matrix', free: 'x', pro: 'check' },
+  { label: 'Blocks', free: 'x', pro: 'check' },
   { label: 'App Lock', free: 'x', pro: 'check' },
   { label: 'Batch Tasks Add', free: 'x', pro: 'check' },
-  { label: 'Time Tracking', free: 'x', pro: 'check' },
+  { label: 'Countdown Timer', free: 'x', pro: 'check' },
   { label: 'Version History', free: 'x', pro: 'check' },
-  { label: 'Tasks Status', free: 'x', pro: 'check' },
+  { label: 'Reading Mode', free: 'x', pro: 'check' },
   { label: '@ Mention', free: 'x', pro: 'check' },
 ];
 
@@ -478,7 +479,7 @@ function ComparisonTable({ rows, title, onRowClick }: { rows: { label: string; f
 
 // Hero — single Premium Crown image (carousel disabled per design).
 const HERO_SLIDES = [
-  { img: heroCrown, title: 'Upgrade to Premium', subtitle: 'Unlock premium features across all platforms' },
+  { img: heroCrown, title: 'Stay organized without limits', subtitle: 'Unlock premium features across all platforms' },
 ];
 
 function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> }) {
@@ -491,16 +492,35 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
     const body = document.body;
     const previousHtmlOverflow = html.style.overflow;
     const previousBodyOverflow = body.style.overflow;
+    const previousBodyPointer = body.style.pointerEvents;
     html.style.overflow = 'hidden';
     body.style.overflow = 'hidden';
+
+    // Defeat Radix Dialog/Sheet scroll-lock & pointer-events lockdown that
+    // can leave the paywall un-scrollable when it opens from inside an open
+    // Sheet/Dialog. Re-apply on every DOM mutation while the paywall is up.
+    const neutralize = () => {
+      if (body.style.pointerEvents === 'none') body.style.pointerEvents = '';
+      if (body.hasAttribute('data-scroll-locked')) body.removeAttribute('data-scroll-locked');
+      // Radix also sets these inline when it locks scroll
+      body.style.removeProperty('margin-right');
+      body.style.removeProperty('overflow');
+      body.style.overflow = 'hidden';
+    };
+    neutralize();
+    const observer = new MutationObserver(neutralize);
+    observer.observe(body, { attributes: true, attributeFilter: ['style', 'data-scroll-locked'] });
+
     return () => {
+      observer.disconnect();
       html.style.overflow = previousHtmlOverflow;
       body.style.overflow = previousBodyOverflow;
+      body.style.pointerEvents = previousBodyPointer;
     };
   }, []);
 
-  return (
-    <div className="fixed inset-0 z-[200] flex flex-col overflow-hidden"
+  return createPortal((
+    <div className="fixed inset-0 z-[2147483646] flex flex-col overflow-hidden"
       style={{
         background: '#000',
         color: '#fff',
@@ -512,6 +532,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
       }}>
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', pointerEvents: 'auto', paddingBottom: 'calc(150px + var(--safe-bottom, 0px))' }}>
+
 
         {/* Hero — compact single image (no carousel) */}
         <div
@@ -613,6 +634,9 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
               {t('paywall.privacy', 'Privacy Policy')}
             </a>
           </div>
+          <p className="text-center text-[11px] font-semibold mt-2" style={{ color: '#9a9a9a' }}>
+            No Commitment, Cancel Anytime
+          </p>
         </div>
       </div>
 
@@ -628,7 +652,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           {isPurchasing
             ? t('onboarding.paywall.processing')
             : (!hasUsedTrial && currentPlan.hasTrial)
-              ? '3-Day Free Trial'
+              ? 'Try for $0.00 Today'
               : t('onboarding.paywall.continueWith', { price: currentPlan.price })}
         </button>
         <p className="text-[9.5px] leading-snug text-center mt-1.5 px-2" style={{ color: '#7a7a7a' }}>
@@ -638,7 +662,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
         </p>
       </div>
     </div>
-  );
+  ), document.body);
 }
 
 /* ═══════════════════════════════════════════
