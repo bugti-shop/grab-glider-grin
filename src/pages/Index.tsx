@@ -52,7 +52,7 @@ const Index = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const { isDarkMode, toggleDarkMode, currentTheme } = useDarkMode();
   
   
   // Use global notes context - no more local loading!
@@ -904,7 +904,7 @@ const Index = () => {
                 onClick={() => {
                   // Free users get one dark theme; extras require Pro.
                   if (!isPro && currentTheme !== 'light' && currentTheme !== 'dark') {
-                    requireFeature('dark_theme_extra');
+                    requireFeature('dark_mode');
                     return;
                   }
                   if (!isPro && currentTheme === 'dark') {
