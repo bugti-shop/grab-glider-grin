@@ -64,9 +64,14 @@ export const useDarkMode = () => {
     updateStatusBarStyle(currentTheme !== 'light', currentTheme);
   }, [currentTheme, isLoaded]);
 
-  // Cycle through all dark themes on toggle
-  const toggleDarkMode = () => {
+  // Cycle through dark themes on toggle. When `isPro` is false, only the
+  // first dark theme ('dark') is free; cycling beyond it is gated, so the
+  // toggle behaves as a simple light↔dark switch for free users.
+  const toggleDarkMode = (isPro: boolean = true) => {
     setCurrentTheme(prev => {
+      if (!isPro) {
+        return prev === 'light' ? 'dark' : 'light';
+      }
       // If currently light, go to first dark theme
       if (prev === 'light') {
         return 'dark';

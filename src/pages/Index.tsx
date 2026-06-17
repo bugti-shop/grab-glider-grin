@@ -902,7 +902,23 @@ const Index = () => {
                 size="icon"
                 variant="ghost"
                 onClick={() => {
-                  toggleDarkMode();
+                  // Free users get one dark theme; extras require Pro.
+                  if (!isPro && currentTheme !== 'light' && currentTheme !== 'dark') {
+                    requireFeature('dark_theme_extra');
+                    return;
+                  }
+                  if (!isPro && currentTheme === 'dark') {
+                    // Free user toggling away from the single free dark theme:
+                    // allow returning to light, but tapping again should gate.
+                    toggleDarkMode(false);
+                    return;
+                  }
+                  if (!isPro) {
+                    // Light -> single free dark theme.
+                    toggleDarkMode(false);
+                    return;
+                  }
+                  toggleDarkMode(true);
                 }}
                 className="h-7 w-7 xs:h-8 xs:w-8 sm:h-9 sm:w-9 hover:bg-transparent active:bg-transparent touch-target"
                 title={t('common.toggleDarkMode')}
