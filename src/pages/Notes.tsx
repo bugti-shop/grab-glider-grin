@@ -67,7 +67,7 @@ const Notes = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const { isDarkMode, toggleDarkMode, currentTheme } = useDarkMode();
   
   const { requireFeature, openPaywall, isPro, isNewFreeUser, softRequireCreate, softRequireMutate } = useSubscription();
   
@@ -405,7 +405,11 @@ const Notes = () => {
                 size="icon"
                 variant="ghost"
                 onClick={() => {
-                  toggleDarkMode();
+                  if (!isPro && currentTheme !== 'light' && currentTheme !== 'dark') {
+                    requireFeature('dark_mode');
+                    return;
+                  }
+                  toggleDarkMode(isPro);
                 }}
                 className="h-7 w-7 xs:h-8 xs:w-8 sm:h-10 sm:w-10 touch-target"
                 title={t('common.toggleDarkMode')}
