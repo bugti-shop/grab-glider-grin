@@ -344,45 +344,29 @@ const HabitDetail = () => {
         <p className="mt-2 text-white/85 text-[15px]">{habit.quote || 'Keep going, one day at a time'}</p>
       </div>
 
-      {/* Swipe-to-complete pill OR achieved stats card */}
+      {/* Tap-to-check OR achieved stats card */}
       <div className="relative z-10 px-6 mt-4">
         <AnimatePresence mode="wait" initial={false}>
           {!todayDone ? (
-            <motion.div
-              key="pill"
+            <motion.button
+              key="check"
+              type="button"
+              onClick={toggleToday}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              ref={trackRef}
-              className="relative h-16 rounded-full overflow-hidden select-none"
+              whileTap={{ scale: 0.97 }}
+              className="relative w-full h-16 rounded-full overflow-hidden select-none flex items-center justify-center gap-3 text-white font-semibold text-[15px] tracking-wide"
               style={{ background: 'rgba(255,255,255,0.28)' }}
+              aria-label="Check in"
             >
-              {/* progress fill following the knob */}
-              <motion.div
-                aria-hidden
-                className="absolute top-0 left-0 h-full rounded-full pointer-events-none"
-                style={{ width: fillWidth, background: 'rgba(255,255,255,0.35)' }}
-              />
-              <motion.span
-                style={{ opacity: labelOpacity }}
-                className="absolute inset-0 flex items-center justify-center text-white/95 text-[15px] font-semibold tracking-wide pointer-events-none"
+              <span
+                className="h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center"
+                style={{ color: headerColor }}
               >
-                Swipe to check in →
-              </motion.span>
-              <motion.div
-                drag="x"
-                dragConstraints={{ left: 0, right: maxDrag }}
-                dragElastic={0}
-                dragMomentum={false}
-                onDragEnd={handleDragEnd}
-                onTap={handleKnobTap}
-                whileTap={{ scale: 0.96 }}
-                style={{ x: knobX, color: headerColor, top: PAD, left: PAD, touchAction: 'none' }}
-                className="absolute h-14 w-14 rounded-full bg-white shadow-lg flex items-center justify-center cursor-grab active:cursor-grabbing"
-                aria-label="Swipe to check in"
-              >
-                <Check className="h-7 w-7" strokeWidth={3} />
-              </motion.div>
+                <Check className="h-6 w-6" strokeWidth={3} />
+              </span>
+              <span>Tap to check in</span>
+            </motion.button>
 
-            </motion.div>
           ) : (
             <motion.div
               key="stats"
