@@ -47,6 +47,7 @@ const HabitDetail = () => {
   const [focusOpen, setFocusOpen] = useState(false);
   const [focusSecs, setFocusSecs] = useState(25 * 60);
   const [focusRunning, setFocusRunning] = useState(false);
+  const [saving, setSaving] = useState(false);
   // Sweep finished/stale focus entries from prior sessions once per mount.
   useEffect(() => { cleanupStaleFocusKeys(); }, []);
 
@@ -145,7 +146,6 @@ const HabitDetail = () => {
   const todayKey = format(new Date(), 'yyyy-MM-dd');
   const todayDone = habit.completions.some((c) => c.date === todayKey && c.completed);
 
-  const [saving, setSaving] = useState(false);
   const toggleToday = async () => {
     if (saving) return;
     triggerHaptic('medium').catch(() => {});

@@ -486,12 +486,12 @@ const USER_COMMENTS: { tag: string; title: string; body: string }[] = [
   {
     tag: 'Notes & Tasks',
     title: 'Replaced 4 apps in one day',
-    body: "I deleted my notepad, to-do app, calendar, and Pomodoro timer after installing Flowist. Everything is in one place — and it works offline. I didn't realize how much app-switching was killing my focus until I stopped doing it.",
+    body: "I deleted my notepad, to-do app, calendar, and Pomodoro timer after installing Flowist. Everything is in one place, and it works offline. I didn't realize how much app-switching was killing my focus until I stopped doing it.",
   },
   {
     tag: 'Focus Timer',
     title: 'Finally finishing what I start',
-    body: 'The Pomodoro timer changed how I study. I sit down, start a session, and actually finish my work. The session history shows me exactly how many productive hours I put in — which is weirdly motivating. Worth it just for this feature alone.',
+    body: 'The Pomodoro timer changed how I study. I sit down, start a session, and actually finish my work. The session history shows me exactly how many productive hours I put in, which is weirdly motivating. Worth it just for this feature alone.',
   },
   {
     tag: 'Privacy',
@@ -501,7 +501,7 @@ const USER_COMMENTS: { tag: string; title: string; body: string }[] = [
   {
     tag: 'Students',
     title: 'My entire semester lives here',
-    body: 'Lecture notes, assignment deadlines, exam countdowns, habit streaks — Flowist holds all of it. I used to have a separate app for each. Now I open one app in the morning and I know exactly what my day looks like.',
+    body: 'Lecture notes, assignment deadlines, exam countdowns, habit streaks, Flowist holds all of it. I used to have a separate app for each. Now I open one app in the morning and I know exactly what my day looks like.',
   },
 ];
 
