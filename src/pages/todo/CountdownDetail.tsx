@@ -197,7 +197,13 @@ const CountdownDetail = () => {
                 aria-label="Toggle unit"
               >
                 {unit === 'days' && (
-                  <span className="text-7xl tracking-tight">{absDays}</span>
+                  showHMS ? (
+                    <span className="text-5xl tracking-tight tabular-nums">
+                      {String(hLeft).padStart(2, '0')}:{String(mLeft).padStart(2, '0')}:{String(sLeft).padStart(2, '0')}
+                    </span>
+                  ) : (
+                    <span className="text-7xl tracking-tight">{absDays}</span>
+                  )
                 )}
                 {unit === 'weeks' && (
                   <span className="text-6xl tracking-tight">
