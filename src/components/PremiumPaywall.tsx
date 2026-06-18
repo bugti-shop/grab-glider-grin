@@ -309,6 +309,7 @@ function usePaywallLogic() {
     notes_settings_advanced: 'This advanced notes setting is Pro.',
     tasks_default_advanced: 'This advanced tasks setting is Pro.',
     note_type_visibility_advanced: 'Hiding more note types is a Pro feature.',
+    widget_section_tasks: 'Section Tasks widget is a Premium feature. Free plan includes the Notes widget only.',
   };
   const genericFeatureMessage = paywallFeature && !paywallFeature.startsWith('capacity_') && !paywallFeature.startsWith('soft_limit_')
     ? `${paywallFeature.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())} is a Premium feature. Upgrade to unlock.`
