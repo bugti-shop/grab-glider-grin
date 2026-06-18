@@ -602,19 +602,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           className="relative w-full overflow-hidden select-none"
           style={{ aspectRatio: '16 / 10', background: '#05060c' }}
         >
-          <img
-            src={current.img}
-            alt=""
-            draggable={false}
-            width={1376}
-            height={768}
-            fetchPriority="high"
-            decoding="async"
-            loading="eager"
-            sizes="(max-width: 768px) 100vw, 768px"
-            className="w-full h-full object-contain pointer-events-none"
-            style={{ padding: '14px 0 22px', contentVisibility: 'auto' }}
-          />
+          <img src={current.img} alt="" draggable={false} className="w-full h-full object-contain pointer-events-none" style={{ padding: '14px 0 22px' }} />
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.95) 100%)' }} />
 
           {/* Back button overlay */}
