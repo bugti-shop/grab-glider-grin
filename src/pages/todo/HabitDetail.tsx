@@ -113,23 +113,28 @@ const HabitDetail = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRunning, focusOpen, id]);
 
-  // Focus timer countdown
+  // Focus timer countdown — derive remaining seconds from persisted endAt so the
+  // session keeps progressing accurately even if the tab was backgrounded.
   useEffect(() => {
-    if (!focusRunning) return;
-    const t = setInterval(() => {
-      setFocusSecs((s) => {
-        if (s <= 1) {
-          setFocusRunning(false);
-          triggerHaptic('heavy').catch(() => {});
-          toast.success('Focus session complete! 🎉');
-          if (id) { clearFocus(id); clearActiveFocus(); }
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
+    if (!focusRunning || !id) return;
+    const saved = readFocus(id);
+    const endAt = saved?.endAt ?? Date.now() + focusSecs * 1000;
+    const tick = () => {
+      const remaining = Math.max(0, Math.round((endAt - Date.now()) / 1000));
+      setFocusSecs(remaining);
+      if (remaining <= 0) {
+        setFocusRunning(false);
+        triggerHaptic('heavy').catch(() => {});
+        toast.success('Focus session complete! 🎉');
+        if (id) { clearFocus(id); clearActiveFocus(); }
+      }
+    };
+    tick();
+    const t = setInterval(tick, 1000);
     return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRunning, id]);
+
 
 
 
