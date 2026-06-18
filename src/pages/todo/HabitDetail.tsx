@@ -145,7 +145,9 @@ const HabitDetail = () => {
   const todayKey = format(new Date(), 'yyyy-MM-dd');
   const todayDone = habit.completions.some((c) => c.date === todayKey && c.completed);
 
+  const [saving, setSaving] = useState(false);
   const toggleToday = async () => {
+    if (saving) return;
     triggerHaptic('medium').catch(() => {});
     const previous = habit;
     const others = habit.completions.filter((c) => c.date !== todayKey);
@@ -158,14 +160,18 @@ const HabitDetail = () => {
     };
     // Optimistic — update UI immediately.
     setHabit(updated);
+    setSaving(true);
     try {
       await saveHabit(updated);
     } catch (err) {
       // Roll back on failure.
       setHabit(previous);
       toast.error('Could not save check-in. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
+
 
 
 
