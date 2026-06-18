@@ -18,10 +18,15 @@ export function useCloudSync(): void {
     let mounted = true;
     installCloudListener();
 
-    const handle = (userId: string | null) => {
+    const handle = async (userId: string | null) => {
       if (!mounted) return;
-      if (userId) void startSync(userId);
-      else void stopSync();
+      if (userId) {
+        // Reassign UUIDs to legacy local rows BEFORE the engine starts so the
+        // first listener pass merges them cleanly. Runs at most once per device.
+        try { await runLegacyIdMigration(); } catch {}
+        if (!mounted) return;
+        void startSync(userId);
+      } else void stopSync();
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
