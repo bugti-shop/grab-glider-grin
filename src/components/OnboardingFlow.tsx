@@ -26,6 +26,7 @@ import { saveUserProfile, loadUserProfile } from '@/hooks/useUserProfile';
 
 import { StreakDay1Screen } from '@/components/StreakDay1Screen';
 import { StreakConsistencyCertificate } from '@/components/StreakConsistencyCertificate';
+import { EmailAuthSheet } from '@/components/EmailAuthSheet';
 
 
 const ONBOARDING_COLOR = '#3c78f0';
