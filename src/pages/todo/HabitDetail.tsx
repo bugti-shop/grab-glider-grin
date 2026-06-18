@@ -51,20 +51,6 @@ const HabitDetail = () => {
   useEffect(() => { cleanupStaleFocusKeys(); }, []);
 
 
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [trackWidth, setTrackWidth] = useState(0);
-  const knobX = useMotionValue(0);
-  const completingRef = useRef(false);
-
-  useLayoutEffect(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    const measure = () => setTrackWidth(el.offsetWidth);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const load = useCallback(async () => {
     const all = await loadHabits();
