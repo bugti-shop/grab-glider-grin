@@ -519,10 +519,39 @@ export default function Profile() {
                 </span>
               </button>
               )}
+              <button
+                onClick={() => setShowEmailAuth(true)}
+                className="mt-3 w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border border-[#d9d9e3] rounded-full shadow-sm hover:shadow-md transition-all"
+              >
+                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="5" width="18" height="14" rx="2" />
+                  <path d="m3 7 9 6 9-6" />
+                </svg>
+                <span className="text-sm font-medium text-[#1a1a1a]">
+                  {t('profile.continueWithEmail', 'Continue with Email')}
+                </span>
+              </button>
             </>
           )}
         </div>
       </div>
+
+      <EmailAuthSheet
+        open={showEmailAuth}
+        onClose={() => setShowEmailAuth(false)}
+        onSignedIn={() => {
+          toast({ title: t('profile.signInSuccess', 'Signed in successfully') });
+        }}
+      />
+      {/* legacy closer */}
+      {false && (
+        <></>
+      )}
+      {/* end inject */}
+      {(() => null)()}
+      {/* original close below */}
+      {/* */}
+      {/* */}
 
 
       {/* Subscription Section */}
