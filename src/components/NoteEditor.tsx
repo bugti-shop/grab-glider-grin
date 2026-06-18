@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { genId } from '@/utils/genId';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { compressImage, isCompressibleImage } from '@/utils/imageCompression';
 import { useNavigate } from 'react-router-dom';
