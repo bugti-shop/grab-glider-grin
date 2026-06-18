@@ -197,6 +197,7 @@ export const PRO_FEATURE_LABELS: Record<string, string> = {
   notes_settings_advanced: 'This advanced notes setting is Pro',
   tasks_default_advanced: 'This advanced tasks setting is Pro',
   note_type_visibility_advanced: 'Hiding more note types is a Pro feature',
+  widget_section_tasks: 'Section Tasks widget is a Pro feature. Only the Notes widget is free.',
 };
 
 
