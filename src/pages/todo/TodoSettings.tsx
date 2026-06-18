@@ -569,10 +569,7 @@ const TodoSettings = () => {
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div 
-                      className="w-6 h-6 rounded-full border-2 border-border"
-                      style={{ backgroundColor: theme.preview }}
-                    />
+                    <div className={cn("w-6 h-6 rounded-full border-2 border-border", theme.preview)} />
                     <span className="text-sm font-medium">{theme.name}</span>
                     {isLocked && <Crown className="h-3.5 w-3.5" fill="#FFD700" color="#FFD700" />}
                   </div>
