@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { startSync, stopSync, syncNow } from '@/utils/cloudSync/syncEngine';
 import { installCloudListener } from '@/utils/cloudSync/storeBridge';
+import { runLegacyIdMigration } from '@/utils/cloudSync/legacyIdMigration';
 import { Capacitor } from '@capacitor/core';
 
 export function useCloudSync(): void {
@@ -17,10 +18,15 @@ export function useCloudSync(): void {
     let mounted = true;
     installCloudListener();
 
-    const handle = (userId: string | null) => {
+    const handle = async (userId: string | null) => {
       if (!mounted) return;
-      if (userId) void startSync(userId);
-      else void stopSync();
+      if (userId) {
+        // Reassign UUIDs to legacy local rows BEFORE the engine starts so the
+        // first listener pass merges them cleanly. Runs at most once per device.
+        try { await runLegacyIdMigration(); } catch {}
+        if (!mounted) return;
+        void startSync(userId);
+      } else void stopSync();
     };
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
