@@ -4,8 +4,8 @@
 <dict>
  <key>BGTaskSchedulerPermittedIdentifiers</key>
  <array>
-  <string>com.flowist.app.refresh</string>
-  <string>com.flowist.app.processing</string>
+  <string>nota.npd.com.refresh</string>
+  <string>nota.npd.com.processing</string>
  </array>
  <key>CFBundleDevelopmentRegion</key>
  <string>en</string>
@@ -28,15 +28,15 @@
   <dict>
    <key>CFBundleURLSchemes</key>
    <array>
-    <string>com.googleusercontent.apps.425291387152-hg7uajqc20bd8t3qfb760gngbl2pd20i</string>
-    <string>com.flowist.app</string>
+    <string>com.googleusercontent.apps.425291387152-u06impgmsgg286jg7odo4f40fu6pjmb5</string>
+    <string>nota.npd.com</string>
    </array>
   </dict>
  </array>
  <key>CFBundleVersion</key>
  <string>$(CURRENT_PROJECT_VERSION)</string>
  <key>GIDClientID</key>
- <string>425291387152-hg7uajqc20bd8t3qfb760gngbl2pd20i.apps.googleusercontent.com</string>
+ <string>425291387152-u06impgmsgg286jg7odo4f40fu6pjmb5.apps.googleusercontent.com</string>
  <key>ITSAppUsesNonExemptEncryption</key>
  <false/>
  <key>LSApplicationQueriesSchemes</key>
