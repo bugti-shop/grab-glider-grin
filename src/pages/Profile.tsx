@@ -18,6 +18,7 @@ import { ProfileStatsBanner } from '@/components/profile/ProfileStats';
 import { ProfileAchievements } from '@/components/profile/ProfileAchievements';
 import { ProfileSubscriptionCard } from '@/components/profile/ProfileSubscriptionCard';
 import { CountryFlagPickerSheet } from '@/components/CountryFlagPickerSheet';
+import { EmailAuthSheet } from '@/components/EmailAuthSheet';
 import { Capacitor } from '@capacitor/core';
 
 
@@ -56,6 +57,7 @@ export default function Profile() {
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState('');
+  const [showEmailAuth, setShowEmailAuth] = useState(false);
 
   useEffect(() => {
     getSetting<string | null>('flowist_manual_country', null).then(setManualCountryCode);
@@ -122,6 +124,10 @@ export default function Profile() {
 
   const handleSignOut = async () => {
     await signOut();
+    try {
+      const { signOutEmail } = await import('@/utils/emailAuth');
+      await signOutEmail();
+    } catch {}
     // Clear all local subscription flags so paywall shows after sign out
     try {
       localStorage.removeItem('flowist_stripe_subscribed');
@@ -130,7 +136,7 @@ export default function Profile() {
     } catch {}
     // Dispatch event so SubscriptionContext resets state
     window.dispatchEvent(new CustomEvent('flowistSignedOut'));
-    toast({ title: t('profile.signedOut', 'Signed out'), description: t('profile.signedOutDesc2', 'Google account disconnected.') });
+    toast({ title: t('profile.signedOut', 'Signed out'), description: t('profile.signedOutDesc2', 'Account disconnected.') });
   };
 
 
@@ -513,10 +519,30 @@ export default function Profile() {
                 </span>
               </button>
               )}
+              <button
+                onClick={() => setShowEmailAuth(true)}
+                className="mt-3 w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border border-[#d9d9e3] rounded-full shadow-sm hover:shadow-md transition-all"
+              >
+                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="5" width="18" height="14" rx="2" />
+                  <path d="m3 7 9 6 9-6" />
+                </svg>
+                <span className="text-sm font-medium text-[#1a1a1a]">
+                  {t('profile.continueWithEmail', 'Continue with Email')}
+                </span>
+              </button>
             </>
           )}
         </div>
       </div>
+
+      <EmailAuthSheet
+        open={showEmailAuth}
+        onClose={() => setShowEmailAuth(false)}
+        onSignedIn={() => {
+          toast({ title: t('profile.signInSuccess', 'Signed in successfully') });
+        }}
+      />
 
 
       {/* Subscription Section */}
