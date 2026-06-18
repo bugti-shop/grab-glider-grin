@@ -199,15 +199,21 @@ const HabitDetail = () => {
     triggerHaptic('light').catch(() => {});
     const text = `${habit.emoji || '✨'} ${habit.name} — ${streak} day streak (best ${bestStreak}). Total check-ins: ${totalCheckins}.`;
     try {
-      if ((navigator as any).share) await (navigator as any).share({ title: habit.name, text });
-      else { await navigator.clipboard.writeText(text); alert('Copied to clipboard'); }
+      if ((navigator as any).share) {
+        await (navigator as any).share({ title: habit.name, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast.success('Copied to clipboard');
+      }
     } catch {}
   };
 
   const handleStartFocus = () => {
-    try { sessionStorage.setItem('focus:habit', JSON.stringify({ id: habit.id, name: habit.name })); } catch {}
-    navigate('/todo');
+    setFocusSecs(25 * 60);
+    setFocusRunning(false);
+    setFocusOpen(true);
   };
+
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: headerColor }}>
