@@ -10,6 +10,8 @@ import { loadHabitSections, DEFAULT_HABIT_SECTION_ID } from '@/utils/habitSectio
 import { triggerHaptic } from '@/utils/haptics';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { toast } from 'sonner';
+
 
 
 const Habits = () => {
