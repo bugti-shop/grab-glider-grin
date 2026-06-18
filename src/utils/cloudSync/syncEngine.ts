@@ -31,6 +31,7 @@ let currentUserId: string | null = null;
 let channel: RealtimeChannel | null = null;
 let heartbeat: ReturnType<typeof setInterval> | null = null;
 let bootstrapping = false;
+let authSub: { unsubscribe: () => void } | null = null;
 
 function emit(detail: SyncChangeDetail): void {
   try {
