@@ -193,6 +193,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
+  const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
   const [metaDescription, setMetaDescription] = useState<string>('');
   const [customColor, setCustomColor] = useState<string | undefined>(undefined);
   
@@ -1064,7 +1065,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           <div className="flex items-center gap-1">
             {/* Table Picker moved to toolbar/options menu */}
 
-            <DropdownMenu>
+            <DropdownMenu open={isOptionsMenuOpen} onOpenChange={setIsOptionsMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
                   <MoreVertical className="h-5 w-5" />
@@ -1255,7 +1256,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <CollapsibleTrigger asChild>
                     <div 
                       className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground w-full"
-                      onClick={(e) => { e.stopPropagation(); if (!requireFeature('extract_features')) { e.preventDefault(); } }}
+                      onClick={(e) => { e.stopPropagation(); if (!isPro) { e.preventDefault(); setIsOptionsMenuOpen(false); requireFeature('extract_features'); } }}
                     >
                       <Mail className="h-4 w-4 mr-2" />
                       {t('editor.extractEmails', 'Extract Emails')}
@@ -1357,7 +1358,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <CollapsibleTrigger asChild>
                     <div 
                       className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground w-full"
-                      onClick={(e) => { e.stopPropagation(); if (!requireFeature('extract_features')) { e.preventDefault(); } }}
+                      onClick={(e) => { e.stopPropagation(); if (!isPro) { e.preventDefault(); setIsOptionsMenuOpen(false); requireFeature('extract_features'); } }}
                     >
                       <Phone className="h-4 w-4 mr-2" />
                       {t('editor.extractPhones', 'Extract Phone Numbers')}
@@ -1463,7 +1464,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <CollapsibleTrigger asChild>
                     <div 
                       className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground w-full"
-                      onClick={(e) => { e.stopPropagation(); if (!requireFeature('extract_features')) { e.preventDefault(); } }}
+                      onClick={(e) => { e.stopPropagation(); if (!isPro) { e.preventDefault(); setIsOptionsMenuOpen(false); requireFeature('extract_features'); } }}
                     >
                       <LinkIcon className="h-4 w-4 mr-2" />
                       {t('editor.extractUrls', 'Extract URLs')}
@@ -1580,7 +1581,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <CollapsibleTrigger asChild>
                     <div 
                       className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground w-full"
-                      onClick={(e) => { e.stopPropagation(); if (!requireFeature('extract_features')) { e.preventDefault(); } }}
+                      onClick={(e) => { e.stopPropagation(); if (!isPro) { e.preventDefault(); setIsOptionsMenuOpen(false); requireFeature('extract_features'); } }}
                     >
                       <Hash className="h-4 w-4 mr-2" />
                       {t('editor.extractHashtags', 'Extract Hashtags')}
