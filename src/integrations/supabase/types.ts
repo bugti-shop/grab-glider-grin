@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      device_registry: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: string
+          is_deleted: boolean
+          last_seen_at: string
+          last_sync_timestamp: string
+          platform: string
+          push_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          id?: string
+          is_deleted?: boolean
+          last_seen_at?: string
+          last_sync_timestamp?: string
+          platform: string
+          push_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          is_deleted?: boolean
+          last_seen_at?: string
+          last_sync_timestamp?: string
+          platform?: string
+          push_token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           app_version: string | null
@@ -49,6 +88,373 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      file_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          is_deleted: boolean
+          mime_type: string | null
+          parent_id: string
+          parent_type: string
+          size_bytes: number | null
+          storage_path: string
+          thumbnail_path: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          is_deleted?: boolean
+          mime_type?: string | null
+          parent_id: string
+          parent_type: string
+          size_bytes?: number | null
+          storage_path: string
+          thumbnail_path?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          is_deleted?: boolean
+          mime_type?: string | null
+          parent_id?: string
+          parent_type?: string
+          size_bytes?: number | null
+          storage_path?: string
+          thumbnail_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      folders: {
+        Row: {
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          is_deleted: boolean
+          name: string
+          order_index: number
+          parent_folder_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_deleted?: boolean
+          name: string
+          order_index?: number
+          parent_folder_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_deleted?: boolean
+          name?: string
+          order_index?: number
+          parent_folder_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habit_certificates: {
+        Row: {
+          created_at: string
+          earned_at: string
+          habit_id: string
+          id: string
+          is_deleted: boolean
+          milestone: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          earned_at?: string
+          habit_id: string
+          id?: string
+          is_deleted?: boolean
+          milestone: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          earned_at?: string
+          habit_id?: string
+          id?: string
+          is_deleted?: boolean
+          milestone?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_certificates_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habit_logs: {
+        Row: {
+          completed_on: string
+          created_at: string
+          habit_id: string
+          id: string
+          is_deleted: boolean
+          note: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_on: string
+          created_at?: string
+          habit_id: string
+          id?: string
+          is_deleted?: boolean
+          note?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_on?: string
+          created_at?: string
+          habit_id?: string
+          id?: string
+          is_deleted?: boolean
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_logs_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          color: string | null
+          created_at: string
+          current_streak: number
+          frequency: string
+          frequency_config: Json
+          icon: string | null
+          id: string
+          is_deleted: boolean
+          longest_streak: number
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          current_streak?: number
+          frequency?: string
+          frequency_config?: Json
+          icon?: string | null
+          id?: string
+          is_deleted?: boolean
+          longest_streak?: number
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          current_streak?: number
+          frequency?: string
+          frequency_config?: Json
+          icon?: string | null
+          id?: string
+          is_deleted?: boolean
+          longest_streak?: number
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      lists: {
+        Row: {
+          color: string | null
+          created_at: string
+          folder_id: string | null
+          icon: string | null
+          id: string
+          is_deleted: boolean
+          name: string
+          order_index: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          folder_id?: string | null
+          icon?: string | null
+          id?: string
+          is_deleted?: boolean
+          name: string
+          order_index?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          folder_id?: string | null
+          icon?: string | null
+          id?: string
+          is_deleted?: boolean
+          name?: string
+          order_index?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lists_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      note_versions: {
+        Row: {
+          body_snapshot: string | null
+          created_at: string
+          device_id: string | null
+          id: string
+          is_deleted: boolean
+          note_id: string
+          saved_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body_snapshot?: string | null
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          is_deleted?: boolean
+          note_id: string
+          saved_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body_snapshot?: string | null
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          is_deleted?: boolean
+          note_id?: string
+          saved_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_versions_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          body: string | null
+          created_at: string
+          folder_id: string | null
+          id: string
+          is_deleted: boolean
+          is_pinned: boolean
+          list_id: string | null
+          tags: string[]
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_pinned?: boolean
+          list_id?: string | null
+          tags?: string[]
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          is_deleted?: boolean
+          is_pinned?: boolean
+          list_id?: string | null
+          tags?: string[]
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       onboarding_responses: {
         Row: {
@@ -152,6 +558,99 @@ export type Database = {
         }
         Relationships: []
       }
+      sections: {
+        Row: {
+          created_at: string
+          folder_id: string | null
+          id: string
+          is_deleted: boolean
+          list_id: string | null
+          name: string
+          order_index: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          is_deleted?: boolean
+          list_id?: string | null
+          name: string
+          order_index?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string | null
+          id?: string
+          is_deleted?: boolean
+          list_id?: string | null
+          name?: string
+          order_index?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sections_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sections_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_status: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          is_deleted: boolean
+          plan_name: string
+          started_at: string
+          store: string | null
+          store_transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_deleted?: boolean
+          plan_name?: string
+          started_at?: string
+          store?: string | null
+          store_transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_deleted?: boolean
+          plan_name?: string
+          started_at?: string
+          store?: string | null
+          store_transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean
@@ -196,6 +695,75 @@ export type Database = {
           user_email?: string
         }
         Relationships: []
+      }
+      tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          is_completed: boolean
+          is_deleted: boolean
+          list_id: string | null
+          notes: string | null
+          order_index: number
+          parent_task_id: string | null
+          priority: number
+          reminder_at: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          is_deleted?: boolean
+          list_id?: string | null
+          notes?: string | null
+          order_index?: number
+          parent_task_id?: string | null
+          priority?: number
+          reminder_at?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          is_deleted?: boolean
+          list_id?: string | null
+          notes?: string | null
+          order_index?: number
+          parent_task_id?: string | null
+          priority?: number
+          reminder_at?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_daily_ai_usage: {
         Row: {
@@ -327,6 +895,48 @@ export type Database = {
           created_at?: string
           google_refresh_token?: string
           id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          date_format: string
+          display_options: Json
+          first_day_of_week: number
+          id: string
+          is_deleted: boolean
+          language: string
+          notification_preferences: Json
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date_format?: string
+          display_options?: Json
+          first_day_of_week?: number
+          id?: string
+          is_deleted?: boolean
+          language?: string
+          notification_preferences?: Json
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date_format?: string
+          display_options?: Json
+          first_day_of_week?: number
+          id?: string
+          is_deleted?: boolean
+          language?: string
+          notification_preferences?: Json
+          theme?: string
           updated_at?: string
           user_id?: string
         }
