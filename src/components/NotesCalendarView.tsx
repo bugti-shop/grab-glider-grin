@@ -35,6 +35,10 @@ interface NotesCalendarViewProps {
   getDayChips?: (date: Date) => DayChip[];
   /** Maximum visible chips per cell (default 3). */
   maxChipsPerDay?: number;
+  /** Called when a chip inside a day cell is tapped. */
+  onChipClick?: (chip: DayChip, day: Date) => void;
+  /** Extra controls rendered in the calendar header (e.g. filter button). */
+  headerExtras?: React.ReactNode;
 }
 
 const BACKGROUND_GRADIENTS: Record<string, string | null> = {
@@ -71,6 +75,8 @@ export const NotesCalendarView = ({
   onBackgroundSettingsClick,
   getDayChips,
   maxChipsPerDay = 3,
+  onChipClick,
+  headerExtras,
 }: NotesCalendarViewProps) => {
   const { t } = useTranslation();
   const resolvedEmptyMessage = emptyStateMessage || t('calendar.noNotes', 'No notes for the day.');
@@ -200,15 +206,18 @@ export const NotesCalendarView = ({
         </div>
         
         <div className="flex items-center gap-1">
+          {headerExtras}
           <button
             onClick={handleGoToToday}
             className={cn(
-              "p-1.5 hover:bg-accent/50 rounded-full transition-colors",
-              useLightText && "hover:bg-white/20"
+              "px-2.5 h-7 rounded-full text-xs font-semibold transition-colors border",
+              useLightText
+                ? "text-white border-white/30 hover:bg-white/20"
+                : "text-primary border-primary/30 hover:bg-primary/10"
             )}
             aria-label="Go to today"
           >
-            <ChevronDown className={cn("w-5 h-5", useLightText ? "text-white/80" : "text-muted-foreground")} />
+            {t('calendar.today', 'Today')}
           </button>
           
           <DropdownMenu>
@@ -278,7 +287,7 @@ export const NotesCalendarView = ({
                 key={`${day.toString()}-${index}`}
                 onClick={() => onDateSelect?.(day)}
                 className={cn(
-                  "relative flex flex-col items-stretch text-left",
+                  "relative flex flex-col items-stretch text-left min-w-0",
                   "min-h-[78px] px-1 pt-1 pb-0.5 rounded-md transition-colors",
                   "border border-transparent",
                   isSelected && !isToday && (useLightText
@@ -304,14 +313,22 @@ export const NotesCalendarView = ({
                   </span>
                 </div>
 
-                {/* Colored chips */}
-                <div className="mt-1 flex flex-col gap-[2px] w-full overflow-hidden">
+                {/* Colored chips — clickable */}
+                <div className="mt-1 flex flex-col gap-[2px] w-full min-w-0 overflow-hidden">
                   {visible.map((chip) => (
                     <span
                       key={chip.id}
                       title={chip.label}
+                      onClick={(e) => {
+                        if (!onChipClick) return;
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onChipClick(chip, day);
+                      }}
+                      role={onChipClick ? 'button' : undefined}
                       className={cn(
-                        "block w-full truncate rounded-[3px] px-1 text-[9px] leading-[12px] font-medium text-white",
+                        "block max-w-full truncate rounded-[3px] px-1 text-[9px] leading-[12px] font-medium text-white",
+                        onChipClick && "cursor-pointer active:opacity-80",
                         chip.completed && "opacity-60 line-through"
                       )}
                       style={{ backgroundColor: chip.color }}
@@ -322,7 +339,7 @@ export const NotesCalendarView = ({
                   {extra > 0 && (
                     <span
                       className={cn(
-                        "block w-full text-[9px] leading-[12px] font-semibold px-1",
+                        "block max-w-full truncate text-[9px] leading-[12px] font-semibold px-1",
                         useLightText ? "text-white/80" : "text-muted-foreground"
                       )}
                     >
@@ -330,6 +347,7 @@ export const NotesCalendarView = ({
                     </span>
                   )}
                 </div>
+
               </button>
             );
           }
