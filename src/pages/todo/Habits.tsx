@@ -11,6 +11,7 @@ import { triggerHaptic } from '@/utils/haptics';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { toast } from 'sonner';
+import { readActiveFocus, cleanupStaleFocusKeys, clearActiveFocus } from '@/utils/focusSession';
 
 
 
@@ -39,6 +40,19 @@ const Habits = () => {
       window.removeEventListener('habitSectionsUpdated', onSec);
     };
   }, [load]);
+
+  // After refresh, if a focus session is still active, jump back into that
+  // habit so the dialog reopens automatically. Also sweep stale entries.
+  useEffect(() => {
+    cleanupStaleFocusKeys();
+    const active = readActiveFocus();
+    if (!active?.habitId) return;
+    if (active.endAt && active.endAt <= Date.now()) {
+      clearActiveFocus();
+      return;
+    }
+    navigate(`/todo/habits/${active.habitId}`, { replace: true });
+  }, [navigate]);
 
   // 7-day strip ending today
   const weekDays = useMemo(() => {
