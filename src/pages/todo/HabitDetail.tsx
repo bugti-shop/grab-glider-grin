@@ -146,7 +146,6 @@ const HabitDetail = () => {
   const todayKey = format(new Date(), 'yyyy-MM-dd');
   const todayDone = habit.completions.some((c) => c.date === todayKey && c.completed);
 
-  const [saving, setSaving] = useState(false);
   const toggleToday = async () => {
     if (saving) return;
     triggerHaptic('medium').catch(() => {});
