@@ -15,7 +15,9 @@ import {
 import {
   ArrowLeft, MoreVertical, ChevronLeft, ChevronRight,
   CheckCircle2, CalendarCheck, Percent, Activity, Trash2, Check, Share2, ChevronUp,
+  Pencil, Target, Archive,
 } from 'lucide-react';
+
 import { m as motion, AnimatePresence, useMotionValue, useTransform, animate as motionAnimate } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Habit, HabitDayStatus } from '@/types/habit';
@@ -38,7 +40,6 @@ const HabitDetail = () => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [trackWidth, setTrackWidth] = useState(0);
   const knobX = useMotionValue(0);
-  const dragStateRef = useRef({ active: false, startX: 0, startValue: 0 });
   const completingRef = useRef(false);
 
   useLayoutEffect(() => {
@@ -111,28 +112,17 @@ const HabitDetail = () => {
     });
   };
 
-  const handleSwipeStart = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (todayDone || maxDrag <= 0) return;
-    e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    dragStateRef.current = { active: true, startX: e.clientX, startValue: knobX.get() };
-  };
-
-  const handleSwipeMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragStateRef.current.active) return;
-    e.preventDefault();
-    const next = Math.min(maxDrag, Math.max(0, dragStateRef.current.startValue + e.clientX - dragStateRef.current.startX));
-    knobX.set(next);
-  };
-
-  const handleSwipeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragStateRef.current.active) return;
-    e.preventDefault();
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
-    dragStateRef.current.active = false;
-    if (knobX.get() >= maxDrag * 0.65) finishSwipe();
+  const handleDragEnd = () => {
+    if (knobX.get() >= maxDrag * 0.55) finishSwipe();
     else motionAnimate(knobX, 0, { type: 'spring', stiffness: 380, damping: 30 });
   };
+
+  // Tap-to-complete fallback: if user taps the knob without dragging, still check in.
+  const handleKnobTap = () => {
+    if (todayDone || completingRef.current) return;
+    finishSwipe();
+  };
+
 
   const statusFor = (d: Date): HabitDayStatus | null => {
     const key = format(d, 'yyyy-MM-dd');
@@ -170,6 +160,28 @@ const HabitDetail = () => {
     if (!confirm('Delete this habit?')) return;
     await deleteHabit(habit.id);
     navigate(-1);
+  };
+
+  const handleEdit = () => navigate(`/todo/habits/new?id=${habit.id}`);
+
+  const handleArchive = async () => {
+    const updated: Habit = { ...habit, isArchived: !habit.isArchived, updatedAt: new Date().toISOString() };
+    await saveHabit(updated);
+    navigate(-1);
+  };
+
+  const handleShare = async () => {
+    triggerHaptic('light').catch(() => {});
+    const text = `${habit.emoji || '✨'} ${habit.name} — ${streak} day streak (best ${bestStreak}). Total check-ins: ${totalCheckins}.`;
+    try {
+      if ((navigator as any).share) await (navigator as any).share({ title: habit.name, text });
+      else { await navigator.clipboard.writeText(text); alert('Copied to clipboard'); }
+    } catch {}
+  };
+
+  const handleStartFocus = () => {
+    try { sessionStorage.setItem('focus:habit', JSON.stringify({ id: habit.id, name: habit.name })); } catch {}
+    navigate('/todo');
   };
 
   return (
@@ -212,11 +224,24 @@ const HabitDetail = () => {
               <MoreVertical className="h-6 w-6" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleEdit}>
+              <Pencil className="h-4 w-4 mr-2" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleStartFocus}>
+              <Target className="h-4 w-4 mr-2" /> Start Focus
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShare}>
+              <Share2 className="h-4 w-4 mr-2" /> Share
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleArchive}>
+              <Archive className="h-4 w-4 mr-2" /> {habit.isArchived ? 'Unarchive' : 'Archive'}
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-              <Trash2 className="h-4 w-4 mr-2" /> Delete habit
+              <Trash2 className="h-4 w-4 mr-2" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
+
         </DropdownMenu>
       </header>
 
@@ -238,17 +263,13 @@ const HabitDetail = () => {
               key="pill"
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               ref={trackRef}
-              className="relative h-16 rounded-full overflow-hidden touch-none select-none"
-              style={{ background: 'rgba(255,255,255,0.28)', touchAction: 'none' }}
-              onPointerDown={handleSwipeStart}
-              onPointerMove={handleSwipeMove}
-              onPointerUp={handleSwipeEnd}
-              onPointerCancel={handleSwipeEnd}
+              className="relative h-16 rounded-full overflow-hidden select-none"
+              style={{ background: 'rgba(255,255,255,0.28)' }}
             >
               {/* progress fill following the knob */}
               <motion.div
                 aria-hidden
-                className="absolute top-0 left-0 h-full rounded-full"
+                className="absolute top-0 left-0 h-full rounded-full pointer-events-none"
                 style={{ width: fillWidth, background: 'rgba(255,255,255,0.35)' }}
               />
               <motion.span
@@ -257,15 +278,21 @@ const HabitDetail = () => {
               >
                 Swipe to check in →
               </motion.span>
-              <motion.button
-                style={{ x: knobX, color: headerColor, top: PAD, left: PAD, touchAction: 'none' }}
+              <motion.div
+                drag="x"
+                dragConstraints={{ left: 0, right: maxDrag }}
+                dragElastic={0}
+                dragMomentum={false}
+                onDragEnd={handleDragEnd}
+                onTap={handleKnobTap}
                 whileTap={{ scale: 0.96 }}
+                style={{ x: knobX, color: headerColor, top: PAD, left: PAD, touchAction: 'none' }}
                 className="absolute h-14 w-14 rounded-full bg-white shadow-lg flex items-center justify-center cursor-grab active:cursor-grabbing"
                 aria-label="Swipe to check in"
-                onClick={(e) => e.preventDefault()}
               >
                 <Check className="h-7 w-7" strokeWidth={3} />
-              </motion.button>
+              </motion.div>
+
             </motion.div>
           ) : (
             <motion.div
