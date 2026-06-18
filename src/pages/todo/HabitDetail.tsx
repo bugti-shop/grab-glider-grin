@@ -167,7 +167,7 @@ const HabitDetail = () => {
   const handleArchive = async () => {
     const updated: Habit = { ...habit, isArchived: !habit.isArchived, updatedAt: new Date().toISOString() };
     await saveHabit(updated);
-    setHabit(updated);
+    navigate(-1);
   };
 
   const handleShare = async () => {
@@ -179,7 +179,10 @@ const HabitDetail = () => {
     } catch {}
   };
 
-  const handleStartFocus = () => navigate('/todo/focus');
+  const handleStartFocus = () => {
+    try { sessionStorage.setItem('focus:habit', JSON.stringify({ id: habit.id, name: habit.name })); } catch {}
+    navigate('/todo');
+  };
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: headerColor }}>
