@@ -512,8 +512,12 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
     return () => {
       observer.disconnect();
       html.style.overflow = previousHtmlOverflow;
-      body.style.overflow = previousBodyOverflow;
-      body.style.pointerEvents = previousBodyPointer;
+      body.removeAttribute('data-scroll-locked');
+      body.style.removeProperty('margin-right');
+      if (previousBodyOverflow && previousBodyOverflow !== 'hidden') body.style.overflow = previousBodyOverflow;
+      else body.style.removeProperty('overflow');
+      if (previousBodyPointer && previousBodyPointer !== 'none') body.style.pointerEvents = previousBodyPointer;
+      else body.style.removeProperty('pointer-events');
     };
   }, []);
 
