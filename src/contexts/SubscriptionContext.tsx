@@ -1441,6 +1441,17 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     // is enforced separately at each Pro-gated action via requireFeature().
     setShowPaywall(false);
     setPaywallFeature(null);
+    // Defensive: clear any leftover Radix scroll-lock / pointer-events lockdown
+    // so the underlying UI never gets "stuck" un-interactive after paywall closes.
+    try {
+      const b = document.body;
+      const h = document.documentElement;
+      b.removeAttribute('data-scroll-locked');
+      b.style.removeProperty('overflow');
+      b.style.removeProperty('margin-right');
+      b.style.removeProperty('pointer-events');
+      h.style.removeProperty('overflow');
+    } catch {}
   }, []);
 
   const unlockPro = useCallback(async () => {
