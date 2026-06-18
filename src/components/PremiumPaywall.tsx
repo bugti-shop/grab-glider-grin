@@ -309,6 +309,7 @@ function usePaywallLogic() {
     notes_settings_advanced: 'This advanced notes setting is Pro.',
     tasks_default_advanced: 'This advanced tasks setting is Pro.',
     note_type_visibility_advanced: 'Hiding more note types is a Pro feature.',
+    widget_section_tasks: 'Section Tasks widget is a Premium feature. Free plan includes the Notes widget only.',
   };
   const genericFeatureMessage = paywallFeature && !paywallFeature.startsWith('capacity_') && !paywallFeature.startsWith('soft_limit_')
     ? `${paywallFeature.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())} is a Premium feature. Upgrade to unlock.`
@@ -409,14 +410,17 @@ const FEATURE_ROWS: { label: string; free: string | 'x' | 'check'; pro: string |
 ];
 
 const CAPACITY_ROWS: { label: string; free: string; pro: string }[] = [
-  { label: 'Calendar View', free: 'Basic', pro: 'Month/Week/3-Day' },
-  { label: 'Attachment', free: '1/day', pro: '200/day' },
-  { label: 'Habit Count', free: '5', pro: '300' },
-  { label: 'Countdown', free: '5', pro: '300' },
-  { label: 'Notes', free: '50', pro: 'Unlimited' },
-  { label: 'Folders Count', free: '9', pro: 'Unlimited' },
-  { label: 'Task Count', free: '99 per folder', pro: 'Unlimited' },
-  { label: 'Widgets', free: 'Basic', pro: 'Unlimited' },
+  { label: 'Notes', free: '30', pro: 'Unlimited' },
+  { label: 'Note Folders', free: '5', pro: 'Unlimited' },
+  { label: 'Task Folders', free: '5', pro: 'Unlimited' },
+  { label: 'Tasks', free: '38 per folder', pro: 'Unlimited' },
+  { label: 'Sections', free: '3 per folder', pro: 'Unlimited' },
+  { label: 'Habits', free: '3', pro: 'Unlimited' },
+  { label: 'Countdowns', free: '2', pro: 'Unlimited' },
+  { label: 'Reminders', free: '1 per task', pro: 'Unlimited' },
+  { label: 'Widgets', free: 'Notes only', pro: 'All widgets' },
+  { label: 'Attachments', free: '1/day', pro: '200/day' },
+  { label: 'Calendar View', free: 'Month only', pro: 'Month/Week/3-Day' },
   { label: 'Themes', free: 'Basic', pro: 'Unlimited' },
 ];
 

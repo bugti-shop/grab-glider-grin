@@ -12,9 +12,10 @@ import { loadNotesFromDB } from '@/utils/noteStorage';
 import { getSetting } from '@/utils/settingsStorage';
 import { Note } from '@/types/note';
 import { toast } from 'sonner';
-import { Smartphone, RefreshCw, ExternalLink } from 'lucide-react';
+import { Smartphone, RefreshCw, ExternalLink, Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
 interface WidgetSettingsSheetProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ interface TaskSection {
 
 export const WidgetSettingsSheet = ({ isOpen, onClose }: WidgetSettingsSheetProps) => {
   const { t } = useTranslation();
+  const { isPro, requireProFeature } = useSubscription();
   const [widgetConfigs, setWidgetConfigs] = useState<WidgetConfig[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [sections, setSections] = useState<TaskSection[]>([]);
@@ -252,19 +254,31 @@ export const WidgetSettingsSheet = ({ isOpen, onClose }: WidgetSettingsSheetProp
             <Separator />
 
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground">{t('widgetSettings.sectionTasksWidget')}</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
+                {t('widgetSettings.sectionTasksWidget')}
+                {!isPro && <Crown className="h-3.5 w-3.5 text-amber-500" />}
+              </h3>
               
               <div className="flex items-center justify-between p-3 rounded-lg border border-border">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">📋</span>
                   <div>
-                    <p className="text-sm font-medium">{t('widgetSettings.sectionTasks')}</p>
+                    <p className="text-sm font-medium flex items-center gap-1.5">
+                      {t('widgetSettings.sectionTasks')}
+                      {!isPro && <Crown className="h-3.5 w-3.5 text-amber-500" />}
+                    </p>
                     <p className="text-xs text-muted-foreground">{t('widgetSettings.sectionTasksDesc')}</p>
                   </div>
                 </div>
                 <Switch
                   checked={isWidgetEnabled('section_tasks')}
-                  onCheckedChange={(checked) => handleToggleWidget('section_tasks', checked)}
+                  onCheckedChange={(checked) => {
+                    if (checked && !isPro) {
+                      requireProFeature('widget_section_tasks');
+                      return;
+                    }
+                    handleToggleWidget('section_tasks', checked);
+                  }}
                 />
               </div>
 

@@ -113,11 +113,11 @@ export const FREE_LIMITS = {
 // Free user lifetime limits — applies to ALL free users (not just brand-new).
 // These are LIFETIME counts: deleting items does NOT free up quota. User must upgrade to Pro.
 export const SOFT_FREE_LIMITS = {
-  notes: 50,
-  tasks: 891,
-  noteFolders: 9,
-  taskFolders: 9,
-  taskSections: 10,
+  notes: 30,
+  tasks: 190, // 5 folders × 38 tasks
+  noteFolders: 5,
+  taskFolders: 5,
+  taskSections: 3,
 } as const;
 
 export type SoftLimitKind = keyof typeof SOFT_FREE_LIMITS;
@@ -126,22 +126,23 @@ export type SoftLimitKind = keyof typeof SOFT_FREE_LIMITS;
 // These complement SOFT_FREE_LIMITS and are checked at create time using the
 // CURRENT count for the relevant scope (per folder / per task / per day / global).
 export const FREE_CAPACITY_LIMITS = {
-  habits: 5,                      // global
-  noteFolders: 9,                 // global
-  taskFolders: 9,                 // global
-  notes: 50,                      // global
+  habits: 3,                      // global
+  noteFolders: 5,                 // global (separate from task folders)
+  taskFolders: 5,                 // global (separate from note folders)
+  notes: 30,                      // global
   tags: 20,                       // global
-  countdowns: 5,                  // global
-  sectionsPerFolder: 10,          // per task folder
-  tasksPerFolder: 99,             // per task folder
+  countdowns: 2,                  // global
+  sectionsPerFolder: 3,           // per task folder
+  tasksPerFolder: 38,             // per task folder
   subtasksPerTask: 19,            // per task
-  remindersPerTask: 2,            // per task
+  remindersPerTask: 1,            // per task
   attachmentsPerDay: 1,           // per calendar day
   darkThemes: 1,                  // only 1 dark theme free
   eisenhowerTasksPerQuadrant: 10, // per quadrant
   smartListsCustom: 2,            // saved custom smart views
   blocksAdvancedPerNote: 3,       // per note (image/file/toggle/callout/template)
   calendarViews: 1,               // only "month"
+  widgets: 1,                     // only Notes widget is free
 } as const;
 
 export type CapacityKind = keyof typeof FREE_CAPACITY_LIMITS;
@@ -164,6 +165,7 @@ export const CAPACITY_LABELS: Record<CapacityKind, { label: string; scope: strin
   smartListsCustom:   { label: 'Custom Smart Lists', scope: 'total' },
   blocksAdvancedPerNote: { label: 'Advanced Blocks', scope: 'per note' },
   calendarViews:      { label: 'Calendar Views', scope: 'total' },
+  widgets:            { label: 'Widgets',        scope: 'total' },
 };
 
 // Pro-only feature keys used with requirePro(feature). Free message map lives in PremiumPaywall.
@@ -195,6 +197,7 @@ export const PRO_FEATURE_LABELS: Record<string, string> = {
   notes_settings_advanced: 'This advanced notes setting is Pro',
   tasks_default_advanced: 'This advanced tasks setting is Pro',
   note_type_visibility_advanced: 'Hiding more note types is a Pro feature',
+  widget_section_tasks: 'Section Tasks widget is a Pro feature. Only the Notes widget is free.',
 };
 
 
@@ -1438,6 +1441,17 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     // is enforced separately at each Pro-gated action via requireFeature().
     setShowPaywall(false);
     setPaywallFeature(null);
+    // Defensive: clear any leftover Radix scroll-lock / pointer-events lockdown
+    // so the underlying UI never gets "stuck" un-interactive after paywall closes.
+    try {
+      const b = document.body;
+      const h = document.documentElement;
+      b.removeAttribute('data-scroll-locked');
+      b.style.removeProperty('overflow');
+      b.style.removeProperty('margin-right');
+      b.style.removeProperty('pointer-events');
+      h.style.removeProperty('overflow');
+    } catch {}
   }, []);
 
   const unlockPro = useCallback(async () => {
