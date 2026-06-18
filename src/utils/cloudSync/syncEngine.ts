@@ -96,6 +96,7 @@ function attachRealtime(userId: string): void {
         const row = (payload.new ?? payload.old) as SyncRow | undefined;
         if (!row) return;
         emit({ table, rows: [row], source: 'realtime' });
+        import('./diagnostics').then(d => d.recordListenerEvent(table)).catch(() => {});
         if (row.updated_at) setLastSync(userId, table, row.updated_at);
       },
     );
