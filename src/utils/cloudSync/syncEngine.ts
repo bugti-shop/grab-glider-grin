@@ -60,7 +60,7 @@ async function fetchSince(userId: string, table: SyncTable, since: string | null
     console.warn('[sync] fetch failed', table, error);
     return;
   }
-  const rows = (data ?? []) as SyncRow[];
+  const rows = ((data ?? []) as unknown) as SyncRow[];
   if (rows.length > 0) {
     emit({ table, rows, source });
     const newest = rows[rows.length - 1].updated_at;
