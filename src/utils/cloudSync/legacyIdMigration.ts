@@ -36,6 +36,49 @@ export interface MigrationReport {
 
 let runningPromise: Promise<MigrationReport> | null = null;
 
+const LOCK_NAME = 'flowist:legacyIdMigration:v1:lock';
+const LOCK_LS_KEY = 'flowist:legacyIdMigration:v1:lock-held';
+const LOCK_TTL_MS = 60_000;
+
+/**
+ * Acquire an inter-tab / inter-process lock so two tabs (or a tab + a SW)
+ * can't run the migration concurrently and produce conflicting UUID rewrites.
+ *
+ * Prefers the Web Locks API (truly atomic across same-origin contexts on the
+ * same device). Falls back to a TTL'd localStorage flag + storage-event check
+ * for browsers without Web Locks.
+ */
+async function withMigrationLock<T>(fn: () => Promise<T>): Promise<T | { skipped: true }> {
+  const nav: any = typeof navigator !== 'undefined' ? navigator : null;
+  if (nav?.locks?.request) {
+    return await nav.locks.request(
+      LOCK_NAME,
+      { mode: 'exclusive', ifAvailable: true },
+      async (lock: any) => {
+        if (!lock) return { skipped: true } as const;
+        return await fn();
+      },
+    );
+  }
+  // Fallback: TTL'd localStorage lock
+  try {
+    const now = Date.now();
+    const raw = localStorage.getItem(LOCK_LS_KEY);
+    if (raw) {
+      const ts = parseInt(raw, 10);
+      if (Number.isFinite(ts) && now - ts < LOCK_TTL_MS) {
+        return { skipped: true } as const;
+      }
+    }
+    localStorage.setItem(LOCK_LS_KEY, String(now));
+  } catch {}
+  try {
+    return await fn();
+  } finally {
+    try { localStorage.removeItem(LOCK_LS_KEY); } catch {}
+  }
+}
+
 export function runLegacyIdMigration(): Promise<MigrationReport> {
   if (runningPromise) return runningPromise;
   runningPromise = (async (): Promise<MigrationReport> => {
@@ -46,6 +89,37 @@ export function runLegacyIdMigration(): Promise<MigrationReport> {
         report.alreadyRan = true;
         return report;
       }
+
+      const result = await withMigrationLock(async () => {
+        // Re-check the flag inside the lock: another tab may have completed
+        // the migration while we were waiting.
+        if (localStorage.getItem(FLAG_KEY) === 'done') {
+          report.alreadyRan = true;
+          return report;
+        }
+        await doMigrate(report);
+        localStorage.setItem(FLAG_KEY, 'done');
+        return report;
+      });
+
+      if ((result as any)?.skipped) {
+        // Another tab is running the migration. Treat this run as a no-op;
+        // the cloud listener will pick up its writes via realtime.
+        console.info('[legacyIdMigration] skipped — another tab holds the lock');
+        report.alreadyRan = true;
+        return report;
+      }
+      return report as MigrationReport;
+    } catch (e) {
+      console.warn('[legacyIdMigration] aborted', e);
+      return report;
+    }
+  })();
+  return runningPromise;
+}
+
+async function doMigrate(report: MigrationReport): Promise<void> {
+
 
       const remap: Remap = new Map();
 
