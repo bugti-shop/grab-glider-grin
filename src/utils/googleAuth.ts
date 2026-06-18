@@ -822,43 +822,11 @@ export const backgroundTokenRefresh = async (): Promise<void> => {
 };
 
 /**
- * Force-refresh the Google Drive access token using stored refresh_token.
- * Called when Supabase fires TOKEN_REFRESHED so Drive token stays in sync.
- * Skips the "is it still fresh?" check — always refreshes.
+ * Drive integration removed — kept as a no-op so existing callers compile.
+ * Returns the currently stored Google user without performing any refresh.
  */
 export const forceRefreshDriveToken = async (): Promise<GoogleUser | null> => {
-  const stored = await getStoredGoogleUser();
-  if (!stored) return null;
-
-  // On native, prefer the plugin's silent refresh — works even when the
-  // refresh_token wasn't persisted server-side.
-  if (isNative()) {
-    try {
-      return await nativeRefresh();
-    } catch (err) {
-      console.warn('Native force refresh failed, falling back to backend:', err);
-    }
-  }
-
-  try {
-    const { accessToken, expiresIn, newRefreshToken } = await refreshAccessTokenViaRefreshToken(stored.refreshToken);
-    const refreshedUser: GoogleUser = {
-      ...stored,
-      accessToken,
-      refreshToken: newRefreshToken || stored.refreshToken,
-      accessTokenExpiresAt: Date.now() + (expiresIn * 1000) - 60000,
-      expiresAt: Date.now() + SESSION_TTL,
-    };
-    await setSetting('googleUser', refreshedUser);
-    if (refreshedUser.refreshToken) {
-      persistRefreshTokenBestEffort(refreshedUser.refreshToken, refreshedUser.email).catch(() => {});
-    }
-    console.log('Drive token force-refreshed via Supabase TOKEN_REFRESHED hook ✅');
-    return refreshedUser;
-  } catch (err) {
-    console.warn('Drive token force-refresh failed:', err);
-    return stored;
-  }
+  return await getStoredGoogleUser();
 };
 
 if (import.meta.env.DEV) {
