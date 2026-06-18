@@ -498,7 +498,7 @@ const getGisTokenClient = async () => {
   if (!google?.accounts?.oauth2?.initTokenClient) return null;
   gisTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
-    scope: ['openid', 'email', 'profile', ...DRIVE_SCOPES, ...CALENDAR_SCOPES].join(' '),
+    scope: ['openid', 'email', 'profile'].join(' '),
     callback: () => {},
   });
   return gisTokenClient;
