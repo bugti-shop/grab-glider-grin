@@ -165,6 +165,7 @@ export const CAPACITY_LABELS: Record<CapacityKind, { label: string; scope: strin
   smartListsCustom:   { label: 'Custom Smart Lists', scope: 'total' },
   blocksAdvancedPerNote: { label: 'Advanced Blocks', scope: 'per note' },
   calendarViews:      { label: 'Calendar Views', scope: 'total' },
+  widgets:            { label: 'Widgets',        scope: 'total' },
 };
 
 // Pro-only feature keys used with requirePro(feature). Free message map lives in PremiumPaywall.
