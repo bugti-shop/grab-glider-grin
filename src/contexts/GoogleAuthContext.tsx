@@ -113,12 +113,8 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
         await setSetting('googleUser', nextUser);
         setUser(nextUser);
       },
-      // This fires when Supabase auto-refreshes its JWT — piggyback Drive token refresh
-      async () => {
-        console.log('Supabase TOKEN_REFRESHED → refreshing Google Drive token');
-        const refreshed = await forceRefreshDriveToken();
-        if (refreshed) setUser(refreshed);
-      },
+      // Drive integration removed — no Drive token to refresh on TOKEN_REFRESHED.
+      async () => {},
     );
     return () => unsubscribe();
   }, [user?.uid]);
@@ -128,10 +124,6 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     backgroundTokenRefresh().catch(() => {});
-
-    // TEMP DISABLED — two-way Google Calendar sync (pending Google scope
-    // verification). Re-enable once scopes are approved.
-    // startCalendarAutoSync();
 
     refreshTimerRef.current = setInterval(() => {
       backgroundTokenRefresh().then(async () => {
@@ -156,32 +148,16 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
       }).catch(() => {});
     };
 
-    const handleReauthNeeded = () => {
-      console.log('Drive re-auth needed — showing Reconnect Sync button');
-      window.dispatchEvent(new CustomEvent('syncStatusChanged', { detail: { status: 'reauth' } }));
-    };
-
-    const handleSyncReconnected = () => {
-      setTimeout(() => {
-        window.dispatchEvent(new Event('triggerManualSync'));
-      }, 2000);
-    };
-    window.addEventListener('syncReconnected', handleSyncReconnected);
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
-    window.addEventListener('driveReauthNeeded', handleReauthNeeded);
 
     return () => {
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
-      window.removeEventListener('driveReauthNeeded', handleReauthNeeded);
-      window.removeEventListener('syncReconnected', handleSyncReconnected);
-      // TEMP DISABLED — see note above.
-      // stopCalendarAutoSync();
     };
   }, [user?.email]);
+
 
   const signIn = useCallback(async (explicit = false): Promise<GoogleUser> => {
     setIsSigningIn(true);
