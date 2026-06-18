@@ -176,7 +176,7 @@ const refreshAccessTokenViaRefreshToken = async (
 
 // ── Native (@capgo/capacitor-social-login → Supabase credential) ──────────
 
-const IOS_CLIENT_ID = '425291387152-u06impgmsgg286jg7odo4f40fu6pjmb5.apps.googleusercontent.com';
+const IOS_CLIENT_ID = '425291387152-hg7uajqc20bd8t3qfb760gngbl2pd20i.apps.googleusercontent.com';
 const SERVER_CLIENT_ID = '425291387152-u06impgmsgg286jg7odo4f40fu6pjmb5.apps.googleusercontent.com';
 
 type CapgoAccessToken = { token: string } | null;
