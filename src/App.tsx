@@ -58,6 +58,7 @@ const Notes = lazy(() => import("./pages/Notes"));
 const NotesCalendar = lazy(() => import("./pages/NotesCalendar"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
+const SyncDiagnostics = lazy(() => import("./pages/SyncDiagnostics"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
 const Progress = lazy(() => import("./pages/todo/Progress"));
@@ -420,6 +421,7 @@ const AppRoutes = () => {
             <Route path="/calendar" element={<NotesCalendar />} />
             <Route path="/clip" element={<WebClipper />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/sync-diagnostics" element={<SyncDiagnostics />} />
             <Route path="/reminders" element={<Reminders />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/todo/today" element={<Today />} />
