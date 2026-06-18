@@ -86,6 +86,12 @@ export const deleteFolder = async (id: string): Promise<boolean> => {
 
   await saveFolders(filtered);
 
+  // Mirror delete to Lovable Cloud
+  import('@/utils/cloudSync/storeBridge').then(({ pushFolderDelete }) => {
+    try { pushFolderDelete(id); } catch {}
+  }).catch(() => {});
+
+
   // Track deletion for cross-device sync and upload immediately
   import('@/utils/deletionTracker').then(({ trackDeletion, loadDeletions }) => {
     trackDeletion(id, 'folders');
