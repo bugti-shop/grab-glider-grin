@@ -12,7 +12,8 @@
  */
 import { enqueueWrite } from './writeQueue';
 import { mappers, type MappedTable } from './mappers';
-import type { SyncChangeDetail, SyncRow } from './syncTables';
+import type { SyncRow } from './syncTables';
+import type { SyncChangeDetail } from './syncEngine';
 import type { Folder } from '@/utils/folderStorage';
 import type { Note, TodoItem } from '@/types/note';
 import type { Habit } from '@/types/habit';
@@ -131,7 +132,7 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
     if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
     const merged = mappers.tasks.mergeCloud(byId.get(r.id), r) as TodoItem;
     const existing = byId.get(r.id);
-    const localTs = existing?.updatedAt ? new Date(existing.updatedAt as any).getTime() : 0;
+    const localTs = (existing as any)?.updatedAt ? new Date((existing as any).updatedAt).getTime() : 0;
     const cloudTs = merged.updatedAt ? new Date(merged.updatedAt as any).getTime() : 0;
     if (!existing || localTs < cloudTs) { byId.set(r.id, merged as any); changed = true; }
   }
