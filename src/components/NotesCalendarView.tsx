@@ -313,14 +313,22 @@ export const NotesCalendarView = ({
                   </span>
                 </div>
 
-                {/* Colored chips */}
-                <div className="mt-1 flex flex-col gap-[2px] w-full overflow-hidden">
+                {/* Colored chips — clickable */}
+                <div className="mt-1 flex flex-col gap-[2px] w-full min-w-0 overflow-hidden">
                   {visible.map((chip) => (
                     <span
                       key={chip.id}
                       title={chip.label}
+                      onClick={(e) => {
+                        if (!onChipClick) return;
+                        e.stopPropagation();
+                        e.preventDefault();
+                        onChipClick(chip, day);
+                      }}
+                      role={onChipClick ? 'button' : undefined}
                       className={cn(
-                        "block w-full truncate rounded-[3px] px-1 text-[9px] leading-[12px] font-medium text-white",
+                        "block max-w-full truncate rounded-[3px] px-1 text-[9px] leading-[12px] font-medium text-white",
+                        onChipClick && "cursor-pointer active:opacity-80",
                         chip.completed && "opacity-60 line-through"
                       )}
                       style={{ backgroundColor: chip.color }}
@@ -331,7 +339,7 @@ export const NotesCalendarView = ({
                   {extra > 0 && (
                     <span
                       className={cn(
-                        "block w-full text-[9px] leading-[12px] font-semibold px-1",
+                        "block max-w-full truncate text-[9px] leading-[12px] font-semibold px-1",
                         useLightText ? "text-white/80" : "text-muted-foreground"
                       )}
                     >
@@ -339,6 +347,7 @@ export const NotesCalendarView = ({
                     </span>
                   )}
                 </div>
+
               </button>
             );
           }
