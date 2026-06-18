@@ -123,15 +123,6 @@ const HabitDetail = () => {
 
 
 
-
-  // Pill swipe-to-complete geometry — keep motion hooks before any early return.
-  const KNOB = 56;
-  const PAD = 4;
-  const maxDrag = Math.max(0, trackWidth - KNOB - PAD * 2);
-  const progress = useTransform(knobX, [0, Math.max(1, maxDrag)], [0, 1]);
-  const fillWidth = useTransform(knobX, (v) => `${KNOB + Math.max(0, v)}px`);
-  const labelOpacity = useTransform(progress, [0, 0.5], [1, 0]);
-
   const grid = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 0 });
     const end = endOfWeek(endOfMonth(month), { weekStartsOn: 0 });
@@ -177,25 +168,7 @@ const HabitDetail = () => {
   };
 
 
-  const finishSwipe = () => {
-    if (completingRef.current) return;
-    completingRef.current = true;
-    motionAnimate(knobX, maxDrag, { type: 'spring', stiffness: 420, damping: 32 });
-    toggleToday().finally(() => {
-      completingRef.current = false;
-    });
-  };
 
-  const handleDragEnd = () => {
-    if (knobX.get() >= maxDrag * 0.55) finishSwipe();
-    else motionAnimate(knobX, 0, { type: 'spring', stiffness: 380, damping: 30 });
-  };
-
-  // Tap-to-complete fallback: if user taps the knob without dragging, still check in.
-  const handleKnobTap = () => {
-    if (todayDone || completingRef.current) return;
-    finishSwipe();
-  };
 
 
   const statusFor = (d: Date): HabitDayStatus | null => {
