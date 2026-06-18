@@ -111,14 +111,9 @@ const CountdownDetail = () => {
     year: 'numeric',
   });
 
-  // When it's the same day, count down the remaining H:M:S until end of today.
-  const showHMS = days === 0 && isFuture;
-  const _now = new Date(nowTick);
-  const endOfDay = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() + 1, 0, 0, 0, 0);
-  const msLeft = Math.max(0, endOfDay.getTime() - nowTick);
-  const hLeft = Math.floor(msLeft / 3600000);
-  const mLeft = Math.floor((msLeft % 3600000) / 60000);
-  const sLeft = Math.floor((msLeft % 60000) / 1000);
+  const showToday = days === 0 && isFuture;
+
+
 
   // Unit decompositions
   const weeks = Math.floor(absDays / 7);
@@ -202,7 +197,7 @@ const CountdownDetail = () => {
                 aria-label="Toggle unit"
               >
                 {unit === 'days' && (
-                  showHMS ? (
+                  showToday ? (
                     <span className="text-7xl tracking-tight">Today</span>
                   ) : (
                     <span className="text-7xl tracking-tight">{absDays}</span>
