@@ -10,7 +10,7 @@ import com.getcapacitor.BridgeActivity;
 import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
 
 /**
- * Main Activity for Npd App
+ * Main Activity for Flowist App
  * - Google + Apple Sign-In via @capgo/capacitor-social-login (auto-registered)
  * - Edge-to-edge layout (Android 15+ / API 35)
  * - Backend: Supabase (no Firebase)
@@ -44,7 +44,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
         if (intent == null) return;
         String path = intent.getStringExtra("widget_path");
         Uri data = intent.getData();
-        if ((path == null || path.isEmpty()) && data != null && "codaib".equals(data.getScheme()) && "widget".equals(data.getHost())) {
+        if ((path == null || path.isEmpty()) && data != null && "flowist".equals(data.getScheme()) && "widget".equals(data.getHost())) {
             path = data.getPath();
             String query = data.getEncodedQuery();
             if (path != null && query != null && !query.isEmpty()) path = path + "?" + query;
