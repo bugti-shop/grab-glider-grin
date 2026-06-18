@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+
 import { format } from 'date-fns';
 import { ArrowLeft, RotateCw, Plus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,9 +48,14 @@ const STEP_DETAILS = 1;
 const HabitNew = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('id');
   const { requireCapacity } = useSubscription();
   const prefill = (location.state as { name?: string; emoji?: string; quote?: string } | null) || null;
   const [step, setStep] = useState(STEP_BASICS);
+
+  // Holds the original habit when editing — so we preserve completions, streaks, etc.
+  const editingRef = useRef<Habit | null>(null);
 
   // Basics
   const [name, setName] = useState(prefill?.name ?? '');
@@ -85,6 +91,35 @@ const HabitNew = () => {
     return () => window.removeEventListener('habitSectionsUpdated', onSec);
   }, []);
 
+  // Load existing habit when editing.
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+    (async () => {
+      const all = await loadHabits();
+      const h = all.find((x) => x.id === editId);
+      if (!h || cancelled) return;
+      editingRef.current = h;
+      setName(h.name);
+      setEmoji(h.emoji || '🍌');
+      setQuote(h.quote || QUOTES[0]);
+      setFrequency(h.frequency);
+      if (h.weeklyDays?.length) setWeeklyDays(h.weeklyDays);
+      if (h.weeklyCount) setWeeklyCount(h.weeklyCount);
+      if (h.intervalDays) setIntervalDays(h.intervalDays);
+      setGoalType(h.goalType || 'all');
+      if (h.goalAmount) setGoalAmount(h.goalAmount);
+      if (h.goalUnit) setGoalUnit(h.goalUnit);
+      if (h.startDate) setStartDate(new Date(h.startDate));
+      setGoalDays(h.goalDays || 0);
+      if (h.sectionId) setSectionId(h.sectionId);
+      if (h.reminder?.enabled) setReminderTime(h.reminder.time);
+      setAutoPopup(!!h.autoPopupLog);
+    })();
+    return () => { cancelled = true; };
+  }, [editId]);
+
+
   const toggleDay = (d: number) => {
     setWeeklyDays((prev) =>
       prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()
@@ -107,17 +142,20 @@ const HabitNew = () => {
   const handleSave = async () => {
     triggerHaptic('medium').catch(() => {});
     const existing = await loadHabits();
-    const activeCount = existing.filter((h) => !h.isArchived).length;
-    if (!requireCapacity('habits', activeCount)) return;
+    const editingExisting = editingRef.current;
+    if (!editingExisting) {
+      const activeCount = existing.filter((h) => !h.isArchived).length;
+      if (!requireCapacity('habits', activeCount)) return;
+    }
     const now = new Date().toISOString();
     const habit: Habit = {
-      id: genId(),
+      id: editingExisting?.id ?? genId(),
       name: name.trim(),
       emoji,
-      color: 'hsl(220, 85%, 59%)',
+      color: editingExisting?.color ?? 'hsl(220, 85%, 59%)',
       quote,
       frequency,
-      weeklyDays: frequency === 'weekly' ? weeklyDays : undefined,
+      weeklyDays: frequency === 'weekly' || frequency === 'daily' ? weeklyDays : undefined,
       weeklyCount: frequency === 'weekly' ? weeklyCount : undefined,
       intervalDays: frequency === 'interval' ? intervalDays : undefined,
       goalType,
@@ -128,11 +166,11 @@ const HabitNew = () => {
       sectionId,
       reminder: reminderTime ? { enabled: true, time: reminderTime } : undefined,
       autoPopupLog: autoPopup,
-      completions: [],
-      currentStreak: 0,
-      bestStreak: 0,
-      isArchived: false,
-      createdAt: now,
+      completions: editingExisting?.completions ?? [],
+      currentStreak: editingExisting?.currentStreak ?? 0,
+      bestStreak: editingExisting?.bestStreak ?? 0,
+      isArchived: editingExisting?.isArchived ?? false,
+      createdAt: editingExisting?.createdAt ?? now,
       updatedAt: now,
     };
     await saveHabit(habit);
@@ -141,6 +179,7 @@ const HabitNew = () => {
     }
     navigate('/todo/habits', { replace: true });
   };
+
 
   const handleTestReminder = async () => {
     triggerHaptic('light').catch(() => {});
@@ -154,7 +193,7 @@ const HabitNew = () => {
         <Button variant="ghost" size="icon" onClick={() => (step === STEP_BASICS ? navigate(-1) : setStep(STEP_BASICS))}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-bold text-foreground">New Habit</h1>
+        <h1 className="text-2xl font-bold text-foreground">{editId ? 'Edit Habit' : 'New Habit'}</h1>
       </header>
 
       <div className="px-3 space-y-3">

@@ -30,6 +30,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+
 
 const HabitDetail = () => {
   const { id } = useParams();
@@ -37,6 +40,10 @@ const HabitDetail = () => {
   const [habit, setHabit] = useState<Habit | null>(null);
   const [month, setMonth] = useState(new Date());
   const [expanded, setExpanded] = useState(false);
+  const [focusOpen, setFocusOpen] = useState(false);
+  const [focusSecs, setFocusSecs] = useState(25 * 60);
+  const [focusRunning, setFocusRunning] = useState(false);
+
   const trackRef = useRef<HTMLDivElement>(null);
   const [trackWidth, setTrackWidth] = useState(0);
   const knobX = useMotionValue(0);
@@ -58,6 +65,24 @@ const HabitDetail = () => {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Focus timer countdown
+  useEffect(() => {
+    if (!focusRunning) return;
+    const t = setInterval(() => {
+      setFocusSecs((s) => {
+        if (s <= 1) {
+          setFocusRunning(false);
+          triggerHaptic('heavy').catch(() => {});
+          toast.success('Focus session complete! 🎉');
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [focusRunning]);
+
 
   // Pill swipe-to-complete geometry — keep motion hooks before any early return.
   const KNOB = 56;
@@ -174,15 +199,21 @@ const HabitDetail = () => {
     triggerHaptic('light').catch(() => {});
     const text = `${habit.emoji || '✨'} ${habit.name} — ${streak} day streak (best ${bestStreak}). Total check-ins: ${totalCheckins}.`;
     try {
-      if ((navigator as any).share) await (navigator as any).share({ title: habit.name, text });
-      else { await navigator.clipboard.writeText(text); alert('Copied to clipboard'); }
+      if ((navigator as any).share) {
+        await (navigator as any).share({ title: habit.name, text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        toast.success('Copied to clipboard');
+      }
     } catch {}
   };
 
   const handleStartFocus = () => {
-    try { sessionStorage.setItem('focus:habit', JSON.stringify({ id: habit.id, name: habit.name })); } catch {}
-    navigate('/todo');
+    setFocusSecs(25 * 60);
+    setFocusRunning(false);
+    setFocusOpen(true);
   };
+
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: headerColor }}>
@@ -405,9 +436,48 @@ const HabitDetail = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Focus timer dialog */}
+      <Dialog open={focusOpen} onOpenChange={(o) => { setFocusOpen(o); if (!o) setFocusRunning(false); }}>
+        <DialogContent className="rounded-2xl max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="text-center">Focus on {habit.name}</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 flex flex-col items-center gap-4">
+            <div className="text-6xl font-bold tabular-nums">
+              {String(Math.floor(focusSecs / 60)).padStart(2, '0')}:{String(focusSecs % 60).padStart(2, '0')}
+            </div>
+            <div className="flex gap-2">
+              {[15, 25, 45].map((m) => (
+                <Button
+                  key={m}
+                  size="sm"
+                  variant={focusSecs === m * 60 && !focusRunning ? 'default' : 'outline'}
+                  onClick={() => { setFocusRunning(false); setFocusSecs(m * 60); }}
+                  disabled={focusRunning}
+                >
+                  {m}m
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setFocusRunning(false); setFocusSecs(25 * 60); }}
+            >
+              Reset
+            </Button>
+            <Button onClick={() => setFocusRunning((r) => !r)} disabled={focusSecs === 0}>
+              {focusRunning ? 'Pause' : 'Start'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
 
 const StatCard = ({ icon, label, value, unit }: { icon: React.ReactNode; label: string; value: string; unit: string }) => (
   <div className="bg-muted/40 rounded-xl p-3">
