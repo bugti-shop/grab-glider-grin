@@ -120,6 +120,11 @@ const TodoCalendar = () => {
   const [calendarLayout, setCalendarLayout] = useState<CalendarLayout>('list');
   // Prefilled due date when quick-adding from a calendar time slot
   const [quickAddDate, setQuickAddDate] = useState<Date | null>(null);
+  // Calendar chip filters — which sections (and events) appear as chips in list view
+  const [hiddenSections, setHiddenSections] = useState<Set<string>>(new Set());
+  const [hideEvents, setHideEvents] = useState(false);
+  const [hideCountdowns, setHideCountdowns] = useState(false);
+
 
   // Countdown events (shown as markers/pills in time-grid views)
   const [countdowns, setCountdowns] = useState<CountdownEvent[]>([]);
