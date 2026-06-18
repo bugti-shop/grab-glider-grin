@@ -12,7 +12,7 @@ function useSafeNavigate() {
   };
 }
 import appLogo from '@/assets/app-logo.webp';
-import heroCrown from '@/assets/paywall-hero-crown.jpg';
+import heroCrown from '@/assets/paywall-hero-logo-crown.png';
 import { useTranslation } from 'react-i18next';
 import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock, LayoutGrid, Blocks, Timer, BookOpen } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -482,6 +482,67 @@ const HERO_SLIDES = [
   { img: heroCrown, title: 'Stay organized without limits', subtitle: 'Unlock premium features across all platforms' },
 ];
 
+const USER_COMMENTS: { tag: string; title: string; body: string }[] = [
+  {
+    tag: 'Notes & Tasks',
+    title: 'Replaced 4 apps in one day',
+    body: "I deleted my notepad, to-do app, calendar, and Pomodoro timer after installing Flowist. Everything is in one place — and it works offline. I didn't realize how much app-switching was killing my focus until I stopped doing it.",
+  },
+  {
+    tag: 'Focus Timer',
+    title: 'Finally finishing what I start',
+    body: 'The Pomodoro timer changed how I study. I sit down, start a session, and actually finish my work. The session history shows me exactly how many productive hours I put in — which is weirdly motivating. Worth it just for this feature alone.',
+  },
+  {
+    tag: 'Privacy',
+    title: 'No account. No cloud. Just works.',
+    body: "I've tried every productivity app and they all want my email, cloud sync, and a monthly subscription before I can even make a note. Flowist just opens and works. My data stays on my phone. That alone made me a loyal user.",
+  },
+  {
+    tag: 'Students',
+    title: 'My entire semester lives here',
+    body: 'Lecture notes, assignment deadlines, exam countdowns, habit streaks — Flowist holds all of it. I used to have a separate app for each. Now I open one app in the morning and I know exactly what my day looks like.',
+  },
+];
+
+function Stars() {
+  return (
+    <span className="inline-flex items-center gap-[2px]" aria-label="5 out of 5 stars">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <svg key={i} width="12" height="12" viewBox="0 0 24 24" fill="#f5a524">
+          <path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.7 7-6.3-3.8L5.7 21l1.7-7L2 9.5l7.1-.6L12 2z" />
+        </svg>
+      ))}
+    </span>
+  );
+}
+
+function UserComments() {
+  return (
+    <div className="mt-6">
+      <h2 className="text-[15.5px] font-bold mb-2 px-1" style={{ color: PRO_BLUE, fontFamily: "'Nunito', sans-serif" }}>
+        User Comments
+      </h2>
+      <div className="flex flex-col gap-2.5">
+        {USER_COMMENTS.map((c) => (
+          <div key={c.title} className="rounded-xl px-3.5 py-3" style={{ background: '#161616', border: '1px solid #262626' }}>
+            <span className="inline-block text-[10.5px] font-semibold px-2 py-[2px] rounded-full mb-2"
+              style={{ background: `${PRO_BLUE}22`, color: PRO_BLUE }}>
+              {c.tag}
+            </span>
+            <div className="flex items-start justify-between gap-3 mb-1.5">
+              <h3 className="text-[13.5px] font-bold text-white leading-snug">{c.title}</h3>
+              <Stars />
+            </div>
+            <p className="text-[12.25px] leading-relaxed" style={{ color: '#c9c9c9' }}>{c.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
 function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> }) {
   const { t, selectedPlan, setSelectedPlan, isPurchasing, PLANS, currentPlan, handlePurchase, hasUsedTrial, closePaywall, handleRestore, isRestoring, adminError, capacityMessage } = logic;
 
@@ -541,7 +602,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           className="relative w-full overflow-hidden select-none"
           style={{ aspectRatio: '16 / 10', background: '#05060c' }}
         >
-          <img src={current.img} alt="" draggable={false} className="w-full h-full object-cover pointer-events-none" />
+          <img src={current.img} alt="" draggable={false} className="w-full h-full object-contain pointer-events-none" style={{ padding: '14px 0 22px' }} />
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.95) 100%)' }} />
 
           {/* Back button overlay */}
@@ -582,6 +643,10 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           <div className="mt-6">
             <ComparisonTable rows={CAPACITY_ROWS} title="10x Capacity" onRowClick={() => triggerTripleHeavyHaptic()} />
           </div>
+
+          <UserComments />
+
+
 
         <h2 className="text-[17px] font-bold mb-2 mt-6" style={{ color: PRO_BLUE, fontFamily: "'Nunito', sans-serif" }}>
           Select Your Plan

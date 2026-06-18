@@ -145,7 +145,9 @@ const HabitDetail = () => {
   const todayKey = format(new Date(), 'yyyy-MM-dd');
   const todayDone = habit.completions.some((c) => c.date === todayKey && c.completed);
 
+  const [saving, setSaving] = useState(false);
   const toggleToday = async () => {
+    if (saving) return;
     triggerHaptic('medium').catch(() => {});
     const previous = habit;
     const others = habit.completions.filter((c) => c.date !== todayKey);
@@ -158,14 +160,18 @@ const HabitDetail = () => {
     };
     // Optimistic — update UI immediately.
     setHabit(updated);
+    setSaving(true);
     try {
       await saveHabit(updated);
     } catch (err) {
       // Roll back on failure.
       setHabit(previous);
       toast.error('Could not save check-in. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
+
 
 
 
@@ -316,20 +322,25 @@ const HabitDetail = () => {
               key="check"
               type="button"
               onClick={toggleToday}
+              disabled={saving}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               whileTap={{ scale: 0.97 }}
-              className="relative w-full h-16 rounded-full overflow-hidden select-none flex items-center justify-center gap-3 text-white font-semibold text-[15px] tracking-wide"
+              className="relative w-full h-16 rounded-full overflow-hidden select-none flex items-center justify-center gap-3 text-white font-semibold text-[15px] tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:opacity-70 disabled:cursor-not-allowed"
               style={{ background: 'rgba(255,255,255,0.28)' }}
-              aria-label="Check in"
+              aria-label={saving ? 'Saving check-in' : 'Check in'}
+              aria-busy={saving}
             >
-              <span
+              <motion.span
                 className="h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center"
                 style={{ color: headerColor }}
+                animate={saving ? { scale: [1, 0.9, 1] } : { scale: 1 }}
+                transition={saving ? { duration: 0.8, repeat: Infinity } : { duration: 0.2 }}
               >
                 <Check className="h-6 w-6" strokeWidth={3} />
-              </span>
-              <span>Tap to check in</span>
+              </motion.span>
+              <span>{saving ? 'Saving…' : 'Tap to check in'}</span>
             </motion.button>
+
 
           ) : (
             <motion.div
