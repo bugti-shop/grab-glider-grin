@@ -133,7 +133,7 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
     const merged = mappers.tasks.mergeCloud(byId.get(r.id), r) as TodoItem;
     const existing = byId.get(r.id);
     const localTs = (existing as any)?.updatedAt ? new Date((existing as any).updatedAt).getTime() : 0;
-    const cloudTs = merged.updatedAt ? new Date(merged.updatedAt as any).getTime() : 0;
+    const cloudTs = (merged as any).updatedAt ? new Date((merged as any).updatedAt).getTime() : 0;
     if (!existing || localTs < cloudTs) { byId.set(r.id, merged as any); changed = true; }
   }
   if (changed) await saveTasksToDB(Array.from(byId.values()) as TodoItem[], true);
