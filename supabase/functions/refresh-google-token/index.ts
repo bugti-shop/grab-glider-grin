@@ -39,28 +39,26 @@ serve(async (req) => {
     const user = await getAuthedUser(req);
     if (!user) return json({ error: "Unauthorized" }, 401);
 
-    const body = await req.json().catch(() => ({}));
-    let refreshToken = typeof body?.refresh_token === "string" ? body.refresh_token : "";
-
+    // SECURITY: Never accept refresh tokens from the client. Always look up
+    // the stored token for the authenticated user so this endpoint cannot be
+    // used to proxy arbitrary Google token exchanges for foreign accounts.
     const admin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       { auth: { persistSession: false } },
     );
 
-    if (!refreshToken) {
-      const { data, error } = await admin
-        .from("user_refresh_tokens")
-        .select("google_refresh_token")
-        .eq("user_id", user.id)
-        .maybeSingle();
+    const { data: tokenRow, error: tokenLookupError } = await admin
+      .from("user_refresh_tokens")
+      .select("google_refresh_token")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-      if (error) {
-        console.error("[refresh-google-token] failed to load stored token", error);
-      }
-
-      refreshToken = data?.google_refresh_token ?? "";
+    if (tokenLookupError) {
+      console.error("[refresh-google-token] failed to load stored token", tokenLookupError);
     }
+
+    const refreshToken = tokenRow?.google_refresh_token ?? "";
 
     if (!refreshToken) {
       return json({ error: "No refresh token available" }, 400);

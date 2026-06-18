@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { genId } from '@/utils/genId';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { compressImage, isCompressibleImage } from '@/utils/imageCompression';
 import { useNavigate } from 'react-router-dom';
@@ -912,16 +913,17 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           sel.addRange(range);
         }
       } catch {}
+      const safeHtml = sanitizeHtml(html) + '<p><br></p>';
       let inserted = false;
       try {
-        inserted = document.execCommand('insertHTML', false, html + '<p><br></p>');
+        inserted = document.execCommand('insertHTML', false, safeHtml);
       } catch {
         inserted = false;
       }
       if (!inserted) {
         // Fallback: direct DOM append so transcript is never lost even if
         // execCommand is blocked/deprecated.
-        editor.insertAdjacentHTML('beforeend', html + '<p><br></p>');
+        editor.insertAdjacentHTML('beforeend', safeHtml);
       }
       setContent(editor.innerHTML);
     } else if (noteType === 'code') {
@@ -945,7 +947,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         toast.success(t('scanNote.copiedToClipboard', 'Extracted text copied to clipboard'));
       }
     } else {
-      setContent(prev => (prev || '') + html);
+      setContent(prev => (prev || '') + sanitizeHtml(html));
     }
   };
 
