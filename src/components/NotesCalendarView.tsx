@@ -251,32 +251,105 @@ export const NotesCalendarView = ({
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 px-2 gap-y-1 pb-4">
+      <div
+        className={cn(
+          "grid grid-cols-7 px-2 pb-4",
+          chipsEnabled ? "gap-px bg-transparent" : "gap-y-1"
+        )}
+      >
         {calendarDays.map((day, index) => {
           const isCurrentMonth = isSameMonth(day, displayMonth);
           const hasNoteOnDay = hasNote(day);
           const hasTaskOnDay = hasTask(day);
           const hasEventOnDay = hasEvent(day);
-           
+
           const isToday = isSameDay(day, today);
-          const isSelected = selectedDate && isSameDay(day, selectedDate) && !isToday;
+          const isSelected = selectedDate && isSameDay(day, selectedDate);
           const hasAnyIndicator = hasNoteOnDay || hasTaskOnDay || hasEventOnDay;
 
+          // ---------- Apple-Calendar style cell with colored chips ----------
+          if (chipsEnabled) {
+            const chips = getDayChips!(day) || [];
+            const visible = chips.slice(0, maxChipsPerDay);
+            const extra = chips.length - visible.length;
+
+            return (
+              <button
+                key={`${day.toString()}-${index}`}
+                onClick={() => onDateSelect?.(day)}
+                className={cn(
+                  "relative flex flex-col items-stretch text-left",
+                  "min-h-[78px] px-1 pt-1 pb-0.5 rounded-md transition-colors",
+                  "border border-transparent",
+                  isSelected && !isToday && (useLightText
+                    ? "bg-white/15 border-white/30"
+                    : "bg-primary/10 border-primary/40"),
+                  !isCurrentMonth && "opacity-60"
+                )}
+              >
+                {/* Day number */}
+                <div className="flex justify-center">
+                  <span
+                    className={cn(
+                      "min-w-[22px] h-[22px] px-1 flex items-center justify-center rounded-full text-[12px] font-semibold leading-none",
+                      isToday && "text-white",
+                      !isToday && !isCurrentMonth && (useLightText ? "text-white/40" : "text-muted-foreground/50"),
+                      !isToday && isCurrentMonth && (useLightText ? "text-white" : "text-foreground")
+                    )}
+                    style={{
+                      backgroundColor: isToday ? '#3c78f0' : undefined,
+                    }}
+                  >
+                    {format(day, "d")}
+                  </span>
+                </div>
+
+                {/* Colored chips */}
+                <div className="mt-1 flex flex-col gap-[2px] w-full overflow-hidden">
+                  {visible.map((chip) => (
+                    <span
+                      key={chip.id}
+                      title={chip.label}
+                      className={cn(
+                        "block w-full truncate rounded-[3px] px-1 text-[9px] leading-[12px] font-medium text-white",
+                        chip.completed && "opacity-60 line-through"
+                      )}
+                      style={{ backgroundColor: chip.color }}
+                    >
+                      {chip.label}
+                    </span>
+                  ))}
+                  {extra > 0 && (
+                    <span
+                      className={cn(
+                        "block w-full text-[9px] leading-[12px] font-semibold px-1",
+                        useLightText ? "text-white/80" : "text-muted-foreground"
+                      )}
+                    >
+                      +{extra} {t('calendar.more', 'more')}
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          }
+
+          // ---------- Default compact dot-style cell (unchanged) ----------
           return (
             <button
               key={`${day.toString()}-${index}`}
               onClick={() => onDateSelect?.(day)}
               className="h-12 flex flex-col items-center justify-center relative"
             >
-              <span 
+              <span
                 className={cn(
                   "w-10 h-10 flex items-center justify-center rounded-full text-base font-normal transition-all",
                   !isCurrentMonth && (useLightText ? "text-white/30" : "text-muted-foreground/40"),
                   isCurrentMonth && !isToday && !isSelected && !hasAnyIndicator && (useLightText ? "text-white" : "text-foreground"),
                   isCurrentMonth && !isToday && !isSelected && hasAnyIndicator && "text-white",
                   isToday && "text-white font-normal",
-                  isSelected && !isToday && !hasAnyIndicator && (useLightText 
-                    ? "text-white font-normal ring-2 ring-white/30" 
+                  isSelected && !isToday && !hasAnyIndicator && (useLightText
+                    ? "text-white font-normal ring-2 ring-white/30"
                     : "text-white font-normal ring-2 ring-white/30")
                 )}
                 style={{
@@ -295,6 +368,7 @@ export const NotesCalendarView = ({
           );
         })}
       </div>
+
 
       {/* Empty State */}
       {showEmptyState && (
