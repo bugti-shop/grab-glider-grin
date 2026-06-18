@@ -75,6 +75,8 @@ export const NotesCalendarView = ({
   onBackgroundSettingsClick,
   getDayChips,
   maxChipsPerDay = 3,
+  onChipClick,
+  headerExtras,
 }: NotesCalendarViewProps) => {
   const { t } = useTranslation();
   const resolvedEmptyMessage = emptyStateMessage || t('calendar.noNotes', 'No notes for the day.');
