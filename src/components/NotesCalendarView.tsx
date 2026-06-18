@@ -35,6 +35,10 @@ interface NotesCalendarViewProps {
   getDayChips?: (date: Date) => DayChip[];
   /** Maximum visible chips per cell (default 3). */
   maxChipsPerDay?: number;
+  /** Called when a chip inside a day cell is tapped. */
+  onChipClick?: (chip: DayChip, day: Date) => void;
+  /** Extra controls rendered in the calendar header (e.g. filter button). */
+  headerExtras?: React.ReactNode;
 }
 
 const BACKGROUND_GRADIENTS: Record<string, string | null> = {
