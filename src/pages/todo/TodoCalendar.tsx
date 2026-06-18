@@ -1290,8 +1290,13 @@ const TodoCalendar = () => {
               for (const task of itemsWithCountdowns) {
                 if (!task.dueDate) continue;
                 if (!isSameDay(new Date(task.dueDate), day)) continue;
-                const section = sections.find((s) => s.id === task.sectionId);
-                const color = section?.color
+                const isCountdown = task.id?.startsWith('countdown:');
+                if (isCountdown && hideCountdowns) continue;
+                const sectionKey = task.sectionId || 'default';
+                if (!isCountdown && hiddenSections.has(sectionKey)) continue;
+                const section = sections.find((s) => s.id === sectionKey);
+                const color = (isCountdown ? '#f59e0b' : undefined)
+                  || section?.color
                   || (task.priority ? getPriorityColor(task.priority as Priority) : undefined)
                   || '#3c78f0';
                 chips.push({
@@ -1302,20 +1307,108 @@ const TodoCalendar = () => {
                 });
               }
               // Calendar events on this day (including recurring)
-              for (const ev of events) {
-                const start = new Date(ev.startDate);
-                const onDay = isSameDay(start, day)
-                  || (ev.repeat !== 'never' && isRecurringEventOnDate(ev, day));
-                if (!onDay) continue;
-                chips.push({
-                  id: `event:${ev.id}:${day.getTime()}`,
-                  label: ev.title || t('calendar.untitledEvent', 'Event'),
-                  color: '#10b981',
-                });
+              if (!hideEvents) {
+                for (const ev of events) {
+                  const start = new Date(ev.startDate);
+                  const onDay = isSameDay(start, day)
+                    || (ev.repeat !== 'never' && isRecurringEventOnDate(ev, day));
+                  if (!onDay) continue;
+                  chips.push({
+                    id: `event:${ev.id}:${day.getTime()}`,
+                    label: ev.title || t('calendar.untitledEvent', 'Event'),
+                    color: '#10b981',
+                  });
+                }
               }
               return chips;
             }}
+            onChipClick={(chip) => {
+              if (chip.id.startsWith('event:')) {
+                const eventId = chip.id.split(':')[1];
+                const ev = events.find((e) => e.id === eventId);
+                if (ev) {
+                  setEditingEvent(ev);
+                  setIsEventEditorOpen(true);
+                }
+                return;
+              }
+              if (chip.id.startsWith('countdown:')) {
+                const cid = chip.id.split(':')[1];
+                navigate(`/todo/countdown/${cid}`);
+                return;
+              }
+              const task = itemsWithCountdowns.find((t) => t.id === chip.id);
+              if (task) setSelectedTask(task);
+            }}
+            headerExtras={
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    aria-label={t('calendar.filterChips', 'Filter sections')}
+                    className="h-7 px-2 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/60 backdrop-blur hover:bg-accent/40 text-xs font-medium"
+                  >
+                    <ListChecks className="h-3.5 w-3.5" />
+                    {(hiddenSections.size > 0 || hideEvents || hideCountdowns) && (
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-popover border shadow-lg z-50">
+                  <div className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t('calendar.showOnCalendar', 'Show on calendar')}
+                  </div>
+                  <DropdownMenuSeparator />
+                  {sortedSections.map((s) => {
+                    const isOn = !hiddenSections.has(s.id);
+                    return (
+                      <DropdownMenuItem
+                        key={s.id}
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          setHiddenSections((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(s.id)) next.delete(s.id);
+                            else next.add(s.id);
+                            return next;
+                          });
+                        }}
+                        className="cursor-pointer flex items-center justify-between gap-2"
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
+                          <span className="truncate">{s.name}</span>
+                        </span>
+                        {isOn && <Check className="h-4 w-4 text-primary" />}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={(e) => { e.preventDefault(); setHideEvents((v) => !v); }}
+                    className="cursor-pointer flex items-center justify-between gap-2"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#10b981' }} />
+                      {t('calendar.events', 'Events')}
+                    </span>
+                    {!hideEvents && <Check className="h-4 w-4 text-primary" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={(e) => { e.preventDefault(); setHideCountdowns((v) => !v); }}
+                    className="cursor-pointer flex items-center justify-between gap-2"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#f59e0b' }} />
+                      {t('calendar.countdowns', 'Countdowns')}
+                    </span>
+                    {!hideCountdowns && <Check className="h-4 w-4 text-primary" />}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            }
           />
+
+
 
         ) : calendarLayout === 'year' ? (
           <div className="px-4 py-3">
