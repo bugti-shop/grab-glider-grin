@@ -7,6 +7,8 @@ import android.os.Bundle;
 
 import com.getcapacitor.BridgeActivity;
 
+import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
+
 /**
  * Main Activity for Npd App
  * - Google + Apple Sign-In via @capgo/capacitor-social-login (auto-registered)
@@ -14,7 +16,7 @@ import com.getcapacitor.BridgeActivity;
  * - Backend: Supabase (no Firebase)
  * - Receives deep-link path from home screen widgets via "widget_path" intent extra
  */
-public class MainActivity extends BridgeActivity {
+public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,6 +32,11 @@ public class MainActivity extends BridgeActivity {
         setIntent(intent);
         storeWidgetPath(intent);
         super.onNewIntent(intent);
+    }
+
+    @Override
+    public void IHaveModifiedTheMainActivityForTheUseWithSocialLoginPlugin() {
+        // Required by @capgo/capacitor-social-login before requesting Google scopes.
     }
 
     /** Persist widget deep-link path so the web app can pick it up via Capacitor Preferences. */
