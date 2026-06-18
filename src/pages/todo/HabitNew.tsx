@@ -193,7 +193,7 @@ const HabitNew = () => {
         <Button variant="ghost" size="icon" onClick={() => (step === STEP_BASICS ? navigate(-1) : setStep(STEP_BASICS))}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-bold text-foreground">New Habit</h1>
+        <h1 className="text-2xl font-bold text-foreground">{editId ? 'Edit Habit' : 'New Habit'}</h1>
       </header>
 
       <div className="px-3 space-y-3">
