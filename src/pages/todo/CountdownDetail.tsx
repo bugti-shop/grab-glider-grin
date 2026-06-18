@@ -49,14 +49,19 @@ const CountdownDetail = () => {
   }, [id]);
 
   const next = useMemo(() => (item ? getNextOccurrence(item) : null), [item]);
-  const days = useMemo(() => (item ? getDaysUntil(item) : 0), [item]);
+  // Recompute days from nowTick so day-rollover / DST / timezone-change always
+  // updates the "Today" label without a manual refresh.
+  const days = useMemo(
+    () => (item ? getDaysUntil(item, new Date(nowTick)) : 0),
+    [item, nowTick]
+  );
 
-  // When it's the same day, tick every second so we can show H:M:S countdown.
+  // Always tick every 30s so the day boundary is detected; no HH:MM:SS needed
+  // because day 0 renders the static "Today" label.
   useEffect(() => {
-    if (days !== 0 || !next) return;
-    const t = setInterval(() => setNowTick(Date.now()), 1000);
+    const t = setInterval(() => setNowTick(Date.now()), 30_000);
     return () => clearInterval(t);
-  }, [days, next]);
+  }, []);
 
   const cycleUnit = () =>
     setUnit((u) => (u === 'days' ? 'weeks' : u === 'weeks' ? 'months' : 'days'));
