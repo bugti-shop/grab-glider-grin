@@ -209,13 +209,6 @@ async function doMigrate(report: MigrationReport): Promise<void> {
         if (changed) await saveHabitsBatch(habits);
       } catch (e) { console.warn('[legacyIdMigration] habits failed', e); }
 
-      localStorage.setItem(FLAG_KEY, 'done');
       console.info('[legacyIdMigration] complete', report);
-      return report;
-    } catch (e) {
-      console.warn('[legacyIdMigration] aborted', e);
-      return report;
-    }
-  })();
-  return runningPromise;
 }
+
