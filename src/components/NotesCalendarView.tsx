@@ -69,6 +69,8 @@ export const NotesCalendarView = ({
   showEmptyState = false,
   calendarBackground = 'none',
   onBackgroundSettingsClick,
+  getDayChips,
+  maxChipsPerDay = 3,
 }: NotesCalendarViewProps) => {
   const { t } = useTranslation();
   const resolvedEmptyMessage = emptyStateMessage || t('calendar.noNotes', 'No notes for the day.');
@@ -79,6 +81,7 @@ export const NotesCalendarView = ({
 
   const backgroundGradient = BACKGROUND_GRADIENTS[calendarBackground];
   const useLightText = needsLightText(calendarBackground);
+  const chipsEnabled = typeof getDayChips === 'function';
 
   useEffect(() => {
     if (highlightedDates) {
