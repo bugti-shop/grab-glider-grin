@@ -12,9 +12,10 @@ import { loadNotesFromDB } from '@/utils/noteStorage';
 import { getSetting } from '@/utils/settingsStorage';
 import { Note } from '@/types/note';
 import { toast } from 'sonner';
-import { Smartphone, RefreshCw, ExternalLink } from 'lucide-react';
+import { Smartphone, RefreshCw, ExternalLink, Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
 interface WidgetSettingsSheetProps {
   isOpen: boolean;
