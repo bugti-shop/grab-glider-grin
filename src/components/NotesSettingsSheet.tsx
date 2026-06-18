@@ -153,6 +153,14 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const closeForPaywall = () => {
+      if (isOpen) onClose();
+    };
+    window.addEventListener('flowist:paywall-opening', closeForPaywall);
+    return () => window.removeEventListener('flowist:paywall-opening', closeForPaywall);
+  }, [isOpen, onClose]);
+
   const loadSettings = async () => {
     setIsLoading(true);
     try {
@@ -277,7 +285,7 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
             label={t('settings.advancedEditing', 'Advanced Editing')}
             subtitle={t('settings.advancedEditingDesc', 'Smart detection for URLs, phone, email')}
             onClick={() => {
-              if (!requireProFeature('notes_settings_advanced')) return;
+              if (!isPro) { onClose(); requireProFeature('notes_settings_advanced'); return; }
               setCurrentPage('advancedEditing');
             }}
             rightElement={!isPro ? <Crown className="h-4 w-4 text-amber-500" /> : undefined}

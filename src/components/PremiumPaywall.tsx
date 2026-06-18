@@ -409,13 +409,13 @@ const FEATURE_ROWS: { label: string; free: string | 'x' | 'check'; pro: string |
 ];
 
 const CAPACITY_ROWS: { label: string; free: string; pro: string }[] = [
-  { label: 'Notes', free: '50', pro: 'Unlimited' },
-  { label: 'Folders Count', free: '9', pro: 'Unlimited' },
-  { label: 'Task Count', free: '99 per folder', pro: 'Unlimited' },
+  { label: 'Calendar View', free: 'Basic', pro: 'Month/Week/3-Day' },
   { label: 'Attachment', free: '1/day', pro: '200/day' },
   { label: 'Habit Count', free: '5', pro: '300' },
   { label: 'Countdown', free: '5', pro: '300' },
-  { label: 'Calendar View', free: 'Basic', pro: 'Month/Week/3-Day' },
+  { label: 'Notes', free: '50', pro: 'Unlimited' },
+  { label: 'Folders Count', free: '9', pro: 'Unlimited' },
+  { label: 'Task Count', free: '99 per folder', pro: 'Unlimited' },
   { label: 'Widgets', free: 'Basic', pro: 'Unlimited' },
   { label: 'Themes', free: 'Basic', pro: 'Unlimited' },
 ];
@@ -494,7 +494,6 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
     const previousBodyOverflow = body.style.overflow;
     const previousBodyPointer = body.style.pointerEvents;
     html.style.overflow = 'hidden';
-    body.style.overflow = 'hidden';
 
     // Defeat Radix Dialog/Sheet scroll-lock & pointer-events lockdown that
     // can leave the paywall un-scrollable when it opens from inside an open
@@ -505,7 +504,6 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
       // Radix also sets these inline when it locks scroll
       body.style.removeProperty('margin-right');
       body.style.removeProperty('overflow');
-      body.style.overflow = 'hidden';
     };
     neutralize();
     const observer = new MutationObserver(neutralize);
@@ -514,8 +512,12 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
     return () => {
       observer.disconnect();
       html.style.overflow = previousHtmlOverflow;
-      body.style.overflow = previousBodyOverflow;
-      body.style.pointerEvents = previousBodyPointer;
+      body.removeAttribute('data-scroll-locked');
+      body.style.removeProperty('margin-right');
+      if (previousBodyOverflow && previousBodyOverflow !== 'hidden') body.style.overflow = previousBodyOverflow;
+      else body.style.removeProperty('overflow');
+      if (previousBodyPointer && previousBodyPointer !== 'none') body.style.pointerEvents = previousBodyPointer;
+      else body.style.removeProperty('pointer-events');
     };
   }, []);
 
@@ -530,8 +532,8 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
         touchAction: 'auto',
         pointerEvents: 'auto',
       }}>
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
-        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', pointerEvents: 'auto', paddingBottom: 'calc(150px + var(--safe-bottom, 0px))' }}>
+      <div className="flex-1 min-h-0 overflow-y-scroll overscroll-contain"
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', pointerEvents: 'auto', paddingBottom: 'calc(170px + var(--safe-bottom, 0px))' }}>
 
 
         {/* Hero — compact single image (no carousel) */}

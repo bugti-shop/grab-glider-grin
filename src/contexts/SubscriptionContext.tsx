@@ -1389,6 +1389,14 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
   // ==================== Feature Gating ====================
 
+  const showFeaturePaywall = useCallback((feature: string | null) => {
+    try {
+      window.dispatchEvent(new CustomEvent('flowist:paywall-opening', { detail: { feature } }));
+    } catch {}
+    setPaywallFeature(feature);
+    setShowPaywall(true);
+  }, []);
+
   const canUseFeature = useCallback((feature: PremiumFeature): boolean => {
     // Sketch editor is FREE for everyone (collab remains Pro).
     if (feature === 'sketch') return true;
@@ -1407,30 +1415,26 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     if (feature === 'ai_dictation') {
       const hasRealPro = rcIsPro || isAdminBypass;
       if (hasRealPro) return true;
-      setPaywallFeature(feature);
-      setShowPaywall(true);
+      showFeaturePaywall(feature);
       return false;
     }
     if ((RECURRING_ONLY_FEATURES as readonly string[]).includes(feature)) {
       if (isRecurringSubscriber) return true;
-      setPaywallFeature(feature);
-      setShowPaywall(true);
+      showFeaturePaywall(feature);
       return false;
     }
     if (isPro) return true;
-    setPaywallFeature(feature);
-    setShowPaywall(true);
+    showFeaturePaywall(feature);
     return false;
-  }, [isPro, isRecurringSubscriber, rcIsPro, isAdminBypass]);
+  }, [isPro, isRecurringSubscriber, rcIsPro, isAdminBypass, showFeaturePaywall]);
 
   const openPaywall = useCallback((feature?: string, options?: { daily?: boolean }) => {
     if (options?.daily) {
       if (!canShowAutomaticPaywallToday()) return;
       markPaywallShownToday();
     }
-    setPaywallFeature(feature || null);
-    setShowPaywall(true);
-  }, []);
+    showFeaturePaywall(feature || null);
+  }, [showFeaturePaywall]);
 
   const closePaywall = useCallback(() => {
     // Paywall is always dismissable via the close (X) button. Hard feature gating
@@ -1507,12 +1511,12 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       setPaywallFeature(`soft_limit_${kind}`);
       if (canShowAutomaticPaywallToday()) {
         markPaywallShownToday();
-        setShowPaywall(true);
+        showFeaturePaywall(`soft_limit_${kind}`);
       }
       return false;
     }
     return true;
-  }, [isPro]);
+  }, [isPro, showFeaturePaywall]);
 
   // Returns true when allowed to mutate.
   // Pro/trial-active users: always allowed.
@@ -1523,12 +1527,12 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       setPaywallFeature('trial_expired');
       if (canShowAutomaticPaywallToday()) {
         markPaywallShownToday();
-        setShowPaywall(true);
+        showFeaturePaywall('trial_expired');
       }
       return false;
     }
     return true;
-  }, [isPro, localTrialExpired]);
+  }, [isPro, localTrialExpired, showFeaturePaywall]);
 
   // === Free Plan capacity gating (current-count) ===
   const capacityLimit = useCallback((kind: CapacityKind): number => {
@@ -1544,19 +1548,17 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const requireCapacity = useCallback((kind: CapacityKind, currentCount: number): boolean => {
     if (isPro) return true;
     if (currentCount < FREE_CAPACITY_LIMITS[kind]) return true;
-    setPaywallFeature(`capacity_${kind}`);
-    setShowPaywall(true);
+    showFeaturePaywall(`capacity_${kind}`);
     return false;
-  }, [isPro]);
+  }, [isPro, showFeaturePaywall]);
 
   // Generic "require pro" for arbitrary feature strings (e.g. 'pomodoro', 'reading_mode').
   // Returns true when access is allowed; opens paywall with the feature key otherwise.
   const requireProFeature = useCallback((feature: string): boolean => {
     if (isPro) return true;
-    setPaywallFeature(feature);
-    setShowPaywall(true);
+    showFeaturePaywall(feature);
     return false;
-  }, [isPro]);
+  }, [isPro, showFeaturePaywall]);
 
 
 

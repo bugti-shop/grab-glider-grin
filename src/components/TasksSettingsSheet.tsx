@@ -119,6 +119,14 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const closeForPaywall = () => {
+      if (isOpen) onClose();
+    };
+    window.addEventListener('flowist:paywall-opening', closeForPaywall);
+    return () => window.removeEventListener('flowist:paywall-opening', closeForPaywall);
+  }, [isOpen, onClose]);
+
   const loadSettings = async () => {
     setIsLoading(true);
     try {
@@ -206,7 +214,7 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
             label={t('settings.defaultSettings', 'Default Settings')}
             subtitle={t('settings.defaultSettingsDesc', 'Priority, due date defaults')}
             onClick={() => {
-              if (!requireProFeature('tasks_default_advanced')) return;
+              if (!isPro) { onClose(); requireProFeature('tasks_default_advanced'); return; }
               setCurrentPage('defaults');
             }}
             rightElement={!isPro ? <Crown className="h-4 w-4 text-amber-500" /> : undefined}
@@ -234,7 +242,7 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
             label={t('settings.prioritySettings', 'Priority Settings')}
             subtitle={t('settings.prioritySettingsDesc', 'Customize priority colors')}
             onClick={() => {
-              if (!requireProFeature('tasks_default_advanced')) return;
+              if (!isPro) { onClose(); requireProFeature('tasks_default_advanced'); return; }
               setCurrentPage('priorities');
             }}
             rightElement={!isPro ? <Crown className="h-4 w-4 text-amber-500" /> : undefined}
