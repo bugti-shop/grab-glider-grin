@@ -255,6 +255,9 @@ if (Capacitor.isNativePlatform()) {
 // Warm settings cache in background (non-blocking)
 warmSettingsCache().catch(() => {});
 
+// Background sync worker (web only, production builds only — guarded internally)
+import('./utils/cloudSync/registerSyncWorker').then(m => m.registerSyncWorker()).catch(() => {});
+
 // Initialize native social-login plugin EARLY on iOS/Android.
 // Capgo's SocialLogin requires initialize() before login() — otherwise the
 // native sheet may open but the JS callback never fires.
