@@ -162,6 +162,25 @@ const HabitDetail = () => {
     navigate(-1);
   };
 
+  const handleEdit = () => navigate(`/todo/habits/new?id=${habit.id}`);
+
+  const handleArchive = async () => {
+    const updated: Habit = { ...habit, isArchived: !habit.isArchived, updatedAt: new Date().toISOString() };
+    await saveHabit(updated);
+    setHabit(updated);
+  };
+
+  const handleShare = async () => {
+    triggerHaptic('light').catch(() => {});
+    const text = `${habit.emoji || '✨'} ${habit.name} — ${streak} day streak (best ${bestStreak}). Total check-ins: ${totalCheckins}.`;
+    try {
+      if ((navigator as any).share) await (navigator as any).share({ title: habit.name, text });
+      else { await navigator.clipboard.writeText(text); alert('Copied to clipboard'); }
+    } catch {}
+  };
+
+  const handleStartFocus = () => navigate('/todo/focus');
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: headerColor }}>
       {/* Decorative blobs */}
