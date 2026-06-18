@@ -73,43 +73,45 @@ const HabitDetail = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  // Restore persisted focus timer on mount / id change.
+  // Restore persisted focus timer on mount / id change. Reopens the dialog for
+  // both running and paused sessions so a refresh resumes the same habit.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(focusKey);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as { endAt?: number; remaining?: number; running?: boolean; duration?: number };
-      if (saved.running && saved.endAt) {
-        const remaining = Math.max(0, Math.round((saved.endAt - Date.now()) / 1000));
-        if (remaining > 0) {
-          setFocusSecs(remaining);
-          setFocusRunning(true);
-          setFocusOpen(true);
-        } else {
-          localStorage.removeItem(focusKey);
-        }
-      } else if (typeof saved.remaining === 'number' && saved.remaining > 0) {
-        setFocusSecs(saved.remaining);
-        setFocusRunning(false);
-      }
-    } catch {}
-  }, [focusKey]);
-
-  // Persist focus timer whenever it changes.
-  useEffect(() => {
-    try {
-      if (focusRunning) {
-        const endAt = Date.now() + focusSecs * 1000;
-        localStorage.setItem(focusKey, JSON.stringify({ running: true, endAt, duration: focusSecs }));
-      } else if (focusSecs > 0 && focusSecs !== 25 * 60) {
-        localStorage.setItem(focusKey, JSON.stringify({ running: false, remaining: focusSecs }));
+    if (!id) return;
+    const saved = readFocus(id);
+    if (!saved) return;
+    if (saved.running && saved.endAt) {
+      const remaining = Math.max(0, Math.round((saved.endAt - Date.now()) / 1000));
+      if (remaining > 0) {
+        setFocusSecs(remaining);
+        setFocusRunning(true);
+        setFocusOpen(true);
       } else {
-        localStorage.removeItem(focusKey);
+        clearFocus(id);
+        clearActiveFocus();
       }
-    } catch {}
-    // Only re-persist when running flips or when paused-seconds change meaningfully.
+    } else if (typeof saved.remaining === 'number' && saved.remaining > 0) {
+      setFocusSecs(saved.remaining);
+      setFocusRunning(false);
+      setFocusOpen(true);
+    }
+  }, [id]);
+
+  // Persist focus timer + active pointer whenever it changes.
+  useEffect(() => {
+    if (!id) return;
+    if (focusRunning) {
+      const endAt = Date.now() + focusSecs * 1000;
+      writeFocus(id, { running: true, endAt, duration: focusSecs });
+      setActiveFocus(id, endAt);
+    } else if (focusOpen && focusSecs > 0) {
+      writeFocus(id, { running: false, remaining: focusSecs });
+      setActiveFocus(id);
+    } else {
+      clearFocus(id);
+      clearActiveFocus();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusRunning, focusKey]);
+  }, [focusRunning, focusOpen, id]);
 
   // Focus timer countdown
   useEffect(() => {
@@ -120,14 +122,14 @@ const HabitDetail = () => {
           setFocusRunning(false);
           triggerHaptic('heavy').catch(() => {});
           toast.success('Focus session complete! 🎉');
-          try { localStorage.removeItem(focusKey); } catch {}
+          if (id) { clearFocus(id); clearActiveFocus(); }
           return 0;
         }
         return s - 1;
       });
     }, 1000);
     return () => clearInterval(t);
-  }, [focusRunning, focusKey]);
+  }, [focusRunning, id]);
 
 
 
