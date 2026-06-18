@@ -33,6 +33,7 @@ const CountdownDetail = () => {
   const [item, setItem] = useState<CountdownEvent | null>(null);
   const [unit, setUnit] = useState<UnitMode>('days');
   const [loading, setLoading] = useState(true);
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   useEffect(() => {
     const load = async () => {
@@ -49,6 +50,13 @@ const CountdownDetail = () => {
 
   const next = useMemo(() => (item ? getNextOccurrence(item) : null), [item]);
   const days = useMemo(() => (item ? getDaysUntil(item) : 0), [item]);
+
+  // When it's the same day, tick every second so we can show H:M:S countdown.
+  useEffect(() => {
+    if (days !== 0 || !next) return;
+    const t = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [days, next]);
 
   const cycleUnit = () =>
     setUnit((u) => (u === 'days' ? 'weeks' : u === 'weeks' ? 'months' : 'days'));
