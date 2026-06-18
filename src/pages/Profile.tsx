@@ -405,27 +405,26 @@ export default function Profile() {
         <div className="mt-4">
           {user ? (
             <div className="space-y-2">
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('openSyncProgressSheet'));
-                    triggerSync();
-                  }}
-                  disabled={isSyncing}
-                  className="flex-1 h-11 rounded-lg px-4 py-2.5 text-sm font-bold bg-primary text-primary-foreground border-b-4 border-[hsl(var(--primary-darker))] shadow-[0_10px_22px_hsl(var(--primary)/0.22)] hover:bg-[hsl(var(--primary-dark))] active:border-b-0 active:translate-y-1"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? t('profile.uploading', 'Uploading...') : t('profile.uploadToCloud', 'Upload to Cloud')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="rounded-xl h-11 w-11 border-destructive/30 text-destructive hover:bg-destructive/10"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('openSyncProgressSheet'));
+                  triggerSync();
+                }}
+                disabled={isSyncing}
+                className="w-full h-11 rounded-lg px-4 py-2.5 text-sm font-bold bg-primary text-primary-foreground border-b-4 border-[hsl(var(--primary-darker))] shadow-[0_10px_22px_hsl(var(--primary)/0.22)] hover:bg-[hsl(var(--primary-dark))] active:border-b-0 active:translate-y-1"
+              >
+                <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? t('profile.uploading', 'Uploading...') : t('profile.uploadToCloud', 'Upload to Cloud')}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSignOut}
+                className="w-full h-10 rounded-lg text-sm font-medium border-destructive/30 text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                {t('profile.signOutGoogle', 'Sign out of Google')}
+              </Button>
+
               <Button
                 variant="outline"
                 onClick={async () => {
