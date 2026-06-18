@@ -287,16 +287,15 @@ const hasActiveRevenueCatAccess = (info: CustomerInfo | null | undefined): boole
 };
 
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
-  // Local state
-  const [localProAccess, setLocalProAccess] = useState(() => {
-    try { return localStorage.getItem('flowist_admin_bypass') === 'true'; } catch { return false; }
-  });
+  // SECURITY: admin-bypass state is NEVER seeded from localStorage (trivially set
+  // via devtools to unlock Pro). The real value loads asynchronously from the
+  // settings store (IndexedDB) — see effect around line 450.
+  const [localProAccess, setLocalProAccess] = useState(false);
   // If cached as subscribed, skip local loading entirely — instant access
   const [localLoading, setLocalLoading] = useState(() => {
     try {
       if (!Capacitor.isNativePlatform() && localStorage.getItem('flowist_stripe_subscribed') === 'true') return false;
       if (Capacitor.isNativePlatform() && localStorage.getItem('flowist_rc_entitled') === 'true') return false;
-      if (localStorage.getItem('flowist_admin_bypass') === 'true') return false;
     } catch {}
     return true;
   });
@@ -307,7 +306,6 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     try {
       // If previously verified as subscribed, don't show paywall on mount
       if (localStorage.getItem('flowist_stripe_subscribed') === 'true') return false;
-      if (localStorage.getItem('flowist_admin_bypass') === 'true') return false;
     } catch {}
     return false;
   });
@@ -356,16 +354,15 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [listenerHandle, setListenerHandle] = useState<PurchasesCallbackId | null>(null);
-  const [isAdminBypass, setIsAdminBypass] = useState(() => {
-    try { return localStorage.getItem('flowist_admin_bypass') === 'true'; } catch { return false; }
-  });
+  // SECURITY: never seed admin-bypass from localStorage; load from IndexedDB-backed
+  // settings store asynchronously.
+  const [isAdminBypass, setIsAdminBypass] = useState(false);
   // If locally cached as subscribed AND cache is fresh, mark as resolved to avoid loading state
   const [isWebSubscriptionResolved, setIsWebSubscriptionResolved] = useState(() => {
     if (Capacitor.isNativePlatform()) return true;
     try {
       if (localStorage.getItem('flowist_stripe_subscribed') === 'true'
         && isCacheFresh('flowist_sub_verified_at', STRIPE_CACHE_MAX_AGE_MS)) return true;
-      if (localStorage.getItem('flowist_admin_bypass') === 'true') return true;
     } catch {}
     return false;
   });
@@ -1444,9 +1441,11 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const unlockPro = useCallback(async () => {
+    // SECURITY: persist admin bypass only in the IndexedDB-backed settings store.
+    // Never mirror to localStorage — that key would be trivially tampered with
+    // via devtools to unlock Pro client-side.
     await setSetting('flowist_admin_bypass', true);
     try {
-      localStorage.setItem('flowist_admin_bypass', 'true');
       localStorage.setItem('flowist_user_engaged', 'true');
       localStorage.setItem('onboarding_completed_flag', 'true');
     } catch {}
