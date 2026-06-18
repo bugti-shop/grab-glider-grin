@@ -142,17 +142,20 @@ const HabitNew = () => {
   const handleSave = async () => {
     triggerHaptic('medium').catch(() => {});
     const existing = await loadHabits();
-    const activeCount = existing.filter((h) => !h.isArchived).length;
-    if (!requireCapacity('habits', activeCount)) return;
+    const editingExisting = editingRef.current;
+    if (!editingExisting) {
+      const activeCount = existing.filter((h) => !h.isArchived).length;
+      if (!requireCapacity('habits', activeCount)) return;
+    }
     const now = new Date().toISOString();
     const habit: Habit = {
-      id: genId(),
+      id: editingExisting?.id ?? genId(),
       name: name.trim(),
       emoji,
-      color: 'hsl(220, 85%, 59%)',
+      color: editingExisting?.color ?? 'hsl(220, 85%, 59%)',
       quote,
       frequency,
-      weeklyDays: frequency === 'weekly' ? weeklyDays : undefined,
+      weeklyDays: frequency === 'weekly' || frequency === 'daily' ? weeklyDays : undefined,
       weeklyCount: frequency === 'weekly' ? weeklyCount : undefined,
       intervalDays: frequency === 'interval' ? intervalDays : undefined,
       goalType,
@@ -163,11 +166,11 @@ const HabitNew = () => {
       sectionId,
       reminder: reminderTime ? { enabled: true, time: reminderTime } : undefined,
       autoPopupLog: autoPopup,
-      completions: [],
-      currentStreak: 0,
-      bestStreak: 0,
-      isArchived: false,
-      createdAt: now,
+      completions: editingExisting?.completions ?? [],
+      currentStreak: editingExisting?.currentStreak ?? 0,
+      bestStreak: editingExisting?.bestStreak ?? 0,
+      isArchived: editingExisting?.isArchived ?? false,
+      createdAt: editingExisting?.createdAt ?? now,
       updatedAt: now,
     };
     await saveHabit(habit);
@@ -176,6 +179,7 @@ const HabitNew = () => {
     }
     navigate('/todo/habits', { replace: true });
   };
+
 
   const handleTestReminder = async () => {
     triggerHaptic('light').catch(() => {});
