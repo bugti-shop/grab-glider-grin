@@ -40,6 +40,10 @@ const HabitDetail = () => {
   const [habit, setHabit] = useState<Habit | null>(null);
   const [month, setMonth] = useState(new Date());
   const [expanded, setExpanded] = useState(false);
+  const [focusOpen, setFocusOpen] = useState(false);
+  const [focusSecs, setFocusSecs] = useState(25 * 60);
+  const [focusRunning, setFocusRunning] = useState(false);
+
   const trackRef = useRef<HTMLDivElement>(null);
   const [trackWidth, setTrackWidth] = useState(0);
   const knobX = useMotionValue(0);
