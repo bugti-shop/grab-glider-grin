@@ -15,7 +15,9 @@ import {
 import {
   ArrowLeft, MoreVertical, ChevronLeft, ChevronRight,
   CheckCircle2, CalendarCheck, Percent, Activity, Trash2, Check, Share2, ChevronUp,
+  Pencil, Target, Archive,
 } from 'lucide-react';
+
 import { m as motion, AnimatePresence, useMotionValue, useTransform, animate as motionAnimate } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Habit, HabitDayStatus } from '@/types/habit';
