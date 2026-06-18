@@ -32,6 +32,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import {
+  readFocus, writeFocus, clearFocus,
+  setActiveFocus, clearActiveFocus, cleanupStaleFocusKeys,
+} from '@/utils/focusSession';
 
 
 const HabitDetail = () => {
