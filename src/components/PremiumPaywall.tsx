@@ -583,6 +583,10 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
             <ComparisonTable rows={CAPACITY_ROWS} title="10x Capacity" onRowClick={() => triggerTripleHeavyHaptic()} />
           </div>
 
+          <UserComments />
+
+
+
         <h2 className="text-[17px] font-bold mb-2 mt-6" style={{ color: PRO_BLUE, fontFamily: "'Nunito', sans-serif" }}>
           Select Your Plan
         </h2>
