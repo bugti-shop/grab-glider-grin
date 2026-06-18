@@ -198,9 +198,7 @@ const CountdownDetail = () => {
               >
                 {unit === 'days' && (
                   showHMS ? (
-                    <span className="text-5xl tracking-tight tabular-nums">
-                      {String(hLeft).padStart(2, '0')}:{String(mLeft).padStart(2, '0')}:{String(sLeft).padStart(2, '0')}
-                    </span>
+                    <span className="text-7xl tracking-tight">Today</span>
                   ) : (
                     <span className="text-7xl tracking-tight">{absDays}</span>
                   )
