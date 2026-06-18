@@ -17,6 +17,7 @@ import type { SyncChangeDetail } from './syncEngine';
 import type { Folder } from '@/utils/folderStorage';
 import type { Note, TodoItem } from '@/types/note';
 import type { Habit } from '@/types/habit';
+import { recordConflict, recordListenerEvent } from './diagnostics';
 
 let installed = false;
 
@@ -105,6 +106,9 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
     if (r.is_deleted) { byId.delete(r.id); continue; }
     const existing = byId.get(r.id);
     if (!existing || existing.updatedAt < mapped.updatedAt) byId.set(r.id, mapped);
+    else if (existing.updatedAt.getTime() > mapped.updatedAt.getTime()) {
+      recordConflict({ table: 'folders', rowId: r.id, localUpdatedAt: +existing.updatedAt, cloudUpdatedAt: +mapped.updatedAt, resolution: 'kept_local' });
+    }
   }
   await saveFolders(Array.from(byId.values()));
 }
@@ -119,6 +123,8 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
     const existing = byId.get(r.id);
     if (!existing || (existing.updatedAt as Date) < (merged.updatedAt as Date)) {
       await saveNoteToDBSingle(merged);
+    } else if (+(existing.updatedAt as Date) > +(merged.updatedAt as Date)) {
+      recordConflict({ table: 'notes', rowId: r.id, localUpdatedAt: +(existing.updatedAt as Date), cloudUpdatedAt: +(merged.updatedAt as Date), resolution: 'kept_local' });
     }
   }
 }
@@ -135,6 +141,9 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
     const localTs = (existing as any)?.updatedAt ? new Date((existing as any).updatedAt).getTime() : 0;
     const cloudTs = (merged as any).updatedAt ? new Date((merged as any).updatedAt).getTime() : 0;
     if (!existing || localTs < cloudTs) { byId.set(r.id, merged as any); changed = true; }
+    else if (localTs > cloudTs) {
+      recordConflict({ table: 'tasks', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
+    }
   }
   if (changed) await saveTasksToDB(Array.from(byId.values()) as TodoItem[], true);
 }
@@ -150,6 +159,9 @@ async function applyHabitsFromCloud(rows: SyncRow[]) {
     const localTs = existing ? new Date((existing as any).updatedAt ?? 0).getTime() : 0;
     const cloudTs = new Date((merged as any).updatedAt ?? 0).getTime();
     if (!existing || localTs < cloudTs) await saveHabit(merged);
+    else if (localTs > cloudTs) {
+      recordConflict({ table: 'habits', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
+    }
   }
 }
 
