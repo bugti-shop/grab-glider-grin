@@ -113,11 +113,11 @@ export const FREE_LIMITS = {
 // Free user lifetime limits — applies to ALL free users (not just brand-new).
 // These are LIFETIME counts: deleting items does NOT free up quota. User must upgrade to Pro.
 export const SOFT_FREE_LIMITS = {
-  notes: 50,
-  tasks: 891,
-  noteFolders: 9,
-  taskFolders: 9,
-  taskSections: 10,
+  notes: 30,
+  tasks: 190, // 5 folders × 38 tasks
+  noteFolders: 5,
+  taskFolders: 5,
+  taskSections: 3,
 } as const;
 
 export type SoftLimitKind = keyof typeof SOFT_FREE_LIMITS;
@@ -126,22 +126,23 @@ export type SoftLimitKind = keyof typeof SOFT_FREE_LIMITS;
 // These complement SOFT_FREE_LIMITS and are checked at create time using the
 // CURRENT count for the relevant scope (per folder / per task / per day / global).
 export const FREE_CAPACITY_LIMITS = {
-  habits: 5,                      // global
-  noteFolders: 9,                 // global
-  taskFolders: 9,                 // global
-  notes: 50,                      // global
+  habits: 3,                      // global
+  noteFolders: 5,                 // global (separate from task folders)
+  taskFolders: 5,                 // global (separate from note folders)
+  notes: 30,                      // global
   tags: 20,                       // global
-  countdowns: 5,                  // global
-  sectionsPerFolder: 10,          // per task folder
-  tasksPerFolder: 99,             // per task folder
+  countdowns: 2,                  // global
+  sectionsPerFolder: 3,           // per task folder
+  tasksPerFolder: 38,             // per task folder
   subtasksPerTask: 19,            // per task
-  remindersPerTask: 2,            // per task
+  remindersPerTask: 1,            // per task
   attachmentsPerDay: 1,           // per calendar day
   darkThemes: 1,                  // only 1 dark theme free
   eisenhowerTasksPerQuadrant: 10, // per quadrant
   smartListsCustom: 2,            // saved custom smart views
   blocksAdvancedPerNote: 3,       // per note (image/file/toggle/callout/template)
   calendarViews: 1,               // only "month"
+  widgets: 1,                     // only Notes widget is free
 } as const;
 
 export type CapacityKind = keyof typeof FREE_CAPACITY_LIMITS;
