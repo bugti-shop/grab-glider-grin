@@ -348,7 +348,8 @@ const TodoSettings = () => {
             />
             <SettingsRow 
               label={t('settings.noteTypeVisibility', 'Note Type Visibility')}
-              onClick={() => setShowNoteTypeVisibilitySheet(true)} 
+              icon={!isPro ? <Crown className="h-4 w-4" fill="#FFD700" color="#FFD700" /> : undefined}
+              onClick={() => { if (requireFeature('notes_type_visibility')) setShowNoteTypeVisibilitySheet(true); }} 
             />
             <SettingsRow 
               label={t('settings.notesSettings', 'Notes Settings')}
