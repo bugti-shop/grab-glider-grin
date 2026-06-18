@@ -12,17 +12,10 @@ const CLIENT_ID = '425291387152-u06impgmsgg286jg7odo4f40fu6pjmb5.apps.googleuser
 
 const SUPABASE_FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-// Include Drive scopes for both native and web
-const DRIVE_SCOPES = [
-  'https://www.googleapis.com/auth/drive.appdata',
-  'https://www.googleapis.com/auth/drive.file',
-];
-// Calendar scopes — read events + create/update/delete (two-way sync)
-const CALENDAR_SCOPES = [
-  'https://www.googleapis.com/auth/calendar.readonly',
-  'https://www.googleapis.com/auth/calendar.events',
-];
-const NATIVE_SCOPES = ['openid', 'email', 'profile', ...DRIVE_SCOPES, ...CALENDAR_SCOPES];
+// Auth-only scopes — Drive and Calendar integrations removed
+const DRIVE_SCOPES: string[] = [];
+const CALENDAR_SCOPES: string[] = [];
+const NATIVE_SCOPES = ['openid', 'email', 'profile'];
 
 const SESSION_TTL = 365 * 24 * 3600 * 1000; // 1 year session
 const ACCESS_TOKEN_TTL = 3500 * 1000; // ~58 min
@@ -31,14 +24,8 @@ const WEB_REFRESH_RETRY_COUNT = 1;
 const NATIVE_REFRESH_RETRY_COUNT = 2;
 const NATIVE_SIGN_IN_TIMEOUT_MS = 45_000;
 
-// Debounce driveReauthNeeded to avoid spamming
-let lastReauthEventTime = 0;
-const REAUTH_EVENT_COOLDOWN = 5 * 60 * 1000;
-const emitReauthNeeded = () => {
-  if (Date.now() - lastReauthEventTime < REAUTH_EVENT_COOLDOWN) return;
-  lastReauthEventTime = Date.now();
-  window.dispatchEvent(new CustomEvent('driveReauthNeeded'));
-};
+// No-op: Drive integration removed
+const emitReauthNeeded = () => {};
 
 const NATIVE_LOGIN_OPTIONS = {
   scopes: NATIVE_SCOPES,
