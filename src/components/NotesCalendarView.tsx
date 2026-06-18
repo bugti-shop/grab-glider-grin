@@ -206,15 +206,18 @@ export const NotesCalendarView = ({
         </div>
         
         <div className="flex items-center gap-1">
+          {headerExtras}
           <button
             onClick={handleGoToToday}
             className={cn(
-              "p-1.5 hover:bg-accent/50 rounded-full transition-colors",
-              useLightText && "hover:bg-white/20"
+              "px-2.5 h-7 rounded-full text-xs font-semibold transition-colors border",
+              useLightText
+                ? "text-white border-white/30 hover:bg-white/20"
+                : "text-primary border-primary/30 hover:bg-primary/10"
             )}
             aria-label="Go to today"
           >
-            <ChevronDown className={cn("w-5 h-5", useLightText ? "text-white/80" : "text-muted-foreground")} />
+            {t('calendar.today', 'Today')}
           </button>
           
           <DropdownMenu>
