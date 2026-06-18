@@ -30,6 +30,7 @@ interface TaskSection {
 
 export const WidgetSettingsSheet = ({ isOpen, onClose }: WidgetSettingsSheetProps) => {
   const { t } = useTranslation();
+  const { isPro, requireProFeature } = useSubscription();
   const [widgetConfigs, setWidgetConfigs] = useState<WidgetConfig[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [sections, setSections] = useState<TaskSection[]>([]);
