@@ -15,6 +15,7 @@ import { Capacitor } from '@capacitor/core';
 export function useCloudSync(): void {
   useEffect(() => {
     let mounted = true;
+    installCloudListener();
 
     const handle = (userId: string | null) => {
       if (!mounted) return;
