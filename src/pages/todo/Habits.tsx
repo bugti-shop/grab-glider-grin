@@ -10,6 +10,8 @@ import { loadHabitSections, DEFAULT_HABIT_SECTION_ID } from '@/utils/habitSectio
 import { triggerHaptic } from '@/utils/haptics';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { toast } from 'sonner';
+
 
 
 const Habits = () => {
@@ -83,9 +85,17 @@ const Habits = () => {
           : [...others, { date: dateKey, completed: next === 'done', status: next }],
       updatedAt: new Date().toISOString(),
     };
-    await saveHabit(updated);
+    // Optimistic UI — flip the checkbox immediately, then persist.
+    const previous = habits;
     setHabits((h) => h.map((x) => (x.id === habit.id ? updated : x)));
+    try {
+      await saveHabit(updated);
+    } catch {
+      setHabits(previous);
+      toast.error('Could not save check-in. Please try again.');
+    }
   };
+
 
   const visibleHabits = habits.filter((h) => isHabitDueOn(h, selectedDate));
 

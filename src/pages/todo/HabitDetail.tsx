@@ -43,6 +43,8 @@ const HabitDetail = () => {
   const [focusOpen, setFocusOpen] = useState(false);
   const [focusSecs, setFocusSecs] = useState(25 * 60);
   const [focusRunning, setFocusRunning] = useState(false);
+  const focusKey = `focus:habit:${id || 'unknown'}`;
+
 
   const trackRef = useRef<HTMLDivElement>(null);
   const [trackWidth, setTrackWidth] = useState(0);
@@ -66,6 +68,44 @@ const HabitDetail = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Restore persisted focus timer on mount / id change.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(focusKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { endAt?: number; remaining?: number; running?: boolean; duration?: number };
+      if (saved.running && saved.endAt) {
+        const remaining = Math.max(0, Math.round((saved.endAt - Date.now()) / 1000));
+        if (remaining > 0) {
+          setFocusSecs(remaining);
+          setFocusRunning(true);
+          setFocusOpen(true);
+        } else {
+          localStorage.removeItem(focusKey);
+        }
+      } else if (typeof saved.remaining === 'number' && saved.remaining > 0) {
+        setFocusSecs(saved.remaining);
+        setFocusRunning(false);
+      }
+    } catch {}
+  }, [focusKey]);
+
+  // Persist focus timer whenever it changes.
+  useEffect(() => {
+    try {
+      if (focusRunning) {
+        const endAt = Date.now() + focusSecs * 1000;
+        localStorage.setItem(focusKey, JSON.stringify({ running: true, endAt, duration: focusSecs }));
+      } else if (focusSecs > 0 && focusSecs !== 25 * 60) {
+        localStorage.setItem(focusKey, JSON.stringify({ running: false, remaining: focusSecs }));
+      } else {
+        localStorage.removeItem(focusKey);
+      }
+    } catch {}
+    // Only re-persist when running flips or when paused-seconds change meaningfully.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRunning, focusKey]);
+
   // Focus timer countdown
   useEffect(() => {
     if (!focusRunning) return;
@@ -75,13 +115,15 @@ const HabitDetail = () => {
           setFocusRunning(false);
           triggerHaptic('heavy').catch(() => {});
           toast.success('Focus session complete! 🎉');
+          try { localStorage.removeItem(focusKey); } catch {}
           return 0;
         }
         return s - 1;
       });
     }, 1000);
     return () => clearInterval(t);
-  }, [focusRunning]);
+  }, [focusRunning, focusKey]);
+
 
 
   // Pill swipe-to-complete geometry — keep motion hooks before any early return.
@@ -116,6 +158,7 @@ const HabitDetail = () => {
 
   const toggleToday = async () => {
     triggerHaptic('medium').catch(() => {});
+    const previous = habit;
     const others = habit.completions.filter((c) => c.date !== todayKey);
     const updated: Habit = {
       ...habit,
@@ -124,9 +167,17 @@ const HabitDetail = () => {
         : [...others, { date: todayKey, completed: true, status: 'done' }],
       updatedAt: new Date().toISOString(),
     };
-    await saveHabit(updated);
+    // Optimistic — update UI immediately.
     setHabit(updated);
+    try {
+      await saveHabit(updated);
+    } catch (err) {
+      // Roll back on failure.
+      setHabit(previous);
+      toast.error('Could not save check-in. Please try again.');
+    }
   };
+
 
   const finishSwipe = () => {
     if (completingRef.current) return;
