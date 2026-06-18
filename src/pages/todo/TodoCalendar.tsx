@@ -268,9 +268,11 @@ const TodoCalendar = () => {
     loadTasks();
     const handleTasksUpdate = () => loadTasks();
     window.addEventListener('tasksUpdated', handleTasksUpdate);
+    window.addEventListener('sectionsUpdated', handleTasksUpdate);
     window.addEventListener('storage', handleTasksUpdate);
     return () => {
       window.removeEventListener('tasksUpdated', handleTasksUpdate);
+      window.removeEventListener('sectionsUpdated', handleTasksUpdate);
       window.removeEventListener('storage', handleTasksUpdate);
     };
   }, [loadTasks]);
@@ -278,7 +280,16 @@ const TodoCalendar = () => {
   // Persist view mode
   useEffect(() => {
     getSetting<string>('calendarBackground', 'none').then(setCalendarBackground);
+    getSetting<string[]>('calendarHiddenSections', []).then((arr) => setHiddenSections(new Set(arr || [])));
+    getSetting<boolean>('calendarHideEvents', false).then((v) => setHideEvents(!!v));
+    getSetting<boolean>('calendarHideCountdowns', false).then((v) => setHideCountdowns(!!v));
   }, []);
+
+  // Persist chip filter changes
+  useEffect(() => { setSetting('calendarHiddenSections', Array.from(hiddenSections)); }, [hiddenSections]);
+  useEffect(() => { setSetting('calendarHideEvents', hideEvents); }, [hideEvents]);
+  useEffect(() => { setSetting('calendarHideCountdowns', hideCountdowns); }, [hideCountdowns]);
+
 
   // Save view mode when changed
   const handleViewModeChange = useCallback(async (mode: ViewMode) => {
