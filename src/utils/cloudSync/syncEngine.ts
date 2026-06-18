@@ -175,6 +175,7 @@ export async function stopSync(): Promise<void> {
   currentUserId = null;
   if (channel) { try { supabase.removeChannel(channel); } catch {} channel = null; }
   if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
+  if (authSub) { try { authSub.unsubscribe(); } catch {} authSub = null; }
   document.removeEventListener('visibilitychange', onVisibility);
   window.removeEventListener('online', onOnline);
   window.removeEventListener('flowist:app:foreground', onForeground);
