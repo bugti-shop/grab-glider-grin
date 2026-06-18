@@ -43,6 +43,8 @@ const HabitDetail = () => {
   const [focusOpen, setFocusOpen] = useState(false);
   const [focusSecs, setFocusSecs] = useState(25 * 60);
   const [focusRunning, setFocusRunning] = useState(false);
+  const focusKey = `focus:habit:${id || 'unknown'}`;
+
 
   const trackRef = useRef<HTMLDivElement>(null);
   const [trackWidth, setTrackWidth] = useState(0);
