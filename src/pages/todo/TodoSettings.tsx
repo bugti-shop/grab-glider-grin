@@ -549,9 +549,16 @@ const TodoSettings = () => {
           <ScrollArea className="max-h-[60vh]">
             <div className="space-y-1">
               {themes.map((theme) => (
-                <button
-                  key={theme.id}
-                  onClick={() => {
+                (() => {
+                  const isLocked = theme.id !== 'light' && theme.id !== 'dark' && !isPro;
+                  return <button
+                    key={theme.id}
+                    onClick={() => {
+                    if (isLocked) {
+                      setShowThemeDialog(false);
+                      openPaywall('dark_theme_extra');
+                      return;
+                    }
                     setTheme(theme.id);
                     setShowThemeDialog(false);
                     toast.success(t('settings.themeChanged', { theme: theme.name }));
@@ -567,10 +574,11 @@ const TodoSettings = () => {
                       style={{ backgroundColor: theme.preview }}
                     />
                     <span className="text-sm font-medium">{theme.name}</span>
-                    {theme.id !== 'light' && !isPro && <Crown className="h-3.5 w-3.5" fill="#FFD700" color="#FFD700" />}
+                    {isLocked && <Crown className="h-3.5 w-3.5" fill="#FFD700" color="#FFD700" />}
                   </div>
                   {currentTheme === theme.id && <Check className="h-4 w-4" />}
-                </button>
+                  </button>;
+                })()
               ))}
             </div>
           </ScrollArea>

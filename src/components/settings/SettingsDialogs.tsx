@@ -248,6 +248,7 @@ export const SettingsDialogs = (props: SettingsDialogsProps) => {
                     key={theme.id}
                     onClick={() => {
                       if (isLocked) {
+                        props.setShowThemeDialog(false);
                         props.requireFeature('dark_theme_extra');
                         return;
                       }
@@ -290,7 +291,7 @@ export const SettingsDialogs = (props: SettingsDialogsProps) => {
                 variant="outline"
                 className={cn("w-full gap-2", !props.isProSub && "opacity-80")}
                 onClick={() => {
-                  if (!props.isProSub) { props.requireFeature('dark_theme_extra'); return; }
+                  if (!props.isProSub) { props.setShowThemeDialog(false); props.requireFeature('dark_theme_extra'); return; }
                   props.onOpenCustomTheme();
                 }}
               >
