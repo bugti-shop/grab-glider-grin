@@ -226,17 +226,13 @@ const HabitDetail = () => {
               key="pill"
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
               ref={trackRef}
-              className="relative h-16 rounded-full overflow-hidden touch-none select-none"
-              style={{ background: 'rgba(255,255,255,0.28)', touchAction: 'none' }}
-              onPointerDown={handleSwipeStart}
-              onPointerMove={handleSwipeMove}
-              onPointerUp={handleSwipeEnd}
-              onPointerCancel={handleSwipeEnd}
+              className="relative h-16 rounded-full overflow-hidden select-none"
+              style={{ background: 'rgba(255,255,255,0.28)' }}
             >
               {/* progress fill following the knob */}
               <motion.div
                 aria-hidden
-                className="absolute top-0 left-0 h-full rounded-full"
+                className="absolute top-0 left-0 h-full rounded-full pointer-events-none"
                 style={{ width: fillWidth, background: 'rgba(255,255,255,0.35)' }}
               />
               <motion.span
@@ -245,15 +241,21 @@ const HabitDetail = () => {
               >
                 Swipe to check in →
               </motion.span>
-              <motion.button
-                style={{ x: knobX, color: headerColor, top: PAD, left: PAD, touchAction: 'none' }}
+              <motion.div
+                drag="x"
+                dragConstraints={{ left: 0, right: maxDrag }}
+                dragElastic={0}
+                dragMomentum={false}
+                onDragEnd={handleDragEnd}
+                onTap={handleKnobTap}
                 whileTap={{ scale: 0.96 }}
+                style={{ x: knobX, color: headerColor, top: PAD, left: PAD, touchAction: 'none' }}
                 className="absolute h-14 w-14 rounded-full bg-white shadow-lg flex items-center justify-center cursor-grab active:cursor-grabbing"
                 aria-label="Swipe to check in"
-                onClick={(e) => e.preventDefault()}
               >
                 <Check className="h-7 w-7" strokeWidth={3} />
-              </motion.button>
+              </motion.div>
+
             </motion.div>
           ) : (
             <motion.div
