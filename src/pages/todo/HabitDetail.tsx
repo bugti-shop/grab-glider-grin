@@ -68,6 +68,44 @@ const HabitDetail = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Restore persisted focus timer on mount / id change.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(focusKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { endAt?: number; remaining?: number; running?: boolean; duration?: number };
+      if (saved.running && saved.endAt) {
+        const remaining = Math.max(0, Math.round((saved.endAt - Date.now()) / 1000));
+        if (remaining > 0) {
+          setFocusSecs(remaining);
+          setFocusRunning(true);
+          setFocusOpen(true);
+        } else {
+          localStorage.removeItem(focusKey);
+        }
+      } else if (typeof saved.remaining === 'number' && saved.remaining > 0) {
+        setFocusSecs(saved.remaining);
+        setFocusRunning(false);
+      }
+    } catch {}
+  }, [focusKey]);
+
+  // Persist focus timer whenever it changes.
+  useEffect(() => {
+    try {
+      if (focusRunning) {
+        const endAt = Date.now() + focusSecs * 1000;
+        localStorage.setItem(focusKey, JSON.stringify({ running: true, endAt, duration: focusSecs }));
+      } else if (focusSecs > 0 && focusSecs !== 25 * 60) {
+        localStorage.setItem(focusKey, JSON.stringify({ running: false, remaining: focusSecs }));
+      } else {
+        localStorage.removeItem(focusKey);
+      }
+    } catch {}
+    // Only re-persist when running flips or when paused-seconds change meaningfully.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusRunning, focusKey]);
+
   // Focus timer countdown
   useEffect(() => {
     if (!focusRunning) return;
@@ -77,13 +115,15 @@ const HabitDetail = () => {
           setFocusRunning(false);
           triggerHaptic('heavy').catch(() => {});
           toast.success('Focus session complete! 🎉');
+          try { localStorage.removeItem(focusKey); } catch {}
           return 0;
         }
         return s - 1;
       });
     }, 1000);
     return () => clearInterval(t);
-  }, [focusRunning]);
+  }, [focusRunning, focusKey]);
+
 
 
   // Pill swipe-to-complete geometry — keep motion hooks before any early return.
