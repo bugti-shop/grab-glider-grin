@@ -48,9 +48,14 @@ const STEP_DETAILS = 1;
 const HabitNew = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('id');
   const { requireCapacity } = useSubscription();
   const prefill = (location.state as { name?: string; emoji?: string; quote?: string } | null) || null;
   const [step, setStep] = useState(STEP_BASICS);
+
+  // Holds the original habit when editing — so we preserve completions, streaks, etc.
+  const editingRef = useRef<Habit | null>(null);
 
   // Basics
   const [name, setName] = useState(prefill?.name ?? '');
@@ -85,6 +90,35 @@ const HabitNew = () => {
     window.addEventListener('habitSectionsUpdated', onSec);
     return () => window.removeEventListener('habitSectionsUpdated', onSec);
   }, []);
+
+  // Load existing habit when editing.
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+    (async () => {
+      const all = await loadHabits();
+      const h = all.find((x) => x.id === editId);
+      if (!h || cancelled) return;
+      editingRef.current = h;
+      setName(h.name);
+      setEmoji(h.emoji || '🍌');
+      setQuote(h.quote || QUOTES[0]);
+      setFrequency(h.frequency);
+      if (h.weeklyDays?.length) setWeeklyDays(h.weeklyDays);
+      if (h.weeklyCount) setWeeklyCount(h.weeklyCount);
+      if (h.intervalDays) setIntervalDays(h.intervalDays);
+      setGoalType(h.goalType || 'all');
+      if (h.goalAmount) setGoalAmount(h.goalAmount);
+      if (h.goalUnit) setGoalUnit(h.goalUnit);
+      if (h.startDate) setStartDate(new Date(h.startDate));
+      setGoalDays(h.goalDays || 0);
+      if (h.sectionId) setSectionId(h.sectionId);
+      if (h.reminder?.enabled) setReminderTime(h.reminder.time);
+      setAutoPopup(!!h.autoPopupLog);
+    })();
+    return () => { cancelled = true; };
+  }, [editId]);
+
 
   const toggleDay = (d: number) => {
     setWeeklyDays((prev) =>
