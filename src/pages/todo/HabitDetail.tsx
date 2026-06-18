@@ -18,7 +18,7 @@ import {
   Pencil, Target, Archive,
 } from 'lucide-react';
 
-import { m as motion, AnimatePresence, useMotionValue, useTransform, animate as motionAnimate } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Habit, HabitDayStatus } from '@/types/habit';
 import { loadHabits, saveHabit, deleteHabit } from '@/utils/habitStorage';
