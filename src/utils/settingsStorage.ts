@@ -140,6 +140,16 @@ export const setSetting = async <T>(key: string, value: T): Promise<void> => {
   // Always update warm cache immediately so reads are instant
   _warmCache.set(key, value);
 
+  // Mirror the full settings snapshot to Lovable Cloud (debounced inside bridge).
+  // We snapshot the warm cache because the cloud row is user-level, not per-key.
+  import('@/utils/cloudSync/storeBridge').then(({ pushSettingsSnapshot }) => {
+    try {
+      const snap: Record<string, unknown> = {};
+      _warmCache.forEach((v, k) => { snap[k] = v; });
+      pushSettingsSnapshot(snap);
+    } catch {}
+  }).catch(() => {});
+
   try {
     await withRetry((database) => new Promise<void>((resolve, reject) => {
       const transaction = database.transaction([STORE_NAME], 'readwrite');
