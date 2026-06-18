@@ -12,17 +12,10 @@ const CLIENT_ID = '425291387152-u06impgmsgg286jg7odo4f40fu6pjmb5.apps.googleuser
 
 const SUPABASE_FUNCTIONS_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-// Include Drive scopes for both native and web
-const DRIVE_SCOPES = [
-  'https://www.googleapis.com/auth/drive.appdata',
-  'https://www.googleapis.com/auth/drive.file',
-];
-// Calendar scopes — read events + create/update/delete (two-way sync)
-const CALENDAR_SCOPES = [
-  'https://www.googleapis.com/auth/calendar.readonly',
-  'https://www.googleapis.com/auth/calendar.events',
-];
-const NATIVE_SCOPES = ['openid', 'email', 'profile', ...DRIVE_SCOPES, ...CALENDAR_SCOPES];
+// Auth-only scopes — Drive and Calendar integrations removed
+const DRIVE_SCOPES: string[] = [];
+const CALENDAR_SCOPES: string[] = [];
+const NATIVE_SCOPES = ['openid', 'email', 'profile'];
 
 const SESSION_TTL = 365 * 24 * 3600 * 1000; // 1 year session
 const ACCESS_TOKEN_TTL = 3500 * 1000; // ~58 min
@@ -31,14 +24,8 @@ const WEB_REFRESH_RETRY_COUNT = 1;
 const NATIVE_REFRESH_RETRY_COUNT = 2;
 const NATIVE_SIGN_IN_TIMEOUT_MS = 45_000;
 
-// Debounce driveReauthNeeded to avoid spamming
-let lastReauthEventTime = 0;
-const REAUTH_EVENT_COOLDOWN = 5 * 60 * 1000;
-const emitReauthNeeded = () => {
-  if (Date.now() - lastReauthEventTime < REAUTH_EVENT_COOLDOWN) return;
-  lastReauthEventTime = Date.now();
-  window.dispatchEvent(new CustomEvent('driveReauthNeeded'));
-};
+// No-op: Drive integration removed
+const emitReauthNeeded = () => {};
 
 const NATIVE_LOGIN_OPTIONS = {
   scopes: NATIVE_SCOPES,
@@ -511,7 +498,7 @@ const getGisTokenClient = async () => {
   if (!google?.accounts?.oauth2?.initTokenClient) return null;
   gisTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
-    scope: ['openid', 'email', 'profile', ...DRIVE_SCOPES, ...CALENDAR_SCOPES].join(' '),
+    scope: ['openid', 'email', 'profile'].join(' '),
     callback: () => {},
   });
   return gisTokenClient;
@@ -561,7 +548,7 @@ const webSignIn = async (): Promise<GoogleUser> => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      scopes: [...DRIVE_SCOPES, ...CALENDAR_SCOPES].join(' '),
+      scopes: 'openid email profile',
       queryParams: {
         access_type: 'offline',
         prompt: hasRefreshToken ? 'select_account' : 'consent',
@@ -835,43 +822,11 @@ export const backgroundTokenRefresh = async (): Promise<void> => {
 };
 
 /**
- * Force-refresh the Google Drive access token using stored refresh_token.
- * Called when Supabase fires TOKEN_REFRESHED so Drive token stays in sync.
- * Skips the "is it still fresh?" check — always refreshes.
+ * Drive integration removed — kept as a no-op so existing callers compile.
+ * Returns the currently stored Google user without performing any refresh.
  */
 export const forceRefreshDriveToken = async (): Promise<GoogleUser | null> => {
-  const stored = await getStoredGoogleUser();
-  if (!stored) return null;
-
-  // On native, prefer the plugin's silent refresh — works even when the
-  // refresh_token wasn't persisted server-side.
-  if (isNative()) {
-    try {
-      return await nativeRefresh();
-    } catch (err) {
-      console.warn('Native force refresh failed, falling back to backend:', err);
-    }
-  }
-
-  try {
-    const { accessToken, expiresIn, newRefreshToken } = await refreshAccessTokenViaRefreshToken(stored.refreshToken);
-    const refreshedUser: GoogleUser = {
-      ...stored,
-      accessToken,
-      refreshToken: newRefreshToken || stored.refreshToken,
-      accessTokenExpiresAt: Date.now() + (expiresIn * 1000) - 60000,
-      expiresAt: Date.now() + SESSION_TTL,
-    };
-    await setSetting('googleUser', refreshedUser);
-    if (refreshedUser.refreshToken) {
-      persistRefreshTokenBestEffort(refreshedUser.refreshToken, refreshedUser.email).catch(() => {});
-    }
-    console.log('Drive token force-refreshed via Supabase TOKEN_REFRESHED hook ✅');
-    return refreshedUser;
-  } catch (err) {
-    console.warn('Drive token force-refresh failed:', err);
-    return stored;
-  }
+  return await getStoredGoogleUser();
 };
 
 if (import.meta.env.DEV) {
