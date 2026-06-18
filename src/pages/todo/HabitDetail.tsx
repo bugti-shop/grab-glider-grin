@@ -436,9 +436,48 @@ const HabitDetail = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Focus timer dialog */}
+      <Dialog open={focusOpen} onOpenChange={(o) => { setFocusOpen(o); if (!o) setFocusRunning(false); }}>
+        <DialogContent className="rounded-2xl max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="text-center">Focus on {habit.name}</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 flex flex-col items-center gap-4">
+            <div className="text-6xl font-bold tabular-nums">
+              {String(Math.floor(focusSecs / 60)).padStart(2, '0')}:{String(focusSecs % 60).padStart(2, '0')}
+            </div>
+            <div className="flex gap-2">
+              {[15, 25, 45].map((m) => (
+                <Button
+                  key={m}
+                  size="sm"
+                  variant={focusSecs === m * 60 && !focusRunning ? 'default' : 'outline'}
+                  onClick={() => { setFocusRunning(false); setFocusSecs(m * 60); }}
+                  disabled={focusRunning}
+                >
+                  {m}m
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setFocusRunning(false); setFocusSecs(25 * 60); }}
+            >
+              Reset
+            </Button>
+            <Button onClick={() => setFocusRunning((r) => !r)} disabled={focusSecs === 0}>
+              {focusRunning ? 'Pause' : 'Start'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
 
 const StatCard = ({ icon, label, value, unit }: { icon: React.ReactNode; label: string; value: string; unit: string }) => (
   <div className="bg-muted/40 rounded-xl p-3">
