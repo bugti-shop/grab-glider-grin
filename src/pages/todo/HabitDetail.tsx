@@ -47,7 +47,8 @@ const HabitDetail = () => {
   const [focusOpen, setFocusOpen] = useState(false);
   const [focusSecs, setFocusSecs] = useState(25 * 60);
   const [focusRunning, setFocusRunning] = useState(false);
-  const focusKey = `focus:habit:${id || 'unknown'}`;
+  // Sweep finished/stale focus entries from prior sessions once per mount.
+  useEffect(() => { cleanupStaleFocusKeys(); }, []);
 
 
   const trackRef = useRef<HTMLDivElement>(null);
