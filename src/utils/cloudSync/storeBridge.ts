@@ -176,7 +176,22 @@ async function applySettingsFromCloud(rows: SyncRow[]) {
 
 async function applyAttachmentsFromCloud(rows: SyncRow[]) {
   const { onAttachmentEvent } = await import('./cloudAttachments');
-  for (const r of rows) onAttachmentEvent(r as any);
+  // Duplicate detection: same parent_id + file_name with different ids
+  const seen = new Map<string, string>(); // parent|name -> id
+  for (const r of rows as any[]) {
+    const key = `${r.parent_id}|${r.file_name}`;
+    const prior = seen.get(key);
+    if (prior && prior !== r.id) {
+      recordConflict({
+        table: 'file_attachments', rowId: r.id, parentId: r.parent_id, fileName: r.file_name,
+        localUpdatedAt: 0, cloudUpdatedAt: +new Date(r.updated_at ?? Date.now()),
+        resolution: 'duplicate_attachment',
+      });
+    } else {
+      seen.set(key, r.id);
+    }
+    onAttachmentEvent(r);
+  }
 }
 
 const ROUTERS: Partial<Record<string, (rows: SyncRow[]) => Promise<void>>> = {
@@ -193,6 +208,7 @@ export function installCloudListener(): void {
   installed = true;
   window.addEventListener('flowist:sync:change', (ev: Event) => {
     const detail = (ev as CustomEvent<SyncChangeDetail>).detail;
+    recordListenerEvent(detail.table as any);
     const router = ROUTERS[detail.table];
     if (router) router(detail.rows).catch(err => console.warn('[sync] apply failed', detail.table, err));
   });
