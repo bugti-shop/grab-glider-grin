@@ -197,7 +197,7 @@ const CountdownDetail = () => {
                 aria-label="Toggle unit"
               >
                 {unit === 'days' && (
-                  showHMS ? (
+                  showToday ? (
                     <span className="text-7xl tracking-tight">Today</span>
                   ) : (
                     <span className="text-7xl tracking-tight">{absDays}</span>
