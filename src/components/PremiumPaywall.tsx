@@ -12,7 +12,7 @@ function useSafeNavigate() {
   };
 }
 import appLogo from '@/assets/app-logo.webp';
-import heroCrown from '@/assets/paywall-hero-king-throne.png';
+import heroCrown from '@/assets/paywall-hero-king-throne.webp';
 import { useTranslation } from 'react-i18next';
 import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock, LayoutGrid, Blocks, Timer, BookOpen } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -602,7 +602,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           className="relative w-full overflow-hidden select-none"
           style={{ aspectRatio: '16 / 10', background: '#05060c' }}
         >
-          <img src={current.img} alt="" draggable={false} className="w-full h-full object-contain pointer-events-none" style={{ padding: '14px 0 22px' }} />
+          <img src={current.img} alt="" draggable={false} decoding="async" fetchPriority="high" loading="eager" width={800} height={500} className="w-full h-full object-contain pointer-events-none" style={{ padding: '14px 0 22px', contentVisibility: 'auto' }} />
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.95) 100%)' }} />
 
           {/* Back button overlay */}
