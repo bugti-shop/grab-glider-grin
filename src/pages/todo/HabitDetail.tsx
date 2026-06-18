@@ -66,6 +66,24 @@ const HabitDetail = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  // Focus timer countdown
+  useEffect(() => {
+    if (!focusRunning) return;
+    const t = setInterval(() => {
+      setFocusSecs((s) => {
+        if (s <= 1) {
+          setFocusRunning(false);
+          triggerHaptic('heavy').catch(() => {});
+          toast.success('Focus session complete! 🎉');
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [focusRunning]);
+
+
   // Pill swipe-to-complete geometry — keep motion hooks before any early return.
   const KNOB = 56;
   const PAD = 4;
