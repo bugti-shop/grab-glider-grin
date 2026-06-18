@@ -38,10 +38,10 @@ export const saveFolders = async (folders: Folder[]): Promise<void> => {
     }));
     await setSetting(FOLDERS_KEY, serialized);
     window.dispatchEvent(new Event('foldersUpdated'));
-    // Auto-sync folders to Google Drive
-    import('@/utils/googleDriveSync').then(({ syncFoldersToDrive }) => {
-      syncFoldersToDrive().catch(() => {});
-    });
+    // Mirror to Lovable Cloud (offline-queued, last-write-wins by id)
+    import('@/utils/cloudSync/storeBridge').then(({ pushFolders }) => {
+      try { pushFolders(folders); } catch {}
+    }).catch(() => {});
   } catch (error) {
     console.error('Error saving folders:', error);
   }
@@ -85,6 +85,12 @@ export const deleteFolder = async (id: string): Promise<boolean> => {
   if (filtered.length === folders.length) return false;
 
   await saveFolders(filtered);
+
+  // Mirror delete to Lovable Cloud
+  import('@/utils/cloudSync/storeBridge').then(({ pushFolderDelete }) => {
+    try { pushFolderDelete(id); } catch {}
+  }).catch(() => {});
+
 
   // Track deletion for cross-device sync and upload immediately
   import('@/utils/deletionTracker').then(({ trackDeletion, loadDeletions }) => {

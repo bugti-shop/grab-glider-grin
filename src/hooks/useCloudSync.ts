@@ -9,11 +9,13 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { startSync, stopSync, syncNow } from '@/utils/cloudSync/syncEngine';
+import { installCloudListener } from '@/utils/cloudSync/storeBridge';
 import { Capacitor } from '@capacitor/core';
 
 export function useCloudSync(): void {
   useEffect(() => {
     let mounted = true;
+    installCloudListener();
 
     const handle = (userId: string | null) => {
       if (!mounted) return;

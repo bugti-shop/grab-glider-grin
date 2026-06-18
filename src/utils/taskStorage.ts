@@ -153,6 +153,15 @@ export const saveTasksToDB = async (items: TodoItem[], skipSyncEvent = false): P
   tasksCache = items;
   cacheVersion++;
 
+  // Mirror to Lovable Cloud (offline-queued). Skipped when this save was itself
+  // triggered by an inbound realtime event (skipSyncEvent=true) to avoid loops.
+  if (!skipSyncEvent) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
+      try { pushTasks(items); } catch {}
+    }).catch(() => {});
+  }
+
+
   // Throttle actual IndexedDB writes to prevent overwhelming the database
   const now = Date.now();
   if (now - lastSaveTime < MIN_SAVE_INTERVAL) {
@@ -341,9 +350,14 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
     cacheVersion++;
   }
   
+  // Mirror delete to Lovable Cloud
+  import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => {
+    try { pushTaskDelete(taskId); } catch {}
+  }).catch(() => {});
+
   try {
     const db = await openDB();
-    
+
     return new Promise((resolve) => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       const store = transaction.objectStore(STORE_NAME);

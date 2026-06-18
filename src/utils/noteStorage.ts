@@ -253,6 +253,14 @@ export const saveNotesToDB = async (notes: Note[], skipSyncEvent = false): Promi
   notesCache = notes;
   notesCacheVersion++;
 
+  // Mirror to Lovable Cloud (offline-queued)
+  if (!skipSyncEvent) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushNotes }) => {
+      try { pushNotes(notes); } catch {}
+    }).catch(() => {});
+  }
+
+
   // Throttle IndexedDB writes
   const now = Date.now();
   if (now - lastNoteSaveTime < MIN_SAVE_INTERVAL) {
@@ -292,11 +300,16 @@ export const saveNoteToDBSingle = async (note: Note): Promise<void> => {
     notesCacheVersion++;
   }
 
+  // Mirror to Lovable Cloud
+  import('@/utils/cloudSync/storeBridge').then(({ pushNotes }) => {
+    try { pushNotes([note]); } catch {}
+  }).catch(() => {});
+
   try {
     await withRetry((database) => new Promise<void>((resolve, reject) => {
       const transaction = database.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
-      
+
       store.put(serializeNote(hydrateNote(note)));
 
       transaction.oncomplete = () => {
@@ -316,6 +329,11 @@ export const deleteNoteFromDB = async (noteId: string): Promise<void> => {
     notesCache = notesCache.filter(n => n.id !== noteId);
     notesCacheVersion++;
   }
+
+  // Mirror delete to Lovable Cloud
+  import('@/utils/cloudSync/storeBridge').then(({ pushNoteDelete }) => {
+    try { pushNoteDelete(noteId); } catch {}
+  }).catch(() => {});
 
   try {
     await withRetry((database) => new Promise<void>((resolve, reject) => {

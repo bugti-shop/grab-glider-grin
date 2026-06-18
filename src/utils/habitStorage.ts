@@ -38,6 +38,11 @@ export const loadHabits = async (): Promise<Habit[]> => {
 };
 
 export const saveHabit = async (habit: Habit): Promise<void> => {
+  // Mirror to Lovable Cloud
+  import('@/utils/cloudSync/storeBridge').then(({ pushHabits }) => {
+    try { pushHabits([habit]); } catch {}
+  }).catch(() => {});
+
   const database = await openDB();
   return new Promise((resolve, reject) => {
     const tx = database.transaction([STORE_NAME], 'readwrite');
@@ -51,6 +56,11 @@ export const saveHabit = async (habit: Habit): Promise<void> => {
 };
 
 export const saveHabitsBatch = async (habits: Habit[]): Promise<void> => {
+  // Mirror to Lovable Cloud
+  import('@/utils/cloudSync/storeBridge').then(({ pushHabits }) => {
+    try { pushHabits(habits); } catch {}
+  }).catch(() => {});
+
   const database = await openDB();
   return new Promise((resolve, reject) => {
     const tx = database.transaction([STORE_NAME], 'readwrite');
@@ -69,6 +79,11 @@ export const saveHabitsBatch = async (habits: Habit[]): Promise<void> => {
 };
 
 export const deleteHabit = async (id: string): Promise<void> => {
+  // Mirror delete to Lovable Cloud
+  import('@/utils/cloudSync/storeBridge').then(({ pushHabitDelete }) => {
+    try { pushHabitDelete(id); } catch {}
+  }).catch(() => {});
+
   const database = await openDB();
   return new Promise((resolve, reject) => {
     const tx = database.transaction([STORE_NAME], 'readwrite');
