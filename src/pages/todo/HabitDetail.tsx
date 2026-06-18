@@ -158,6 +158,7 @@ const HabitDetail = () => {
 
   const toggleToday = async () => {
     triggerHaptic('medium').catch(() => {});
+    const previous = habit;
     const others = habit.completions.filter((c) => c.date !== todayKey);
     const updated: Habit = {
       ...habit,
@@ -166,9 +167,17 @@ const HabitDetail = () => {
         : [...others, { date: todayKey, completed: true, status: 'done' }],
       updatedAt: new Date().toISOString(),
     };
-    await saveHabit(updated);
+    // Optimistic — update UI immediately.
     setHabit(updated);
+    try {
+      await saveHabit(updated);
+    } catch (err) {
+      // Roll back on failure.
+      setHabit(previous);
+      toast.error('Could not save check-in. Please try again.');
+    }
   };
+
 
   const finishSwipe = () => {
     if (completingRef.current) return;
