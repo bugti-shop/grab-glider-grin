@@ -106,6 +106,18 @@ const CountdownDetail = () => {
     year: 'numeric',
   });
 
+  // When it's the same day, count down the remaining H:M:S until end of today.
+  const showHMS = days === 0 && isFuture;
+  const endOfDay = useMemo(() => {
+    const d = new Date();
+    d.setHours(24, 0, 0, 0);
+    return d;
+  }, [nowTick > 0 && days === 0 ? new Date().toDateString() : 'static']);
+  const msLeft = Math.max(0, endOfDay.getTime() - nowTick);
+  const hLeft = Math.floor(msLeft / 3600000);
+  const mLeft = Math.floor((msLeft % 3600000) / 60000);
+  const sLeft = Math.floor((msLeft % 60000) / 1000);
+
   // Unit decompositions
   const weeks = Math.floor(absDays / 7);
   const weekRem = absDays % 7;
