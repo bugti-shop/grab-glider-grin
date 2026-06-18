@@ -202,7 +202,7 @@ const HabitDetail = () => {
       </div>
 
       {/* Top bar */}
-      <header className="relative z-10 px-4 pt-3 pb-2 flex items-center justify-between text-white">
+      <header className="safe-area-top relative z-10 px-4 pt-3 pb-2 flex items-center justify-between text-white">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-white hover:bg-white/20">
           <ArrowLeft className="h-6 w-6" />
         </Button>
