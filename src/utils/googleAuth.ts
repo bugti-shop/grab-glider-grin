@@ -317,17 +317,33 @@ const extractNativeProfile = async (
 const nativeSignIn = async (): Promise<GoogleUser> => {
   const SocialLogin = await ensureNativeInit();
 
-  const response = await withTimeout<CapgoLoginResult>(
-    SocialLogin.login({
-      provider: 'google',
-      options: {
-        scopes: NATIVE_SCOPES,
-        forceRefreshToken: true,
-      },
-    }),
-    NATIVE_SIGN_IN_TIMEOUT_MS,
-    'Google Sign-In timed out. Please close the Google sheet and try again.',
-  );
+  // Always force the account picker. Without forcePrompt, Credential Manager on
+  // Android silently exits ("blinks") when no account is pre-authorized for the
+  // app, and the Google sheet on iOS may auto-dismiss for returning users.
+  const doLogin = (opts: { scopes?: string[]; forceRefreshToken?: boolean; forcePrompt?: boolean }) =>
+    withTimeout<CapgoLoginResult>(
+      SocialLogin.login({ provider: 'google', options: opts }),
+      NATIVE_SIGN_IN_TIMEOUT_MS,
+      'Google Sign-In timed out. Please close the Google sheet and try again.',
+    );
+
+  let response: CapgoLoginResult;
+  try {
+    response = await doLogin({
+      scopes: NATIVE_SCOPES,
+      forceRefreshToken: true,
+      forcePrompt: true,
+    });
+  } catch (firstErr) {
+    console.warn('[Auth] First Google sign-in attempt failed, retrying after logout:', firstErr);
+    // Clear any stale Credential Manager state and retry with the picker forced.
+    try { await SocialLogin.logout({ provider: 'google' }); } catch {}
+    response = await doLogin({
+      scopes: NATIVE_SCOPES,
+      forceRefreshToken: true,
+      forcePrompt: true,
+    });
+  }
 
   const r = response.result;
   if (r.responseType !== 'online') {
