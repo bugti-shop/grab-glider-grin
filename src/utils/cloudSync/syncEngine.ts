@@ -149,6 +149,20 @@ export async function startSync(userId: string): Promise<void> {
   window.addEventListener('online', onOnline);
   window.addEventListener('flowist:app:foreground', onForeground);
 
+  // Re-attach the Realtime channel with the fresh JWT whenever Supabase
+  // silently rotates the session. Without this, after ~1h the websocket is
+  // still alive but using a stale token and stops receiving postgres_changes.
+  if (authSub) { try { authSub.unsubscribe(); } catch {} authSub = null; }
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    if (!currentUserId) return;
+    if (event === 'TOKEN_REFRESHED' && session?.access_token) {
+      try { (supabase.realtime as any).setAuth?.(session.access_token); } catch {}
+      attachRealtime(currentUserId);
+      void flushQueue().then(() => refetchMissed(currentUserId!));
+    }
+  });
+  authSub = data.subscription;
+
   // Best-effort: register background sync if the SW supports it.
   try {
     const reg: any = await (navigator as any).serviceWorker?.ready;
