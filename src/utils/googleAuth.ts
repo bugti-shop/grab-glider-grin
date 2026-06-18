@@ -548,7 +548,7 @@ const webSignIn = async (): Promise<GoogleUser> => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      scopes: [...DRIVE_SCOPES, ...CALENDAR_SCOPES].join(' '),
+      scopes: 'openid email profile',
       queryParams: {
         access_type: 'offline',
         prompt: hasRefreshToken ? 'select_account' : 'consent',
