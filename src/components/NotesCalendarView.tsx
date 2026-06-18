@@ -287,7 +287,7 @@ export const NotesCalendarView = ({
                 key={`${day.toString()}-${index}`}
                 onClick={() => onDateSelect?.(day)}
                 className={cn(
-                  "relative flex flex-col items-stretch text-left",
+                  "relative flex flex-col items-stretch text-left min-w-0",
                   "min-h-[78px] px-1 pt-1 pb-0.5 rounded-md transition-colors",
                   "border border-transparent",
                   isSelected && !isToday && (useLightText
