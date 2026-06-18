@@ -485,7 +485,7 @@ const HabitDetail = () => {
       </AnimatePresence>
 
       {/* Focus timer dialog */}
-      <Dialog open={focusOpen} onOpenChange={(o) => { setFocusOpen(o); if (!o) setFocusRunning(false); }}>
+      <Dialog open={focusOpen} onOpenChange={(o) => { setFocusOpen(o); }}>
         <DialogContent className="rounded-2xl max-w-xs">
           <DialogHeader>
             <DialogTitle className="text-center">Focus on {habit.name}</DialogTitle>
