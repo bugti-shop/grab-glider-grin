@@ -11,6 +11,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+export interface DayChip {
+  id: string;
+  label: string;
+  color: string;
+  completed?: boolean;
+}
+
 interface NotesCalendarViewProps {
   selectedDate?: Date;
   onDateSelect?: (date: Date) => void;
@@ -24,6 +31,10 @@ interface NotesCalendarViewProps {
   showEmptyState?: boolean;
   calendarBackground?: string;
   onBackgroundSettingsClick?: () => void;
+  /** When provided, each day cell renders up to 3 colored task/event chips (Apple-Calendar style). */
+  getDayChips?: (date: Date) => DayChip[];
+  /** Maximum visible chips per cell (default 3). */
+  maxChipsPerDay?: number;
 }
 
 const BACKGROUND_GRADIENTS: Record<string, string | null> = {
