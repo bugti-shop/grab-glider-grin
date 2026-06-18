@@ -38,7 +38,6 @@ const HabitDetail = () => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [trackWidth, setTrackWidth] = useState(0);
   const knobX = useMotionValue(0);
-  const dragStateRef = useRef({ active: false, startX: 0, startValue: 0 });
   const completingRef = useRef(false);
 
   useLayoutEffect(() => {
@@ -111,28 +110,17 @@ const HabitDetail = () => {
     });
   };
 
-  const handleSwipeStart = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (todayDone || maxDrag <= 0) return;
-    e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    dragStateRef.current = { active: true, startX: e.clientX, startValue: knobX.get() };
-  };
-
-  const handleSwipeMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragStateRef.current.active) return;
-    e.preventDefault();
-    const next = Math.min(maxDrag, Math.max(0, dragStateRef.current.startValue + e.clientX - dragStateRef.current.startX));
-    knobX.set(next);
-  };
-
-  const handleSwipeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragStateRef.current.active) return;
-    e.preventDefault();
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
-    dragStateRef.current.active = false;
-    if (knobX.get() >= maxDrag * 0.65) finishSwipe();
+  const handleDragEnd = () => {
+    if (knobX.get() >= maxDrag * 0.55) finishSwipe();
     else motionAnimate(knobX, 0, { type: 'spring', stiffness: 380, damping: 30 });
   };
+
+  // Tap-to-complete fallback: if user taps the knob without dragging, still check in.
+  const handleKnobTap = () => {
+    if (todayDone || completingRef.current) return;
+    finishSwipe();
+  };
+
 
   const statusFor = (d: Date): HabitDayStatus | null => {
     const key = format(d, 'yyyy-MM-dd');
