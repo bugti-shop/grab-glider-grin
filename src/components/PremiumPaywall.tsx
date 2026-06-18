@@ -12,7 +12,7 @@ function useSafeNavigate() {
   };
 }
 import appLogo from '@/assets/app-logo.webp';
-import heroCrown from '@/assets/paywall-hero-logo-crown.png';
+import heroCrown from '@/assets/paywall-hero-king-throne.png';
 import { useTranslation } from 'react-i18next';
 import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock, LayoutGrid, Blocks, Timer, BookOpen } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -479,7 +479,7 @@ function ComparisonTable({ rows, title, onRowClick }: { rows: { label: string; f
 
 // Hero — single Premium Crown image (carousel disabled per design).
 const HERO_SLIDES = [
-  { img: heroCrown, title: 'Stay organized without limits', subtitle: 'Unlock premium features across all platforms' },
+  { img: heroCrown, title: 'Upgrade to Flowist Master Plan', subtitle: 'Unlock premium features across all platforms' },
 ];
 
 const USER_COMMENTS: { tag: string; title: string; body: string }[] = [
