@@ -8,14 +8,9 @@ import {
   backgroundTokenRefresh,
   onSupabaseAuthStateChanged,
   captureOAuthSession,
-  forceRefreshDriveToken,
   cancelNativeAutoPrompt,
 } from '@/utils/googleAuth';
 import { setSetting } from '@/utils/settingsStorage';
-// TEMP DISABLED — Google Calendar two-way sync is paused while the Calendar
-// OAuth scopes are under verification on Google Cloud Console. Re-enable by
-// uncommenting the import below and the start/stop calls further down.
-// import { startCalendarAutoSync, stopCalendarAutoSync } from '@/utils/googleCalendarSync';
 
 interface GoogleAuthContextType {
   user: GoogleUser | null;
