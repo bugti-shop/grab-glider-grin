@@ -347,8 +347,12 @@ const TodoSettings = () => {
               onClick={() => setShowLanguageDialog(true)} 
             />
             <SettingsRow 
-              label={t('settings.noteTypeVisibility', 'Note Type Visibility')}
-              icon={!isPro ? <Crown className="h-4 w-4" fill="#FFD700" color="#FFD700" /> : undefined}
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  {t('settings.noteTypeVisibility', 'Note Type Visibility')}
+                  {!isPro && <Crown className="h-3.5 w-3.5" fill="#FFD700" color="#FFD700" />}
+                </span>
+              }
               onClick={() => { if (requireFeature('notes_type_visibility')) setShowNoteTypeVisibilitySheet(true); }} 
             />
             <SettingsRow 
