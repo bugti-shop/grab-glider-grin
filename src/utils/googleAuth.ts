@@ -726,12 +726,18 @@ export const signInWithGoogle = (explicit = false): Promise<GoogleUser> => {
 export const signOutGoogle = async (): Promise<void> => {
   if (isNative()) {
     await nativeSignOut();
+    // Reset module-level flags so the next sign-in re-initializes the plugin
+    // and reliably re-opens the Google account picker (no silent auto-pick).
+    nativeInitialized = false;
+    nativeAutoPromptCancelled = false;
+    nativeRefreshCooldownUntil = 0;
   } else {
     await webSignOut();
   }
   await supabase.auth.signOut().catch(() => {});
   await removeSetting('googleUser');
 };
+
 
 export const getStoredGoogleUser = async (): Promise<GoogleUser | null> => {
   const user = await getSetting<GoogleUser | null>('googleUser', null);
