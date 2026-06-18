@@ -1268,7 +1268,39 @@ const TodoCalendar = () => {
             emptyStateSubMessage={t('calendar.clickToCreateTasks', 'Click "+" to create your tasks.')}
             calendarBackground={calendarBackground}
             onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
+            getDayChips={(day) => {
+              const chips: { id: string; label: string; color: string; completed?: boolean }[] = [];
+              // Tasks (and countdown pseudo-tasks) on this day, colored by section
+              for (const task of itemsWithCountdowns) {
+                if (!task.dueDate) continue;
+                if (!isSameDay(new Date(task.dueDate), day)) continue;
+                const section = sections.find((s) => s.id === task.sectionId);
+                const color = section?.color
+                  || (task.priority ? getPriorityColor(task.priority as Priority) : undefined)
+                  || '#3c78f0';
+                chips.push({
+                  id: task.id,
+                  label: task.text || t('calendar.untitledTask', 'Task'),
+                  color,
+                  completed: !!task.completed,
+                });
+              }
+              // Calendar events on this day (including recurring)
+              for (const ev of events) {
+                const start = new Date(ev.startDate);
+                const onDay = isSameDay(start, day)
+                  || (ev.repeat !== 'never' && isRecurringEventOnDate(ev, day));
+                if (!onDay) continue;
+                chips.push({
+                  id: `event:${ev.id}:${day.getTime()}`,
+                  label: ev.title || t('calendar.untitledEvent', 'Event'),
+                  color: '#10b981',
+                });
+              }
+              return chips;
+            }}
           />
+
         ) : calendarLayout === 'year' ? (
           <div className="px-4 py-3">
             <YearCalendarView
