@@ -479,7 +479,7 @@ function ComparisonTable({ rows, title, onRowClick }: { rows: { label: string; f
 
 // Hero — single Premium Crown image (carousel disabled per design).
 const HERO_SLIDES = [
-  { img: heroCrown, title: 'Stay organized without limits', subtitle: 'Unlock premium features across all platforms' },
+  { img: heroCrown, title: 'Upgrade to Flowist Master Plan', subtitle: 'Unlock premium features across all platforms' },
 ];
 
 const USER_COMMENTS: { tag: string; title: string; body: string }[] = [
