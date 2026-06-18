@@ -543,15 +543,6 @@ export default function Profile() {
           toast({ title: t('profile.signInSuccess', 'Signed in successfully') });
         }}
       />
-      {/* legacy closer */}
-      {false && (
-        <></>
-      )}
-      {/* end inject */}
-      {(() => null)()}
-      {/* original close below */}
-      {/* */}
-      {/* */}
 
 
       {/* Subscription Section */}
