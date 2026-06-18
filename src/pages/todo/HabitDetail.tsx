@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   format,
@@ -18,7 +18,7 @@ import {
   Pencil, Target, Archive,
 } from 'lucide-react';
 
-import { m as motion, AnimatePresence, useMotionValue, useTransform, animate as motionAnimate } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Habit, HabitDayStatus } from '@/types/habit';
 import { loadHabits, saveHabit, deleteHabit } from '@/utils/habitStorage';
@@ -51,20 +51,6 @@ const HabitDetail = () => {
   useEffect(() => { cleanupStaleFocusKeys(); }, []);
 
 
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [trackWidth, setTrackWidth] = useState(0);
-  const knobX = useMotionValue(0);
-  const completingRef = useRef(false);
-
-  useLayoutEffect(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    const measure = () => setTrackWidth(el.offsetWidth);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const load = useCallback(async () => {
     const all = await loadHabits();
@@ -113,33 +99,29 @@ const HabitDetail = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRunning, focusOpen, id]);
 
-  // Focus timer countdown
+  // Focus timer countdown — derive remaining seconds from persisted endAt so the
+  // session keeps progressing accurately even if the tab was backgrounded.
   useEffect(() => {
-    if (!focusRunning) return;
-    const t = setInterval(() => {
-      setFocusSecs((s) => {
-        if (s <= 1) {
-          setFocusRunning(false);
-          triggerHaptic('heavy').catch(() => {});
-          toast.success('Focus session complete! 🎉');
-          if (id) { clearFocus(id); clearActiveFocus(); }
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
+    if (!focusRunning || !id) return;
+    const saved = readFocus(id);
+    const endAt = saved?.endAt ?? Date.now() + focusSecs * 1000;
+    const tick = () => {
+      const remaining = Math.max(0, Math.round((endAt - Date.now()) / 1000));
+      setFocusSecs(remaining);
+      if (remaining <= 0) {
+        setFocusRunning(false);
+        triggerHaptic('heavy').catch(() => {});
+        toast.success('Focus session complete! 🎉');
+        if (id) { clearFocus(id); clearActiveFocus(); }
+      }
+    };
+    tick();
+    const t = setInterval(tick, 1000);
     return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRunning, id]);
 
 
-
-  // Pill swipe-to-complete geometry — keep motion hooks before any early return.
-  const KNOB = 56;
-  const PAD = 4;
-  const maxDrag = Math.max(0, trackWidth - KNOB - PAD * 2);
-  const progress = useTransform(knobX, [0, Math.max(1, maxDrag)], [0, 1]);
-  const fillWidth = useTransform(knobX, (v) => `${KNOB + Math.max(0, v)}px`);
-  const labelOpacity = useTransform(progress, [0, 0.5], [1, 0]);
 
   const grid = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 0 });
@@ -186,25 +168,7 @@ const HabitDetail = () => {
   };
 
 
-  const finishSwipe = () => {
-    if (completingRef.current) return;
-    completingRef.current = true;
-    motionAnimate(knobX, maxDrag, { type: 'spring', stiffness: 420, damping: 32 });
-    toggleToday().finally(() => {
-      completingRef.current = false;
-    });
-  };
 
-  const handleDragEnd = () => {
-    if (knobX.get() >= maxDrag * 0.55) finishSwipe();
-    else motionAnimate(knobX, 0, { type: 'spring', stiffness: 380, damping: 30 });
-  };
-
-  // Tap-to-complete fallback: if user taps the knob without dragging, still check in.
-  const handleKnobTap = () => {
-    if (todayDone || completingRef.current) return;
-    finishSwipe();
-  };
 
 
   const statusFor = (d: Date): HabitDayStatus | null => {
@@ -344,45 +308,29 @@ const HabitDetail = () => {
         <p className="mt-2 text-white/85 text-[15px]">{habit.quote || 'Keep going, one day at a time'}</p>
       </div>
 
-      {/* Swipe-to-complete pill OR achieved stats card */}
+      {/* Tap-to-check OR achieved stats card */}
       <div className="relative z-10 px-6 mt-4">
         <AnimatePresence mode="wait" initial={false}>
           {!todayDone ? (
-            <motion.div
-              key="pill"
+            <motion.button
+              key="check"
+              type="button"
+              onClick={toggleToday}
               initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              ref={trackRef}
-              className="relative h-16 rounded-full overflow-hidden select-none"
+              whileTap={{ scale: 0.97 }}
+              className="relative w-full h-16 rounded-full overflow-hidden select-none flex items-center justify-center gap-3 text-white font-semibold text-[15px] tracking-wide"
               style={{ background: 'rgba(255,255,255,0.28)' }}
+              aria-label="Check in"
             >
-              {/* progress fill following the knob */}
-              <motion.div
-                aria-hidden
-                className="absolute top-0 left-0 h-full rounded-full pointer-events-none"
-                style={{ width: fillWidth, background: 'rgba(255,255,255,0.35)' }}
-              />
-              <motion.span
-                style={{ opacity: labelOpacity }}
-                className="absolute inset-0 flex items-center justify-center text-white/95 text-[15px] font-semibold tracking-wide pointer-events-none"
+              <span
+                className="h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center"
+                style={{ color: headerColor }}
               >
-                Swipe to check in →
-              </motion.span>
-              <motion.div
-                drag="x"
-                dragConstraints={{ left: 0, right: maxDrag }}
-                dragElastic={0}
-                dragMomentum={false}
-                onDragEnd={handleDragEnd}
-                onTap={handleKnobTap}
-                whileTap={{ scale: 0.96 }}
-                style={{ x: knobX, color: headerColor, top: PAD, left: PAD, touchAction: 'none' }}
-                className="absolute h-14 w-14 rounded-full bg-white shadow-lg flex items-center justify-center cursor-grab active:cursor-grabbing"
-                aria-label="Swipe to check in"
-              >
-                <Check className="h-7 w-7" strokeWidth={3} />
-              </motion.div>
+                <Check className="h-6 w-6" strokeWidth={3} />
+              </span>
+              <span>Tap to check in</span>
+            </motion.button>
 
-            </motion.div>
           ) : (
             <motion.div
               key="stats"
@@ -496,7 +444,7 @@ const HabitDetail = () => {
       </AnimatePresence>
 
       {/* Focus timer dialog */}
-      <Dialog open={focusOpen} onOpenChange={(o) => { setFocusOpen(o); if (!o) setFocusRunning(false); }}>
+      <Dialog open={focusOpen} onOpenChange={(o) => { setFocusOpen(o); }}>
         <DialogContent className="rounded-2xl max-w-xs">
           <DialogHeader>
             <DialogTitle className="text-center">Focus on {habit.name}</DialogTitle>

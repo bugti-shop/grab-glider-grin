@@ -33,6 +33,7 @@ const CountdownDetail = () => {
   const [item, setItem] = useState<CountdownEvent | null>(null);
   const [unit, setUnit] = useState<UnitMode>('days');
   const [loading, setLoading] = useState(true);
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   useEffect(() => {
     const load = async () => {
@@ -49,6 +50,13 @@ const CountdownDetail = () => {
 
   const next = useMemo(() => (item ? getNextOccurrence(item) : null), [item]);
   const days = useMemo(() => (item ? getDaysUntil(item) : 0), [item]);
+
+  // When it's the same day, tick every second so we can show H:M:S countdown.
+  useEffect(() => {
+    if (days !== 0 || !next) return;
+    const t = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [days, next]);
 
   const cycleUnit = () =>
     setUnit((u) => (u === 'days' ? 'weeks' : u === 'weeks' ? 'months' : 'days'));
@@ -97,6 +105,15 @@ const CountdownDetail = () => {
     day: '2-digit',
     year: 'numeric',
   });
+
+  // When it's the same day, count down the remaining H:M:S until end of today.
+  const showHMS = days === 0 && isFuture;
+  const _now = new Date(nowTick);
+  const endOfDay = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() + 1, 0, 0, 0, 0);
+  const msLeft = Math.max(0, endOfDay.getTime() - nowTick);
+  const hLeft = Math.floor(msLeft / 3600000);
+  const mLeft = Math.floor((msLeft % 3600000) / 60000);
+  const sLeft = Math.floor((msLeft % 60000) / 1000);
 
   // Unit decompositions
   const weeks = Math.floor(absDays / 7);
@@ -180,7 +197,13 @@ const CountdownDetail = () => {
                 aria-label="Toggle unit"
               >
                 {unit === 'days' && (
-                  <span className="text-7xl tracking-tight">{absDays}</span>
+                  showHMS ? (
+                    <span className="text-5xl tracking-tight tabular-nums">
+                      {String(hLeft).padStart(2, '0')}:{String(mLeft).padStart(2, '0')}:{String(sLeft).padStart(2, '0')}
+                    </span>
+                  ) : (
+                    <span className="text-7xl tracking-tight">{absDays}</span>
+                  )
                 )}
                 {unit === 'weeks' && (
                   <span className="text-6xl tracking-tight">
