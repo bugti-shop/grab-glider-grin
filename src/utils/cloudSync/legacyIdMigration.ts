@@ -215,6 +215,8 @@ async function doMigrate(report: MigrationReport): Promise<void> {
           if (folderRemapped !== t.folderId) { t.folderId = folderRemapped; changed = true; }
           const parentRemapped = remapId(remap, t.parentId);
           if (parentRemapped !== t.parentId) { t.parentId = parentRemapped; changed = true; }
+          const sectionRemapped = remapId(remap, t.sectionId);
+          if (sectionRemapped !== t.sectionId) { t.sectionId = sectionRemapped; changed = true; }
           if (Array.isArray(t.subtasks)) t.subtasks.forEach(rewriteRefs);
         };
         tasks.forEach(rewriteRefs);
