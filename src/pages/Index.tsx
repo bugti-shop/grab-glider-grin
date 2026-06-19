@@ -595,6 +595,7 @@ const Index = () => {
     setNotes(prev => prev.map(n => n.folderId === folderId ? { ...n, folderId: undefined } : n));
 
     trackDeletion(folderId, 'noteFolders');
+    import('@/utils/cloudSync/storeBridge').then(({ pushFolderDelete }) => pushFolderDelete(folderId)).catch(() => {});
 
     try {
       await persistFolders(updatedFolders);
@@ -611,7 +612,7 @@ const Index = () => {
 
   const handleEditFolder = (folderId: string, name: string) => {
     setFolders(prev => {
-      const updated = prev.map(f => f.id === folderId ? { ...f, name } : f);
+      const updated = prev.map(f => f.id === folderId ? { ...f, name, updatedAt: new Date() } as Folder : f);
       persistFolders(updated);
       return updated;
     });
