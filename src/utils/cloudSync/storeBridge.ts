@@ -113,20 +113,36 @@ export function pushSettingsSnapshot(snapshot: Record<string, unknown>): void {
 // ---------- Cloud → Local ----------
 
 async function applyFoldersFromCloud(rows: SyncRow[]) {
-  const { loadFolders, saveFolders } = await import('@/utils/folderStorage');
-  const local = await loadFolders();
-  const byId = new Map(local.map(f => [f.id, f]));
+  const [{ loadFolders, saveFolders }, { getSetting, setSetting }] = await Promise.all([
+    import('@/utils/folderStorage'),
+    import('@/utils/settingsStorage'),
+  ]);
+  const noteLocal = await loadFolders();
+  const taskLocalRaw = await getSetting<any[]>('todoFolders', []);
+  const noteById = new Map(noteLocal.map(f => [f.id, f]));
+  const taskById = new Map((taskLocalRaw ?? []).map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
+  let noteChanged = false;
+  let taskChanged = false;
   for (const r of rows) {
     const mapped = mappers.folders.fromCloud(r);
     if (!mapped) continue;
-    if (r.is_deleted) { byId.delete(r.id); continue; }
-    const existing = byId.get(r.id);
-    if (!existing || existing.updatedAt < mapped.updatedAt) byId.set(r.id, mapped);
-    else if (existing.updatedAt.getTime() > mapped.updatedAt.getTime()) {
+    const store = (mapped as any).__flowistFolderStore === 'tasks' ? 'tasks' : 'notes';
+    const byId = store === 'tasks' ? taskById : noteById;
+    if (r.is_deleted) { if (byId.delete(r.id)) store === 'tasks' ? taskChanged = true : noteChanged = true; continue; }
+    const existing = byId.get(r.id) as any;
+    if (!existing || new Date(existing.updatedAt ?? existing.createdAt ?? 0).getTime() < mapped.updatedAt.getTime()) {
+      byId.set(r.id, mapped);
+      store === 'tasks' ? taskChanged = true : noteChanged = true;
+    } else if (new Date(existing.updatedAt ?? existing.createdAt ?? 0).getTime() > mapped.updatedAt.getTime()) {
       recordConflict({ table: 'folders', rowId: r.id, localUpdatedAt: +existing.updatedAt, cloudUpdatedAt: +mapped.updatedAt, resolution: 'kept_local' });
     }
   }
-  await saveFolders(Array.from(byId.values()));
+  if (noteChanged) await saveFolders(Array.from(noteById.values()), true as any);
+  if (taskChanged) {
+    await setSetting('todoFolders', Array.from(taskById.values()), { skipCloudSync: true } as any);
+    window.dispatchEvent(new Event('foldersRestored'));
+    window.dispatchEvent(new Event('foldersUpdated'));
+  }
 }
 
 async function applyNotesFromCloud(rows: SyncRow[]) {
