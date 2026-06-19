@@ -210,4 +210,4 @@ export const mappers = {
   },
 };
 
-export type MappedTable = Extract<SyncTable, 'folders' | 'notes' | 'tasks' | 'habits'>;
+export type MappedTable = Extract<SyncTable, 'folders' | 'notes' | 'tasks' | 'sections' | 'habits'>;
