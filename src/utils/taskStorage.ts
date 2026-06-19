@@ -149,6 +149,26 @@ export const loadTasksFromDB = async (): Promise<TodoItem[]> => {
 
 // Save tasks to IndexedDB (optimized batch operation for 100B+ items)
 export const saveTasksToDB = async (items: TodoItem[], skipSyncEvent = false): Promise<boolean> => {
+  // Safety net: refuse to wipe a previously non-empty store with an empty array.
+  // This protects against logout/login races where some caller momentarily holds
+  // `[]` before the real data finishes loading. Callers that legitimately need
+  // to clear everything should delete tasks individually (which pushes deletes
+  // to the cloud) or call the dedicated reset path.
+  if (items.length === 0) {
+    const hadCachedItems = Array.isArray(tasksCache) && tasksCache.length > 0;
+    let hadStoredItems = false;
+    if (!hadCachedItems) {
+      try {
+        const existing = await loadTasksFromDB();
+        hadStoredItems = existing.length > 0;
+      } catch {}
+    }
+    if (hadCachedItems || hadStoredItems) {
+      console.warn('[taskStorage] Blocked attempt to wipe tasks with an empty array');
+      return false;
+    }
+  }
+
   // ALWAYS update in-memory cache immediately so any sync reads see latest data
   tasksCache = items;
   cacheVersion++;
