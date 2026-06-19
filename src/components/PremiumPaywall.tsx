@@ -16,7 +16,7 @@ import heroCrown from '@/assets/paywall-hero-king-throne.webp';
 import { useTranslation } from 'react-i18next';
 import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock, LayoutGrid, Blocks, Timer, BookOpen } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { useSubscription, ProductType } from '@/contexts/SubscriptionContext';
+import { useSubscription, ProductType, FREE_CAPACITY_LIMITS, SOFT_FREE_LIMITS, CAPACITY_LABELS } from '@/contexts/SubscriptionContext';
 import { Capacitor } from '@capacitor/core';
 import { PurchasesPackage, PACKAGE_TYPE } from '@revenuecat/purchases-capacitor';
 import { triggerTripleHeavyHaptic } from '@/utils/haptics';
@@ -215,35 +215,26 @@ function usePaywallLogic() {
   };
 
   // Soft-limit info derived from paywallFeature like "soft_limit_notes" / "soft_limit_tasks"
-  const SOFT_LIMIT_COUNTS: Record<string, number> = {
-    notes: 50, tasks: 891, noteFolders: 9, taskFolders: 9, taskSections: 10,
-  };
+  // Single source of truth: SOFT_FREE_LIMITS in SubscriptionContext.
   const softLimitKind = paywallFeature?.startsWith('soft_limit_') ? paywallFeature.replace('soft_limit_', '') : null;
-  const softLimitMessage = softLimitKind && SOFT_LIMIT_COUNTS[softLimitKind] != null
-    ? t(`onboarding.paywall.softLimit.${softLimitKind}`, { count: SOFT_LIMIT_COUNTS[softLimitKind] })
+  const softLimitCount = softLimitKind && (SOFT_FREE_LIMITS as Record<string, number>)[softLimitKind];
+  const softLimitMessage = softLimitKind && softLimitCount != null
+    ? t(`onboarding.paywall.softLimit.${softLimitKind}`, { count: softLimitCount })
     : null;
 
-  // Capacity-limit info derived from paywallFeature like "capacity_habits"
-  const CAPACITY_INFO: Record<string, { label: string; limit: number; scope: string }> = {
-    habits:            { label: 'Habits',       limit: 5,  scope: '' },
-    noteFolders:       { label: 'Note Folders', limit: 9,  scope: '' },
-    taskFolders:       { label: 'Task Folders', limit: 9,  scope: '' },
-    notes:             { label: 'Notes',        limit: 50, scope: '' },
-    tags:              { label: 'Tags',         limit: 20, scope: '' },
-    countdowns:        { label: 'Countdowns',   limit: 5,  scope: '' },
-    sectionsPerFolder: { label: 'Sections',     limit: 10, scope: ' per folder' },
-    tasksPerFolder:    { label: 'Tasks',        limit: 99, scope: ' per folder' },
-    subtasksPerTask:   { label: 'Subtasks',     limit: 19, scope: ' per task' },
-    remindersPerTask:  { label: 'Reminders',    limit: 2,  scope: ' per task' },
-    attachmentsPerDay: { label: 'Attachments',  limit: 1,  scope: ' per day' },
-    darkThemes:        { label: 'Dark Themes',  limit: 1,  scope: '' },
-    eisenhowerTasksPerQuadrant: { label: 'Matrix Tasks', limit: 10, scope: ' per quadrant' },
-    smartListsCustom:  { label: 'Custom Smart Lists', limit: 2, scope: '' },
-    blocksAdvancedPerNote: { label: 'Advanced Blocks', limit: 3, scope: ' per note' },
-    calendarViews:     { label: 'Calendar Views', limit: 1, scope: '' },
-  };
+  // Capacity-limit info derived from paywallFeature like "capacity_habits".
+  // Single source of truth: FREE_CAPACITY_LIMITS + CAPACITY_LABELS in SubscriptionContext.
   const capacityKind = paywallFeature?.startsWith('capacity_') ? paywallFeature.replace('capacity_', '') : null;
-  const capacityInfo = capacityKind ? CAPACITY_INFO[capacityKind] : null;
+  const capacityInfo = capacityKind && (FREE_CAPACITY_LIMITS as Record<string, number>)[capacityKind] != null
+    ? {
+        label: CAPACITY_LABELS[capacityKind as keyof typeof CAPACITY_LABELS]?.label ?? capacityKind,
+        limit: (FREE_CAPACITY_LIMITS as Record<string, number>)[capacityKind],
+        scope: (() => {
+          const s = CAPACITY_LABELS[capacityKind as keyof typeof CAPACITY_LABELS]?.scope ?? '';
+          return s && s !== 'total' ? ` ${s}` : '';
+        })(),
+      }
+    : null;
 
   // Pro-feature dynamic message map
   const PRO_FEATURE_MESSAGES: Record<string, string> = {
