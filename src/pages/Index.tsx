@@ -535,13 +535,15 @@ const Index = () => {
 
   const handleCreateFolder = (name: string, color: string) => {
     if (!requireCapacity('noteFolders', folders.length)) return;
+    const now = new Date();
     const newFolder: Folder = {
-      id: `folder-${Date.now()}`,
+      id: genId(),
       name,
       isDefault: false,
-      createdAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
       color,
-    };
+    } as Folder;
     setFolders(prev => {
       const updated = [...prev, newFolder];
       persistFolders(updated);
@@ -554,12 +556,14 @@ const Index = () => {
     notes: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>[];
   }) => {
     // Create the folder
-    const folderId = `folder-${Date.now()}`;
+    const folderId = genId();
+    const folderCreatedAt = new Date();
     const newFolder: Folder = {
       ...data.folder,
       id: folderId,
-      createdAt: new Date(),
-    };
+      createdAt: folderCreatedAt,
+      updatedAt: folderCreatedAt,
+    } as Folder;
     setFolders(prev => {
       const updated = [...prev, newFolder];
       persistFolders(updated);
@@ -570,7 +574,7 @@ const Index = () => {
     const now = new Date();
     const newNotes: Note[] = data.notes.map((noteDef, i) => ({
       ...noteDef,
-      id: `note-${Date.now()}-${i}`,
+      id: genId(),
       folderId,
       voiceRecordings: noteDef.voiceRecordings || [],
       createdAt: new Date(now.getTime() + i),
