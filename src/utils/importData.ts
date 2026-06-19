@@ -1,16 +1,19 @@
-// Import parsers for Todoist, Notion, and Evernote exports
-// Converts external formats into app-native TodoItem and Note types
+// Import parsers for Todoist, Notion, Evernote, and generic CSV exports.
+// Converts external formats into app-native TodoItem and Note types.
+// Evernote ENEX imports preserve notebook structure as folders.
 
-import { TodoItem, Note, Priority } from '@/types/note';
+import { TodoItem, Note, Priority, Folder } from '@/types/note';
 
-export type ImportSource = 'todoist' | 'notion' | 'evernote';
+export type ImportSource = 'todoist' | 'notion' | 'evernote' | 'csv-tasks' | 'csv-notes';
 
 export interface ImportResult {
   success: boolean;
   tasks: TodoItem[];
   notes: Note[];
+  /** Folders detected in the import (e.g. Evernote notebooks). Optional. */
+  folders?: Folder[];
   error?: string;
-  stats: { tasks: number; notes: number };
+  stats: { tasks: number; notes: number; folders?: number };
 }
 
 const generateId = () => `imported-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -51,7 +54,6 @@ const parseCSVLine = (line: string): string[] => {
 };
 
 // ─── Todoist CSV Import ────────────────────────────────────
-// Todoist CSV columns: TYPE, CONTENT, DESCRIPTION, PRIORITY, INDENT, AUTHOR, RESPONSIBLE, DATE, DATE_LANG, TIMEZONE
 const parseTodoistCSV = (text: string): ImportResult => {
   try {
     const rows = parseCSV(text);
@@ -78,7 +80,6 @@ const parseTodoistCSV = (text: string): ImportResult => {
         modifiedAt: new Date(),
       };
 
-      // Indent > 1 means subtask — but without parent tracking, just add flat
       tasks.push(task);
     }
 
@@ -97,7 +98,6 @@ const parseNotionCSV = (text: string): ImportResult => {
     const tasks: TodoItem[] = [];
     const notes: Note[] = [];
 
-    // Detect if it's a tasks database or notes/pages
     const headers = Object.keys(rows[0]);
     const hasStatus = headers.some(h => ['status', 'done', 'completed', 'checkbox'].includes(h));
     const hasName = headers.some(h => ['name', 'title', 'task', 'to-do', 'todo'].includes(h));
@@ -107,7 +107,6 @@ const parseNotionCSV = (text: string): ImportResult => {
       if (!title) continue;
 
       if (hasStatus || hasName) {
-        // Treat as task
         const isDone = ['true', 'yes', 'done', 'completed', '1', 'x'].includes(
           (row['status'] || row['done'] || row['completed'] || row['checkbox'] || '').toLowerCase()
         );
@@ -130,7 +129,6 @@ const parseNotionCSV = (text: string): ImportResult => {
           modifiedAt: new Date(),
         });
       } else {
-        // Treat as note
         notes.push({
           id: generateId(),
           type: 'regular',
@@ -161,7 +159,6 @@ const parseNotionJSON = (text: string): ImportResult => {
       const title = extractNotionTitle(props);
       if (!title) continue;
 
-      // If it has checkbox/status, treat as task
       const hasCheckbox = Object.values(props).some((v: any) => v?.type === 'checkbox' || v?.checkbox !== undefined);
 
       if (hasCheckbox) {
@@ -205,9 +202,33 @@ const extractNotionTitle = (props: any): string => {
 };
 
 // ─── Evernote ENEX/HTML Import ──────────────────────────────
-const parseEvernoteExport = (text: string): ImportResult => {
+// ENEX exports are per-notebook; the file name (without extension) is treated
+// as the notebook name and mapped to a new Folder. All notes in the file are
+// assigned to that folder so Evernote notebook → Flowist folder structure is
+// preserved on import.
+const parseEvernoteExport = (text: string, fileName?: string): ImportResult => {
   try {
     const notes: Note[] = [];
+    const folders: Folder[] = [];
+
+    // Derive notebook name from filename (Evernote exports one file per notebook).
+    const notebookName = fileName
+      ? fileName.replace(/\.(enex|html?|xml)$/i, '').trim() || 'Evernote'
+      : 'Evernote';
+
+    let notebookFolder: Folder | null = null;
+    const ensureFolder = (): Folder => {
+      if (notebookFolder) return notebookFolder;
+      notebookFolder = {
+        id: generateId(),
+        name: notebookName,
+        type: 'notes',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      folders.push(notebookFolder);
+      return notebookFolder;
+    };
 
     // Handle ENEX (XML) format
     if (text.includes('<en-export') || text.includes('<note>')) {
@@ -217,10 +238,17 @@ const parseEvernoteExport = (text: string): ImportResult => {
         const title = noteXml.match(/<title>([\s\S]*?)<\/title>/)?.[1] || 'Untitled';
         const contentMatch = noteXml.match(/<content>([\s\S]*?)<\/content>/)?.[1] || '';
         const createdMatch = noteXml.match(/<created>([\s\S]*?)<\/created>/)?.[1];
+        const tagMatches = [...noteXml.matchAll(/<tag>([\s\S]*?)<\/tag>/g)].map(m => m[1].trim()).filter(Boolean);
 
-        // Strip ENML/HTML tags for plain text
-        const plainContent = contentMatch
+        // Unwrap CDATA and ENML wrappers, keep inner HTML so RichTextEditor can render it.
+        const inner = contentMatch
           .replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '')
+          .replace(/<\?xml[^>]*\?>/g, '')
+          .replace(/<!DOCTYPE[^>]*>/g, '')
+          .replace(/<\/?en-note[^>]*>/g, '')
+          .trim();
+
+        const plainContent = inner
           .replace(/<[^>]+>/g, '\n')
           .replace(/&nbsp;/g, ' ')
           .replace(/&amp;/g, '&')
@@ -233,51 +261,140 @@ const parseEvernoteExport = (text: string): ImportResult => {
           ? new Date(createdMatch.replace(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/, '$1-$2-$3T$4:$5:$6'))
           : new Date();
 
+        const folder = ensureFolder();
         notes.push({
           id: generateId(),
           type: 'regular',
           title: title.trim(),
           content: plainContent,
+          richContent: inner || undefined,
+          tags: tagMatches.length ? tagMatches : undefined,
+          folderId: folder.id,
           voiceRecordings: [],
           createdAt,
           updatedAt: new Date(),
-        });
+        } as Note);
       }
     } else {
       // Treat as plain HTML — single note
       const titleMatch = text.match(/<title>(.*?)<\/title>/i);
       const bodyMatch = text.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-      const plainContent = (bodyMatch?.[1] || text)
+      const inner = (bodyMatch?.[1] || text).trim();
+      const plainContent = inner
         .replace(/<[^>]+>/g, '\n')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 
+      const folder = ensureFolder();
       notes.push({
         id: generateId(),
         type: 'regular',
-        title: titleMatch?.[1] || 'Imported Note',
+        title: titleMatch?.[1] || fileName || 'Imported Note',
         content: plainContent,
+        richContent: inner || undefined,
+        folderId: folder.id,
         voiceRecordings: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-      });
+      } as Note);
     }
 
-    return { success: true, tasks: [], notes, stats: { tasks: 0, notes: notes.length } };
+    return {
+      success: true,
+      tasks: [],
+      notes,
+      folders,
+      stats: { tasks: 0, notes: notes.length, folders: folders.length },
+    };
   } catch (e) {
     return { success: false, tasks: [], notes: [], error: `Evernote parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
   }
 };
 
+// ─── Generic CSV — Tasks ───────────────────────────────────
+// Accepts flexible column names: title/text/task/content, status/done/completed,
+// priority, description/notes, due/date, tags.
+const parseGenericTasksCSV = (text: string): ImportResult => {
+  try {
+    const rows = parseCSV(text);
+    if (rows.length === 0) return { success: false, tasks: [], notes: [], error: 'No data found in CSV', stats: { tasks: 0, notes: 0 } };
+
+    const tasks: TodoItem[] = [];
+    for (const row of rows) {
+      const title = row['title'] || row['text'] || row['task'] || row['name'] || row['content'] || Object.values(row)[0] || '';
+      if (!title) continue;
+
+      const statusRaw = (row['status'] || row['done'] || row['completed'] || row['checkbox'] || '').toLowerCase();
+      const isDone = ['true', 'yes', 'done', 'completed', '1', 'x'].includes(statusRaw);
+
+      const priorityVal = (row['priority'] || '').toLowerCase();
+      let priority: Priority = 'none';
+      if (priorityVal.includes('high') || priorityVal.includes('urgent') || priorityVal === '4') priority = 'high';
+      else if (priorityVal.includes('medium') || priorityVal.includes('mid') || priorityVal === '3') priority = 'medium';
+      else if (priorityVal.includes('low') || priorityVal === '2') priority = 'low';
+
+      const dueRaw = row['due'] || row['due date'] || row['date'] || row['deadline'] || '';
+      tasks.push({
+        id: generateId(),
+        text: title,
+        completed: isDone,
+        priority,
+        description: row['description'] || row['notes'] || row['details'] || undefined,
+        dueDate: dueRaw ? new Date(dueRaw) : undefined,
+        tags: row['tags'] ? row['tags'].split(/[,;|]/).map(t => t.trim()).filter(Boolean) : undefined,
+        createdAt: row['created'] ? new Date(row['created']) : new Date(),
+        modifiedAt: new Date(),
+      });
+    }
+    return { success: true, tasks, notes: [], stats: { tasks: tasks.length, notes: 0 } };
+  } catch (e) {
+    return { success: false, tasks: [], notes: [], error: `CSV parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
+  }
+};
+
+// ─── Generic CSV — Notes ───────────────────────────────────
+// Accepts flexible columns: title/name, content/body/notes, tags, created.
+const parseGenericNotesCSV = (text: string): ImportResult => {
+  try {
+    const rows = parseCSV(text);
+    if (rows.length === 0) return { success: false, tasks: [], notes: [], error: 'No data found in CSV', stats: { tasks: 0, notes: 0 } };
+
+    const notes: Note[] = [];
+    for (const row of rows) {
+      const title = row['title'] || row['name'] || row['subject'] || Object.values(row)[0] || '';
+      const content = row['content'] || row['body'] || row['notes'] || row['description'] || '';
+      if (!title && !content) continue;
+
+      notes.push({
+        id: generateId(),
+        type: 'regular',
+        title: title || 'Untitled',
+        content,
+        tags: row['tags'] ? row['tags'].split(/[,;|]/).map(t => t.trim()).filter(Boolean) : undefined,
+        voiceRecordings: [],
+        createdAt: row['created'] ? new Date(row['created']) : new Date(),
+        updatedAt: new Date(),
+      } as Note);
+    }
+    return { success: true, tasks: [], notes, stats: { tasks: 0, notes: notes.length } };
+  } catch (e) {
+    return { success: false, tasks: [], notes: [], error: `CSV parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
+  }
+};
+
 // ─── Main Import Function ──────────────────────────────────
-export const importFromFile = (text: string, source: ImportSource, fileType: string): ImportResult => {
+export const importFromFile = (text: string, source: ImportSource, fileType: string, fileName?: string): ImportResult => {
   switch (source) {
     case 'todoist':
       return parseTodoistCSV(text);
     case 'notion':
       return fileType === 'json' ? parseNotionJSON(text) : parseNotionCSV(text);
     case 'evernote':
-      return parseEvernoteExport(text);
+      return parseEvernoteExport(text, fileName);
+    case 'csv-tasks':
+      return parseGenericTasksCSV(text);
+    case 'csv-notes':
+      return parseGenericNotesCSV(text);
     default:
       return { success: false, tasks: [], notes: [], error: 'Unknown source', stats: { tasks: 0, notes: 0 } };
   }
@@ -288,5 +405,7 @@ export const getAcceptedFileTypes = (source: ImportSource): string => {
     case 'todoist': return '.csv';
     case 'notion': return '.csv,.json';
     case 'evernote': return '.enex,.html,.htm';
+    case 'csv-tasks':
+    case 'csv-notes': return '.csv';
   }
 };
