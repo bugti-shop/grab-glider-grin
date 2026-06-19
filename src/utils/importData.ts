@@ -266,7 +266,7 @@ const parseEvernoteExport = (text: string, fileName?: string): ImportResult => {
           type: 'regular',
           title: title.trim(),
           content: plainContent,
-          richContent: inner || undefined,
+
           tags: tagMatches.length ? tagMatches : undefined,
           folderId: folder.id,
           voiceRecordings: [],
@@ -290,7 +290,7 @@ const parseEvernoteExport = (text: string, fileName?: string): ImportResult => {
         type: 'regular',
         title: titleMatch?.[1] || fileName || 'Imported Note',
         content: plainContent,
-        richContent: inner || undefined,
+
         folderId: folder.id,
         voiceRecordings: [],
         createdAt: new Date(),
