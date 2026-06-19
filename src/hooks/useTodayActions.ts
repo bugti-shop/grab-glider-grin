@@ -103,6 +103,9 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     if (selectedFolderId && toRemove.has(selectedFolderId)) setSelectedFolderId(null);
 
     toRemove.forEach((id) => trackDeletion(id, 'todoFolders'));
+    import('@/utils/cloudSync/storeBridge').then(({ pushFolderDelete }) => {
+      toRemove.forEach((id) => pushFolderDelete(id));
+    }).catch(() => {});
 
     try {
       await setSetting('todoFolders', updatedFolders);
@@ -184,6 +187,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     setSections(normalizedSections);
 
     trackDeletion(sectionId, 'todoSections');
+    import('@/utils/cloudSync/storeBridge').then(({ pushSectionDelete }) => pushSectionDelete(sectionId)).catch(() => {});
 
     try {
       await setSetting('todoSections', normalizedSections);
