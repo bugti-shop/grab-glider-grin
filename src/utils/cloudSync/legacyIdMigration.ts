@@ -123,22 +123,30 @@ async function doMigrate(report: MigrationReport): Promise<void> {
 
       const remap: Remap = new Map();
 
-      // --- Folders ---
+      // --- Note + task folders stored in settings ---
       try {
-        const { loadFolders, saveFolders } = await import('@/utils/folderStorage');
-        const folders = await loadFolders();
-        let changed = false;
-        for (const f of folders) {
-          if (!isUuid(f.id)) {
-            const next = newId();
-            remap.set(f.id, next);
-            f.id = next;
-            f.updatedAt = new Date();
-            changed = true;
-            report.folders++;
+        const { getSetting, setSetting } = await import('@/utils/settingsStorage');
+        const migrateFolderKey = async (key: 'folders' | 'todoFolders') => {
+          const folders = await getSetting<any[]>(key, []);
+          let changed = false;
+          for (const f of folders) {
+            if (!isUuid(f.id)) {
+              const next = newId();
+              remap.set(f.id, next);
+              f.id = next;
+              f.updatedAt = new Date();
+              changed = true;
+              report.folders++;
+            }
+            if (f.parentId && remap.has(f.parentId)) {
+              f.parentId = remap.get(f.parentId);
+              changed = true;
+            }
           }
-        }
-        if (changed) await saveFolders(folders);
+          if (changed) await setSetting(key, folders);
+        };
+        await migrateFolderKey('folders');
+        await migrateFolderKey('todoFolders');
       } catch (e) { console.warn('[legacyIdMigration] folders failed', e); }
 
       // --- Notes ---
