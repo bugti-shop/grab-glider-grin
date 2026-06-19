@@ -6,8 +6,7 @@
  * non-destructive: we never erase local data because the cloud row was
  * missing a field.
  */
-import type { Folder } from '@/utils/folderStorage';
-import type { Note, TodoItem } from '@/types/note';
+import type { Note, TodoItem, TaskSection } from '@/types/note';
 import type { Habit } from '@/types/habit';
 import type { SyncTable } from './syncTables';
 
@@ -19,6 +18,20 @@ const iso = (v: unknown): string | null => {
 };
 const isUuid = (s: unknown): s is string =>
   typeof s === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
+const reviveDates = <T extends Record<string, any>>(value: T | null | undefined, keys: string[]): T | null => {
+  if (!value || typeof value !== 'object') return null;
+  const next: Record<string, any> = { ...value };
+  for (const key of keys) if (next[key]) next[key] = new Date(next[key]);
+  if (Array.isArray(next.subtasks)) next.subtasks = next.subtasks.map((item: any) => reviveDates(item, keys) ?? item);
+  if (Array.isArray(next.voiceRecordings)) {
+    next.voiceRecordings = next.voiceRecordings.map((item: any) => ({ ...item, timestamp: item?.timestamp ? new Date(item.timestamp) : new Date() }));
+  }
+  return next as T;
+};
+
+const payloadObject = (r: any): Record<string, any> | null =>
+  r?.payload && typeof r.payload === 'object' && !Array.isArray(r.payload) ? r.payload : null;
 
 export const mappers = {
   folders: {
