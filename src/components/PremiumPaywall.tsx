@@ -597,7 +597,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           className="relative w-full overflow-hidden select-none"
           style={{ aspectRatio: '16 / 10', background: '#05060c' }}
         >
-          <img src={current.img} alt="" draggable={false} decoding="async" fetchPriority="high" loading="eager" width={800} height={500} className="w-full h-full object-contain pointer-events-none" style={{ padding: '14px 0 22px', contentVisibility: 'auto' }} />
+          <img src={current.img} alt="" draggable={false} decoding="async" fetchPriority="high" loading="eager" width={800} height={500} className="w-full h-full object-contain pointer-events-none" style={{ padding: '8px 0 4px', contentVisibility: 'auto' }} />
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.95) 100%)' }} />
 
           {/* Back button overlay */}
@@ -613,8 +613,8 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
             <X size={26} strokeWidth={2.75} />
           </button>
 
-          {/* Title overlay bottom-left */}
-          <div className="absolute left-0 right-0 bottom-0 px-4 pb-5 text-left z-20 pointer-events-none">
+          {/* Title overlay bottom-left — nudged down so the king/throne is fully visible */}
+          <div className="absolute left-0 right-0 bottom-0 px-4 pb-1.5 text-left z-20 pointer-events-none">
             <h2 className="text-[19px] leading-tight font-black tracking-tight text-white drop-shadow-lg" style={{ fontFamily: "'Nunito', sans-serif" }}>{current.title}</h2>
             <p className="text-[11.5px] text-white/80 mt-0.5 drop-shadow">{current.subtitle}</p>
           </div>
@@ -739,25 +739,32 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           bottom: 'max(var(--safe-bottom, 0px), 10px)',
           background: 'linear-gradient(to top, #000 70%, rgba(0,0,0,0))',
         }}>
-        <button onClick={() => { triggerTripleHeavyHaptic(); handlePurchase(); }} disabled={isPurchasing}
-          className="w-full rounded-xl py-3 text-[14px] font-bold active:scale-[0.99] transition disabled:opacity-50"
-          style={{ background: PRO_BLUE, color: '#fff', boxShadow: `0 6px 20px ${PRO_BLUE}55` }}>
-          {isPurchasing
-            ? t('onboarding.paywall.processing')
-            : (!hasUsedTrial && currentPlan.hasTrial)
-              ? `Start 3-Day Free Trial — then ${currentPlan.price}`
-              : t('onboarding.paywall.continueWith', { price: currentPlan.price })}
-        </button>
-        <p className="text-[10.5px] leading-snug text-center mt-1.5 px-2 font-semibold" style={{ color: '#cfcfcf' }}>
-          {(!hasUsedTrial && currentPlan.hasTrial)
-            ? <>Renews at <span className="text-white font-bold">{currentPlan.price}</span> after the 3-day free trial.</>
-            : <>Renews at <span className="text-white font-bold">{currentPlan.price}</span> until cancelled.</>}
-        </p>
-        <p className="text-[9.5px] leading-snug text-center mt-1 px-2" style={{ color: '#9a9a9a' }}>
-          {(!hasUsedTrial && currentPlan.hasTrial)
-            ? `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription, at least 24h before the trial ends to avoid charges.`
-            : `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription.`}
-        </p>
+          {(() => {
+            const trialEnd = new Date();
+            trialEnd.setDate(trialEnd.getDate() + 3);
+            const endStr = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            return (
+              <>
+                <button onClick={() => { triggerTripleHeavyHaptic(); handlePurchase(); }} disabled={isPurchasing}
+                  className="w-full rounded-xl py-3 text-[14px] font-bold active:scale-[0.99] transition disabled:opacity-50"
+                  style={{ background: PRO_BLUE, color: '#fff', boxShadow: `0 6px 20px ${PRO_BLUE}55` }}>
+                  {isPurchasing
+                    ? t('onboarding.paywall.processing')
+                    : `Try for $0.00 Today`}
+                </button>
+                <p className="text-[10.5px] leading-snug text-center mt-1.5 px-2 font-semibold" style={{ color: '#cfcfcf' }}>
+                  {(!hasUsedTrial && currentPlan.hasTrial)
+                    ? <>3-day free trial, then renews at <span className="text-white font-bold">{currentPlan.price}</span> on <span className="text-white font-bold">{endStr}</span> until cancelled.</>
+                    : <>Renews at <span className="text-white font-bold">{currentPlan.price}</span> until cancelled.</>}
+                </p>
+                <p className="text-[9.5px] leading-snug text-center mt-1 px-2" style={{ color: '#9a9a9a' }}>
+                  {(!hasUsedTrial && currentPlan.hasTrial)
+                    ? `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription, at least 24h before ${endStr} to avoid charges.`
+                    : `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription.`}
+                </p>
+              </>
+            );
+          })()}
 
 
       </div>
