@@ -180,6 +180,25 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
   if (changed) await saveTasksToDB(Array.from(byId.values()) as TodoItem[], true);
 }
 
+async function applySectionsFromCloud(rows: SyncRow[]) {
+  const { getSetting, setSetting } = await import('@/utils/settingsStorage');
+  const local = await getSetting<any[]>('todoSections', []);
+  const byId = new Map((local ?? []).map((s: any) => [s.id, s]));
+  let changed = false;
+  for (const r of rows) {
+    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
+    const mapped = mappers.sections.fromCloud(r);
+    if (!mapped) continue;
+    byId.set(r.id, mapped);
+    changed = true;
+  }
+  if (changed) {
+    await setSetting('todoSections', Array.from(byId.values()), { skipCloudSync: true });
+    window.dispatchEvent(new Event('sectionsRestored'));
+    window.dispatchEvent(new Event('sectionsUpdated'));
+  }
+}
+
 async function applyHabitsFromCloud(rows: SyncRow[]) {
   const { loadHabits, saveHabit, deleteHabit } = await import('@/utils/habitStorage');
   const local = await loadHabits();
@@ -230,6 +249,7 @@ const ROUTERS: Partial<Record<string, (rows: SyncRow[]) => Promise<void>>> = {
   folders: applyFoldersFromCloud,
   notes: applyNotesFromCloud,
   tasks: applyTasksFromCloud,
+  sections: applySectionsFromCloud,
   habits: applyHabitsFromCloud,
   user_settings: applySettingsFromCloud,
   file_attachments: applyAttachmentsFromCloud,
