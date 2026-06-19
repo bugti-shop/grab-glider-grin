@@ -185,27 +185,85 @@ export const mappers = {
         frequency: (h as any).frequency ?? 'daily',
         frequency_config: (h as any).frequencyConfig ?? {},
         current_streak: (h as any).currentStreak ?? 0,
-        longest_streak: (h as any).longestStreak ?? 0,
+        longest_streak: (h as any).bestStreak ?? (h as any).longestStreak ?? 0,
         color: (h as any).color ?? null,
-        icon: (h as any).icon ?? null,
-        is_deleted: !!(h as any).isDeleted,
+        icon: (h as any).emoji ?? (h as any).icon ?? null,
+        payload: h,
+        is_deleted: !!(h as any).isArchived || !!(h as any).isDeleted,
         created_at: iso((h as any).createdAt),
         updated_at: iso((h as any).updatedAt) ?? new Date().toISOString(),
       };
     },
     mergeCloud(local: Habit | undefined, r: any): Partial<Habit> & { id: string } {
+      const payload = (payloadObject(r) ?? {}) as any;
       return {
         ...(local ?? {}),
+        ...payload,
         id: r.id,
-        name: r.name,
-        frequency: r.frequency,
-        currentStreak: r.current_streak ?? 0,
-        longestStreak: r.longest_streak ?? 0,
-        color: r.color ?? undefined,
-        icon: r.icon ?? undefined,
-        isDeleted: !!r.is_deleted,
-        updatedAt: new Date(r.updated_at ?? Date.now()),
+        name: r.name ?? local?.name ?? payload.name ?? '',
+        frequency: r.frequency ?? local?.frequency ?? payload.frequency,
+        currentStreak: r.current_streak ?? payload.currentStreak ?? local?.currentStreak ?? 0,
+        bestStreak: r.longest_streak ?? payload.bestStreak ?? local?.bestStreak ?? 0,
+        color: r.color ?? payload.color ?? local?.color,
+        emoji: payload.emoji ?? r.icon ?? (local as any)?.emoji,
+        isArchived: !!r.is_deleted,
+        updatedAt: new Date(r.updated_at ?? Date.now()).toISOString(),
       } as unknown as Partial<Habit> & { id: string };
+    },
+  },
+
+  countdowns: {
+    toCloud(c: any) {
+      if (!isUuid(c.id)) return null;
+      return {
+        id: c.id,
+        name: c.name ?? '',
+        event_date: c.date ?? null,
+        event_type: c.type ?? null,
+        repeat: c.repeat ?? 'none',
+        payload: c,
+        is_deleted: false,
+        created_at: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
+        updated_at: c.updatedAt ? new Date(c.updatedAt).toISOString() : new Date().toISOString(),
+      };
+    },
+    mergeCloud(local: any | undefined, r: any): any {
+      const payload = (payloadObject(r) ?? {}) as any;
+      return {
+        ...(local ?? {}),
+        ...payload,
+        id: r.id,
+        name: r.name ?? payload.name ?? local?.name ?? '',
+        date: r.event_date ?? payload.date ?? local?.date,
+        type: r.event_type ?? payload.type ?? local?.type ?? 'countdown',
+        repeat: r.repeat ?? payload.repeat ?? local?.repeat ?? 'none',
+        createdAt: r.created_at ? +new Date(r.created_at) : (local?.createdAt ?? Date.now()),
+        updatedAt: r.updated_at ? +new Date(r.updated_at) : Date.now(),
+      };
+    },
+  },
+
+  habitSections: {
+    toCloud(s: any) {
+      if (!isUuid(s.id)) return null;
+      return {
+        id: s.id,
+        name: s.name ?? '',
+        order_index: typeof s.order === 'number' ? s.order : 0,
+        payload: s,
+        is_deleted: false,
+        updated_at: new Date().toISOString(),
+      };
+    },
+    fromCloud(r: any): any | null {
+      if (!r?.id) return null;
+      const payload = (payloadObject(r) ?? {}) as any;
+      return {
+        ...payload,
+        id: r.id,
+        name: r.name ?? payload.name ?? '',
+        order: typeof r.order_index === 'number' ? r.order_index : (payload.order ?? 0),
+      };
     },
   },
 };

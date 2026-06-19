@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      countdowns: {
+        Row: {
+          created_at: string
+          event_date: string | null
+          event_type: string | null
+          id: string
+          is_deleted: boolean
+          name: string
+          payload: Json | null
+          repeat: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_date?: string | null
+          event_type?: string | null
+          id: string
+          is_deleted?: boolean
+          name?: string
+          payload?: Json | null
+          repeat?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_date?: string | null
+          event_type?: string | null
+          id?: string
+          is_deleted?: boolean
+          name?: string
+          payload?: Json | null
+          repeat?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       device_registry: {
         Row: {
           created_at: string
@@ -266,6 +305,39 @@ export type Database = {
           },
         ]
       }
+      habit_sections: {
+        Row: {
+          created_at: string
+          id: string
+          is_deleted: boolean
+          name: string
+          order_index: number
+          payload: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_deleted?: boolean
+          name?: string
+          order_index?: number
+          payload?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_deleted?: boolean
+          name?: string
+          order_index?: number
+          payload?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       habits: {
         Row: {
           color: string | null
@@ -278,6 +350,7 @@ export type Database = {
           is_deleted: boolean
           longest_streak: number
           name: string
+          payload: Json | null
           updated_at: string
           user_id: string
         }
@@ -292,6 +365,7 @@ export type Database = {
           is_deleted?: boolean
           longest_streak?: number
           name: string
+          payload?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -306,6 +380,7 @@ export type Database = {
           is_deleted?: boolean
           longest_streak?: number
           name?: string
+          payload?: Json | null
           updated_at?: string
           user_id?: string
         }
