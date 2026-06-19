@@ -170,8 +170,8 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
     if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
     const merged = mappers.tasks.mergeCloud(byId.get(r.id), r) as TodoItem;
     const existing = byId.get(r.id);
-    const localTs = (existing as any)?.updatedAt ? new Date((existing as any).updatedAt).getTime() : 0;
-    const cloudTs = (merged as any).updatedAt ? new Date((merged as any).updatedAt).getTime() : 0;
+    const localTs = new Date((existing as any)?.modifiedAt ?? (existing as any)?.updatedAt ?? (existing as any)?.createdAt ?? 0).getTime();
+    const cloudTs = new Date((merged as any).modifiedAt ?? (merged as any).updatedAt ?? (merged as any).createdAt ?? r.updated_at ?? 0).getTime();
     if (!existing || localTs < cloudTs) { byId.set(r.id, merged as any); changed = true; }
     else if (localTs > cloudTs) {
       recordConflict({ table: 'tasks', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
