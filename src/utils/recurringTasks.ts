@@ -182,23 +182,38 @@ export const createNextRecurringTask = (completedTask: TodoItem): TodoItem | nul
   // Record completion in recurring stats
   const updatedStats = recordRecurringCompletion(completedTask);
 
+  // Deterministic UUID derived from (source id + next occurrence). Every
+  // device that processes the same completion produces the SAME id, so the
+  // new recurring task syncs as one row instead of duplicating per device.
+  const seed = `${completedTask.id}:${nextDate.toISOString()}`;
+  let h1 = 0x811c9dc5, h2 = 0xdeadbeef;
+  for (let i = 0; i < seed.length; i++) {
+    const c = seed.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  const hex = (n: number) => (n >>> 0).toString(16).padStart(8, '0');
+  const a = hex(h1), b = hex(h2);
+  const cc = hex(Math.imul(h1 ^ h2, 2246822507));
+  const dd = hex(Math.imul(h2 ^ h1, 3266489909));
+  const variant = ((parseInt(cc.slice(0, 1), 16) & 0x3) | 0x8).toString(16);
+  const recurringId = `${a}-${b.slice(0, 4)}-4${b.slice(4, 7)}-${variant}${cc.slice(1, 4)}-${cc.slice(4)}${dd}`;
+
   return {
     ...completedTask,
-    id: `${Date.now()}-recurring`,
+    id: recurringId,
     completed: false,
     dueDate: nextDate,
     reminderTime: newReminderTime,
     recurringStats: updatedStats,
-    // Reset time tracking for new occurrence
     timeTracking: completedTask.timeTracking ? {
       totalSeconds: 0,
       isRunning: false,
       sessions: []
     } : undefined,
-    // Reset subtasks
-    subtasks: completedTask.subtasks?.map(st => ({
+    subtasks: completedTask.subtasks?.map((st, i) => ({
       ...st,
-      id: `${Date.now()}-${st.id}`,
+      id: `${recurringId}-st-${i}`,
       completed: false
     }))
   };
