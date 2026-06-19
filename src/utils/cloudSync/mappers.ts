@@ -77,6 +77,7 @@ export const mappers = {
         folder_id: isUuid(n.folderId) ? n.folderId : null,
         is_pinned: !!n.isPinned,
         tags: Array.isArray(n.tagIds) ? n.tagIds : [],
+        payload: n,
         is_deleted: !!n.isDeleted,
         created_at: iso(n.createdAt),
         updated_at: iso(n.updatedAt) ?? new Date().toISOString(),
@@ -84,8 +85,10 @@ export const mappers = {
     },
     /** Partial merge — only fields the cloud row owns. */
     mergeCloud(local: Note | undefined, r: any): Partial<Note> & { id: string } {
+      const payload = reviveDates(payloadObject(r), ['createdAt', 'updatedAt', 'archivedAt', 'deletedAt', 'reminderTime']);
       return {
         ...(local ?? {}),
+        ...(payload ?? {}),
         id: r.id,
         title: r.title ?? local?.title ?? '',
         content: r.body ?? local?.content ?? '',
