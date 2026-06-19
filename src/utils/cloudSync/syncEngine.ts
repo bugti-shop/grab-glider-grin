@@ -114,12 +114,12 @@ function attachRealtime(userId: string): void {
 
 function startHeartbeat(): void {
   if (heartbeat) clearInterval(heartbeat);
-  // Every 30s: if online and we have a user, refetch missed events as a safety net.
+  // Every 10s: if online and we have a user, refetch missed events as a safety net.
   heartbeat = setInterval(() => {
     if (!currentUserId) return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) return;
     void refetchMissed(currentUserId);
-  }, 30_000);
+  }, 10_000);
 }
 
 function onVisibility(): void {
@@ -141,8 +141,8 @@ export async function startSync(userId: string): Promise<void> {
   currentUserId = userId;
 
   await registerDevice(userId);
-  await bootstrap(userId);
   attachRealtime(userId);
+  await bootstrap(userId);
   startHeartbeat();
 
   document.addEventListener('visibilitychange', onVisibility);
