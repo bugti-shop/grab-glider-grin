@@ -406,6 +406,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
     const itemToRestore = deletedItem;
     setItems(prev => prev.filter(item => item.id !== itemId));
+    import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => pushTaskDelete(itemId)).catch(() => {});
     toast.success(t('todayPage.taskDeleted'), {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [itemToRestore!, ...prev]); toast.success(t('todayPage.taskRestored')); } },
       duration: 5000,
@@ -417,6 +418,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
     const deletedItem = deleteConfirmItem;
     setItems(prev => prev.filter(item => item.id !== deletedItem.id));
+    import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => pushTaskDelete(deletedItem.id)).catch(() => {});
     setDeleteConfirmItem(null);
     toast.success(t('todayPage.taskDeleted'), {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [deletedItem, ...prev]); toast.success(t('todayPage.taskRestored')); } },
@@ -496,6 +498,9 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       case 'move': setIsMoveToFolderOpen(true); break;
       case 'delete':
         setItems(prev => prev.filter(i => !selectedTaskIds.has(i.id)));
+        import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => {
+          selectedItems.forEach(item => pushTaskDelete(item.id));
+        }).catch(() => {});
         setSelectedTaskIds(new Set()); setIsSelectionMode(false);
         toast.success(t('todayPage.deletedTasks', { count: selectedItems.length }));
         break;
