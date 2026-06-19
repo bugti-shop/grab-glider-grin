@@ -734,14 +734,15 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           {isPurchasing
             ? t('onboarding.paywall.processing')
             : (!hasUsedTrial && currentPlan.hasTrial)
-              ? 'Try for $0.00 Today'
+              ? 'Start 3-Day Free Trial'
               : t('onboarding.paywall.continueWith', { price: currentPlan.price })}
         </button>
-        <p className="text-[9.5px] leading-snug text-center mt-1.5 px-2" style={{ color: '#7a7a7a' }}>
+        <p className="text-[9.5px] leading-snug text-center mt-1.5 px-2" style={{ color: '#9a9a9a' }}>
           {(!hasUsedTrial && currentPlan.hasTrial)
-            ? `Auto renew plans, cancel anytime. Auto renew at ${currentPlan.price} after the trial, cancel anytime.`
-            : `Subscription renews automatically at ${currentPlan.price} until cancelled. Cancel anytime.`}
+            ? `3 days free, then ${currentPlan.price} auto-renews until cancelled. Cancel anytime in Google Play → Subscriptions at least 24h before trial ends to avoid charges.`
+            : `Auto-renews at ${currentPlan.price} until cancelled. Cancel anytime in Google Play → Subscriptions.`}
         </p>
+
       </div>
     </div>
   ), document.body);
