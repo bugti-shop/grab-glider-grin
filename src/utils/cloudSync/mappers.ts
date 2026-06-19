@@ -148,6 +148,34 @@ export const mappers = {
     },
   },
 
+  sections: {
+    toCloud(s: TaskSection) {
+      if (!isUuid(s.id)) return null;
+      return {
+        id: s.id,
+        name: s.name,
+        order_index: typeof s.order === 'number' ? s.order : 0,
+        folder_id: isUuid(s.folderId) ? s.folderId : null,
+        payload: s,
+        is_deleted: false,
+        updated_at: new Date().toISOString(),
+      };
+    },
+    fromCloud(r: any): TaskSection | null {
+      if (!r?.id) return null;
+      const payload = payloadObject(r) as Partial<TaskSection> | null;
+      return {
+        ...(payload ?? {}),
+        id: r.id,
+        name: r.name ?? payload?.name ?? '',
+        color: payload?.color ?? '#3b82f6',
+        isCollapsed: payload?.isCollapsed ?? false,
+        order: typeof r.order_index === 'number' ? r.order_index : (payload?.order ?? 0),
+        folderId: r.folder_id ?? payload?.folderId,
+      };
+    },
+  },
+
   habits: {
     toCloud(h: Habit) {
       if (!isUuid(h.id)) return null;
