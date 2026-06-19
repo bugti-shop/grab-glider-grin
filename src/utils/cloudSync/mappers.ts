@@ -35,26 +35,32 @@ const payloadObject = (r: any): Record<string, any> | null =>
 
 export const mappers = {
   folders: {
-    toCloud(f: Folder) {
+    toCloud(f: any, store: 'notes' | 'tasks' = 'notes') {
       if (!isUuid(f.id)) return null;
       return {
         id: f.id,
         name: f.name,
         color: f.color ?? null,
         icon: f.icon ?? null,
+        parent_folder_id: isUuid(f.parentId) ? f.parentId : null,
+        order_index: typeof f.order === 'number' ? f.order : 0,
+        payload: { ...f, __flowistFolderStore: store },
         is_deleted: false,
         created_at: iso(f.createdAt),
-        updated_at: iso(f.updatedAt) ?? new Date().toISOString(),
+        updated_at: iso(f.updatedAt) ?? iso(f.modifiedAt) ?? iso(f.createdAt) ?? new Date().toISOString(),
       };
     },
-    fromCloud(r: any): Folder | null {
+    fromCloud(r: any): any | null {
       if (!r?.id) return null;
+      const payload = reviveDates(payloadObject(r), ['createdAt', 'updatedAt', 'modifiedAt']);
       return {
+        ...(payload ?? {}),
         id: r.id,
         name: r.name ?? '',
         color: r.color ?? undefined,
         icon: r.icon ?? undefined,
-        type: 'both',
+        parentId: r.parent_folder_id ?? payload?.parentId,
+        isDefault: payload?.isDefault ?? false,
         createdAt: new Date(r.created_at ?? Date.now()),
         updatedAt: new Date(r.updated_at ?? Date.now()),
       };
