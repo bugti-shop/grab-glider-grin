@@ -25,12 +25,28 @@ let installed = false;
 
 export function pushFolders(folders: Folder[]): void {
   for (const f of folders) {
-    const row = mappers.folders.toCloud(f);
+    const row = mappers.folders.toCloud(f, 'notes');
+    if (row) enqueueWrite('folders', 'upsert', row as any);
+  }
+}
+export function pushTaskFolders(folders: any[]): void {
+  for (const f of folders) {
+    const row = mappers.folders.toCloud(f, 'tasks');
     if (row) enqueueWrite('folders', 'upsert', row as any);
   }
 }
 export function pushFolderDelete(id: string): void {
   enqueueWrite('folders', 'delete', { id });
+}
+
+export function pushSections(sections: any[]): void {
+  for (const s of sections) {
+    const row = mappers.sections.toCloud(s);
+    if (row) enqueueWrite('sections', 'upsert', row as any);
+  }
+}
+export function pushSectionDelete(id: string): void {
+  enqueueWrite('sections', 'delete', { id });
 }
 
 export function pushNotes(notes: Note[]): void {
