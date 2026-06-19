@@ -315,7 +315,7 @@ export const saveNoteToDBSingle = async (note: Note, skipCloudSync = false): Pro
       store.put(serializeNote(hydrateNote(note)));
 
       transaction.oncomplete = () => {
-        window.dispatchEvent(new Event('notesUpdated'));
+        window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
         resolve();
       };
       transaction.onerror = () => reject(transaction.error);
@@ -346,7 +346,7 @@ export const deleteNoteFromDB = async (noteId: string, skipCloudSync = false): P
       store.delete(noteId);
 
       transaction.oncomplete = () => {
-        window.dispatchEvent(new Event('notesUpdated'));
+        window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
         resolve();
       };
       transaction.onerror = () => reject(transaction.error);
