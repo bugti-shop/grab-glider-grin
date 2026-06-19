@@ -745,14 +745,20 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           {isPurchasing
             ? t('onboarding.paywall.processing')
             : (!hasUsedTrial && currentPlan.hasTrial)
-              ? 'Start 3-Day Free Trial'
+              ? `Start 3-Day Free Trial — then ${currentPlan.price}`
               : t('onboarding.paywall.continueWith', { price: currentPlan.price })}
         </button>
-        <p className="text-[9.5px] leading-snug text-center mt-1.5 px-2" style={{ color: '#9a9a9a' }}>
+        <p className="text-[10.5px] leading-snug text-center mt-1.5 px-2 font-semibold" style={{ color: '#cfcfcf' }}>
           {(!hasUsedTrial && currentPlan.hasTrial)
-            ? `3 days free, then ${currentPlan.price} auto-renews until cancelled. Cancel anytime in Google Play → Subscriptions at least 24h before trial ends to avoid charges.`
-            : `Auto-renews at ${currentPlan.price} until cancelled. Cancel anytime in Google Play → Subscriptions.`}
+            ? <>Renews at <span className="text-white font-bold">{currentPlan.price}</span> after the 3-day free trial.</>
+            : <>Renews at <span className="text-white font-bold">{currentPlan.price}</span> until cancelled.</>}
         </p>
+        <p className="text-[9.5px] leading-snug text-center mt-1 px-2" style={{ color: '#9a9a9a' }}>
+          {(!hasUsedTrial && currentPlan.hasTrial)
+            ? `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription, at least 24h before the trial ends to avoid charges.`
+            : `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription.`}
+        </p>
+
 
       </div>
     </div>
