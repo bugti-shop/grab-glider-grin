@@ -25,12 +25,28 @@ let installed = false;
 
 export function pushFolders(folders: Folder[]): void {
   for (const f of folders) {
-    const row = mappers.folders.toCloud(f);
+    const row = mappers.folders.toCloud(f, 'notes');
+    if (row) enqueueWrite('folders', 'upsert', row as any);
+  }
+}
+export function pushTaskFolders(folders: any[]): void {
+  for (const f of folders) {
+    const row = mappers.folders.toCloud(f, 'tasks');
     if (row) enqueueWrite('folders', 'upsert', row as any);
   }
 }
 export function pushFolderDelete(id: string): void {
   enqueueWrite('folders', 'delete', { id });
+}
+
+export function pushSections(sections: any[]): void {
+  for (const s of sections) {
+    const row = mappers.sections.toCloud(s);
+    if (row) enqueueWrite('sections', 'upsert', row as any);
+  }
+}
+export function pushSectionDelete(id: string): void {
+  enqueueWrite('sections', 'delete', { id });
 }
 
 export function pushNotes(notes: Note[]): void {
@@ -97,20 +113,37 @@ export function pushSettingsSnapshot(snapshot: Record<string, unknown>): void {
 // ---------- Cloud → Local ----------
 
 async function applyFoldersFromCloud(rows: SyncRow[]) {
-  const { loadFolders, saveFolders } = await import('@/utils/folderStorage');
-  const local = await loadFolders();
-  const byId = new Map(local.map(f => [f.id, f]));
+  const { getSetting, setSetting } = await import('@/utils/settingsStorage');
+  const noteLocal = await getSetting<any[]>('folders', []);
+  const taskLocalRaw = await getSetting<any[]>('todoFolders', []);
+  const noteById = new Map((noteLocal ?? []).map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
+  const taskById = new Map((taskLocalRaw ?? []).map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
+  let noteChanged = false;
+  let taskChanged = false;
   for (const r of rows) {
     const mapped = mappers.folders.fromCloud(r);
     if (!mapped) continue;
-    if (r.is_deleted) { byId.delete(r.id); continue; }
-    const existing = byId.get(r.id);
-    if (!existing || existing.updatedAt < mapped.updatedAt) byId.set(r.id, mapped);
-    else if (existing.updatedAt.getTime() > mapped.updatedAt.getTime()) {
+    const store = (mapped as any).__flowistFolderStore === 'tasks' ? 'tasks' : 'notes';
+    const byId = store === 'tasks' ? taskById : noteById;
+    if (r.is_deleted) { if (byId.delete(r.id)) store === 'tasks' ? taskChanged = true : noteChanged = true; continue; }
+    const existing = byId.get(r.id) as any;
+    if (!existing || new Date(existing.updatedAt ?? existing.createdAt ?? 0).getTime() < mapped.updatedAt.getTime()) {
+      byId.set(r.id, mapped);
+      store === 'tasks' ? taskChanged = true : noteChanged = true;
+    } else if (new Date(existing.updatedAt ?? existing.createdAt ?? 0).getTime() > mapped.updatedAt.getTime()) {
       recordConflict({ table: 'folders', rowId: r.id, localUpdatedAt: +existing.updatedAt, cloudUpdatedAt: +mapped.updatedAt, resolution: 'kept_local' });
     }
   }
-  await saveFolders(Array.from(byId.values()));
+  if (noteChanged) {
+    await setSetting('folders', Array.from(noteById.values()), { skipCloudSync: true });
+    window.dispatchEvent(new Event('foldersRestored'));
+    window.dispatchEvent(new Event('foldersUpdated'));
+  }
+  if (taskChanged) {
+    await setSetting('todoFolders', Array.from(taskById.values()), { skipCloudSync: true } as any);
+    window.dispatchEvent(new Event('foldersRestored'));
+    window.dispatchEvent(new Event('foldersUpdated'));
+  }
 }
 
 async function applyNotesFromCloud(rows: SyncRow[]) {
@@ -118,11 +151,11 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
   const local = await loadNotesFromDB();
   const byId = new Map(local.map(n => [n.id, n]));
   for (const r of rows) {
-    if (r.is_deleted) { await deleteNoteFromDB(r.id); continue; }
+    if (r.is_deleted) { await deleteNoteFromDB(r.id, true); continue; }
     const merged = mappers.notes.mergeCloud(byId.get(r.id), r) as Note;
     const existing = byId.get(r.id);
     if (!existing || (existing.updatedAt as Date) < (merged.updatedAt as Date)) {
-      await saveNoteToDBSingle(merged);
+      await saveNoteToDBSingle(merged, true);
     } else if (+(existing.updatedAt as Date) > +(merged.updatedAt as Date)) {
       recordConflict({ table: 'notes', rowId: r.id, localUpdatedAt: +(existing.updatedAt as Date), cloudUpdatedAt: +(merged.updatedAt as Date), resolution: 'kept_local' });
     }
@@ -138,14 +171,37 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
     if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
     const merged = mappers.tasks.mergeCloud(byId.get(r.id), r) as TodoItem;
     const existing = byId.get(r.id);
-    const localTs = (existing as any)?.updatedAt ? new Date((existing as any).updatedAt).getTime() : 0;
-    const cloudTs = (merged as any).updatedAt ? new Date((merged as any).updatedAt).getTime() : 0;
+    const localTs = new Date((existing as any)?.modifiedAt ?? (existing as any)?.updatedAt ?? (existing as any)?.createdAt ?? 0).getTime();
+    const cloudTs = new Date((merged as any).modifiedAt ?? (merged as any).updatedAt ?? (merged as any).createdAt ?? r.updated_at ?? 0).getTime();
     if (!existing || localTs < cloudTs) { byId.set(r.id, merged as any); changed = true; }
     else if (localTs > cloudTs) {
       recordConflict({ table: 'tasks', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
     }
   }
-  if (changed) await saveTasksToDB(Array.from(byId.values()) as TodoItem[], true);
+  if (changed) {
+    await saveTasksToDB(Array.from(byId.values()) as TodoItem[], true);
+    window.dispatchEvent(new Event('tasksRestored'));
+    window.dispatchEvent(new Event('tasksUpdated'));
+  }
+}
+
+async function applySectionsFromCloud(rows: SyncRow[]) {
+  const { getSetting, setSetting } = await import('@/utils/settingsStorage');
+  const local = await getSetting<any[]>('todoSections', []);
+  const byId = new Map((local ?? []).map((s: any) => [s.id, s]));
+  let changed = false;
+  for (const r of rows) {
+    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
+    const mapped = mappers.sections.fromCloud(r);
+    if (!mapped) continue;
+    byId.set(r.id, mapped);
+    changed = true;
+  }
+  if (changed) {
+    await setSetting('todoSections', Array.from(byId.values()), { skipCloudSync: true });
+    window.dispatchEvent(new Event('sectionsRestored'));
+    window.dispatchEvent(new Event('sectionsUpdated'));
+  }
 }
 
 async function applyHabitsFromCloud(rows: SyncRow[]) {
@@ -171,7 +227,11 @@ async function applySettingsFromCloud(rows: SyncRow[]) {
   const display = r.display_options as Record<string, unknown> | null;
   if (!display) return;
   const { setManySettings } = await import('@/utils/settingsStorage');
-  await setManySettings(display);
+  const safeDisplay = { ...display };
+  delete safeDisplay.folders;
+  delete safeDisplay.todoFolders;
+  delete safeDisplay.todoSections;
+  await setManySettings(safeDisplay);
 }
 
 async function applyAttachmentsFromCloud(rows: SyncRow[]) {
@@ -198,6 +258,7 @@ const ROUTERS: Partial<Record<string, (rows: SyncRow[]) => Promise<void>>> = {
   folders: applyFoldersFromCloud,
   notes: applyNotesFromCloud,
   tasks: applyTasksFromCloud,
+  sections: applySectionsFromCloud,
   habits: applyHabitsFromCloud,
   user_settings: applySettingsFromCloud,
   file_attachments: applyAttachmentsFromCloud,

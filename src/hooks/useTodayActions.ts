@@ -83,12 +83,13 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   // ── Folder Actions ──
   const handleCreateFolder = useCallback((name: string, color: string, icon?: string, parentId?: string) => {
     if (!requireCapacity('taskFolders', folders.length)) return;
-    const newFolder: Folder = { id: genId(), name, color, icon, parentId, isDefault: false, createdAt: new Date() };
+    const now = new Date();
+    const newFolder: Folder = { id: genId(), name, color, icon, parentId, isDefault: false, createdAt: now, updatedAt: now } as Folder;
     setFolders(prev => [...prev, newFolder]);
   }, [folders.length, requireCapacity, setFolders]);
 
   const handleEditFolder = useCallback((folderId: string, name: string, color: string, icon?: string, parentId?: string) => {
-    setFolders(prev => prev.map(f => f.id === folderId ? { ...f, name, color, icon, parentId } : f));
+    setFolders(prev => prev.map(f => f.id === folderId ? { ...f, name, color, icon, parentId, updatedAt: new Date() } as Folder : f));
   }, [setFolders]);
 
   const handleDeleteFolder = useCallback(async (folderId: string) => {
@@ -102,6 +103,9 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     if (selectedFolderId && toRemove.has(selectedFolderId)) setSelectedFolderId(null);
 
     toRemove.forEach((id) => trackDeletion(id, 'todoFolders'));
+    import('@/utils/cloudSync/storeBridge').then(({ pushFolderDelete }) => {
+      toRemove.forEach((id) => pushFolderDelete(id));
+    }).catch(() => {});
 
     try {
       await setSetting('todoFolders', updatedFolders);
@@ -150,7 +154,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       id: genId(), name: t('todayPage.newSection'), color: '#3b82f6', isCollapsed: false, order: newOrder,
       // Scope new sections to the currently selected folder (if any)
       folderId: selectedFolderId || undefined,
-    };
+      updatedAt: new Date(),
+    } as TaskSection;
     const updatedSections = [...sections, newSection].sort((a, b) => a.order - b.order).map((s, idx) => ({ ...s, order: idx }));
     setSections(updatedSections);
     setEditingSection(newSection);
@@ -164,7 +169,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   }, [setEditingSection, setIsSectionEditOpen]);
 
   const handleSaveSection = useCallback((updatedSection: TaskSection) => {
-    setSections(prev => prev.map(s => s.id === updatedSection.id ? updatedSection : s));
+    setSections(prev => prev.map(s => s.id === updatedSection.id ? { ...updatedSection, updatedAt: new Date() } as TaskSection : s));
   }, [setSections]);
 
   const handleDeleteSection = useCallback(async (sectionId: string) => {
@@ -182,6 +187,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     setSections(normalizedSections);
 
     trackDeletion(sectionId, 'todoSections');
+    import('@/utils/cloudSync/storeBridge').then(({ pushSectionDelete }) => pushSectionDelete(sectionId)).catch(() => {});
 
     try {
       await setSetting('todoSections', normalizedSections);
@@ -205,7 +211,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     if (!requireCapacity('sectionsPerFolder', folderSectionsCount)) return;
 
     const maxOrder = Math.max(...sections.map(s => s.order), 0);
-    const newSection: TaskSection = { ...section, id: genId(), name: `${section.name} (Copy)`, order: maxOrder + 1 };
+    const newSection: TaskSection = { ...section, id: genId(), name: `${section.name} (Copy)`, order: maxOrder + 1, updatedAt: new Date() } as TaskSection;
     const sectionTasks = items.filter(i => i.sectionId === sectionId && !i.completed);
 
     // Cap duplicated tasks to remaining per-folder and global soft limits
@@ -226,7 +232,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     if (currentIndex === targetIndex) return;
     const [movedSection] = sortedSections.splice(currentIndex, 1);
     sortedSections.splice(targetIndex, 0, movedSection);
-    setSections(sortedSections.map((s, idx) => ({ ...s, order: idx })));
+    const now = new Date();
+    setSections(sortedSections.map((s, idx) => ({ ...s, order: idx, updatedAt: s.id === sectionId ? now : (s as any).updatedAt })) as TaskSection[]);
     toast.success(t('todayPage.sectionMoved'));
   }, [sections, setSections, t]);
 
@@ -263,7 +270,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const sortedSects = [...sections].sort((a, b) => a.order - b.order);
     const [removed] = sortedSects.splice(sourceIndex, 1);
     sortedSects.splice(destIndex, 0, removed);
-    setSections(sortedSects.map((s, idx) => ({ ...s, order: idx })));
+    const now = new Date();
+    setSections(sortedSects.map((s, idx) => ({ ...s, order: idx, updatedAt: now })) as TaskSection[]);
   }, [sections, setSections]);
 
   // ── Task CRUD ──
@@ -402,6 +410,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
     const itemToRestore = deletedItem;
     setItems(prev => prev.filter(item => item.id !== itemId));
+    import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => pushTaskDelete(itemId)).catch(() => {});
     toast.success(t('todayPage.taskDeleted'), {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [itemToRestore!, ...prev]); toast.success(t('todayPage.taskRestored')); } },
       duration: 5000,
@@ -413,6 +422,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
     const deletedItem = deleteConfirmItem;
     setItems(prev => prev.filter(item => item.id !== deletedItem.id));
+    import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => pushTaskDelete(deletedItem.id)).catch(() => {});
     setDeleteConfirmItem(null);
     toast.success(t('todayPage.taskDeleted'), {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [deletedItem, ...prev]); toast.success(t('todayPage.taskRestored')); } },
@@ -492,6 +502,9 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       case 'move': setIsMoveToFolderOpen(true); break;
       case 'delete':
         setItems(prev => prev.filter(i => !selectedTaskIds.has(i.id)));
+        import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => {
+          selectedItems.forEach(item => pushTaskDelete(item.id));
+        }).catch(() => {});
         setSelectedTaskIds(new Set()); setIsSelectionMode(false);
         toast.success(t('todayPage.deletedTasks', { count: selectedItems.length }));
         break;

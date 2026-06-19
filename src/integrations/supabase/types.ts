@@ -144,6 +144,7 @@ export type Database = {
           name: string
           order_index: number
           parent_folder_id: string | null
+          payload: Json
           updated_at: string
           user_id: string
         }
@@ -156,6 +157,7 @@ export type Database = {
           name: string
           order_index?: number
           parent_folder_id?: string | null
+          payload?: Json
           updated_at?: string
           user_id: string
         }
@@ -168,6 +170,7 @@ export type Database = {
           name?: string
           order_index?: number
           parent_folder_id?: string | null
+          payload?: Json
           updated_at?: string
           user_id?: string
         }
@@ -408,6 +411,7 @@ export type Database = {
           is_deleted: boolean
           is_pinned: boolean
           list_id: string | null
+          payload: Json
           tags: string[]
           title: string | null
           updated_at: string
@@ -421,6 +425,7 @@ export type Database = {
           is_deleted?: boolean
           is_pinned?: boolean
           list_id?: string | null
+          payload?: Json
           tags?: string[]
           title?: string | null
           updated_at?: string
@@ -434,6 +439,7 @@ export type Database = {
           is_deleted?: boolean
           is_pinned?: boolean
           list_id?: string | null
+          payload?: Json
           tags?: string[]
           title?: string | null
           updated_at?: string
@@ -570,6 +576,7 @@ export type Database = {
           list_id: string | null
           name: string
           order_index: number
+          payload: Json
           updated_at: string
           user_id: string
         }
@@ -581,6 +588,7 @@ export type Database = {
           list_id?: string | null
           name: string
           order_index?: number
+          payload?: Json
           updated_at?: string
           user_id: string
         }
@@ -592,6 +600,7 @@ export type Database = {
           list_id?: string | null
           name?: string
           order_index?: number
+          payload?: Json
           updated_at?: string
           user_id?: string
         }
@@ -704,6 +713,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           due_date: string | null
+          folder_id: string | null
           id: string
           is_completed: boolean
           is_deleted: boolean
@@ -711,8 +721,10 @@ export type Database = {
           notes: string | null
           order_index: number
           parent_task_id: string | null
+          payload: Json
           priority: number
           reminder_at: string | null
+          section_id: string | null
           title: string
           updated_at: string
           user_id: string
@@ -721,6 +733,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           due_date?: string | null
+          folder_id?: string | null
           id?: string
           is_completed?: boolean
           is_deleted?: boolean
@@ -728,8 +741,10 @@ export type Database = {
           notes?: string | null
           order_index?: number
           parent_task_id?: string | null
+          payload?: Json
           priority?: number
           reminder_at?: string | null
+          section_id?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -738,6 +753,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           due_date?: string | null
+          folder_id?: string | null
           id?: string
           is_completed?: boolean
           is_deleted?: boolean
@@ -745,13 +761,22 @@ export type Database = {
           notes?: string | null
           order_index?: number
           parent_task_id?: string | null
+          payload?: Json
           priority?: number
           reminder_at?: string | null
+          section_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_list_id_fkey"
             columns: ["list_id"]
@@ -764,6 +789,13 @@ export type Database = {
             columns: ["parent_task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
             referencedColumns: ["id"]
           },
         ]

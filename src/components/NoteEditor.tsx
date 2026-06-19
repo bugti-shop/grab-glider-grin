@@ -455,8 +455,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       name: newFolderName,
       isDefault: false,
       createdAt: new Date(),
+      updatedAt: new Date(),
       color: newFolderColor,
-    };
+    } as Folder;
 
     const updatedFolders = [...folders, newFolder];
     setFolders(updatedFolders);

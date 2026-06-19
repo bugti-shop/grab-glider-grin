@@ -6,13 +6,18 @@
  * subtask add). All collisions previously caused "complete one → all
  * complete" style bugs because the items shared the same id.
  *
- * This produces ids of the form `<timestamp>-<random>` which are:
- *  - Sortable by creation time (timestamp prefix)
- *  - Unique across same-tick batches (random suffix)
- *  - Stable string format compatible with existing storage
+ * This now produces UUIDs so new tasks, notes, folders, and sections can be
+ * mirrored to the backend immediately. Creation sorting should use createdAt /
+ * modifiedAt instead of parsing the id.
  *
  * Use `genId()` everywhere a new entity (task, folder, section, recording,
  * comment, note, subtask, calendar event) needs an id.
  */
 export const genId = (): string =>
-  `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });

@@ -288,7 +288,7 @@ export const saveNotesToDB = async (notes: Note[], skipSyncEvent = false): Promi
   return flushNotesToDB(notes, skipSyncEvent);
 };
 
-export const saveNoteToDBSingle = async (note: Note): Promise<void> => {
+export const saveNoteToDBSingle = async (note: Note, skipCloudSync = false): Promise<void> => {
   // Update cache
   if (notesCache) {
     const idx = notesCache.findIndex(n => n.id === note.id);
@@ -301,9 +301,11 @@ export const saveNoteToDBSingle = async (note: Note): Promise<void> => {
   }
 
   // Mirror to Lovable Cloud
-  import('@/utils/cloudSync/storeBridge').then(({ pushNotes }) => {
-    try { pushNotes([note]); } catch {}
-  }).catch(() => {});
+  if (!skipCloudSync) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushNotes }) => {
+      try { pushNotes([note]); } catch {}
+    }).catch(() => {});
+  }
 
   try {
     await withRetry((database) => new Promise<void>((resolve, reject) => {
@@ -313,7 +315,7 @@ export const saveNoteToDBSingle = async (note: Note): Promise<void> => {
       store.put(serializeNote(hydrateNote(note)));
 
       transaction.oncomplete = () => {
-        window.dispatchEvent(new Event('notesUpdated'));
+        window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
         resolve();
       };
       transaction.onerror = () => reject(transaction.error);
@@ -323,7 +325,7 @@ export const saveNoteToDBSingle = async (note: Note): Promise<void> => {
   }
 };
 
-export const deleteNoteFromDB = async (noteId: string): Promise<void> => {
+export const deleteNoteFromDB = async (noteId: string, skipCloudSync = false): Promise<void> => {
   // Update cache
   if (notesCache) {
     notesCache = notesCache.filter(n => n.id !== noteId);
@@ -331,9 +333,11 @@ export const deleteNoteFromDB = async (noteId: string): Promise<void> => {
   }
 
   // Mirror delete to Lovable Cloud
-  import('@/utils/cloudSync/storeBridge').then(({ pushNoteDelete }) => {
-    try { pushNoteDelete(noteId); } catch {}
-  }).catch(() => {});
+  if (!skipCloudSync) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushNoteDelete }) => {
+      try { pushNoteDelete(noteId); } catch {}
+    }).catch(() => {});
+  }
 
   try {
     await withRetry((database) => new Promise<void>((resolve, reject) => {
@@ -342,7 +346,7 @@ export const deleteNoteFromDB = async (noteId: string): Promise<void> => {
       store.delete(noteId);
 
       transaction.oncomplete = () => {
-        window.dispatchEvent(new Event('notesUpdated'));
+        window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
         resolve();
       };
       transaction.onerror = () => reject(transaction.error);

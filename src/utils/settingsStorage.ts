@@ -136,19 +136,28 @@ export const getSetting = async <T>(key: string, defaultValue: T): Promise<T> =>
   }
 };
 
-export const setSetting = async <T>(key: string, value: T): Promise<void> => {
+export const setSetting = async <T>(key: string, value: T, options?: { skipCloudSync?: boolean }): Promise<void> => {
   // Always update warm cache immediately so reads are instant
   _warmCache.set(key, value);
 
   // Mirror the full settings snapshot to Lovable Cloud (debounced inside bridge).
   // We snapshot the warm cache because the cloud row is user-level, not per-key.
-  import('@/utils/cloudSync/storeBridge').then(({ pushSettingsSnapshot }) => {
-    try {
-      const snap: Record<string, unknown> = {};
-      _warmCache.forEach((v, k) => { snap[k] = v; });
-      pushSettingsSnapshot(snap);
-    } catch {}
-  }).catch(() => {});
+  if (!options?.skipCloudSync) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushSettingsSnapshot }) => {
+      try {
+        const snap: Record<string, unknown> = {};
+        _warmCache.forEach((v, k) => { snap[k] = v; });
+        pushSettingsSnapshot(snap);
+      } catch {}
+    }).catch(() => {});
+    import('@/utils/cloudSync/storeBridge').then(({ pushFolders, pushTaskFolders, pushSections }) => {
+      try {
+        if (key === 'folders' && Array.isArray(value)) pushFolders(value as any);
+        if (key === 'todoFolders' && Array.isArray(value)) pushTaskFolders(value as any);
+        if (key === 'todoSections' && Array.isArray(value)) pushSections(value as any);
+      } catch {}
+    }).catch(() => {});
+  }
 
   try {
     await withRetry((database) => new Promise<void>((resolve, reject) => {

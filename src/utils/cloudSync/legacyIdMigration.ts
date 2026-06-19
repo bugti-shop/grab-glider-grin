@@ -8,7 +8,7 @@
  * - Persists via the regular save APIs so the writeQueue mirrors them to cloud.
  * - Guarded by a localStorage flag so it runs at most once per device.
  */
-const FLAG_KEY = 'flowist:legacyIdMigration:v1';
+const FLAG_KEY = 'flowist:legacyIdMigration:v2';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid = (s: unknown): s is string => typeof s === 'string' && UUID_RE.test(s);
@@ -123,23 +123,52 @@ async function doMigrate(report: MigrationReport): Promise<void> {
 
       const remap: Remap = new Map();
 
-      // --- Folders ---
+      // --- Note + task folders stored in settings ---
       try {
-        const { loadFolders, saveFolders } = await import('@/utils/folderStorage');
-        const folders = await loadFolders();
+        const { getSetting, setSetting } = await import('@/utils/settingsStorage');
+        const migrateFolderKey = async (key: 'folders' | 'todoFolders') => {
+          const folders = await getSetting<any[]>(key, []);
+          let changed = false;
+          for (const f of folders) {
+            if (!isUuid(f.id)) {
+              const next = newId();
+              remap.set(f.id, next);
+              f.id = next;
+              f.updatedAt = new Date();
+              changed = true;
+              report.folders++;
+            }
+            if (f.parentId && remap.has(f.parentId)) {
+              f.parentId = remap.get(f.parentId);
+              changed = true;
+            }
+          }
+          if (changed) await setSetting(key, folders);
+        };
+        await migrateFolderKey('folders');
+        await migrateFolderKey('todoFolders');
+      } catch (e) { console.warn('[legacyIdMigration] folders failed', e); }
+
+      // --- Task sections ---
+      try {
+        const { getSetting, setSetting } = await import('@/utils/settingsStorage');
+        const sections = await getSetting<any[]>('todoSections', []);
         let changed = false;
-        for (const f of folders) {
-          if (!isUuid(f.id)) {
+        for (const s of sections) {
+          if (!isUuid(s.id)) {
             const next = newId();
-            remap.set(f.id, next);
-            f.id = next;
-            f.updatedAt = new Date();
+            remap.set(s.id, next);
+            s.id = next;
+            s.updatedAt = new Date();
             changed = true;
-            report.folders++;
+          }
+          if (s.folderId && remap.has(s.folderId)) {
+            s.folderId = remap.get(s.folderId);
+            changed = true;
           }
         }
-        if (changed) await saveFolders(folders);
-      } catch (e) { console.warn('[legacyIdMigration] folders failed', e); }
+        if (changed) await setSetting('todoSections', sections);
+      } catch (e) { console.warn('[legacyIdMigration] sections failed', e); }
 
       // --- Notes ---
       try {
@@ -186,6 +215,8 @@ async function doMigrate(report: MigrationReport): Promise<void> {
           if (folderRemapped !== t.folderId) { t.folderId = folderRemapped; changed = true; }
           const parentRemapped = remapId(remap, t.parentId);
           if (parentRemapped !== t.parentId) { t.parentId = parentRemapped; changed = true; }
+          const sectionRemapped = remapId(remap, t.sectionId);
+          if (sectionRemapped !== t.sectionId) { t.sectionId = sectionRemapped; changed = true; }
           if (Array.isArray(t.subtasks)) t.subtasks.forEach(rewriteRefs);
         };
         tasks.forEach(rewriteRefs);

@@ -217,10 +217,12 @@ export const useTodayState = () => {
       setItemsLoaded(true);
     };
     const handleSectionsFromSync = async () => {
+      (window as any).__todaySyncFlag.sectionsFromSync = true;
       const savedSections = await getSetting<TaskSection[]>('todoSections', []);
       setSections(savedSections.length > 0 ? savedSections : getDefaultSections(t));
     };
     const handleFoldersFromSync = async () => {
+      (window as any).__todaySyncFlag.foldersFromSync = true;
       const savedFolders = await getSetting<Folder[] | null>('todoFolders', null);
       if (savedFolders) {
         setFolders(savedFolders.map((f: Folder) => ({ ...f, createdAt: new Date(f.createdAt) })));
@@ -228,7 +230,7 @@ export const useTodayState = () => {
     };
 
     // Expose the flag via a ref on the window for the save effect to read
-    (window as any).__todaySyncFlag = { isFromSync: false };
+    (window as any).__todaySyncFlag = { isFromSync: false, foldersFromSync: false, sectionsFromSync: false };
     const origHandleTasksFromSync = handleTasksFromSync;
     const wrappedHandleTasksFromSync = async () => {
       (window as any).__todaySyncFlag.isFromSync = true;
@@ -280,9 +282,17 @@ export const useTodayState = () => {
   }, [items, settingsLoaded, itemsLoaded]);
 
   // Settings persistence
-  useEffect(() => { if (settingsLoaded) { setSetting('todoFolders', folders); window.dispatchEvent(new Event('foldersUpdated')); } }, [folders, settingsLoaded]);
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    const syncFlag = (window as any).__todaySyncFlag;
+    if (syncFlag?.foldersFromSync) { syncFlag.foldersFromSync = false; return; }
+    setSetting('todoFolders', folders);
+    window.dispatchEvent(new Event('foldersUpdated'));
+  }, [folders, settingsLoaded]);
   useEffect(() => {
     if (settingsLoaded) {
+      const syncFlag = (window as any).__todaySyncFlag;
+      if (syncFlag?.sectionsFromSync) { syncFlag.sectionsFromSync = false; return; }
       setSetting('todoSections', sections);
       window.dispatchEvent(new Event('sectionsUpdated'));
     }

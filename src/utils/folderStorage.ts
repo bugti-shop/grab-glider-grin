@@ -29,7 +29,7 @@ export const loadFolders = async (): Promise<Folder[]> => {
   }
 };
 
-export const saveFolders = async (folders: Folder[]): Promise<void> => {
+export const saveFolders = async (folders: Folder[], skipCloudSync = false): Promise<void> => {
   try {
     const serialized = folders.map(folder => ({
       ...folder,
@@ -39,9 +39,11 @@ export const saveFolders = async (folders: Folder[]): Promise<void> => {
     await setSetting(FOLDERS_KEY, serialized);
     window.dispatchEvent(new Event('foldersUpdated'));
     // Mirror to Lovable Cloud (offline-queued, last-write-wins by id)
-    import('@/utils/cloudSync/storeBridge').then(({ pushFolders }) => {
-      try { pushFolders(folders); } catch {}
-    }).catch(() => {});
+    if (!skipCloudSync) {
+      import('@/utils/cloudSync/storeBridge').then(({ pushFolders }) => {
+        try { pushFolders(folders); } catch {}
+      }).catch(() => {});
+    }
   } catch (error) {
     console.error('Error saving folders:', error);
   }
