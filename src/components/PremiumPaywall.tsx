@@ -739,25 +739,32 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           bottom: 'max(var(--safe-bottom, 0px), 10px)',
           background: 'linear-gradient(to top, #000 70%, rgba(0,0,0,0))',
         }}>
-        <button onClick={() => { triggerTripleHeavyHaptic(); handlePurchase(); }} disabled={isPurchasing}
-          className="w-full rounded-xl py-3 text-[14px] font-bold active:scale-[0.99] transition disabled:opacity-50"
-          style={{ background: PRO_BLUE, color: '#fff', boxShadow: `0 6px 20px ${PRO_BLUE}55` }}>
-          {isPurchasing
-            ? t('onboarding.paywall.processing')
-            : (!hasUsedTrial && currentPlan.hasTrial)
-              ? `Start 3-Day Free Trial — then ${currentPlan.price}`
-              : t('onboarding.paywall.continueWith', { price: currentPlan.price })}
-        </button>
-        <p className="text-[10.5px] leading-snug text-center mt-1.5 px-2 font-semibold" style={{ color: '#cfcfcf' }}>
-          {(!hasUsedTrial && currentPlan.hasTrial)
-            ? <>Renews at <span className="text-white font-bold">{currentPlan.price}</span> after the 3-day free trial.</>
-            : <>Renews at <span className="text-white font-bold">{currentPlan.price}</span> until cancelled.</>}
-        </p>
-        <p className="text-[9.5px] leading-snug text-center mt-1 px-2" style={{ color: '#9a9a9a' }}>
-          {(!hasUsedTrial && currentPlan.hasTrial)
-            ? `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription, at least 24h before the trial ends to avoid charges.`
-            : `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription.`}
-        </p>
+          {(() => {
+            const trialEnd = new Date();
+            trialEnd.setDate(trialEnd.getDate() + 3);
+            const endStr = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            return (
+              <>
+                <button onClick={() => { triggerTripleHeavyHaptic(); handlePurchase(); }} disabled={isPurchasing}
+                  className="w-full rounded-xl py-3 text-[14px] font-bold active:scale-[0.99] transition disabled:opacity-50"
+                  style={{ background: PRO_BLUE, color: '#fff', boxShadow: `0 6px 20px ${PRO_BLUE}55` }}>
+                  {isPurchasing
+                    ? t('onboarding.paywall.processing')
+                    : `Try for $0.00 Today`}
+                </button>
+                <p className="text-[10.5px] leading-snug text-center mt-1.5 px-2 font-semibold" style={{ color: '#cfcfcf' }}>
+                  {(!hasUsedTrial && currentPlan.hasTrial)
+                    ? <>3-day free trial, then renews at <span className="text-white font-bold">{currentPlan.price}</span> on <span className="text-white font-bold">{endStr}</span> until cancelled.</>
+                    : <>Renews at <span className="text-white font-bold">{currentPlan.price}</span> until cancelled.</>}
+                </p>
+                <p className="text-[9.5px] leading-snug text-center mt-1 px-2" style={{ color: '#9a9a9a' }}>
+                  {(!hasUsedTrial && currentPlan.hasTrial)
+                    ? `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription, at least 24h before ${endStr} to avoid charges.`
+                    : `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription.`}
+                </p>
+              </>
+            );
+          })()}
 
 
       </div>
