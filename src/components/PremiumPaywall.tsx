@@ -678,6 +678,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           const trialEnd = new Date();
           trialEnd.setDate(trialEnd.getDate() + 3);
           const endStr = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+          const period = currentPlan.labelKey.includes('yearly') ? 'yearly' : currentPlan.labelKey.includes('monthly') ? 'monthly' : 'weekly';
           return (
             <div className="mt-4 rounded-xl p-3.5" style={{ background: '#111', border: `1px solid ${PRO_BLUE}55` }}>
               <p className="text-[12.5px] font-bold mb-2" style={{ color: PRO_BLUE }}>
@@ -685,10 +686,20 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
               </p>
               <ul className="space-y-1.5 text-[11.5px] leading-snug" style={{ color: '#cfcfcf' }}>
                 <li>• 3-day free trial — you pay <span className="font-bold text-white">$0.00 today</span>.</li>
-                <li>• Trial ends on <span className="font-bold text-white">{endStr}</span>. After the trial, your {currentPlan.labelKey.includes('yearly') ? 'yearly' : currentPlan.labelKey.includes('monthly') ? 'monthly' : 'weekly'} subscription auto-renews at <span className="font-bold text-white">{currentPlan.price}</span> until cancelled.</li>
-                <li>• Cancel anytime at least 24 hours before the trial ends in Google Play → Subscriptions to avoid being charged. No cancellation fee.</li>
-                <li>• Payment is charged to your Google Play account on the renewal date. Prices may vary by country and applicable taxes.</li>
+                <li>• Trial ends on <span className="font-bold text-white">{endStr}</span>. After the trial, your {period} subscription auto-renews at <span className="font-bold text-white">{currentPlan.price}</span> (renewal amount: <span className="font-bold text-white">{currentPlan.price}</span>) until cancelled.</li>
+                <li>• Payment is charged to your Google Play account on the renewal date. Prices may vary by country and applicable taxes. No cancellation fee.</li>
               </ul>
+
+              <p className="text-[12px] font-bold mt-3 mb-1.5" style={{ color: PRO_BLUE }}>
+                How to cancel your free trial (Google Play)
+              </p>
+              <ol className="space-y-1 text-[11.5px] leading-snug list-decimal pl-4" style={{ color: '#cfcfcf' }}>
+                <li>Open the <span className="font-semibold text-white">Google Play Store</span> app on the device used to subscribe.</li>
+                <li>Tap your <span className="font-semibold text-white">profile icon</span> (top-right) → <span className="font-semibold text-white">Payments &amp; subscriptions</span> → <span className="font-semibold text-white">Subscriptions</span>.</li>
+                <li>Select <span className="font-semibold text-white">Flowist</span> from the list of subscriptions.</li>
+                <li>Tap <span className="font-semibold text-white">Cancel subscription</span> and confirm.</li>
+                <li>Cancel <span className="font-bold text-white">at least 24 hours before {endStr}</span> to avoid being charged. You'll keep Premium access until the trial ends.</li>
+              </ol>
             </div>
           );
         })()}
