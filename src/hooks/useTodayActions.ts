@@ -151,7 +151,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       id: genId(), name: t('todayPage.newSection'), color: '#3b82f6', isCollapsed: false, order: newOrder,
       // Scope new sections to the currently selected folder (if any)
       folderId: selectedFolderId || undefined,
-    };
+      updatedAt: new Date(),
+    } as TaskSection;
     const updatedSections = [...sections, newSection].sort((a, b) => a.order - b.order).map((s, idx) => ({ ...s, order: idx }));
     setSections(updatedSections);
     setEditingSection(newSection);
@@ -165,7 +166,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   }, [setEditingSection, setIsSectionEditOpen]);
 
   const handleSaveSection = useCallback((updatedSection: TaskSection) => {
-    setSections(prev => prev.map(s => s.id === updatedSection.id ? updatedSection : s));
+    setSections(prev => prev.map(s => s.id === updatedSection.id ? { ...updatedSection, updatedAt: new Date() } as TaskSection : s));
   }, [setSections]);
 
   const handleDeleteSection = useCallback(async (sectionId: string) => {
@@ -206,7 +207,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     if (!requireCapacity('sectionsPerFolder', folderSectionsCount)) return;
 
     const maxOrder = Math.max(...sections.map(s => s.order), 0);
-    const newSection: TaskSection = { ...section, id: genId(), name: `${section.name} (Copy)`, order: maxOrder + 1 };
+    const newSection: TaskSection = { ...section, id: genId(), name: `${section.name} (Copy)`, order: maxOrder + 1, updatedAt: new Date() } as TaskSection;
     const sectionTasks = items.filter(i => i.sectionId === sectionId && !i.completed);
 
     // Cap duplicated tasks to remaining per-folder and global soft limits
