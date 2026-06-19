@@ -178,7 +178,11 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
       recordConflict({ table: 'tasks', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
     }
   }
-  if (changed) await saveTasksToDB(Array.from(byId.values()) as TodoItem[], true);
+  if (changed) {
+    await saveTasksToDB(Array.from(byId.values()) as TodoItem[], true);
+    window.dispatchEvent(new Event('tasksRestored'));
+    window.dispatchEvent(new Event('tasksUpdated'));
+  }
 }
 
 async function applySectionsFromCloud(rows: SyncRow[]) {
