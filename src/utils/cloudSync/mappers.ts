@@ -116,27 +116,34 @@ export const mappers = {
         list_id: isUuid((t as any).listId) ? (t as any).listId : null,
         parent_task_id: isUuid((t as any).parentId) ? (t as any).parentId : null,
         order_index: typeof (t as any).order === 'number' ? (t as any).order : 0,
-        notes: (t as any).notes ?? null,
+        notes: (t as any).description ?? (t as any).notes ?? null,
         reminder_at: iso((t as any).reminderTime),
+        folder_id: isUuid((t as any).folderId) ? (t as any).folderId : null,
+        section_id: isUuid((t as any).sectionId) ? (t as any).sectionId : null,
+        payload: t,
         is_deleted: !!(t as any).isDeleted,
         created_at: iso((t as any).createdAt),
-        updated_at: iso((t as any).updatedAt) ?? new Date().toISOString(),
+        updated_at: iso((t as any).modifiedAt) ?? iso((t as any).updatedAt) ?? iso((t as any).createdAt) ?? new Date().toISOString(),
       };
     },
     mergeCloud(local: TodoItem | undefined, r: any): Partial<TodoItem> & { id: string } {
       const prioMap = ['none', 'low', 'medium', 'high'] as const;
+      const payload = reviveDates(payloadObject(r), ['createdAt', 'modifiedAt', 'updatedAt', 'completedAt', 'dueDate', 'reminderTime', 'extraReminderTime']);
       return {
         ...(local ?? {}),
+        ...(payload ?? {}),
         id: r.id,
         text: r.title ?? (local as any)?.text ?? '',
         completed: !!r.is_completed,
         completedAt: r.completed_at ? new Date(r.completed_at) : (local as any)?.completedAt,
         dueDate: r.due_date ? new Date(r.due_date) : (local as any)?.dueDate,
         priority: prioMap[Math.max(0, Math.min(3, r.priority ?? 0))],
-        notes: r.notes ?? (local as any)?.notes,
+        description: r.notes ?? (payload as any)?.description ?? (local as any)?.description,
         reminderTime: r.reminder_at ? new Date(r.reminder_at) : (local as any)?.reminderTime,
+        folderId: r.folder_id ?? (payload as any)?.folderId ?? (local as any)?.folderId,
+        sectionId: r.section_id ?? (payload as any)?.sectionId ?? (local as any)?.sectionId,
         isDeleted: !!r.is_deleted,
-        updatedAt: new Date(r.updated_at ?? Date.now()),
+        modifiedAt: new Date(r.updated_at ?? Date.now()),
       } as Partial<TodoItem> & { id: string };
     },
   },
