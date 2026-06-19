@@ -125,7 +125,8 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
   const getCurrentNoteId = useCallback(() => {
     if (note?.id) return note.id;
-    if (!draftIdRef.current) draftIdRef.current = `note-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    // UUID required so the note round-trips through Lovable Cloud sync.
+    if (!draftIdRef.current) draftIdRef.current = genId();
     return draftIdRef.current;
   }, [note?.id]);
 
