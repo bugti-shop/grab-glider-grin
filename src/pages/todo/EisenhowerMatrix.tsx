@@ -180,6 +180,10 @@ const EisenhowerMatrix = () => {
     const updated = tasks.filter(t => t.id !== task.id);
     setTasks(updated);
     await saveTasksToDB(updated);
+    try {
+      const { pushTaskDelete } = await import('@/utils/cloudSync/storeBridge');
+      pushTaskDelete(task.id);
+    } catch {}
     window.dispatchEvent(new Event('tasksUpdated'));
     toast.success('Task deleted', { duration: 1000 });
   };
