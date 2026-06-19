@@ -222,7 +222,11 @@ async function applySettingsFromCloud(rows: SyncRow[]) {
   const display = r.display_options as Record<string, unknown> | null;
   if (!display) return;
   const { setManySettings } = await import('@/utils/settingsStorage');
-  await setManySettings(display);
+  const safeDisplay = { ...display };
+  delete safeDisplay.folders;
+  delete safeDisplay.todoFolders;
+  delete safeDisplay.todoSections;
+  await setManySettings(safeDisplay);
 }
 
 async function applyAttachmentsFromCloud(rows: SyncRow[]) {
