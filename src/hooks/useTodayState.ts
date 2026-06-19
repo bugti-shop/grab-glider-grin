@@ -287,9 +287,6 @@ export const useTodayState = () => {
     const syncFlag = (window as any).__todaySyncFlag;
     if (syncFlag?.foldersFromSync) { syncFlag.foldersFromSync = false; return; }
     setSetting('todoFolders', folders);
-    import('@/utils/cloudSync/storeBridge').then(({ pushTaskFolders }) => {
-      try { pushTaskFolders(folders); } catch {}
-    }).catch(() => {});
     window.dispatchEvent(new Event('foldersUpdated'));
   }, [folders, settingsLoaded]);
   useEffect(() => {
@@ -297,9 +294,6 @@ export const useTodayState = () => {
       const syncFlag = (window as any).__todaySyncFlag;
       if (syncFlag?.sectionsFromSync) { syncFlag.sectionsFromSync = false; return; }
       setSetting('todoSections', sections);
-      import('@/utils/cloudSync/storeBridge').then(({ pushSections }) => {
-        try { pushSections(sections); } catch {}
-      }).catch(() => {});
       window.dispatchEvent(new Event('sectionsUpdated'));
     }
   }, [sections, settingsLoaded]);
