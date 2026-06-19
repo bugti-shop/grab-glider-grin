@@ -113,13 +113,10 @@ export function pushSettingsSnapshot(snapshot: Record<string, unknown>): void {
 // ---------- Cloud → Local ----------
 
 async function applyFoldersFromCloud(rows: SyncRow[]) {
-  const [{ loadFolders, saveFolders }, { getSetting, setSetting }] = await Promise.all([
-    import('@/utils/folderStorage'),
-    import('@/utils/settingsStorage'),
-  ]);
-  const noteLocal = await loadFolders();
+  const { getSetting, setSetting } = await import('@/utils/settingsStorage');
+  const noteLocal = await getSetting<any[]>('folders', []);
   const taskLocalRaw = await getSetting<any[]>('todoFolders', []);
-  const noteById = new Map(noteLocal.map(f => [f.id, f]));
+  const noteById = new Map((noteLocal ?? []).map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
   const taskById = new Map((taskLocalRaw ?? []).map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
   let noteChanged = false;
   let taskChanged = false;
@@ -137,7 +134,11 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
       recordConflict({ table: 'folders', rowId: r.id, localUpdatedAt: +existing.updatedAt, cloudUpdatedAt: +mapped.updatedAt, resolution: 'kept_local' });
     }
   }
-  if (noteChanged) await saveFolders(Array.from(noteById.values()), true as any);
+  if (noteChanged) {
+    await setSetting('folders', Array.from(noteById.values()), { skipCloudSync: true });
+    window.dispatchEvent(new Event('foldersRestored'));
+    window.dispatchEvent(new Event('foldersUpdated'));
+  }
   if (taskChanged) {
     await setSetting('todoFolders', Array.from(taskById.values()), { skipCloudSync: true } as any);
     window.dispatchEvent(new Event('foldersRestored'));
