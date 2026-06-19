@@ -756,6 +756,10 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
             const trialEnd = new Date();
             trialEnd.setDate(trialEnd.getDate() + 3);
             const endStr = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            const isIOS = Capacitor.getPlatform() === 'ios';
+            const cancelPath = isIOS
+              ? 'Settings → [Your Name] → Subscriptions → Flowist → Cancel Subscription'
+              : 'Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription';
             return (
               <>
                 <button onClick={() => { triggerTripleHeavyHaptic(); handlePurchase(); }} disabled={isPurchasing}
@@ -772,8 +776,8 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
                 </p>
                 <p className="text-[9.5px] leading-snug text-center mt-1 px-2" style={{ color: '#9a9a9a' }}>
                   {(!hasUsedTrial && currentPlan.hasTrial)
-                    ? `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription, at least 24h before ${endStr} to avoid charges.`
-                    : `Cancel anytime in Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription.`}
+                    ? `Cancel anytime in ${cancelPath}, at least 24h before ${endStr} to avoid charges.`
+                    : `Cancel anytime in ${cancelPath}.`}
                 </p>
               </>
             );
