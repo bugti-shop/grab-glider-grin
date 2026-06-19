@@ -199,16 +199,25 @@ const EisenhowerMatrix = () => {
     const currentInQuadrant = tasks.filter(t => getQuadrantForTask(t) === q).length;
     if (!requireCapacity('eisenhowerTasksPerQuadrant', currentInQuadrant)) return;
     const quad = QUADRANTS.find(x => x.id === q)!;
+    const now = new Date();
     const newTask: TodoItem = {
       id: genId(),
       completed: false,
+      createdAt: now,
+      modifiedAt: now,
       ...task,
       // Force priority to match the quadrant so it stays in this matrix
       priority: quad.priority,
-    };
+    } as TodoItem;
     const updated = [newTask, ...tasks];
     setTasks(updated);
     await saveTasksToDB(updated);
+    // Push the new task explicitly so it reaches the cloud even if the
+    // batched saveTasksToDB throttles or coalesces writes.
+    try {
+      const { pushTasks } = await import('@/utils/cloudSync/storeBridge');
+      pushTasks([newTask]);
+    } catch {}
     window.dispatchEvent(new Event('tasksUpdated'));
     toast.success('Task added', { duration: 1000 });
   };
