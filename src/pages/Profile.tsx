@@ -402,8 +402,11 @@ export default function Profile() {
               {getCountryFlag()}
             </button>
           </div>
+          {user?.email && (
+            <p className="text-sm text-foreground/80 mt-1 break-all">{user.email}</p>
+          )}
           {user && (
-            <p className="text-xs text-muted-foreground mt-1">{getJoinedDate()}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{getJoinedDate()}</p>
           )}
         </div>
 
@@ -412,17 +415,6 @@ export default function Profile() {
           {user ? (
             <div className="space-y-2">
               <Button
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('openSyncProgressSheet'));
-                  triggerSync();
-                }}
-                disabled={isSyncing}
-                className="w-full h-11 rounded-lg px-4 py-2.5 text-sm font-bold bg-primary text-primary-foreground border-b-4 border-[hsl(var(--primary-darker))] shadow-[0_10px_22px_hsl(var(--primary)/0.22)] hover:bg-[hsl(var(--primary-dark))] active:border-b-0 active:translate-y-1"
-              >
-                <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? t('profile.uploading', 'Uploading...') : t('profile.uploadToCloud', 'Upload to Cloud')}
-              </Button>
-              <Button
                 variant="outline"
                 onClick={handleSignOut}
                 className="w-full h-10 rounded-lg text-sm font-medium border-destructive/30 text-destructive hover:bg-destructive/10"
@@ -430,29 +422,6 @@ export default function Profile() {
                 <LogOut className="h-4 w-4 mr-2" />
                 {t('profile.signOutGoogle', 'Sign out of Google')}
               </Button>
-
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  window.dispatchEvent(new CustomEvent('openSyncProgressSheet'));
-                  try {
-                    const { restoreFromDrive } = await import('@/utils/googleDriveSync');
-                    await restoreFromDrive();
-                    toast({ title: t('profile.restoreSuccess', 'Data restored from cloud!') });
-                  } catch {
-                    toast({ title: t('profile.restoreFailed', 'Restore failed'), description: t('profile.restoreFailedDesc', 'Make sure you are signed in.'), variant: 'destructive' });
-                  }
-                }}
-                className="w-full h-10 rounded-lg text-sm font-medium"
-              >
-                <CloudDownload className="h-4 w-4 mr-2" />
-                {t('profile.restoreFromCloud', 'Restore from Cloud')}
-              </Button>
-              {lastSyncTime > 0 && (
-                <p className="text-xs text-muted-foreground text-center">
-                  {t('profile.lastSynced')}: {new Date(lastSyncTime).toLocaleString()}
-                </p>
-              )}
             </div>
           ) : authLoading ? (
             <div className="flex items-center justify-center py-3">
