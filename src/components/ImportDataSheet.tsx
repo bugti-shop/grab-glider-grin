@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, CheckCircle2, FileText, ListTodo } from 'lucide-react';
+import { Upload, CheckCircle2, FileText, ListTodo, FolderOpen } from 'lucide-react';
 import { ImportSource, importFromFile, getAcceptedFileTypes, ImportResult } from '@/utils/importData';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { loadTodoItems, saveTodoItems } from '@/utils/todoItemsStorage';
+import { loadFolders, saveFolders } from '@/utils/folderStorage';
 import { cn } from '@/lib/utils';
 
 interface ImportDataSheetProps {
@@ -15,9 +16,11 @@ interface ImportDataSheetProps {
 }
 
 const sources: { id: ImportSource; name: string; description: string; formats: string }[] = [
+  { id: 'evernote', name: 'Evernote', description: 'Notebooks become folders. Notes preserved with tags & dates', formats: 'ENEX, HTML' },
   { id: 'todoist', name: 'Todoist', description: 'Import tasks from Todoist CSV export', formats: 'CSV' },
   { id: 'notion', name: 'Notion', description: 'Import pages & databases from Notion', formats: 'CSV, JSON' },
-  { id: 'evernote', name: 'Evernote', description: 'Import notes from Evernote export', formats: 'ENEX, HTML' },
+  { id: 'csv-tasks', name: 'CSV — Tasks', description: 'Generic CSV with title, status, priority, due, tags…', formats: 'CSV' },
+  { id: 'csv-notes', name: 'CSV — Notes', description: 'Generic CSV with title, content, tags…', formats: 'CSV' },
 ];
 
 export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
@@ -47,7 +50,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
     try {
       const text = await file.text();
       const fileType = file.name.split('.').pop()?.toLowerCase() || '';
-      const importResult = importFromFile(text, selectedSource, fileType);
+      const importResult = importFromFile(text, selectedSource, fileType, file.name);
 
       if (!importResult.success) {
         toast({ title: t('settings.importFailed', 'Import failed'), description: importResult.error, variant: 'destructive' });
@@ -55,7 +58,13 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
         return;
       }
 
-      // Save imported data
+      // Persist new folders (Evernote notebooks → Flowist folders)
+      if (importResult.folders && importResult.folders.length > 0) {
+        const existingFolders = await loadFolders();
+        await saveFolders([...existingFolders, ...importResult.folders]);
+        window.dispatchEvent(new Event('foldersUpdated'));
+      }
+
       if (importResult.tasks.length > 0) {
         const existing = await loadTodoItems();
         await saveTodoItems([...existing, ...importResult.tasks]);
@@ -68,7 +77,13 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       }
 
       setResult(importResult);
-      toast({ title: t('settings.importSuccess', 'Import successful!'), description: `${importResult.stats.tasks} tasks, ${importResult.stats.notes} notes imported` });
+      const folderCount = importResult.folders?.length || 0;
+      const parts = [
+        importResult.stats.tasks ? `${importResult.stats.tasks} tasks` : null,
+        importResult.stats.notes ? `${importResult.stats.notes} notes` : null,
+        folderCount ? `${folderCount} folders` : null,
+      ].filter(Boolean).join(', ');
+      toast({ title: t('settings.importSuccess', 'Import successful!'), description: parts || 'Done' });
     } catch (err) {
       toast({ title: t('settings.importFailed', 'Import failed'), variant: 'destructive' });
     } finally {
@@ -85,7 +100,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
 
   return (
     <Sheet open={isOpen} onOpenChange={handleClose}>
-      <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh]">
+      <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto">
         <SheetHeader className="pb-4">
           <SheetTitle>{t('settings.importData', 'Import Data')}</SheetTitle>
         </SheetHeader>
@@ -96,7 +111,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           <div className="flex flex-col items-center gap-4 py-6">
             <CheckCircle2 className="h-12 w-12 text-primary" />
             <p className="text-lg font-semibold text-foreground">{t('settings.importComplete', 'Import Complete!')}</p>
-            <div className="flex gap-6 text-sm text-muted-foreground">
+            <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
               {result.stats.tasks > 0 && (
                 <div className="flex items-center gap-1.5">
                   <ListTodo className="h-4 w-4" />
@@ -107,6 +122,12 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
                 <div className="flex items-center gap-1.5">
                   <FileText className="h-4 w-4" />
                   <span>{result.stats.notes} {t('common.notes', 'notes')}</span>
+                </div>
+              )}
+              {(result.folders?.length || 0) > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <FolderOpen className="h-4 w-4" />
+                  <span>{result.folders!.length} {t('common.folders', 'folders')}</span>
                 </div>
               )}
             </div>
@@ -123,17 +144,17 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
                 key={source.id}
                 onClick={() => handleSourceSelect(source.id)}
                 className={cn(
-                  "w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all text-left",
+                  "w-full flex items-center justify-between gap-3 p-4 rounded-xl border-2 transition-all text-left",
                   selectedSource === source.id
                     ? "border-primary bg-primary/5"
                     : "border-border hover:border-muted-foreground/30"
                 )}
               >
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-medium text-foreground">{source.name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{source.description}</p>
                 </div>
-                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md">{source.formats}</span>
+                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-md shrink-0">{source.formats}</span>
               </button>
             ))}
 
