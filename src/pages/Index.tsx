@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
-import { useSubscription, FREE_LIMITS } from '@/contexts/SubscriptionContext';
+import { useSubscription, FREE_LIMITS, FREE_CAPACITY_LIMITS } from '@/contexts/SubscriptionContext';
+const FREE_CAPACITY_LIMITS_NOTES = FREE_CAPACITY_LIMITS.notes;
 import { cn } from '@/lib/utils';
 import { Note, NoteType, Folder } from '@/types/note';
 import { NoteCard } from '@/components/NoteCard';
@@ -299,7 +300,12 @@ const Index = () => {
   const handleDuplicateNote = (noteId: string) => {
     const noteToDuplicate = notes.find(n => n.id === noteId);
     if (!noteToDuplicate) return;
-    
+
+    // Enforce free-plan capacity (global notes count) on duplicates too.
+    const activeNotesCount = notes.filter(n => !n.isDeleted).length;
+    if (!requireCapacity('notes', activeNotesCount)) return;
+    if (!isPro && !softRequireCreate('notes', activeNotesCount)) return;
+
     const duplicatedNote: Note = {
       ...noteToDuplicate,
       id: genId(),
@@ -789,7 +795,16 @@ const Index = () => {
 
   const handleBulkDuplicate = () => {
     setNotes(prev => {
-      const duplicates = selectedNoteIds
+      const activeCount = prev.filter(n => !n.isDeleted).length;
+      const remaining = isPro
+        ? selectedNoteIds.length
+        : Math.max(0, (FREE_CAPACITY_LIMITS_NOTES) - activeCount);
+      const allowed = isPro ? selectedNoteIds : selectedNoteIds.slice(0, remaining);
+      if (allowed.length === 0) {
+        requireCapacity('notes', activeCount);
+        return prev;
+      }
+      const duplicates = allowed
         .map(id => prev.find(n => n.id === id))
         .filter(Boolean)
         .map(note => ({
