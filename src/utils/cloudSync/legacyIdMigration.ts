@@ -149,6 +149,27 @@ async function doMigrate(report: MigrationReport): Promise<void> {
         await migrateFolderKey('todoFolders');
       } catch (e) { console.warn('[legacyIdMigration] folders failed', e); }
 
+      // --- Task sections ---
+      try {
+        const { getSetting, setSetting } = await import('@/utils/settingsStorage');
+        const sections = await getSetting<any[]>('todoSections', []);
+        let changed = false;
+        for (const s of sections) {
+          if (!isUuid(s.id)) {
+            const next = newId();
+            remap.set(s.id, next);
+            s.id = next;
+            s.updatedAt = new Date();
+            changed = true;
+          }
+          if (s.folderId && remap.has(s.folderId)) {
+            s.folderId = remap.get(s.folderId);
+            changed = true;
+          }
+        }
+        if (changed) await setSetting('todoSections', sections);
+      } catch (e) { console.warn('[legacyIdMigration] sections failed', e); }
+
       // --- Notes ---
       try {
         const { loadNotesFromDB, saveNotesToDB } = await import('@/utils/noteStorage');
