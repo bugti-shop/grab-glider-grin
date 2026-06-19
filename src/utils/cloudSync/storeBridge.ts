@@ -79,6 +79,26 @@ export function pushHabitDelete(id: string): void {
   enqueueWrite('habits', 'delete', { id });
 }
 
+export function pushCountdowns(items: any[]): void {
+  for (const c of items) {
+    const row = (mappers as any).countdowns.toCloud(c);
+    if (row) enqueueWrite('countdowns', 'upsert', row);
+  }
+}
+export function pushCountdownDelete(id: string): void {
+  enqueueWrite('countdowns', 'delete', { id });
+}
+
+export function pushHabitSections(items: any[]): void {
+  for (const s of items) {
+    const row = (mappers as any).habitSections.toCloud(s);
+    if (row) enqueueWrite('habit_sections', 'upsert', row);
+  }
+}
+export function pushHabitSectionDelete(id: string): void {
+  enqueueWrite('habit_sections', 'delete', { id });
+}
+
 /**
  * Mirror user settings as a single row keyed by user_id. We bundle local
  * settings into `display_options` jsonb so the schema doesn't need to know
@@ -254,12 +274,45 @@ async function applyAttachmentsFromCloud(rows: SyncRow[]) {
   }
 }
 
+async function applyCountdownsFromCloud(rows: SyncRow[]) {
+  const { loadCountdowns, _applyCloudCountdowns } = await import('@/utils/countdownStorage');
+  const local = await loadCountdowns();
+  const byId = new Map(local.map((c: any) => [c.id, c]));
+  let changed = false;
+  for (const r of rows as any[]) {
+    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
+    const merged = (mappers as any).countdowns.mergeCloud(byId.get(r.id), r);
+    const existing: any = byId.get(r.id);
+    const localTs = existing ? +new Date(existing.updatedAt ?? existing.createdAt ?? 0) : 0;
+    const cloudTs = +new Date(merged.updatedAt ?? r.updated_at ?? 0);
+    if (!existing || localTs <= cloudTs) { byId.set(r.id, merged); changed = true; }
+  }
+  if (changed) await _applyCloudCountdowns(Array.from(byId.values()));
+}
+
+async function applyHabitSectionsFromCloud(rows: SyncRow[]) {
+  const { loadHabitSections, _applyCloudHabitSections } = await import('@/utils/habitSectionsStorage');
+  const local = loadHabitSections();
+  const byId = new Map(local.map((s: any) => [s.id, s]));
+  let changed = false;
+  for (const r of rows as any[]) {
+    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
+    const mapped = (mappers as any).habitSections.fromCloud(r);
+    if (!mapped) continue;
+    byId.set(r.id, mapped);
+    changed = true;
+  }
+  if (changed) _applyCloudHabitSections(Array.from(byId.values()));
+}
+
 const ROUTERS: Partial<Record<string, (rows: SyncRow[]) => Promise<void>>> = {
   folders: applyFoldersFromCloud,
   notes: applyNotesFromCloud,
   tasks: applyTasksFromCloud,
   sections: applySectionsFromCloud,
   habits: applyHabitsFromCloud,
+  countdowns: applyCountdownsFromCloud,
+  habit_sections: applyHabitSectionsFromCloud,
   user_settings: applySettingsFromCloud,
   file_attachments: applyAttachmentsFromCloud,
 };
