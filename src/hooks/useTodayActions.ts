@@ -200,14 +200,25 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   const handleDuplicateSection = useCallback((sectionId: string) => {
     const section = sections.find(s => s.id === sectionId);
     if (!section) return;
+    // Enforce sections-per-folder capacity
+    const folderSectionsCount = sections.filter(s => (s.folderId || null) === (selectedFolderId || null)).length;
+    if (!requireCapacity('sectionsPerFolder', folderSectionsCount)) return;
+
     const maxOrder = Math.max(...sections.map(s => s.order), 0);
     const newSection: TaskSection = { ...section, id: genId(), name: `${section.name} (Copy)`, order: maxOrder + 1 };
     const sectionTasks = items.filter(i => i.sectionId === sectionId && !i.completed);
-    const duplicatedTasks = sectionTasks.map((task) => ({ ...task, id: genId(), sectionId: newSection.id }));
+
+    // Cap duplicated tasks to remaining per-folder and global soft limits
+    const folderTasksCount = items.filter(i => (i.folderId || null) === (selectedFolderId || null)).length;
+    const remainingFolder = isPro ? sectionTasks.length : Math.max(0, FREE_CAPACITY_LIMITS.tasksPerFolder - folderTasksCount);
+    const remainingGlobal = isPro ? sectionTasks.length : Math.max(0, SOFT_FREE_LIMITS.tasks - items.length);
+    const allowedCount = isPro ? sectionTasks.length : Math.min(sectionTasks.length, remainingFolder, remainingGlobal);
+    const duplicatedTasks = sectionTasks.slice(0, allowedCount).map((task) => ({ ...task, id: genId(), sectionId: newSection.id }));
+
     setSections(prev => [...prev, newSection]);
     setItems(prev => [...duplicatedTasks, ...prev]);
     toast.success(t('todayPage.sectionDuplicated'));
-  }, [sections, items, setSections, setItems, t]);
+  }, [sections, items, selectedFolderId, isPro, requireCapacity, setSections, setItems, t]);
 
   const handleMoveSection = useCallback((sectionId: string, targetIndex: number) => {
     const sortedSections = [...sections].sort((a, b) => a.order - b.order);
@@ -410,10 +421,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   }, [deleteConfirmItem, setItems, setDeleteConfirmItem, t]);
 
   const duplicateTask = useCallback(async (task: TodoItem) => {
+    // Enforce per-folder + global free-plan limits on duplicates
+    const folderTasksCount = itemsRef.current.filter(t => (t.folderId || null) === (task.folderId || null)).length;
+    if (!requireCapacity('tasksPerFolder', folderTasksCount)) return;
+    if (!isPro && !softRequireCreate('tasks', itemsRef.current.length)) return;
     try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
     const duplicatedTask: TodoItem = { ...task, id: genId(), completed: false, text: `${task.text} (Copy)` };
     setItems(prev => [duplicatedTask, ...prev]);
-  }, [setItems]);
+  }, [setItems, requireCapacity, softRequireCreate, isPro]);
 
   // ── Selection / Bulk ──
   const handleSelectTask = useCallback((taskId: string) => {
@@ -428,12 +443,25 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   const handleDuplicate = useCallback((option: DuplicateOption) => {
     const filteredItems = selectedFolderId ? items.filter(i => i.folderId === selectedFolderId) : items;
     let toDuplicate: TodoItem[] = option === 'uncompleted' ? filteredItems.filter(i => !i.completed) : filteredItems;
+
+    // Cap to remaining per-folder + global free-plan capacity
+    const folderTasksCount = items.filter(i => (i.folderId || null) === (selectedFolderId || null)).length;
+    const remainingFolder = isPro ? toDuplicate.length : Math.max(0, FREE_CAPACITY_LIMITS.tasksPerFolder - folderTasksCount);
+    const remainingGlobal = isPro ? toDuplicate.length : Math.max(0, SOFT_FREE_LIMITS.tasks - items.length);
+    const allowedCount = isPro ? toDuplicate.length : Math.min(toDuplicate.length, remainingFolder, remainingGlobal);
+    if (allowedCount === 0) {
+      if (!requireCapacity('tasksPerFolder', folderTasksCount)) return;
+      if (!softRequireCreate('tasks', items.length)) return;
+      return;
+    }
+    toDuplicate = toDuplicate.slice(0, allowedCount);
+
     const duplicated = toDuplicate.map((item, idx) => ({
       ...item, id: genId(), completed: option === 'all-reset' ? false : item.completed, text: `${item.text} (Copy)`
     }));
     setItems(prev => [...duplicated, ...prev]);
     toast.success(t('todayPage.duplicatedTasks', { count: duplicated.length }));
-  }, [items, selectedFolderId, setItems, t]);
+  }, [items, selectedFolderId, isPro, requireCapacity, softRequireCreate, setItems, t]);
 
   const convertToNotes = useCallback(async (tasksToConvert: TodoItem[]) => {
     const existingNotes = await loadNotesFromDB();
@@ -486,12 +514,23 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         setSelectedTaskIds(new Set()); setIsSelectionMode(false);
         break;
       case 'priority': setIsPrioritySheetOpen(true); break;
-      case 'duplicate':
-        const duplicated = selectedItems.map((item, idx) => ({ ...item, id: genId(), completed: false, text: `${item.text} (Copy)` }));
+      case 'duplicate': {
+        const folderTasksCount = items.filter(i => (i.folderId || null) === (selectedFolderId || null)).length;
+        const remainingFolder = isPro ? selectedItems.length : Math.max(0, FREE_CAPACITY_LIMITS.tasksPerFolder - folderTasksCount);
+        const remainingGlobal = isPro ? selectedItems.length : Math.max(0, SOFT_FREE_LIMITS.tasks - items.length);
+        const allowedCount = isPro ? selectedItems.length : Math.min(selectedItems.length, remainingFolder, remainingGlobal);
+        if (allowedCount === 0) {
+          if (!requireCapacity('tasksPerFolder', folderTasksCount)) return;
+          softRequireCreate('tasks', items.length);
+          return;
+        }
+        const dupSlice = selectedItems.slice(0, allowedCount);
+        const duplicated = dupSlice.map((item, idx) => ({ ...item, id: genId(), completed: false, text: `${item.text} (Copy)` }));
         setItems(prev => [...duplicated, ...prev]);
         setSelectedTaskIds(new Set()); setIsSelectionMode(false);
-        toast.success(t('todayPage.duplicatedTasks', { count: selectedItems.length }));
+        toast.success(t('todayPage.duplicatedTasks', { count: duplicated.length }));
         break;
+      }
       case 'convert': convertToNotes(selectedItems); break;
       case 'setDueDate': setIsBulkDateSheetOpen(true); break;
       case 'setReminder': setIsBulkReminderSheetOpen(true); break;

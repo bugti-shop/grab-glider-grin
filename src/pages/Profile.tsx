@@ -519,6 +519,7 @@ export default function Profile() {
                 </span>
               </button>
               )}
+              {/* Continue with Email button hidden — will be re-enabled once email auth is fully configured.
               <button
                 onClick={() => setShowEmailAuth(true)}
                 className="mt-3 w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border border-[#d9d9e3] rounded-full shadow-sm hover:shadow-md transition-all"
@@ -531,6 +532,7 @@ export default function Profile() {
                   {t('profile.continueWithEmail', 'Continue with Email')}
                 </span>
               </button>
+              */}
             </>
           )}
         </div>
