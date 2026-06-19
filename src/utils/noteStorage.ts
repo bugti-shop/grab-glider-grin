@@ -249,6 +249,25 @@ const flushNotesToDB = async (notes: Note[], skipSyncEvent: boolean): Promise<vo
 };
 
 export const saveNotesToDB = async (notes: Note[], skipSyncEvent = false): Promise<void> => {
+  // Safety net: refuse to wipe a previously non-empty store with an empty array.
+  // This protects against logout/login races where a context momentarily resets
+  // its state before the real data finishes loading. Individual note deletes
+  // continue to work via deleteNoteFromDB.
+  if (notes.length === 0) {
+    const hadCachedItems = Array.isArray(notesCache) && notesCache.length > 0;
+    let hadStoredItems = false;
+    if (!hadCachedItems) {
+      try {
+        const existing = await loadNotesFromDB();
+        hadStoredItems = existing.length > 0;
+      } catch {}
+    }
+    if (hadCachedItems || hadStoredItems) {
+      console.warn('[noteStorage] Blocked attempt to wipe notes with an empty array');
+      return;
+    }
+  }
+
   // Update in-memory cache immediately
   notesCache = notes;
   notesCacheVersion++;
