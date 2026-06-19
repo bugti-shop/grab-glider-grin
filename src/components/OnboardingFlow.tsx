@@ -1482,6 +1482,7 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
             {t('onboarding.signInWithApple', 'Sign in with Apple')}
           </motion.button>
 
+          {/* Continue with Email button hidden — will be re-enabled once email auth is fully configured.
           <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1504,6 +1505,7 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
             </svg>
             {t('onboarding.continueWithEmail', 'Continue with Email')}
           </motion.button>
+          */}
 
           <EmailAuthSheet
             open={showEmailAuth}
