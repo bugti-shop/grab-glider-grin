@@ -150,11 +150,11 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
   const local = await loadNotesFromDB();
   const byId = new Map(local.map(n => [n.id, n]));
   for (const r of rows) {
-    if (r.is_deleted) { await deleteNoteFromDB(r.id); continue; }
+    if (r.is_deleted) { await deleteNoteFromDB(r.id, true); continue; }
     const merged = mappers.notes.mergeCloud(byId.get(r.id), r) as Note;
     const existing = byId.get(r.id);
     if (!existing || (existing.updatedAt as Date) < (merged.updatedAt as Date)) {
-      await saveNoteToDBSingle(merged);
+      await saveNoteToDBSingle(merged, true);
     } else if (+(existing.updatedAt as Date) > +(merged.updatedAt as Date)) {
       recordConflict({ table: 'notes', rowId: r.id, localUpdatedAt: +(existing.updatedAt as Date), cloudUpdatedAt: +(merged.updatedAt as Date), resolution: 'kept_local' });
     }
