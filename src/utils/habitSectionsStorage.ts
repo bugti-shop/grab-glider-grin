@@ -1,4 +1,5 @@
 import { HabitSection } from '@/types/habit';
+import { genId } from './genId';
 
 const KEY = 'habit-sections-v1';
 
@@ -21,15 +22,27 @@ export const loadHabitSections = (): HabitSection[] => {
   }
 };
 
-export const saveHabitSections = (sections: HabitSection[]) => {
+const writeLocal = (sections: HabitSection[]) => {
   localStorage.setItem(KEY, JSON.stringify(sections));
   window.dispatchEvent(new Event('habitSectionsUpdated'));
+};
+
+export const saveHabitSections = (sections: HabitSection[]) => {
+  writeLocal(sections);
+  import('@/utils/cloudSync/storeBridge').then(({ pushHabitSections }) => {
+    try { pushHabitSections(sections); } catch {}
+  }).catch(() => {});
+};
+
+/** Apply cloud snapshot — replaces local list and skips re-push. */
+export const _applyCloudHabitSections = (sections: HabitSection[]) => {
+  writeLocal(sections.sort((a, b) => a.order - b.order));
 };
 
 export const addHabitSection = (name: string): HabitSection => {
   const sections = loadHabitSections();
   const section: HabitSection = {
-    id: `sec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: genId(),
     name: name.trim() || 'Section',
     order: sections.length,
   };
@@ -46,7 +59,10 @@ export const renameHabitSection = (id: string, name: string) => {
 
 export const deleteHabitSection = (id: string) => {
   const sections = loadHabitSections().filter((s) => s.id !== id);
-  saveHabitSections(sections);
+  writeLocal(sections);
+  import('@/utils/cloudSync/storeBridge').then(({ pushHabitSectionDelete }) => {
+    try { pushHabitSectionDelete(id); } catch {}
+  }).catch(() => {});
 };
 
 export const reorderHabitSections = (ids: string[]) => {

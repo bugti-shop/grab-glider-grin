@@ -45,13 +45,21 @@ export const loadCountdowns = async (): Promise<CountdownEvent[]> => {
   return Array.isArray(list) ? list.slice() : [];
 };
 
-export const saveCountdowns = async (list: CountdownEvent[]) => {
-  // Store a fresh copy so the warm-cache reference differs from any
-  // previously-handed-out reference held in component state.
+export const saveCountdowns = async (list: CountdownEvent[], opts?: { skipCloudSync?: boolean }) => {
   await setSetting(KEY, list.slice());
+  if (!opts?.skipCloudSync) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushCountdowns }) => {
+      try { pushCountdowns(list); } catch {}
+    }).catch(() => {});
+  }
   try {
     window.dispatchEvent(new CustomEvent('countdownsUpdated'));
   } catch {}
+};
+
+/** Apply cloud snapshot — replaces local list and skips re-push. */
+export const _applyCloudCountdowns = async (list: CountdownEvent[]) => {
+  await saveCountdowns(list, { skipCloudSync: true });
 };
 
 export const upsertCountdown = async (
@@ -98,7 +106,10 @@ export const upsertCountdown = async (
 
 export const deleteCountdown = async (id: string) => {
   const list = await loadCountdowns();
-  await saveCountdowns(list.filter((c) => c.id !== id));
+  await saveCountdowns(list.filter((c) => c.id !== id), { skipCloudSync: true });
+  import('@/utils/cloudSync/storeBridge').then(({ pushCountdownDelete }) => {
+    try { pushCountdownDelete(id); } catch {}
+  }).catch(() => {});
 };
 
 export const markCountdownDone = async (id: string, done = true) => {
