@@ -7,7 +7,8 @@ import { Upload, CheckCircle2, FileText, ListTodo, FolderOpen } from 'lucide-rea
 import { ImportSource, importFromFile, getAcceptedFileTypes, ImportResult } from '@/utils/importData';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { loadTodoItems, saveTodoItems } from '@/utils/todoItemsStorage';
-import { loadFolders, saveFolders } from '@/utils/folderStorage';
+import { getSetting, setSetting } from '@/utils/settingsStorage';
+import type { Folder as NotesFolder } from '@/types/note';
 import { cn } from '@/lib/utils';
 
 interface ImportDataSheetProps {
@@ -58,10 +59,12 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
         return;
       }
 
-      // Persist new folders (Evernote notebooks → Flowist folders)
+      // Persist new folders (Evernote notebooks → Flowist notes folders).
+      // Notes page reads from settings key 'folders'.
       if (importResult.folders && importResult.folders.length > 0) {
-        const existingFolders = await loadFolders();
-        await saveFolders([...existingFolders, ...importResult.folders]);
+        const existingFolders = await getSetting<NotesFolder[]>('folders', []);
+        const merged = [...(existingFolders || []), ...importResult.folders];
+        await setSetting('folders', merged);
         window.dispatchEvent(new Event('foldersUpdated'));
       }
 
