@@ -150,6 +150,13 @@ export const setSetting = async <T>(key: string, value: T, options?: { skipCloud
         pushSettingsSnapshot(snap);
       } catch {}
     }).catch(() => {});
+    import('@/utils/cloudSync/storeBridge').then(({ pushFolders, pushTaskFolders, pushSections }) => {
+      try {
+        if (key === 'folders' && Array.isArray(value)) pushFolders(value as any);
+        if (key === 'todoFolders' && Array.isArray(value)) pushTaskFolders(value as any);
+        if (key === 'todoSections' && Array.isArray(value)) pushSections(value as any);
+      } catch {}
+    }).catch(() => {});
   }
 
   try {
