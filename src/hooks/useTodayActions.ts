@@ -228,7 +228,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     if (currentIndex === targetIndex) return;
     const [movedSection] = sortedSections.splice(currentIndex, 1);
     sortedSections.splice(targetIndex, 0, movedSection);
-    setSections(sortedSections.map((s, idx) => ({ ...s, order: idx })));
+    const now = new Date();
+    setSections(sortedSections.map((s, idx) => ({ ...s, order: idx, updatedAt: s.id === sectionId ? now : (s as any).updatedAt })) as TaskSection[]);
     toast.success(t('todayPage.sectionMoved'));
   }, [sections, setSections, t]);
 
@@ -265,7 +266,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const sortedSects = [...sections].sort((a, b) => a.order - b.order);
     const [removed] = sortedSects.splice(sourceIndex, 1);
     sortedSects.splice(destIndex, 0, removed);
-    setSections(sortedSects.map((s, idx) => ({ ...s, order: idx })));
+    const now = new Date();
+    setSections(sortedSects.map((s, idx) => ({ ...s, order: idx, updatedAt: now })) as TaskSection[]);
   }, [sections, setSections]);
 
   // ── Task CRUD ──
