@@ -8,7 +8,7 @@
  * - Persists via the regular save APIs so the writeQueue mirrors them to cloud.
  * - Guarded by a localStorage flag so it runs at most once per device.
  */
-const FLAG_KEY = 'flowist:legacyIdMigration:v1';
+const FLAG_KEY = 'flowist:legacyIdMigration:v2';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid = (s: unknown): s is string => typeof s === 'string' && UUID_RE.test(s);
