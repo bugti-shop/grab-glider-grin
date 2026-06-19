@@ -597,7 +597,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           className="relative w-full overflow-hidden select-none"
           style={{ aspectRatio: '16 / 10', background: '#05060c' }}
         >
-          <img src={current.img} alt="" draggable={false} decoding="async" fetchPriority="high" loading="eager" width={800} height={500} className="w-full h-full object-contain pointer-events-none" style={{ padding: '14px 0 22px', contentVisibility: 'auto' }} />
+          <img src={current.img} alt="" draggable={false} decoding="async" fetchPriority="high" loading="eager" width={800} height={500} className="w-full h-full object-contain pointer-events-none" style={{ padding: '8px 0 4px', contentVisibility: 'auto' }} />
           <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.95) 100%)' }} />
 
           {/* Back button overlay */}
@@ -613,8 +613,8 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
             <X size={26} strokeWidth={2.75} />
           </button>
 
-          {/* Title overlay bottom-left */}
-          <div className="absolute left-0 right-0 bottom-0 px-4 pb-5 text-left z-20 pointer-events-none">
+          {/* Title overlay bottom-left — nudged down so the king/throne is fully visible */}
+          <div className="absolute left-0 right-0 bottom-0 px-4 pb-1.5 text-left z-20 pointer-events-none">
             <h2 className="text-[19px] leading-tight font-black tracking-tight text-white drop-shadow-lg" style={{ fontFamily: "'Nunito', sans-serif" }}>{current.title}</h2>
             <p className="text-[11.5px] text-white/80 mt-0.5 drop-shadow">{current.subtitle}</p>
           </div>
