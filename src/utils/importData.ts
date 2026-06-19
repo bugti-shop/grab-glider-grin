@@ -222,9 +222,8 @@ const parseEvernoteExport = (text: string, fileName?: string): ImportResult => {
       notebookFolder = {
         id: generateId(),
         name: notebookName,
-        type: 'notes',
+        isDefault: false,
         createdAt: new Date(),
-        updatedAt: new Date(),
       };
       folders.push(notebookFolder);
       return notebookFolder;
