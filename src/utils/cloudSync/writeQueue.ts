@@ -78,7 +78,7 @@ export async function flushQueue(): Promise<void> {
               .eq('user_id', userId);
             if (error) throw error;
           } else {
-            const payload = { ...entry.row, user_id: userId, updated_at: new Date().toISOString() };
+            const payload = { ...entry.row, user_id: userId, updated_at: entry.row.updated_at ?? new Date().toISOString() };
             const { error } = await supabase
               .from(entry.table as any)
               .upsert(payload as any, { onConflict: 'id' });
