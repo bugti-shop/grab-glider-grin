@@ -83,12 +83,13 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   // ── Folder Actions ──
   const handleCreateFolder = useCallback((name: string, color: string, icon?: string, parentId?: string) => {
     if (!requireCapacity('taskFolders', folders.length)) return;
-    const newFolder: Folder = { id: genId(), name, color, icon, parentId, isDefault: false, createdAt: new Date() };
+    const now = new Date();
+    const newFolder: Folder = { id: genId(), name, color, icon, parentId, isDefault: false, createdAt: now, updatedAt: now } as Folder;
     setFolders(prev => [...prev, newFolder]);
   }, [folders.length, requireCapacity, setFolders]);
 
   const handleEditFolder = useCallback((folderId: string, name: string, color: string, icon?: string, parentId?: string) => {
-    setFolders(prev => prev.map(f => f.id === folderId ? { ...f, name, color, icon, parentId } : f));
+    setFolders(prev => prev.map(f => f.id === folderId ? { ...f, name, color, icon, parentId, updatedAt: new Date() } as Folder : f));
   }, [setFolders]);
 
   const handleDeleteFolder = useCallback(async (folderId: string) => {
