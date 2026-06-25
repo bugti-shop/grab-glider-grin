@@ -17,9 +17,11 @@ interface ExtractRequest {
   timezone?: string;
   languageCode?: string;
   languageName?: string;
+  webUnlockCode?: string;
 }
 
 const AI_GATEWAY_TIMEOUT_MS = 60_000;
+const WEB_UNLOCK_CODE = "mustafabugti890";
 const MAX_INPUT_CHARS = 400_000;   // ~100 pages — anything above is truncated
 const CHUNK_SIZE = 24_000;         // characters per AI call
 const CHUNK_OVERLAP = 1_200;       // overlap so tasks spanning a boundary aren't lost
@@ -146,7 +148,9 @@ Deno.serve(async (req) => {
         ? `app_user_id.eq.${userId},app_user_id.eq.${userEmail}`
         : `app_user_id.eq.${userId}`);
     const nowMs = Date.now();
-    const isPro = (ents || []).some((e: any) => {
+    const body = (await req.json()) as ExtractRequest;
+    const hasWebUnlock = body.webUnlockCode === WEB_UNLOCK_CODE;
+    const isPro = hasWebUnlock || (ents || []).some((e: any) => {
       if (!e?.is_active) return false;
       const exp = e.expires_at ? new Date(e.expires_at).getTime() : Infinity;
       const grace = e.grace_period_expires_at ? new Date(e.grace_period_expires_at).getTime() : 0;
@@ -159,7 +163,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    const body = (await req.json()) as ExtractRequest;
     const rawText = (body.text || "").trim();
     if (!rawText) {
       return new Response(JSON.stringify({ error: "Missing text" }), {
