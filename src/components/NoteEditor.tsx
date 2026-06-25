@@ -40,7 +40,7 @@ import { TextTaskExtractorSheet } from './TextTaskExtractorSheet';
 import { SafeComponent } from './ErrorBoundary';
 import { loadTasksFromDB, saveTasksToDB } from '@/utils/taskStorage';
 import { stripHtml } from '@/lib/sanitize';
-import type { TodoItem as _TodoItemUnused } from '@/types/note';
+
 import { ListChecks } from 'lucide-react';
 
 import { NoteVoicePlayer } from './NoteVoicePlayer';
