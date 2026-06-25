@@ -135,12 +135,20 @@ export const MentionDescriptionEditor = ({
   return (
     <div className="relative">
       <style>{`${RICH_TEXT_EDITOR_STYLES}
-        .mention-description-editor:empty::before {
+        .mention-description-editor { position: relative; }
+        .mention-description-editor:empty::before,
+        .mention-description-editor:has(> br:only-child)::before {
           content: attr(data-placeholder);
           color: hsl(var(--muted-foreground) / 0.5);
           pointer-events: none;
+          user-select: none;
+          -webkit-user-select: none;
+          position: absolute;
+          top: 0.5rem;
+          left: 0.75rem;
         }
       `}</style>
+
       <div
         ref={editorRef}
         contentEditable
