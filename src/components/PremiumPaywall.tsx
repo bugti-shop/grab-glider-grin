@@ -589,7 +589,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
         pointerEvents: 'auto',
       }}>
       <div className="flex-1 min-h-0 overflow-y-scroll overscroll-contain"
-        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', pointerEvents: 'auto', paddingBottom: 'calc(170px + var(--safe-bottom, 0px))' }}>
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', pointerEvents: 'auto', paddingBottom: 'calc(220px + var(--safe-bottom, 0px))' }}>
 
 
         {/* Hero — compact single image (no carousel) */}
@@ -757,9 +757,10 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
             trialEnd.setDate(trialEnd.getDate() + 3);
             const endStr = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
             const isIOS = Capacitor.getPlatform() === 'ios';
-            const cancelPath = isIOS
-              ? 'Settings → [Your Name] → Subscriptions → Flowist → Cancel Subscription'
-              : 'Google Play → Profile → Payments & subscriptions → Subscriptions → Flowist → Cancel subscription';
+            const shortCancel = isIOS
+              ? 'Settings → Subscriptions → Flowist → Cancel'
+              : 'Google Play → Subscriptions → Flowist → Cancel';
+            const shortEnd = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
             return (
               <>
                 <button onClick={() => { triggerTripleHeavyHaptic(); handlePurchase(); }} disabled={isPurchasing}
@@ -776,8 +777,8 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
                 </p>
                 <p className="text-[9.5px] leading-snug text-center mt-1 px-2" style={{ color: '#9a9a9a' }}>
                   {(!hasUsedTrial && currentPlan.hasTrial)
-                    ? `Cancel anytime in ${cancelPath}, at least 24h before ${endStr} to avoid charges.`
-                    : `Cancel anytime in ${cancelPath}.`}
+                    ? `${shortCancel} (before ${shortEnd})`
+                    : `${shortCancel} (before ${shortEnd}).`}
                 </p>
               </>
             );

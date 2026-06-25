@@ -69,20 +69,6 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
                 variant="ghost"
                 onClick={async () => {
                   triggerHaptic('heavy').catch(() => {});
-                  await prefetchRoute('/todo/calendar');
-                  navigate('/todo/calendar');
-                }}
-                className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-transparent active:bg-transparent"
-                title={t('common.calendar', 'Calendar')}
-                aria-label={t('common.calendar', 'Calendar')}
-              >
-                <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={async () => {
-                  triggerHaptic('heavy').catch(() => {});
                   await prefetchRoute('/notesdashboard');
                   navigate('/notesdashboard');
                 }}
