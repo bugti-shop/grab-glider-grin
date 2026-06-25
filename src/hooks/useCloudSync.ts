@@ -11,12 +11,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { startSync, stopSync, syncNow } from '@/utils/cloudSync/syncEngine';
 import { installCloudListener } from '@/utils/cloudSync/storeBridge';
 import { runLegacyIdMigration } from '@/utils/cloudSync/legacyIdMigration';
+import { loadDeletionsAsync } from '@/utils/deletionTracker';
 import { Capacitor } from '@capacitor/core';
 
 export function useCloudSync(): void {
   useEffect(() => {
     let mounted = true;
     installCloudListener();
+    // Hydrate the in-memory tombstone cache so cloud→local apply functions
+    // can synchronously check whether a row was previously deleted on any device.
+    void loadDeletionsAsync();
 
     const handle = async (userId: string | null) => {
       if (!mounted) return;

@@ -18,54 +18,71 @@ import type { Folder } from '@/utils/folderStorage';
 import type { Note, TodoItem } from '@/types/note';
 import type { Habit } from '@/types/habit';
 import { recordConflict, recordListenerEvent } from './diagnostics';
+import { trackDeletion, loadDeletions, type DeletionRecord } from '@/utils/deletionTracker';
 
 let installed = false;
+
+// Fast lookup for tombstones — once a row id is deleted on ANY device, it stays deleted.
+const isTombstoned = (id: string, category: DeletionRecord['category']): boolean => {
+  const recs = loadDeletions();
+  for (const r of recs) if (r.id === id && r.category === category) return true;
+  return false;
+};
 
 // ---------- Local → Cloud ----------
 
 export function pushFolders(folders: Folder[]): void {
   for (const f of folders) {
+    if (isTombstoned(f.id, 'folders') || isTombstoned(f.id, 'noteFolders')) continue;
     const row = mappers.folders.toCloud(f, 'notes');
     if (row) enqueueWrite('folders', 'upsert', row as any);
   }
 }
 export function pushTaskFolders(folders: any[]): void {
   for (const f of folders) {
+    if (isTombstoned(f.id, 'folders') || isTombstoned(f.id, 'todoFolders')) continue;
     const row = mappers.folders.toCloud(f, 'tasks');
     if (row) enqueueWrite('folders', 'upsert', row as any);
   }
 }
 export function pushFolderDelete(id: string): void {
+  trackDeletion(id, 'folders');
   enqueueWrite('folders', 'delete', { id });
 }
 
 export function pushSections(sections: any[]): void {
   for (const s of sections) {
+    if (isTombstoned(s.id, 'todoSections')) continue;
     const row = mappers.sections.toCloud(s);
     if (row) enqueueWrite('sections', 'upsert', row as any);
   }
 }
 export function pushSectionDelete(id: string): void {
+  trackDeletion(id, 'todoSections');
   enqueueWrite('sections', 'delete', { id });
 }
 
 export function pushNotes(notes: Note[]): void {
   for (const n of notes) {
+    if (isTombstoned(n.id, 'notes')) continue;
     const row = mappers.notes.toCloud(n);
     if (row) enqueueWrite('notes', n.isDeleted ? 'delete' : 'upsert', row as any);
   }
 }
 export function pushNoteDelete(id: string): void {
+  trackDeletion(id, 'notes');
   enqueueWrite('notes', 'delete', { id });
 }
 
 export function pushTasks(tasks: TodoItem[]): void {
   for (const t of tasks) {
+    if (isTombstoned(t.id, 'tasks')) continue;
     const row = mappers.tasks.toCloud(t as any);
     if (row) enqueueWrite('tasks', (t as any).isDeleted ? 'delete' : 'upsert', row as any);
   }
 }
 export function pushTaskDelete(id: string): void {
+  trackDeletion(id, 'tasks');
   enqueueWrite('tasks', 'delete', { id });
 }
 
@@ -145,7 +162,17 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
     if (!mapped) continue;
     const store = (mapped as any).__flowistFolderStore === 'tasks' ? 'tasks' : 'notes';
     const byId = store === 'tasks' ? taskById : noteById;
-    if (r.is_deleted) { if (byId.delete(r.id)) store === 'tasks' ? taskChanged = true : noteChanged = true; continue; }
+    if (r.is_deleted) {
+      trackDeletion(r.id, 'folders');
+      trackDeletion(r.id, store === 'tasks' ? 'todoFolders' : 'noteFolders');
+      if (byId.delete(r.id)) store === 'tasks' ? taskChanged = true : noteChanged = true;
+      continue;
+    }
+    if (isTombstoned(r.id, 'folders') || isTombstoned(r.id, store === 'tasks' ? 'todoFolders' : 'noteFolders')) {
+      // resurrected on cloud? re-issue delete and skip locally
+      enqueueWrite('folders', 'delete', { id: r.id });
+      continue;
+    }
     const existing = byId.get(r.id) as any;
     if (!existing || new Date(existing.updatedAt ?? existing.createdAt ?? 0).getTime() < mapped.updatedAt.getTime()) {
       byId.set(r.id, mapped);
@@ -171,7 +198,12 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
   const local = await loadNotesFromDB();
   const byId = new Map(local.map(n => [n.id, n]));
   for (const r of rows) {
-    if (r.is_deleted) { await deleteNoteFromDB(r.id, true); continue; }
+    if (r.is_deleted) { trackDeletion(r.id, 'notes'); await deleteNoteFromDB(r.id, true); continue; }
+    if (isTombstoned(r.id, 'notes')) {
+      // Resurrected cloud row — push the delete again so all devices clean up.
+      enqueueWrite('notes', 'delete', { id: r.id });
+      continue;
+    }
     const merged = mappers.notes.mergeCloud(byId.get(r.id), r) as Note;
     const existing = byId.get(r.id);
     if (!existing || (existing.updatedAt as Date) < (merged.updatedAt as Date)) {
@@ -187,8 +219,18 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
   const local = await loadTasksFromDB();
   const byId = new Map(local.map((t: any) => [t.id, t]));
   let changed = false;
+  // Track which winners need to be re-pushed so monotonic completion / dedupe propagates.
+  const rePush: any[] = [];
   for (const r of rows) {
-    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
+    if (r.is_deleted) {
+      trackDeletion(r.id, 'tasks');
+      if (byId.delete(r.id)) changed = true;
+      continue;
+    }
+    if (isTombstoned(r.id, 'tasks')) {
+      enqueueWrite('tasks', 'delete', { id: r.id });
+      continue;
+    }
     const existing = byId.get(r.id) as any;
     const cloudMerged = mappers.tasks.mergeCloud(existing, r) as TodoItem;
     const localTs = new Date(existing?.modifiedAt ?? existing?.updatedAt ?? existing?.createdAt ?? 0).getTime();
@@ -218,21 +260,12 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
       winner = { ...existing, ...cloudMerged };
     }
 
-    // Completion: prefer completed=true; tiebreak by later completedAt.
-    if (localCompleted && cloudCompleted) {
+    // FIRST-COMPLETION-WINS: once any device marked the task complete, every device keeps it complete.
+    // The completedAt is fixed to the earliest known completion timestamp (the first device to act).
+    if (localCompleted || cloudCompleted) {
       winner.completed = true;
-      winner.completedAt = new Date(Math.max(localCompletedAt, cloudCompletedAt));
-    } else if (localCompleted || cloudCompleted) {
-      // One side completed, the other not — accept the completion from whichever side recorded it later.
-      const completionTs = localCompleted ? localTs : cloudTs;
-      const unCompleteTs = localCompleted ? cloudTs : localTs;
-      if (completionTs >= unCompleteTs) {
-        winner.completed = true;
-        winner.completedAt = new Date(localCompleted ? (localCompletedAt || localTs) : (cloudCompletedAt || cloudTs));
-      } else {
-        winner.completed = false;
-        winner.completedAt = undefined;
-      }
+      const candidates = [localCompletedAt, cloudCompletedAt, localCompleted ? localTs : 0, cloudCompleted ? cloudTs : 0].filter(Boolean);
+      winner.completedAt = candidates.length ? new Date(Math.min(...candidates)) : new Date();
     }
 
     // Calendar fields — take from the side with the newer modifiedAt (already encoded by pickNewer).
@@ -248,11 +281,25 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
       byId.set(r.id, winner);
       changed = true;
     }
+
+    // If our resolved winner disagrees with the cloud row on completion or
+    // completedAt, re-push it so every other device converges to the same
+    // monotonic-completion state. Without this, a device that came online with
+    // a stale uncompleted version would keep the task uncompleted forever.
+    const cloudCompletedAtIso = r['completed_at' as any] ?? null;
+    const winnerCompletedAtIso = winner.completedAt ? new Date(winner.completedAt).toISOString() : null;
+    if (!!r['is_completed' as any] !== !!winner.completed || cloudCompletedAtIso !== winnerCompletedAtIso) {
+      rePush.push(winner);
+    }
   }
   if (changed) {
     await saveTasksToDB(Array.from(byId.values()) as TodoItem[], true);
     window.dispatchEvent(new Event('tasksRestored'));
     window.dispatchEvent(new Event('tasksUpdated'));
+  }
+  for (const t of rePush) {
+    const row = mappers.tasks.toCloud(t as any);
+    if (row) enqueueWrite('tasks', 'upsert', row as any);
   }
 }
 
@@ -263,7 +310,8 @@ async function applySectionsFromCloud(rows: SyncRow[]) {
   const byId = new Map((local ?? []).map((s: any) => [s.id, s]));
   let changed = false;
   for (const r of rows) {
-    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
+    if (r.is_deleted) { trackDeletion(r.id, 'todoSections'); if (byId.delete(r.id)) changed = true; continue; }
+    if (isTombstoned(r.id, 'todoSections')) { enqueueWrite('sections', 'delete', { id: r.id }); continue; }
     const mapped = mappers.sections.fromCloud(r);
     if (!mapped) continue;
     byId.set(r.id, mapped);
@@ -281,7 +329,8 @@ async function applyHabitsFromCloud(rows: SyncRow[]) {
   const local = await loadHabits();
   const byId = new Map(local.map(h => [h.id, h]));
   for (const r of rows) {
-    if (r.is_deleted) { await deleteHabit(r.id).catch(() => {}); continue; }
+    if (r.is_deleted) { trackDeletion(r.id, 'habits'); await deleteHabit(r.id).catch(() => {}); continue; }
+    if (isTombstoned(r.id, 'habits')) { enqueueWrite('habits', 'delete', { id: r.id }); continue; }
     const merged = mappers.habits.mergeCloud(byId.get(r.id), r) as Habit;
     const existing = byId.get(r.id);
     const localTs = existing ? new Date((existing as any).updatedAt ?? 0).getTime() : 0;
