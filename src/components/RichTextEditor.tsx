@@ -2087,6 +2087,25 @@ export const RichTextEditor = ({
           placeholder={t('editor.titlePlaceholder')}
           className="title-input"
           autoCapitalize="sentences"
+          enterKeyHint="next"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              const editor = editorRef.current;
+              if (editor) {
+                editor.focus();
+                // Place caret at the very start of the editor body
+                try {
+                  const sel = window.getSelection();
+                  const range = document.createRange();
+                  range.selectNodeContents(editor);
+                  range.collapse(true);
+                  sel?.removeAllRanges();
+                  sel?.addRange(range);
+                } catch {}
+              }
+            }
+          }}
           style={{ fontFamily, color: isStickyNote ? '#000000' : undefined }}
         />
       )}
