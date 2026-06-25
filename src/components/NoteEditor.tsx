@@ -6,7 +6,7 @@ import { compressImage, isCompressibleImage } from '@/utils/imageCompression';
 import { useNavigate } from 'react-router-dom';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTranslation } from 'react-i18next';
-import { Note, NoteType, StickyColor, VoiceRecording, Folder, FloatingImage } from '@/types/note';
+import { Note, NoteType, StickyColor, VoiceRecording, Folder, FloatingImage, TodoItem } from '@/types/note';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,12 @@ import { InputSheetPage } from './InputSheetPage';
 import { VoiceRecordingSheet } from './VoiceRecordingSheet';
 import { NoteAttachmentsSection } from './NoteAttachmentsSection';
 import { ScanNoteSheet } from './ScanNoteSheet';
+import { TextTaskExtractorSheet } from './TextTaskExtractorSheet';
 import { SafeComponent } from './ErrorBoundary';
+import { loadTasksFromDB, saveTasksToDB } from '@/utils/taskStorage';
+import { stripHtml } from '@/lib/sanitize';
+
+import { ListChecks } from 'lucide-react';
 
 import { NoteVoicePlayer } from './NoteVoicePlayer';
 import { AudioPlayer } from './AudioPlayer';
@@ -203,6 +208,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   // Voice recorder state
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showScanNote, setShowScanNote] = useState(false);
+  const [showExtractTasks, setShowExtractTasks] = useState(false);
   
   const [showSketchLibrary, setShowSketchLibrary] = useState(false);
   
@@ -1129,6 +1135,14 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <Search className="h-4 w-4 mr-2" />
                   {t('editor.findReplace')}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  if (!requireFeature('ai_dictation')) return;
+                  setShowExtractTasks(true);
+                }}>
+                  <ListChecks className="h-4 w-4 mr-2 text-primary" />
+                  <span className="font-medium">{t('editor.extractTasks', 'Extract Tasks with AI')}</span>
+                  <Sparkles className="h-3 w-3 ml-auto text-primary" />
+                </DropdownMenuItem>
                 {/* Copy with Formatting - special for textformat notes */}
                 {noteType === 'textformat' && (
                   <DropdownMenuItem 
@@ -1998,6 +2012,40 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           isOpen={showScanNote}
           onClose={() => setShowScanNote(false)}
           onInsertHtml={handleAiInsertHtml}
+        />
+      </SafeComponent>
+
+      {/* AI extract tasks from this note's content */}
+      <SafeComponent fallback={null}>
+        <TextTaskExtractorSheet
+          isOpen={showExtractTasks}
+          onClose={() => setShowExtractTasks(false)}
+          folders={folders.filter((f) => (f as any).type !== 'notes')}
+          sections={[]}
+          currentFolderId={null}
+          currentSectionId={null}
+          initialMode="text"
+          initialText={`${title ? title + '\n\n' : ''}${stripHtml(content || '')}`.trim()}
+          titleOverride={t('editor.extractTasksTitle', 'Extract tasks from this note')}
+          onAddTasks={async (newTasks) => {
+            try {
+              const existing = await loadTasksFromDB();
+              const now = new Date();
+              const toAdd: TodoItem[] = newTasks.map((tk) => ({
+                ...tk,
+                id: genId(),
+                completed: false,
+                createdAt: now,
+                modifiedAt: now,
+              } as TodoItem));
+              await saveTasksToDB([...existing, ...toAdd]);
+              window.dispatchEvent(new Event('tasksUpdated'));
+              toast.success(t('editor.tasksAddedFromNote', '{{count}} tasks added to your task list', { count: toAdd.length }));
+            } catch (e) {
+              console.error('[NoteEditor] add extracted tasks failed', e);
+              toast.error(t('editor.tasksAddFailed', 'Could not add tasks'));
+            }
+          }}
         />
       </SafeComponent>
 
