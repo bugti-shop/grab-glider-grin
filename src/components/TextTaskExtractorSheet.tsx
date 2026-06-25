@@ -58,17 +58,24 @@ interface Props {
   sections: TaskSection[];
   currentFolderId?: string | null;
   currentSectionId?: string | null;
+  /** Pre-fill the input text (e.g. when opened from a note). */
+  initialText?: string;
+  /** Pre-select the source mode. */
+  initialMode?: SourceMode;
+  /** Custom sheet title shown in the header. */
+  titleOverride?: string;
 }
 
 export const TextTaskExtractorSheet = ({
   isOpen, onClose, onAddTasks, folders, sections, currentFolderId, currentSectionId,
+  initialText, initialMode, titleOverride,
 }: Props) => {
   const { t, i18n } = useTranslation();
   const { isPro, isAdminBypass, requireFeature } = useSubscription();
   const hasPaidAi = isPro || isAdminBypass;
 
-  const [mode, setMode] = useState<SourceMode>('text');
-  const [text, setText] = useState('');
+  const [mode, setMode] = useState<SourceMode>(initialMode || 'text');
+  const [text, setText] = useState(initialText || '');
   const [pdfName, setPdfName] = useState<string | null>(null);
   const [pdfText, setPdfText] = useState('');
   const [isParsingPdf, setIsParsingPdf] = useState(false);
@@ -78,11 +85,16 @@ export const TextTaskExtractorSheet = ({
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // Re-apply initial values whenever the sheet opens (e.g. opening from a different note)
+      setMode(initialMode || 'text');
+      setText(initialText || '');
+    } else {
       setMode('text'); setText(''); setPdfName(null); setPdfText('');
       setIsParsingPdf(false); setIsExtracting(false); setItems([]); setHasRun(false);
       releaseAllAiLocks();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const handlePdfUpload = async (file: File) => {
