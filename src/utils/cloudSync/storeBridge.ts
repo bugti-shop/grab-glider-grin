@@ -329,7 +329,8 @@ async function applyHabitsFromCloud(rows: SyncRow[]) {
   const local = await loadHabits();
   const byId = new Map(local.map(h => [h.id, h]));
   for (const r of rows) {
-    if (r.is_deleted) { await deleteHabit(r.id).catch(() => {}); continue; }
+    if (r.is_deleted) { trackDeletion(r.id, 'habits'); await deleteHabit(r.id).catch(() => {}); continue; }
+    if (isTombstoned(r.id, 'habits')) { enqueueWrite('habits', 'delete', { id: r.id }); continue; }
     const merged = mappers.habits.mergeCloud(byId.get(r.id), r) as Habit;
     const existing = byId.get(r.id);
     const localTs = existing ? new Date((existing as any).updatedAt ?? 0).getTime() : 0;
