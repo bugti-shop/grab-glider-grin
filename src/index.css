@@ -826,3 +826,12 @@ body.onboarding-active [data-vaul-drawer] {
 }
 
 
+
+/* Empty-state placeholder hint for contentEditable rich-text body */
+.rich-text-editor:empty::before {
+  content: attr(data-placeholder);
+  color: hsl(var(--muted-foreground) / 0.55);
+  pointer-events: none;
+  font-style: italic;
+  display: block;
+}

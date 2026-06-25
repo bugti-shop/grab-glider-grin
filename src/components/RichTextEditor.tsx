@@ -2158,6 +2158,7 @@ export const RichTextEditor = ({
         data-gramm="false"
         data-gramm_editor="false"
         data-enable-grammarly="false"
+        data-placeholder={t('editor.bodyPlaceholder', 'Start typing…   @ mention notes & tasks · / for blocks')}
         className={cn(
           "rich-text-editor flex-1 min-h-0 p-4 border-0 focus:outline-none overflow-y-auto pb-32 rich-text-editor__scroll origin-top-left",
           // Don't add pt-2 for lined notes - let CSS padding-top handle it

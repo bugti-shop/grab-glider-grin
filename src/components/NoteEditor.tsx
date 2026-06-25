@@ -1861,7 +1861,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 <LinkedInTextFormatter
                   initialContent={content}
                   onContentChange={setContent}
-                  placeholder={t('notes.writeHere', 'Write here...')}
+                  placeholder={t('notes.writeHerePlaceholder', 'Write here…   Type @ to mention notes & tasks · Type / for blocks')}
                   className="h-full"
                 />
               </div>
