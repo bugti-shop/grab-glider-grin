@@ -37,12 +37,12 @@ export function benchmarkRender(label: string, itemCount: number, fn: () => void
   console.log(`[perf:render] ${label} items=${itemCount} ${durationMs.toFixed(2)}ms`);
 }
 
-export function markRenderStart(label: string): () => void {
+export function markRenderStart(label: string): (extra?: { itemCount?: number }) => void {
   if (!isEnabled()) return () => {};
   const start = performance.now();
   return (extra?: { itemCount?: number }) => {
     const durationMs = performance.now() - start;
-    const itemCount = (extra && (extra as any).itemCount) ?? 0;
+    const itemCount = extra?.itemCount ?? 0;
     history.push({ label, itemCount, durationMs, timestamp: Date.now() });
     // eslint-disable-next-line no-console
     console.log(`[perf:render] ${label} items=${itemCount} ${durationMs.toFixed(2)}ms`);
