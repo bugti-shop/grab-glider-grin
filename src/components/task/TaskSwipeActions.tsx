@@ -99,7 +99,7 @@ export const TaskSwipeActions = ({
   } = useSwipeState();
 
   const handleSwipeAction = async (action: () => void) => {
-    try { await Haptics.impact({ style: ImpactStyle.Medium }); } catch {}
+    try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
     action();
     setSwipeOffset(0);
   };
@@ -110,14 +110,14 @@ export const TaskSwipeActions = ({
       const maxSwipeLeft = SWIPE_ACTION_WIDTH * 3;
 
       if (swipeOffset > SWIPE_THRESHOLD) {
-        try { await Haptics.impact({ style: ImpactStyle.Medium }); } catch {}
+        try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
         setSwipeOffset(maxSwipeRight);
         setIsSwiping(false);
         touchStartPos.current = null;
         swipeStartX.current = null;
         return;
       } else if (swipeOffset < -SWIPE_THRESHOLD) {
-        try { await Haptics.impact({ style: ImpactStyle.Medium }); } catch {}
+        try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
         setSwipeOffset(-maxSwipeLeft);
         setIsSwiping(false);
         touchStartPos.current = null;
