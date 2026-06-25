@@ -339,6 +339,43 @@ export const advanceJourney = (): { newMilestone?: JourneyMilestone; journeyComp
   return { newMilestone, journeyCompleted };
 };
 
+/** Cap on remembered counted task IDs to prevent the synced set from growing unbounded. */
+const COUNTED_IDS_CAP = 5000;
+
+/** Idempotent advancement: returns null if the task ID was already counted. */
+export const advanceJourneyForTask = (
+  taskId: string,
+): { newMilestone?: JourneyMilestone; journeyCompleted?: boolean } | null => {
+  if (!taskId) return null;
+  const data = loadJourneyData();
+  if (!data.countedTaskIds) data.countedTaskIds = {};
+  if (data.countedTaskIds[taskId]) return null;
+
+  // Reserve the ID up front so concurrent calls / re-renders don't double-advance.
+  data.countedTaskIds[taskId] = true;
+
+  // Soft-cap the dictionary so it doesn't bloat the synced settings blob.
+  const keys = Object.keys(data.countedTaskIds);
+  if (keys.length > COUNTED_IDS_CAP) {
+    const overflow = keys.length - COUNTED_IDS_CAP;
+    for (let i = 0; i < overflow; i++) delete data.countedTaskIds[keys[i]];
+  }
+
+  // Persist the reservation even when there's no active journey, so totalTasksEver-like
+  // counters stay consistent across devices and we never re-count this task.
+  if (!data.activeJourneyId) {
+    data.totalTasksEver = Math.max(0, data.totalTasksEver ?? 0) + 1;
+    saveJourneyData(data);
+    return {};
+  }
+
+  // Save the reservation immediately, then let advanceJourney() do its mutations
+  // (it re-reads the cached data, so the reservation is preserved).
+  saveJourneyData(data);
+  return advanceJourney();
+};
+
+
 export const getActiveJourney = (): { journey: Journey; progress: JourneyProgress } | null => {
   const data = loadJourneyData();
   if (!data.activeJourneyId) return null;
