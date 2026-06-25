@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { TodoItem, TaskSection } from '@/types/note';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { ChevronRight, ChevronDown } from 'lucide-react';
@@ -7,6 +8,13 @@ import { cn } from '@/lib/utils';
 import { applyTaskOrder, updateSectionOrder } from '@/utils/taskOrderStorage';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { VirtualizedTaskList, shouldUseVirtualization } from '@/components/VirtualizedTaskList';
+import { FlatTaskList } from '@/components/tasks/FlatTaskList';
+import { useFlatTaskIndex } from '@/hooks/useFlatTaskIndex';
+import { markRenderStart, trackScrollFps } from '@/utils/perfBenchmark';
+
+// When uncompleted tasks exceed this threshold, switch to a fully-virtualized
+// flat list to keep render and scroll smooth at 100k+ rows.
+const VIRTUALIZE_THRESHOLD = 200;
 
 interface FlatViewProps {
   sortedSections: TaskSection[];
