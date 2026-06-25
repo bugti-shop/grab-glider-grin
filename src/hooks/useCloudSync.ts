@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { startSync, stopSync, syncNow } from '@/utils/cloudSync/syncEngine';
 import { installCloudListener } from '@/utils/cloudSync/storeBridge';
 import { runLegacyIdMigration } from '@/utils/cloudSync/legacyIdMigration';
+import { loadDeletionsAsync } from '@/utils/deletionTracker';
 import { Capacitor } from '@capacitor/core';
 
 export function useCloudSync(): void {
