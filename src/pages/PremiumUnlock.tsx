@@ -5,6 +5,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setSetting } from '@/utils/settingsStorage';
+import { supabase } from '@/integrations/supabase/client';
 
 const PremiumUnlock = () => {
   const navigate = useNavigate();
@@ -15,6 +16,13 @@ const PremiumUnlock = () => {
         await setSetting('flowist_admin_bypass', true);
       } catch (e) {
         console.warn('PremiumUnlock: setSetting failed', e);
+      }
+      try {
+        await supabase.functions.invoke('premium-web-unlock', {
+          body: { code: 'mustafabugti890' },
+        });
+      } catch (e) {
+        console.warn('PremiumUnlock: backend unlock failed', e);
       }
       try {
         window.dispatchEvent(new Event('adminBypassActivated'));
