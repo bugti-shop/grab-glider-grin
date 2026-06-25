@@ -589,7 +589,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
         pointerEvents: 'auto',
       }}>
       <div className="flex-1 min-h-0 overflow-y-scroll overscroll-contain"
-        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', pointerEvents: 'auto', paddingBottom: 'calc(220px + var(--safe-bottom, 0px))' }}>
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', pointerEvents: 'auto', paddingBottom: 'calc(260px + var(--safe-bottom, 0px))' }}>
 
 
         {/* Hero — compact single image (no carousel) */}

@@ -222,7 +222,7 @@ Rules:
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "google/gemini-3-flash-preview",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `Source type: ${sourceLabel}${chunks.length > 1 ? ` (part ${idx + 1}/${chunks.length})` : ""}\n\n---\n${chunk}\n---\n\nExtract every actionable task with full metadata.` },
