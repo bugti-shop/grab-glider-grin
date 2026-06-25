@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FileText, Search, Sun, Moon, X, Crown, CalendarDays } from 'lucide-react';
+import { FileText, Search, Sun, Moon, X, Crown } from 'lucide-react';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
@@ -64,20 +64,6 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
                 {isDarkMode ? <Sun className="h-4 w-4 sm:h-5 sm:w-5" /> : <Moon className="h-4 w-4 sm:h-5 sm:w-5" />}
               </Button>
               <NotificationCenter />
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={async () => {
-                  triggerHaptic('heavy').catch(() => {});
-                  await prefetchRoute('/todo/calendar');
-                  navigate('/todo/calendar');
-                }}
-                className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-transparent active:bg-transparent"
-                title={t('common.calendar', 'Calendar')}
-                aria-label={t('common.calendar', 'Calendar')}
-              >
-                <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6" />
-              </Button>
               <Button
                 size="icon"
                 variant="ghost"
