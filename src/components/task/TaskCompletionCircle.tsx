@@ -64,7 +64,7 @@ export const TaskCompletionCircle = ({
       setPendingComplete(false);
       pendingTimer.current = null;
       onComplete();
-    }, 400);
+    }, 120);
   };
 
   return (

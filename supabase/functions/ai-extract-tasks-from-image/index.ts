@@ -200,7 +200,7 @@ LOCATION:
         method: "POST",
         signal: AbortSignal.timeout(AI_GATEWAY_TIMEOUT_MS),
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Lovable-API-Key": LOVABLE_API_KEY,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
