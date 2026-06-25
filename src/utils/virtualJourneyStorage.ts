@@ -238,7 +238,7 @@ let _journeyCache: VirtualJourneyData | null = null;
 export const loadJourneyData = (): VirtualJourneyData => {
   if (_journeyCache) return _journeyCache;
   // Return default — async init will populate cache
-  return { activeJourneyId: null, completedJourneys: [], journeyProgress: {}, totalTasksEver: 0 };
+  return { activeJourneyId: null, completedJourneys: [], journeyProgress: {}, totalTasksEver: 0, countedTaskIds: {} };
 };
 
 /** Async load from IndexedDB — call at startup */
