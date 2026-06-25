@@ -189,13 +189,64 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
   let changed = false;
   for (const r of rows) {
     if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
-    const merged = mappers.tasks.mergeCloud(byId.get(r.id), r) as TodoItem;
-    const existing = byId.get(r.id);
-    const localTs = new Date((existing as any)?.modifiedAt ?? (existing as any)?.updatedAt ?? (existing as any)?.createdAt ?? 0).getTime();
-    const cloudTs = new Date((merged as any).modifiedAt ?? (merged as any).updatedAt ?? (merged as any).createdAt ?? r.updated_at ?? 0).getTime();
-    if (!existing || localTs < cloudTs) { byId.set(r.id, merged as any); changed = true; }
-    else if (localTs > cloudTs) {
-      recordConflict({ table: 'tasks', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
+    const existing = byId.get(r.id) as any;
+    const cloudMerged = mappers.tasks.mergeCloud(existing, r) as TodoItem;
+    const localTs = new Date(existing?.modifiedAt ?? existing?.updatedAt ?? existing?.createdAt ?? 0).getTime();
+    const cloudTs = new Date((cloudMerged as any).modifiedAt ?? (cloudMerged as any).updatedAt ?? (cloudMerged as any).createdAt ?? r.updated_at ?? 0).getTime();
+
+    // Field-level conflict resolution so completion + calendar fields never diverge:
+    //   - completion is monotonic-preferring-true (and the later completedAt wins when both completed)
+    //   - dueDate / reminderTime take the value from whichever side has the newer timestamp,
+    //     even when the other side wins the overall row.
+    const localCompleted = !!existing?.completed;
+    const cloudCompleted = !!(cloudMerged as any).completed;
+    const localCompletedAt = existing?.completedAt ? +new Date(existing.completedAt) : 0;
+    const cloudCompletedAt = (cloudMerged as any).completedAt ? +new Date((cloudMerged as any).completedAt) : 0;
+
+    const pickNewer = <T,>(a: T | undefined, b: T | undefined): T | undefined => {
+      if (localTs >= cloudTs) return a ?? b;
+      return b ?? a;
+    };
+
+    let winner: any;
+    if (!existing || localTs < cloudTs) {
+      winner = { ...cloudMerged };
+    } else if (localTs > cloudTs) {
+      winner = { ...existing };
+      recordConflict({ table: 'tasks', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local_with_field_merge' });
+    } else {
+      winner = { ...existing, ...cloudMerged };
+    }
+
+    // Completion: prefer completed=true; tiebreak by later completedAt.
+    if (localCompleted && cloudCompleted) {
+      winner.completed = true;
+      winner.completedAt = new Date(Math.max(localCompletedAt, cloudCompletedAt));
+    } else if (localCompleted || cloudCompleted) {
+      // One side completed, the other not — accept the completion from whichever side recorded it later.
+      const completionTs = localCompleted ? localTs : cloudTs;
+      const unCompleteTs = localCompleted ? cloudTs : localTs;
+      if (completionTs >= unCompleteTs) {
+        winner.completed = true;
+        winner.completedAt = new Date(localCompleted ? (localCompletedAt || localTs) : (cloudCompletedAt || cloudTs));
+      } else {
+        winner.completed = false;
+        winner.completedAt = undefined;
+      }
+    }
+
+    // Calendar fields — take from the side with the newer modifiedAt (already encoded by pickNewer).
+    winner.dueDate = pickNewer(existing?.dueDate, (cloudMerged as any).dueDate);
+    winner.reminderTime = pickNewer(existing?.reminderTime, (cloudMerged as any).reminderTime);
+
+    // Keep the row's modifiedAt as the max of both sides so future merges stay stable.
+    winner.modifiedAt = new Date(Math.max(localTs, cloudTs) || Date.now());
+
+    const before = existing ? JSON.stringify({ c: existing.completed, ca: existing.completedAt, d: existing.dueDate, r: existing.reminderTime, m: existing.modifiedAt }) : '';
+    const after = JSON.stringify({ c: winner.completed, ca: winner.completedAt, d: winner.dueDate, r: winner.reminderTime, m: winner.modifiedAt });
+    if (!existing || before !== after || localTs < cloudTs) {
+      byId.set(r.id, winner);
+      changed = true;
     }
   }
   if (changed) {
@@ -204,6 +255,7 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
     window.dispatchEvent(new Event('tasksUpdated'));
   }
 }
+
 
 async function applySectionsFromCloud(rows: SyncRow[]) {
   const { getSetting, setSetting } = await import('@/utils/settingsStorage');
