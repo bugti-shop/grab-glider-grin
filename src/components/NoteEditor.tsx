@@ -6,7 +6,7 @@ import { compressImage, isCompressibleImage } from '@/utils/imageCompression';
 import { useNavigate } from 'react-router-dom';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTranslation } from 'react-i18next';
-import { Note, NoteType, StickyColor, VoiceRecording, Folder, FloatingImage } from '@/types/note';
+import { Note, NoteType, StickyColor, VoiceRecording, Folder, FloatingImage, TodoItem } from '@/types/note';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
