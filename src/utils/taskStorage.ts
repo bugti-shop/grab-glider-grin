@@ -344,6 +344,9 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
         if (existing) {
           const updated = { ...existing, ...updates };
           store.put(updated);
+          import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
+            try { pushTasks([hydrateItem(updated)]); } catch {}
+          }).catch(() => {});
         }
       };
       
