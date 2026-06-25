@@ -33,47 +33,56 @@ const isTombstoned = (id: string, category: DeletionRecord['category']): boolean
 
 export function pushFolders(folders: Folder[]): void {
   for (const f of folders) {
+    if (isTombstoned(f.id, 'folders') || isTombstoned(f.id, 'noteFolders')) continue;
     const row = mappers.folders.toCloud(f, 'notes');
     if (row) enqueueWrite('folders', 'upsert', row as any);
   }
 }
 export function pushTaskFolders(folders: any[]): void {
   for (const f of folders) {
+    if (isTombstoned(f.id, 'folders') || isTombstoned(f.id, 'todoFolders')) continue;
     const row = mappers.folders.toCloud(f, 'tasks');
     if (row) enqueueWrite('folders', 'upsert', row as any);
   }
 }
 export function pushFolderDelete(id: string): void {
+  trackDeletion(id, 'folders');
   enqueueWrite('folders', 'delete', { id });
 }
 
 export function pushSections(sections: any[]): void {
   for (const s of sections) {
+    if (isTombstoned(s.id, 'todoSections')) continue;
     const row = mappers.sections.toCloud(s);
     if (row) enqueueWrite('sections', 'upsert', row as any);
   }
 }
 export function pushSectionDelete(id: string): void {
+  trackDeletion(id, 'todoSections');
   enqueueWrite('sections', 'delete', { id });
 }
 
 export function pushNotes(notes: Note[]): void {
   for (const n of notes) {
+    if (isTombstoned(n.id, 'notes')) continue;
     const row = mappers.notes.toCloud(n);
     if (row) enqueueWrite('notes', n.isDeleted ? 'delete' : 'upsert', row as any);
   }
 }
 export function pushNoteDelete(id: string): void {
+  trackDeletion(id, 'notes');
   enqueueWrite('notes', 'delete', { id });
 }
 
 export function pushTasks(tasks: TodoItem[]): void {
   for (const t of tasks) {
+    if (isTombstoned(t.id, 'tasks')) continue;
     const row = mappers.tasks.toCloud(t as any);
     if (row) enqueueWrite('tasks', (t as any).isDeleted ? 'delete' : 'upsert', row as any);
   }
 }
 export function pushTaskDelete(id: string): void {
+  trackDeletion(id, 'tasks');
   enqueueWrite('tasks', 'delete', { id });
 }
 
