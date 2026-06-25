@@ -753,14 +753,6 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           background: 'linear-gradient(to top, #000 70%, rgba(0,0,0,0))',
         }}>
           {(() => {
-            const trialEnd = new Date();
-            trialEnd.setDate(trialEnd.getDate() + 3);
-            const endStr = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-            const isIOS = Capacitor.getPlatform() === 'ios';
-            const shortCancel = isIOS
-              ? 'Settings → Subscriptions → Flowist → Cancel'
-              : 'Google Play → Subscriptions → Flowist → Cancel';
-            const shortEnd = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
             return (
               <>
                 <button onClick={() => { triggerTripleHeavyHaptic(); handlePurchase(); }} disabled={isPurchasing}
@@ -773,6 +765,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
               </>
 
             );
+
           })()}
 
 
