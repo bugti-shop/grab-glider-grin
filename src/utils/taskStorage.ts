@@ -330,6 +330,9 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
       cacheVersion++;
     }
   }
+  if (pendingFlushItems) {
+    pendingFlushItems = pendingFlushItems.map(t => t.id === taskId ? { ...t, ...updates } : t);
+  }
   
   try {
     const db = await openDB();
@@ -371,6 +374,9 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
   if (tasksCache) {
     tasksCache = tasksCache.filter(t => t.id !== taskId);
     cacheVersion++;
+  }
+  if (pendingFlushItems) {
+    pendingFlushItems = pendingFlushItems.filter(t => t.id !== taskId);
   }
   
   // Mirror delete to Lovable Cloud
