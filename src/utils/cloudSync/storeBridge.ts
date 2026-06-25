@@ -310,7 +310,8 @@ async function applySectionsFromCloud(rows: SyncRow[]) {
   const byId = new Map((local ?? []).map((s: any) => [s.id, s]));
   let changed = false;
   for (const r of rows) {
-    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
+    if (r.is_deleted) { trackDeletion(r.id, 'todoSections'); if (byId.delete(r.id)) changed = true; continue; }
+    if (isTombstoned(r.id, 'todoSections')) { enqueueWrite('sections', 'delete', { id: r.id }); continue; }
     const mapped = mappers.sections.fromCloud(r);
     if (!mapped) continue;
     byId.set(r.id, mapped);
