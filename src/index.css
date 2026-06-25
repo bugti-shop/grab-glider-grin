@@ -827,11 +827,28 @@ body.onboarding-active [data-vaul-drawer] {
 
 
 
-/* Empty-state placeholder hint for contentEditable rich-text body */
-.rich-text-editor:empty::before {
+/* Empty-state placeholder hint for contentEditable rich-text body.
+   Uses absolute positioning so it never pushes the caret or interferes
+   with text selection. Matches truly empty and <br>-only states. */
+.rich-text-editor {
+  position: relative;
+}
+.rich-text-editor:empty::before,
+.rich-text-editor:has(> br:only-child):empty::before,
+.rich-text-editor:has(> br:only-child)::before {
   content: attr(data-placeholder);
   color: hsl(var(--muted-foreground) / 0.55);
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
   font-style: italic;
-  display: block;
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
+  white-space: pre-wrap;
 }
+.rich-text-editor:focus:not(:empty):not(:has(> br:only-child))::before {
+  content: none;
+}
+
