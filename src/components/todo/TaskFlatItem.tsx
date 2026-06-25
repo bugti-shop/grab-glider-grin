@@ -94,12 +94,12 @@ export const TaskFlatItem = memo(({
               onClick={() => onSwipeAction(() => {
                 if (!item.completed) {
                   setPendingCompleteId(item.id);
-                  Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+                  Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
                   pendingCompleteTimer.current = setTimeout(() => {
                     setPendingCompleteId(null);
                     pendingCompleteTimer.current = null;
                     updateItem(item.id, { completed: true });
-                  }, 400);
+                  }, 120);
                 } else {
                   updateItem(item.id, { completed: false });
                 }
@@ -169,13 +169,12 @@ export const TaskFlatItem = memo(({
                 return;
               }
               setPendingCompleteId(item.id);
-              Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
-              setTimeout(() => { Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {}); }, 100);
+              Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
               pendingCompleteTimer.current = setTimeout(() => {
                 setPendingCompleteId(null);
                 pendingCompleteTimer.current = null;
                 updateItem(item.id, { completed: true });
-              }, 400);
+              }, 120);
             }}
             className={cn(
               TASK_CIRCLE.base, TASK_CIRCLE.marginTop,

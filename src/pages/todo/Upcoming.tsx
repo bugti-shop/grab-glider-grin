@@ -152,14 +152,16 @@ const Upcoming = () => {
 
   const updateItem = async (itemId: string, updates: Partial<TodoItem>) => {
     const currentItem = allItems.find(i => i.id === itemId);
+    const now = new Date();
+    const updatesWithTimestamp: Partial<TodoItem> = { ...updates, modifiedAt: now };
+    if (updates.completed === true && currentItem && !currentItem.completed) updatesWithTimestamp.completedAt = now;
+    if (updates.completed === false && currentItem?.completed) updatesWithTimestamp.completedAt = undefined;
+    const isNewCompletion = updates.completed === true && currentItem && !currentItem.completed;
     
     // Play completion sound when completing a task
-    if (updates.completed === true && currentItem && !currentItem.completed) {
+    if (isNewCompletion) {
       playCompletionSound();
-      
-      // Record streak completion
-      try {
-        const streakResult = await recordCompletion(TASK_STREAK_KEY);
+      recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
         if (streakResult.newMilestone) {
           toast.success(t('todayPage.streakMilestone', { days: streakResult.newMilestone }));
           window.dispatchEvent(new CustomEvent('streakMilestone', { detail: { milestone: streakResult.newMilestone } }));
@@ -171,7 +173,7 @@ const Upcoming = () => {
           window.dispatchEvent(new CustomEvent('streakChallengeShow', { detail: { currentStreak: streakResult.data.currentStreak } }));
         }
         window.dispatchEvent(new CustomEvent('streakUpdated'));
-      } catch (e) { console.warn('Failed to record streak:', e); }
+      }).catch((e) => console.warn('Failed to record streak:', e));
     }
     
     // Check if this is a recurring task being completed
@@ -182,25 +184,23 @@ const Upcoming = () => {
           // Add the next occurrence
           const updatedAllItems = [
             nextTask,
-            ...allItems.map(i => i.id === itemId ? { ...i, ...updates } : i)
+            ...allItems.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i)
           ];
           setAllItems(updatedAllItems);
-          await saveTodoItems(updatedAllItems);
+          saveTodoItems(updatedAllItems).catch(console.warn);
           toast.success(t('todayPage.recurringTaskCompleted'), {
             icon: '🔄',
           });
-          loadItems();
+          setItems(updatedAllItems.filter((item: TodoItem) => item.dueDate && isAfter(startOfDay(new Date(item.dueDate)), startOfDay(new Date()))));
           return;
         }
       }
     }
     
-    const updatedAllItems = allItems.map((item) => (item.id === itemId ? { ...item, ...updates } : item));
+    const updatedAllItems = allItems.map((item) => (item.id === itemId ? { ...item, ...updatesWithTimestamp } : item));
     setAllItems(updatedAllItems);
-    
-    
-    
-    loadItems();
+    setItems(updatedAllItems.filter((item: TodoItem) => item.dueDate && isAfter(startOfDay(new Date(item.dueDate)), startOfDay(new Date()))));
+    saveTodoItems(updatedAllItems).catch(console.warn);
   };
 
   const deleteItem = async (itemId: string) => {

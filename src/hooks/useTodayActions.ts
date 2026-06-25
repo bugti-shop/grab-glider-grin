@@ -339,14 +339,49 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     // Get the current item from ref (reliable in async contexts)
     const currentItem = itemsRef.current.find(i => i.id === itemId);
 
-    if (updates.completed === true && currentItem && !currentItem.completed) {
+    const isNewCompletion = updates.completed === true && currentItem && !currentItem.completed;
+
+    if (isNewCompletion) {
       updatesWithTimestamp.completedAt = now;
       playCompletionSound();
       import('@/utils/reminderScheduler').then(({ cancelTaskReminder }) => {
         cancelTaskReminder(itemId).catch(console.warn);
       });
-      try {
-        const streakResult = await recordCompletion(TASK_STREAK_KEY);
+    }
+    if (updates.completed === false && currentItem?.completed) {
+      updatesWithTimestamp.completedAt = undefined;
+    }
+
+    // Handle recurring tasks
+    if (currentItem && isNewCompletion) {
+      if (currentItem.repeatType && currentItem.repeatType !== 'none') {
+        const nextTask = createNextRecurringTask(currentItem);
+        if (nextTask) {
+          const nextTaskWithTimestamps = { ...nextTask, createdAt: now, modifiedAt: now };
+          setItems(prev => [nextTaskWithTimestamps, ...prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i)]);
+          toast.success(t('todayPage.recurringTaskCompleted'), { icon: '🔄' });
+          recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
+            if (streakResult.newMilestone) {
+              toast.success(t('todayPage.streakMilestone', { days: streakResult.newMilestone }));
+              window.dispatchEvent(new CustomEvent('streakMilestone', { detail: { milestone: streakResult.newMilestone } }));
+            }
+            if (streakResult.earnedFreeze) {
+              toast.success(t('todayPage.earnedStreakFreeze'), { description: t('todayPage.earnedStreakFreezeDesc') });
+            }
+            if (streakResult.streakIncremented) {
+              window.dispatchEvent(new CustomEvent('streakChallengeShow', { detail: { currentStreak: streakResult.data.currentStreak } }));
+            }
+            window.dispatchEvent(new CustomEvent('streakUpdated'));
+          }).catch((e) => console.warn('Failed to record streak:', e));
+          return;
+        }
+      }
+    }
+
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i));
+
+    if (isNewCompletion) {
+      recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
         if (streakResult.newMilestone) {
           toast.success(t('todayPage.streakMilestone', { days: streakResult.newMilestone }));
           window.dispatchEvent(new CustomEvent('streakMilestone', { detail: { milestone: streakResult.newMilestone } }));
@@ -358,28 +393,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
           window.dispatchEvent(new CustomEvent('streakChallengeShow', { detail: { currentStreak: streakResult.data.currentStreak } }));
         }
         window.dispatchEvent(new CustomEvent('streakUpdated'));
-      } catch (e) { console.warn('Failed to record streak:', e); }
-    }
-    if (updates.completed === false && currentItem?.completed) {
-      updatesWithTimestamp.completedAt = undefined;
-    }
-
-    // Handle recurring tasks
-    if (currentItem && updates.completed === true && !currentItem.completed) {
-      if (currentItem.repeatType && currentItem.repeatType !== 'none') {
-        const nextTask = createNextRecurringTask(currentItem);
-        if (nextTask) {
-          const nextTaskWithTimestamps = { ...nextTask, createdAt: now, modifiedAt: now };
-          setItems(prev => [nextTaskWithTimestamps, ...prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i)]);
-          toast.success(t('todayPage.recurringTaskCompleted'), { icon: '🔄' });
-          return;
-        }
-      }
-    }
-
-    setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i));
-
-    if (updates.completed === true && currentItem && !currentItem.completed) {
+      }).catch((e) => console.warn('Failed to record streak:', e));
       toast.success(t('todayPage.taskCompleted'), {
         action: {
           label: t('todayPage.undo'),

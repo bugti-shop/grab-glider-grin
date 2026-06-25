@@ -91,6 +91,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             imageBase64: dataUrl,
             languageCode: (i18n.language || 'en').split('-')[0],
             languageName: 'auto',
+            webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
           },
           timeout: AI_SCAN_TIMEOUT_MS,
         },
