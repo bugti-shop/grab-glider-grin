@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FileText, Search, Sun, Moon, X, Crown } from 'lucide-react';
+import { FileText, Search, Sun, Moon, X, Crown, CalendarDays } from 'lucide-react';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
