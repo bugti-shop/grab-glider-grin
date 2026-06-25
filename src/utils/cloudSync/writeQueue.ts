@@ -67,6 +67,7 @@ export async function flushQueue(): Promise<void> {
       const userId = session.user.id;
 
       let q = load();
+      const processingIds = new Set(q.map(entry => entry.id));
       const remaining: QueuedWrite[] = [];
       for (const entry of q) {
         try {
@@ -90,10 +91,18 @@ export async function flushQueue(): Promise<void> {
           else console.warn('[sync] dropping write after max retries', entry, err);
         }
       }
-      save(remaining);
+      // Preserve writes enqueued while this flush was running. The old code
+      // saved `remaining` from the initial snapshot and could accidentally
+      // drop a new complete/delete write, letting stale cloud data restore it.
+      const latest = load();
+      const queuedDuringFlush = latest.filter(entry => !processingIds.has(entry.id));
+      save([...remaining, ...queuedDuringFlush]);
     } finally {
       flushing = false;
       flushPromise = null;
+      if ((typeof navigator === 'undefined' || navigator.onLine) && load().length > 0) {
+        setTimeout(() => { void flushQueue(); }, 0);
+      }
     }
   })();
   return flushPromise;
