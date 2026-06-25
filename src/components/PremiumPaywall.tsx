@@ -753,14 +753,6 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           background: 'linear-gradient(to top, #000 70%, rgba(0,0,0,0))',
         }}>
           {(() => {
-            const trialEnd = new Date();
-            trialEnd.setDate(trialEnd.getDate() + 3);
-            const endStr = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-            const isIOS = Capacitor.getPlatform() === 'ios';
-            const shortCancel = isIOS
-              ? 'Settings → Subscriptions → Flowist → Cancel'
-              : 'Google Play → Subscriptions → Flowist → Cancel';
-            const shortEnd = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
             return (
               <>
                 <button onClick={() => { triggerTripleHeavyHaptic(); handlePurchase(); }} disabled={isPurchasing}
@@ -770,18 +762,10 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
                     ? t('onboarding.paywall.processing')
                     : `Try for $0.00 Today`}
                 </button>
-                <p className="text-[10.5px] leading-snug text-center mt-1.5 px-2 font-semibold" style={{ color: '#cfcfcf' }}>
-                  {(!hasUsedTrial && currentPlan.hasTrial)
-                    ? <>3-day free trial, then renews at <span className="text-white font-bold">{currentPlan.price}</span> on <span className="text-white font-bold">{endStr}</span> until cancelled.</>
-                    : <>Renews at <span className="text-white font-bold">{currentPlan.price}</span> until cancelled.</>}
-                </p>
-                <p className="text-[9.5px] leading-snug text-center mt-1 px-2" style={{ color: '#9a9a9a' }}>
-                  {(!hasUsedTrial && currentPlan.hasTrial)
-                    ? `${shortCancel} (before ${shortEnd})`
-                    : `${shortCancel} (before ${shortEnd}).`}
-                </p>
               </>
+
             );
+
           })()}
 
 

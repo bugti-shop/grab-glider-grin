@@ -81,7 +81,7 @@ export const FlatView = ({
             index={flatIndex}
             rowHeight={compactMode ? 56 : 72}
             renderRow={(row) => (
-              <div className="bg-card rounded-lg border border-border/50 mx-2 my-1">
+              <div className="border-b border-border/50">
                 {row.parentChip && (
                   <div className="px-3 pt-1 text-[10px] text-muted-foreground truncate">
                     ↳ {row.parentChip}
@@ -90,6 +90,7 @@ export const FlatView = ({
                 {renderTaskItem(row.task)}
               </div>
             )}
+
             emptyState={
               <div className="text-center py-20">
                 <p className="text-muted-foreground">{t('emptyStates.noTasks')}</p>
@@ -210,26 +211,25 @@ export const FlatView = ({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="space-y-4">
+      <div>
         {sortedSections.map((section) => {
           const sectionTasks = uncompletedItems.filter(item => item.sectionId === section.id || (!item.sectionId && section.id === sections[0]?.id));
           const sectionId = section.id === sections[0]?.id ? 'default' : section.id;
           const isCollapsed = collapsedViewSections.has(`flat-${section.id}`);
           const orderedTasks = applyTaskOrder(sectionTasks, `flat-section-${sectionId}`);
           return (
-            <div key={section.id} className="bg-muted/30 rounded-xl border border-border/30 overflow-hidden">
+            <div key={section.id}>
               {renderSectionHeader(section, false)}
               {!isCollapsed && (
                 <Droppable droppableId={`flat-section-${sectionId}`}>
                   {(provided, snapshot) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className={cn("p-2 space-y-1 min-h-[40px]", compactMode && "p-1 space-y-0", snapshot.isDraggingOver && "bg-primary/5")}>
+                    <div ref={provided.innerRef} {...provided.droppableProps} className={cn("min-h-[40px]", snapshot.isDraggingOver && "bg-primary/5")}>
                       {orderedTasks.length === 0 ? (
                         <div className={cn("text-center text-sm text-muted-foreground", compactMode ? "py-2 px-2" : "py-4 px-4")}>{t('emptyStates.noTasksInSection')}</div>
                       ) : orderedTasks.map((item, index) => (
                         <Draggable key={item.id} draggableId={item.id} index={index}>
                           {(provided, snapshot) => (
-                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card rounded-lg border border-border/50", snapshot.isDragging && "shadow-lg ring-2 ring-primary")}>
-                              {/* cv-auto applied via parent for non-dragging items */}
+                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("border-b border-border/50", snapshot.isDragging && "shadow-lg ring-2 ring-primary bg-card")}>
                               {renderTaskItem(item)}{renderSubtasksInline(item)}
                             </div>
                           )}
@@ -243,6 +243,7 @@ export const FlatView = ({
             </div>
           );
         })}
+
         {showCompleted && completedItems.length > 0 && (
           <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
             <div className="bg-muted/50 rounded-xl p-3 border border-border/30">

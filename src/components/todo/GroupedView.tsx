@@ -111,8 +111,8 @@ export const GroupedView = ({
           const isCollapsed = collapsedViewSections.has(groupSectionId);
           const orderedTasks = applyTaskOrder(group.tasks, `grouped-${group.id}`);
           return (
-            <div key={group.id} className="bg-muted/30 rounded-xl border border-border/30 overflow-hidden">
-              <button onClick={() => toggleViewSectionCollapse(groupSectionId)} className="w-full flex items-center gap-2 px-3 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors" style={{ borderLeft: `4px solid ${group.color}` }}>
+            <div key={group.id} className="overflow-hidden">
+              <button onClick={() => toggleViewSectionCollapse(groupSectionId)} className="w-full flex items-center gap-2 px-3 py-3 hover:bg-muted/20 transition-colors" style={{ borderLeft: `4px solid ${group.color}` }}>
                 {group.icon}
                 <span className="text-sm font-semibold flex-1 text-left">{group.label}</span>
                 <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{group.tasks.length}</span>
@@ -121,11 +121,11 @@ export const GroupedView = ({
               {!isCollapsed && (
                 <Droppable droppableId={`grouped-${group.id}`}>
                   {(provided, snapshot) => (
-                    <div ref={provided.innerRef} {...provided.droppableProps} className={cn("p-2 space-y-1 min-h-[40px]", compactMode && "p-1 space-y-0", snapshot.isDraggingOver && "bg-primary/5")}>
+                    <div ref={provided.innerRef} {...provided.droppableProps} className={cn("min-h-[40px]", snapshot.isDraggingOver && "bg-primary/5")}>
                       {orderedTasks.length === 0 ? <div className="py-4 text-center text-sm text-muted-foreground">{t('todayPage.dropTasksHere')}</div> : orderedTasks.map((item, index) => (
                         <Draggable key={item.id} draggableId={item.id} index={index}>
                           {(provided, snapshot) => (
-                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card rounded-lg border border-border/50", snapshot.isDragging && "shadow-lg ring-2 ring-primary")}>
+                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("border-b border-border/50", snapshot.isDragging && "shadow-lg ring-2 ring-primary bg-card")}>
                               {renderTaskItem(item)}{renderSubtasksInline(item)}
                             </div>
                           )}
@@ -137,6 +137,7 @@ export const GroupedView = ({
                 </Droppable>
               )}
             </div>
+
           );
         })}
         {showCompleted && completedItems.length > 0 && (
