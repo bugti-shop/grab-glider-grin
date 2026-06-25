@@ -265,7 +265,7 @@ export const TextTaskExtractorSheet = ({
           <SheetHeader className="px-4 pt-4 pb-2">
             <SheetTitle className="flex items-center gap-2 text-left">
               <Sparkles className="h-5 w-5 text-primary" />
-              {t('textExtract.title', 'Extract tasks from text, email or PDF')}
+              {titleOverride || t('textExtract.title', 'Extract tasks from text, email or PDF')}
             </SheetTitle>
             <SheetDescription className="sr-only">
               {t('textExtract.description', 'Paste text or upload a PDF and AI will extract tasks.')}
