@@ -198,7 +198,12 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
   const local = await loadNotesFromDB();
   const byId = new Map(local.map(n => [n.id, n]));
   for (const r of rows) {
-    if (r.is_deleted) { await deleteNoteFromDB(r.id, true); continue; }
+    if (r.is_deleted) { trackDeletion(r.id, 'notes'); await deleteNoteFromDB(r.id, true); continue; }
+    if (isTombstoned(r.id, 'notes')) {
+      // Resurrected cloud row — push the delete again so all devices clean up.
+      enqueueWrite('notes', 'delete', { id: r.id });
+      continue;
+    }
     const merged = mappers.notes.mergeCloud(byId.get(r.id), r) as Note;
     const existing = byId.get(r.id);
     if (!existing || (existing.updatedAt as Date) < (merged.updatedAt as Date)) {
@@ -214,8 +219,18 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
   const local = await loadTasksFromDB();
   const byId = new Map(local.map((t: any) => [t.id, t]));
   let changed = false;
+  // Track which winners need to be re-pushed so monotonic completion / dedupe propagates.
+  const rePush: any[] = [];
   for (const r of rows) {
-    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
+    if (r.is_deleted) {
+      trackDeletion(r.id, 'tasks');
+      if (byId.delete(r.id)) changed = true;
+      continue;
+    }
+    if (isTombstoned(r.id, 'tasks')) {
+      enqueueWrite('tasks', 'delete', { id: r.id });
+      continue;
+    }
     const existing = byId.get(r.id) as any;
     const cloudMerged = mappers.tasks.mergeCloud(existing, r) as TodoItem;
     const localTs = new Date(existing?.modifiedAt ?? existing?.updatedAt ?? existing?.createdAt ?? 0).getTime();
