@@ -81,7 +81,7 @@ export const FlatView = ({
             index={flatIndex}
             rowHeight={compactMode ? 56 : 72}
             renderRow={(row) => (
-              <div className="bg-card rounded-lg border border-border/50 mx-2 my-1">
+              <div className="border-b border-border/50">
                 {row.parentChip && (
                   <div className="px-3 pt-1 text-[10px] text-muted-foreground truncate">
                     ↳ {row.parentChip}
@@ -90,6 +90,7 @@ export const FlatView = ({
                 {renderTaskItem(row.task)}
               </div>
             )}
+
             emptyState={
               <div className="text-center py-20">
                 <p className="text-muted-foreground">{t('emptyStates.noTasks')}</p>
