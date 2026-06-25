@@ -194,7 +194,7 @@ const sanitizeDateMap = (value: unknown): Record<string, string> => {
 /** Ensure every JourneyProgress entry has valid arrays/fields after Firebase round-trip */
 export const sanitizeJourneyData = (raw: any): VirtualJourneyData => {
   if (!raw || typeof raw !== 'object') {
-    return { activeJourneyId: null, completedJourneys: [], journeyProgress: {}, totalTasksEver: 0 };
+    return { activeJourneyId: null, completedJourneys: [], journeyProgress: {}, totalTasksEver: 0, countedTaskIds: {} };
   }
   const completedJourneys = toArray(raw.completedJourneys);
   const journeyProgress: Record<string, JourneyProgress> = {};
@@ -215,11 +215,19 @@ export const sanitizeJourneyData = (raw: any): VirtualJourneyData => {
     }
   }
 
+  const countedTaskIds: Record<string, true> = {};
+  if (raw.countedTaskIds && typeof raw.countedTaskIds === 'object') {
+    for (const k of Object.keys(raw.countedTaskIds)) {
+      if (typeof k === 'string' && k) countedTaskIds[k] = true;
+    }
+  }
+
   return {
     activeJourneyId: typeof raw.activeJourneyId === 'string' ? raw.activeJourneyId : null,
     completedJourneys,
     journeyProgress,
     totalTasksEver: Number.isFinite(Number(raw.totalTasksEver)) ? Math.max(0, Number(raw.totalTasksEver)) : 0,
+    countedTaskIds,
   };
 };
 
