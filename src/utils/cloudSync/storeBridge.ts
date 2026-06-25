@@ -213,7 +213,7 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
       winner = { ...cloudMerged };
     } else if (localTs > cloudTs) {
       winner = { ...existing };
-      recordConflict({ table: 'tasks', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local_with_field_merge' });
+      recordConflict({ table: 'tasks', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
     } else {
       winner = { ...existing, ...cloudMerged };
     }
