@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Check as CheckIcon, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { triggerTripleHeavyHaptic } from '@/utils/haptics';
+import { triggerHaptic } from '@/utils/haptics';
 import { TASK_CIRCLE, TASK_CHECK_ICON } from '@/utils/taskItemStyles';
 import { TaskCompletionBurst } from '@/components/TaskCompletionBurst';
 import { getCurrentCombo } from '@/utils/comboSystem';
@@ -58,7 +58,7 @@ export const TaskCompletionCircle = ({
     setBurstIntensity(combo.multiplier >= 4 ? 'milestone' : combo.isActive ? 'combo' : 'normal');
     setPendingComplete(true);
     setShowBurst(true);
-    triggerTripleHeavyHaptic();
+    triggerHaptic('light');
 
     pendingTimer.current = setTimeout(() => {
       setPendingComplete(false);
