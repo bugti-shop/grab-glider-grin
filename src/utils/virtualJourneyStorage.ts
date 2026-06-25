@@ -250,7 +250,7 @@ export const loadJourneyDataAsync = async (): Promise<VirtualJourneyData> => {
       return _journeyCache;
     }
   } catch {}
-  _journeyCache = { activeJourneyId: null, completedJourneys: [], journeyProgress: {}, totalTasksEver: 0 };
+  _journeyCache = { activeJourneyId: null, completedJourneys: [], journeyProgress: {}, totalTasksEver: 0, countedTaskIds: {} };
   return _journeyCache;
 };
 
