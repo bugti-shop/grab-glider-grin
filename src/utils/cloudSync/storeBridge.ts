@@ -162,7 +162,17 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
     if (!mapped) continue;
     const store = (mapped as any).__flowistFolderStore === 'tasks' ? 'tasks' : 'notes';
     const byId = store === 'tasks' ? taskById : noteById;
-    if (r.is_deleted) { if (byId.delete(r.id)) store === 'tasks' ? taskChanged = true : noteChanged = true; continue; }
+    if (r.is_deleted) {
+      trackDeletion(r.id, 'folders');
+      trackDeletion(r.id, store === 'tasks' ? 'todoFolders' : 'noteFolders');
+      if (byId.delete(r.id)) store === 'tasks' ? taskChanged = true : noteChanged = true;
+      continue;
+    }
+    if (isTombstoned(r.id, 'folders') || isTombstoned(r.id, store === 'tasks' ? 'todoFolders' : 'noteFolders')) {
+      // resurrected on cloud? re-issue delete and skip locally
+      enqueueWrite('folders', 'delete', { id: r.id });
+      continue;
+    }
     const existing = byId.get(r.id) as any;
     if (!existing || new Date(existing.updatedAt ?? existing.createdAt ?? 0).getTime() < mapped.updatedAt.getTime()) {
       byId.set(r.id, mapped);
