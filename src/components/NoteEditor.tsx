@@ -2015,6 +2015,40 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         />
       </SafeComponent>
 
+      {/* AI extract tasks from this note's content */}
+      <SafeComponent fallback={null}>
+        <TextTaskExtractorSheet
+          isOpen={showExtractTasks}
+          onClose={() => setShowExtractTasks(false)}
+          folders={folders.filter((f) => (f as any).type !== 'notes')}
+          sections={[]}
+          currentFolderId={null}
+          currentSectionId={null}
+          initialMode="text"
+          initialText={`${title ? title + '\n\n' : ''}${stripHtml(content || '')}`.trim()}
+          titleOverride={t('editor.extractTasksTitle', 'Extract tasks from this note')}
+          onAddTasks={async (newTasks) => {
+            try {
+              const existing = await loadTasksFromDB();
+              const now = new Date();
+              const toAdd: TodoItem[] = newTasks.map((tk) => ({
+                ...tk,
+                id: genId(),
+                completed: false,
+                createdAt: now,
+                modifiedAt: now,
+              } as TodoItem));
+              await saveTasksToDB([...existing, ...toAdd]);
+              window.dispatchEvent(new Event('tasksUpdated'));
+              toast.success(t('editor.tasksAddedFromNote', '{{count}} tasks added to your task list', { count: toAdd.length }));
+            } catch (e) {
+              console.error('[NoteEditor] add extracted tasks failed', e);
+              toast.error(t('editor.tasksAddFailed', 'Could not add tasks'));
+            }
+          }}
+        />
+      </SafeComponent>
+
 
 
       {/* New Folder Dialog */}
