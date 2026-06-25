@@ -41,7 +41,7 @@ export function enqueueWrite(
   // dedupe: keep only the latest entry per (table,id)
   const filtered = q.filter(e => !(e.table === table && e.row.id === row.id));
   filtered.push({
-    id: `${table}:${row.id}:${Date.now()}`,
+    id: `${table}:${row.id}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
     table, op, row,
     attempts: 0,
     enqueuedAt: Date.now(),
