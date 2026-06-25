@@ -260,21 +260,12 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
       winner = { ...existing, ...cloudMerged };
     }
 
-    // Completion: prefer completed=true; tiebreak by later completedAt.
-    if (localCompleted && cloudCompleted) {
+    // FIRST-COMPLETION-WINS: once any device marked the task complete, every device keeps it complete.
+    // The completedAt is fixed to the earliest known completion timestamp (the first device to act).
+    if (localCompleted || cloudCompleted) {
       winner.completed = true;
-      winner.completedAt = new Date(Math.max(localCompletedAt, cloudCompletedAt));
-    } else if (localCompleted || cloudCompleted) {
-      // One side completed, the other not — accept the completion from whichever side recorded it later.
-      const completionTs = localCompleted ? localTs : cloudTs;
-      const unCompleteTs = localCompleted ? cloudTs : localTs;
-      if (completionTs >= unCompleteTs) {
-        winner.completed = true;
-        winner.completedAt = new Date(localCompleted ? (localCompletedAt || localTs) : (cloudCompletedAt || cloudTs));
-      } else {
-        winner.completed = false;
-        winner.completedAt = undefined;
-      }
+      const candidates = [localCompletedAt, cloudCompletedAt, localCompleted ? localTs : 0, cloudCompleted ? cloudTs : 0].filter(Boolean);
+      winner.completedAt = candidates.length ? new Date(Math.min(...candidates)) : new Date();
     }
 
     // Calendar fields — take from the side with the newer modifiedAt (already encoded by pickNewer).
@@ -290,11 +281,25 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
       byId.set(r.id, winner);
       changed = true;
     }
+
+    // If our resolved winner disagrees with the cloud row on completion or
+    // completedAt, re-push it so every other device converges to the same
+    // monotonic-completion state. Without this, a device that came online with
+    // a stale uncompleted version would keep the task uncompleted forever.
+    const cloudCompletedAtIso = r['completed_at' as any] ?? null;
+    const winnerCompletedAtIso = winner.completedAt ? new Date(winner.completedAt).toISOString() : null;
+    if (!!r['is_completed' as any] !== !!winner.completed || cloudCompletedAtIso !== winnerCompletedAtIso) {
+      rePush.push(winner);
+    }
   }
   if (changed) {
     await saveTasksToDB(Array.from(byId.values()) as TodoItem[], true);
     window.dispatchEvent(new Event('tasksRestored'));
     window.dispatchEvent(new Event('tasksUpdated'));
+  }
+  for (const t of rePush) {
+    const row = mappers.tasks.toCloud(t as any);
+    if (row) enqueueWrite('tasks', 'upsert', row as any);
   }
 }
 
