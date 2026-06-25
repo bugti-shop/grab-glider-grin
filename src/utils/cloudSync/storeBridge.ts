@@ -18,8 +18,16 @@ import type { Folder } from '@/utils/folderStorage';
 import type { Note, TodoItem } from '@/types/note';
 import type { Habit } from '@/types/habit';
 import { recordConflict, recordListenerEvent } from './diagnostics';
+import { trackDeletion, loadDeletions, type DeletionRecord } from '@/utils/deletionTracker';
 
 let installed = false;
+
+// Fast lookup for tombstones — once a row id is deleted on ANY device, it stays deleted.
+const isTombstoned = (id: string, category: DeletionRecord['category']): boolean => {
+  const recs = loadDeletions();
+  for (const r of recs) if (r.id === id && r.category === category) return true;
+  return false;
+};
 
 // ---------- Local → Cloud ----------
 
