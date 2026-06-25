@@ -18,6 +18,9 @@ export function useCloudSync(): void {
   useEffect(() => {
     let mounted = true;
     installCloudListener();
+    // Hydrate the in-memory tombstone cache so cloud→local apply functions
+    // can synchronously check whether a row was previously deleted on any device.
+    void loadDeletionsAsync();
 
     const handle = async (userId: string | null) => {
       if (!mounted) return;
