@@ -95,11 +95,11 @@ export const TaskFlatItem = memo(({
                 if (!item.completed) {
                   setPendingCompleteId(item.id);
                   Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                  updateItem(item.id, { completed: true });
                   pendingCompleteTimer.current = setTimeout(() => {
                     setPendingCompleteId(null);
                     pendingCompleteTimer.current = null;
-                    updateItem(item.id, { completed: true });
-                  }, 120);
+                  }, 180);
                 } else {
                   updateItem(item.id, { completed: false });
                 }
@@ -159,22 +159,18 @@ export const TaskFlatItem = memo(({
             onClick={(e) => {
               e.stopPropagation();
               const isPending = pendingCompleteId === item.id;
-              if (item.completed || isPending) {
-                if (pendingCompleteTimer.current) {
-                  clearTimeout(pendingCompleteTimer.current);
-                  pendingCompleteTimer.current = null;
-                }
-                setPendingCompleteId(null);
+              if (isPending) return;
+              if (item.completed) {
                 if (item.completed) updateItem(item.id, { completed: false });
                 return;
               }
               setPendingCompleteId(item.id);
               Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+              updateItem(item.id, { completed: true });
               pendingCompleteTimer.current = setTimeout(() => {
                 setPendingCompleteId(null);
                 pendingCompleteTimer.current = null;
-                updateItem(item.id, { completed: true });
-              }, 120);
+              }, 180);
             }}
             className={cn(
               TASK_CIRCLE.base, TASK_CIRCLE.marginTop,
