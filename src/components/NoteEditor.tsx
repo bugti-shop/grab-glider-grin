@@ -36,7 +36,12 @@ import { InputSheetPage } from './InputSheetPage';
 import { VoiceRecordingSheet } from './VoiceRecordingSheet';
 import { NoteAttachmentsSection } from './NoteAttachmentsSection';
 import { ScanNoteSheet } from './ScanNoteSheet';
+import { TextTaskExtractorSheet } from './TextTaskExtractorSheet';
 import { SafeComponent } from './ErrorBoundary';
+import { loadTasksFromDB, saveTasksToDB } from '@/utils/taskStorage';
+import { stripHtml } from '@/lib/sanitize';
+import { TodoItem } from '@/types/note';
+import { ListChecks } from 'lucide-react';
 
 import { NoteVoicePlayer } from './NoteVoicePlayer';
 import { AudioPlayer } from './AudioPlayer';
