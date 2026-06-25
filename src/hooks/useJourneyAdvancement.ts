@@ -1,5 +1,10 @@
 import { useEffect, useRef } from 'react';
-import { advanceJourney, getActiveJourney, getRarityFromJourney } from '@/utils/virtualJourneyStorage';
+import {
+  advanceJourneyForTask,
+  getActiveJourney,
+  getRarityFromJourney,
+  loadJourneyData,
+} from '@/utils/virtualJourneyStorage';
 import { playAchievementSound } from '@/utils/gamificationSounds';
 import { toast } from '@/hooks/use-toast';
 import { BadgeUnlockToast } from '@/components/BadgeUnlockToast';
@@ -8,22 +13,25 @@ import { TodoItem } from '@/types/note';
 
 /**
  * Global hook that listens for task updates and advances the active journey
- * only when the actual number of completed tasks increases.
+ * exactly once per uniquely-completed task ID — making advancement idempotent
+ * across devices/realtime echoes (the counted-task set syncs via settings).
  */
 export const useJourneyAdvancement = () => {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastCompletedCountRef = useRef<number | null>(null);
   const isProcessingRef = useRef(false);
 
-  const countCompletedTasks = (items: TodoItem[]): number => {
-    const walk = (list: TodoItem[]): number =>
-      list.reduce((sum, item) => {
-        const self = item.completed ? 1 : 0;
-        const nested = Array.isArray(item.subtasks) && item.subtasks.length > 0 ? walk(item.subtasks) : 0;
-        return sum + self + nested;
-      }, 0);
-
-    return walk(items);
+  const collectCompletedIds = (items: TodoItem[]): string[] => {
+    const out: string[] = [];
+    const walk = (list: TodoItem[]) => {
+      for (const item of list) {
+        if (item && (item as any).completed && typeof item.id === 'string') out.push(item.id);
+        if (Array.isArray((item as any).subtasks) && (item as any).subtasks.length > 0) {
+          walk((item as any).subtasks as TodoItem[]);
+        }
+      }
+    };
+    walk(items);
+    return out;
   };
 
   useEffect(() => {
@@ -33,24 +41,19 @@ export const useJourneyAdvancement = () => {
 
       try {
         const items = await loadTodoItems();
-        const completedCount = countCompletedTasks(items);
+        const completedIds = collectCompletedIds(items);
+        if (completedIds.length === 0) return;
 
-        if (lastCompletedCountRef.current === null) {
-          lastCompletedCountRef.current = completedCount;
-          return;
-        }
+        const counted = loadJourneyData().countedTaskIds ?? {};
+        const fresh = completedIds.filter((id) => !counted[id]);
+        if (fresh.length === 0) return;
 
-        const delta = completedCount - lastCompletedCountRef.current;
-        lastCompletedCountRef.current = completedCount;
-
-        if (delta <= 0) return;
-
-        for (let i = 0; i < delta; i++) {
+        for (const id of fresh) {
           try {
             const active = getActiveJourney();
-            if (!active || active.progress.completedAt) break;
-
-            const result = advanceJourney();
+            const result = advanceJourneyForTask(id);
+            if (!result) continue;
+            if (!active || active.progress.completedAt) continue;
             if (!result.newMilestone && !result.journeyCompleted) continue;
 
             playAchievementSound();
@@ -69,7 +72,7 @@ export const useJourneyAdvancement = () => {
                 duration: 5000,
               });
             } else if (result.newMilestone) {
-              const msIndex = journey.milestones.findIndex((m) => m.id === result.newMilestone.id);
+              const msIndex = journey.milestones.findIndex((m) => m.id === result.newMilestone!.id);
               const rarity = getRarityFromJourney(journey, 'milestone', Math.max(msIndex, 0));
               toast({
                 description: BadgeUnlockToast({
@@ -85,7 +88,7 @@ export const useJourneyAdvancement = () => {
             window.dispatchEvent(
               new CustomEvent('journeyMilestoneReached', {
                 detail: { milestone: result.newMilestone, completed: result.journeyCompleted },
-              })
+              }),
             );
           } catch (error) {
             console.warn('Journey advancement step failed:', error);
@@ -108,9 +111,11 @@ export const useJourneyAdvancement = () => {
     };
 
     window.addEventListener('tasksUpdated', handler);
+    window.addEventListener('journeyUpdated', handler);
 
     return () => {
       window.removeEventListener('tasksUpdated', handler);
+      window.removeEventListener('journeyUpdated', handler);
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
