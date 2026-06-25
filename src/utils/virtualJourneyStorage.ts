@@ -35,6 +35,8 @@ export interface VirtualJourneyData {
   completedJourneys: string[];
   journeyProgress: Record<string, JourneyProgress>;
   totalTasksEver: number;
+  /** Task IDs already counted toward journey progress (deduped across devices via cloud sync). */
+  countedTaskIds?: Record<string, true>;
 }
 
 export type BadgeRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
