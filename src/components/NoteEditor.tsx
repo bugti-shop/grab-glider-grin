@@ -1135,6 +1135,14 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <Search className="h-4 w-4 mr-2" />
                   {t('editor.findReplace')}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  if (!requireFeature('ai_dictation')) return;
+                  setShowExtractTasks(true);
+                }}>
+                  <ListChecks className="h-4 w-4 mr-2 text-primary" />
+                  <span className="font-medium">{t('editor.extractTasks', 'Extract Tasks with AI')}</span>
+                  <Sparkles className="h-3 w-3 ml-auto text-primary" />
+                </DropdownMenuItem>
                 {/* Copy with Formatting - special for textformat notes */}
                 {noteType === 'textformat' && (
                   <DropdownMenuItem 
