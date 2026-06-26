@@ -42,9 +42,13 @@ export const TaskCompletionCircle = ({
     e.stopPropagation();
     if (isBlocked) return;
 
-    if (pendingComplete) return;
-
-    if (completed) {
+    if (completed || pendingComplete) {
+      if (pendingTimer.current) {
+        clearTimeout(pendingTimer.current);
+        pendingTimer.current = null;
+      }
+      setPendingComplete(false);
+      setShowBurst(false);
       if (completed) onUncomplete();
       return;
     }
@@ -55,12 +59,12 @@ export const TaskCompletionCircle = ({
     setPendingComplete(true);
     setShowBurst(true);
     triggerHaptic('light');
-    onComplete();
 
     pendingTimer.current = setTimeout(() => {
       setPendingComplete(false);
       pendingTimer.current = null;
-    }, 180);
+      onComplete();
+    }, 120);
   };
 
   return (

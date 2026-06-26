@@ -20,7 +20,6 @@ import { updateSectionOrder } from '@/utils/taskOrderStorage';
 import { getAllSettings, setSetting } from '@/utils/settingsStorage';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
-import { deleteTaskFromDB, updateTaskInDB } from '@/utils/taskStorage';
 
 interface UseTodayActionsProps {
   items: TodoItem[];
@@ -80,7 +79,6 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   // Keep a ref to items for reliable access in async callbacks
   const itemsRef = useRef(items);
   itemsRef.current = items;
-  const recentCompletionLocks = useRef<Map<string, number>>(new Map());
 
   // ── Folder Actions ──
   const handleCreateFolder = useCallback((name: string, color: string, icon?: string, parentId?: string) => {
@@ -335,21 +333,15 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   const updateItem = useCallback(async (itemId: string, updates: Partial<TodoItem>) => {
     const onlyCompletion = Object.keys(updates).every(k => k === 'completed' || k === 'completedAt' || k === 'modifiedAt');
     if (!onlyCompletion && !softRequireMutate()) return;
-    const lockUntil = recentCompletionLocks.current.get(itemId) ?? 0;
-    if (updates.completed === false && lockUntil > Date.now()) return;
-
     const now = new Date();
     const updatesWithTimestamp: Partial<TodoItem> = { ...updates, modifiedAt: now };
 
     // Get the current item from ref (reliable in async contexts)
     const currentItem = itemsRef.current.find(i => i.id === itemId);
-    if (!currentItem) return;
-    if (updates.completed === true && currentItem.completed) return;
 
     const isNewCompletion = updates.completed === true && currentItem && !currentItem.completed;
 
     if (isNewCompletion) {
-      recentCompletionLocks.current.set(itemId, Date.now() + 900);
       updatesWithTimestamp.completedAt = now;
       playCompletionSound();
       import('@/utils/reminderScheduler').then(({ cancelTaskReminder }) => {
@@ -366,14 +358,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         const nextTask = createNextRecurringTask(currentItem);
         if (nextTask) {
           const nextTaskWithTimestamps = { ...nextTask, createdAt: now, modifiedAt: now };
-          const updatedCurrent = { ...currentItem, ...updatesWithTimestamp } as TodoItem;
-          setItems(prev => {
-            const next = [nextTaskWithTimestamps, ...prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i)];
-            itemsRef.current = next;
-            return next;
-          });
-          void updateTaskInDB(itemId, updatesWithTimestamp);
-          import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => pushTasks([updatedCurrent, nextTaskWithTimestamps] as TodoItem[])).catch(() => {});
+          setItems(prev => [nextTaskWithTimestamps, ...prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i)]);
           toast.success(t('todayPage.recurringTaskCompleted'), { icon: '🔄' });
           recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
             if (streakResult.newMilestone) {
@@ -393,14 +378,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       }
     }
 
-    const updatedItem = { ...currentItem, ...updatesWithTimestamp } as TodoItem;
-    setItems(prev => {
-      const next = prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i);
-      itemsRef.current = next;
-      return next;
-    });
-    void updateTaskInDB(itemId, updatesWithTimestamp);
-    import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => pushTasks([updatedItem])).catch(() => {});
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i));
 
     if (isNewCompletion) {
       recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
@@ -416,13 +394,26 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         }
         window.dispatchEvent(new CustomEvent('streakUpdated'));
       }).catch((e) => console.warn('Failed to record streak:', e));
-      toast.success(t('todayPage.taskCompleted'), { duration: 1500 });
+      toast.success(t('todayPage.taskCompleted'), {
+        action: {
+          label: t('todayPage.undo'),
+          onClick: () => {
+            setItems(prev => prev.map(i => i.id === itemId ? { ...i, completed: false, completedAt: undefined, modifiedAt: new Date() } : i));
+            toast.success(t('todayPage.taskRestored'));
+          }
+        },
+        duration: 5000,
+      });
     }
   }, [setItems, t, softRequireMutate]);
 
   const deleteItem = useCallback(async (itemId: string, _showUndo: boolean = false, skipConfirm: boolean = false) => {
     if (!softRequireMutate()) return;
-    const deletedItem = itemsRef.current.find(item => item.id === itemId);
+    let deletedItem: TodoItem | undefined;
+    setItems(prev => {
+      deletedItem = prev.find(item => item.id === itemId);
+      return prev;
+    });
     if (!deletedItem) return;
     
     if (tasksSettings.confirmBeforeDelete && !skipConfirm) {
@@ -430,30 +421,27 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       return;
     }
     
-    try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
-    trackDeletion(itemId, 'tasks');
-    setItems(prev => {
-      const next = prev.filter(item => item.id !== itemId);
-      itemsRef.current = next;
-      return next;
+    try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
+    const itemToRestore = deletedItem;
+    setItems(prev => prev.filter(item => item.id !== itemId));
+    import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => pushTaskDelete(itemId)).catch(() => {});
+    toast.success(t('todayPage.taskDeleted'), {
+      action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [itemToRestore!, ...prev]); toast.success(t('todayPage.taskRestored')); } },
+      duration: 5000,
     });
-    void deleteTaskFromDB(itemId);
-    toast.success(t('todayPage.taskDeleted'), { duration: 1500 });
   }, [tasksSettings.confirmBeforeDelete, setItems, setDeleteConfirmItem, t, softRequireMutate]);
 
   const confirmDelete = useCallback(async () => {
     if (!deleteConfirmItem) return;
-    try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
+    try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
     const deletedItem = deleteConfirmItem;
-    trackDeletion(deletedItem.id, 'tasks');
-    setItems(prev => {
-      const next = prev.filter(item => item.id !== deletedItem.id);
-      itemsRef.current = next;
-      return next;
-    });
-    void deleteTaskFromDB(deletedItem.id);
+    setItems(prev => prev.filter(item => item.id !== deletedItem.id));
+    import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => pushTaskDelete(deletedItem.id)).catch(() => {});
     setDeleteConfirmItem(null);
-    toast.success(t('todayPage.taskDeleted'), { duration: 1500 });
+    toast.success(t('todayPage.taskDeleted'), {
+      action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [deletedItem, ...prev]); toast.success(t('todayPage.taskRestored')); } },
+      duration: 5000,
+    });
   }, [deleteConfirmItem, setItems, setDeleteConfirmItem, t]);
 
   const duplicateTask = useCallback(async (task: TodoItem) => {
@@ -527,15 +515,10 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         return;
       case 'move': setIsMoveToFolderOpen(true); break;
       case 'delete':
-        selectedItems.forEach(item => {
-          trackDeletion(item.id, 'tasks');
-          void deleteTaskFromDB(item.id);
-        });
-        setItems(prev => {
-          const next = prev.filter(i => !selectedTaskIds.has(i.id));
-          itemsRef.current = next;
-          return next;
-        });
+        setItems(prev => prev.filter(i => !selectedTaskIds.has(i.id)));
+        import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => {
+          selectedItems.forEach(item => pushTaskDelete(item.id));
+        }).catch(() => {});
         setSelectedTaskIds(new Set()); setIsSelectionMode(false);
         toast.success(t('todayPage.deletedTasks', { count: selectedItems.length }));
         break;

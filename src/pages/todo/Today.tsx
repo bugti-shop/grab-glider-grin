@@ -318,12 +318,12 @@ const Today = () => {
                 onClick={() => handleSwipeAction(() => {
                   if (!item.completed) {
                     setPendingCompleteId(item.id);
-                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-                    updateItem(item.id, { completed: true });
+                    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
                     pendingCompleteTimer.current = setTimeout(() => {
                       setPendingCompleteId(null);
                       pendingCompleteTimer.current = null;
-                    }, 180);
+                      updateItem(item.id, { completed: true });
+                    }, 120);
                   } else {
                     updateItem(item.id, { completed: false });
                   }
@@ -383,18 +383,22 @@ const Today = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 const isPending = pendingCompleteId === item.id;
-                if (isPending) return;
-                if (item.completed) {
+                if (item.completed || isPending) {
+                  if (pendingCompleteTimer.current) {
+                    clearTimeout(pendingCompleteTimer.current);
+                    pendingCompleteTimer.current = null;
+                  }
+                  setPendingCompleteId(null);
                   if (item.completed) updateItem(item.id, { completed: false });
                   return;
                 }
                 setPendingCompleteId(item.id);
                 Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-                updateItem(item.id, { completed: true });
                 pendingCompleteTimer.current = setTimeout(() => {
                   setPendingCompleteId(null);
                   pendingCompleteTimer.current = null;
-                }, 180);
+                  updateItem(item.id, { completed: true });
+                }, 120);
               }}
               className={cn(
                 TASK_CIRCLE.base, TASK_CIRCLE.marginTop,
@@ -662,7 +666,7 @@ const Today = () => {
               <p className="text-sm mb-3 font-medium">{t('bulk.tasksSelected', { count: selectedTaskIds.size })}</p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setIsSelectActionsOpen(true)}>{t('common.actions', 'Actions')}</Button>
-                <Button variant="outline" size="sm" onClick={() => { Array.from(selectedTaskIds).forEach(id => deleteItem(id, false, true)); setSelectedTaskIds(new Set()); setIsSelectionMode(false); }}>
+                <Button variant="outline" size="sm" onClick={() => { setItems(items.filter(i => !selectedTaskIds.has(i.id))); setSelectedTaskIds(new Set()); setIsSelectionMode(false); }}>
                   <Trash2 className="h-4 w-4 mr-2" />{t('common.delete')}
                 </Button>
               </div>
