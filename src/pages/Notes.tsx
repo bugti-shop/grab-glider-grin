@@ -683,7 +683,7 @@ const Notes = () => {
                   </div>
                   {note.title && (
                     <h2 className="font-bold text-base mb-2 text-foreground pr-10">
-                      {note.title}
+                      {sanitizeDisplayName(note.title)}
                     </h2>
                   )}
                   {/* Show metaDescription if available, otherwise show content preview */}
