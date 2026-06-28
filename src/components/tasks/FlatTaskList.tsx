@@ -97,6 +97,7 @@ export function FlatTaskList({
   const dragFromRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const autoscrollRafRef = useRef<number | null>(null);
+  const dragGenerationRef = useRef(0);
 
   useEffect(() => {
     if (!resolvedUseWindow) return;
@@ -228,6 +229,7 @@ export function FlatTaskList({
   }, [resolvedUseWindow]);
 
   const cancelDrag = useCallback(() => {
+    dragGenerationRef.current += 1;
     stopAutoscroll();
     dragFromRef.current = null;
     setDragOverIndex(null);
@@ -283,18 +285,38 @@ export function FlatTaskList({
       onDragOver={dndEnabled ? (e) => {
         if (dragFromRef.current == null) return;
         e.preventDefault();
+        try { e.dataTransfer.dropEffect = 'move'; } catch {}
       } : undefined}
       onDrop={dndEnabled ? (e) => {
         if (dragFromRef.current == null) return;
         e.preventDefault();
+        e.stopPropagation();
         const targetEl = (e.target as HTMLElement | null)?.closest?.('[data-index]') as HTMLElement | null;
-        const parsed = Number(targetEl?.dataset?.index);
-        const to = Number.isFinite(parsed) ? parsed : Math.max(0, flat.length - 1);
+        let to = Number(targetEl?.dataset?.index);
+        if (!Number.isFinite(to)) {
+          const rows = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[data-index]'));
+          let nearest = Math.max(0, flat.length - 1);
+          let nearestDistance = Number.POSITIVE_INFINITY;
+          for (const rowEl of rows) {
+            const rect = rowEl.getBoundingClientRect();
+            const distance = Math.abs(e.clientY - (rect.top + rect.height / 2));
+            if (distance < nearestDistance) {
+              nearestDistance = distance;
+              nearest = Number(rowEl.dataset.index);
+            }
+          }
+          to = Number.isFinite(nearest) ? nearest : Math.max(0, flat.length - 1);
+        }
         finishReorder(dragFromRef.current, to, 'blank-drop');
       } : undefined}
       onDragLeave={dndEnabled ? (e) => {
         const next = e.relatedTarget as Node | null;
-        if (!next || !e.currentTarget.contains(next)) cancelDrag();
+        if (!next || !e.currentTarget.contains(next)) {
+          const gen = dragGenerationRef.current;
+          window.setTimeout(() => {
+            if (dragGenerationRef.current === gen && dragFromRef.current != null) cancelDrag();
+          }, 80);
+        }
       } : undefined}
       style={
         resolvedUseWindow
@@ -321,8 +343,13 @@ export function FlatTaskList({
               ref={virtualizer.measureElement}
               draggable={dndEnabled}
               onDragStart={dndEnabled ? (e) => {
+                dragGenerationRef.current += 1;
                 dragFromRef.current = vi.index;
-                try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(vi.index)); } catch {}
+                try {
+                  e.dataTransfer.effectAllowed = 'move';
+                  e.dataTransfer.setData('text/plain', String(vi.index));
+                  e.dataTransfer.setData('application/x-flowist-task-index', String(vi.index));
+                } catch {}
               } : undefined}
               onDragOver={dndEnabled ? (e) => {
                 if (dragFromRef.current == null) return;
@@ -338,7 +365,9 @@ export function FlatTaskList({
               onDrop={dndEnabled ? (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                finishReorder(dragFromRef.current, vi.index, 'drop');
+                const payload = Number(e.dataTransfer.getData('application/x-flowist-task-index') || e.dataTransfer.getData('text/plain'));
+                const from = Number.isFinite(payload) ? payload : dragFromRef.current;
+                finishReorder(from, vi.index, 'drop');
               } : undefined}
               onDragEnd={dndEnabled ? cancelDrag : undefined}
               style={{
