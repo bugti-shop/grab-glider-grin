@@ -69,7 +69,9 @@ export function NotesVirtualGrid({
   const virtualizer = useWindowVirtualizer({
     count: rows.length,
     estimateSize: () => estimatedRowHeight,
-    overscan: 6,
+    // Larger overscan keeps cards pre-painted above/below the viewport so fast
+    // flick-scrolling never reveals empty space at 60fps even on 100k notes.
+    overscan: 16,
     scrollMargin,
     getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
   });

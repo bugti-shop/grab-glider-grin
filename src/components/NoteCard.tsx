@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useRef, useEffect, useMemo, memo } from 'react';
 import { AppTag, getAllTags } from '@/utils/tagStorage';
 import { useTranslation } from 'react-i18next';
 import { Note } from '@/types/note';
@@ -224,16 +224,15 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
     }
   };
 
-  const getCardColor = () => {
+  // Memoize expensive per-card computations so they don't recalculate on
+  // every parent render (only when the underlying note fields change).
+  const cardStyle = useMemo(() => {
     if (isSticky && note.color) {
-      return STICKY_COLORS[note.color];
+      return { backgroundColor: STICKY_COLORS[note.color] };
     }
-    // Use custom color if set for non-sticky notes
     if (note.customColor) {
-      return note.customColor;
+      return { backgroundColor: note.customColor };
     }
-    // Better-distributed hash so colors don't cluster on one shade (e.g. green)
-    // after the UUID migration. FNV-1a over createdAt + id.
     const createdMs =
       note.createdAt instanceof Date
         ? note.createdAt.getTime()
@@ -245,41 +244,34 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
       h = Math.imul(h, 16777619);
     }
     const index = Math.abs(h) % RANDOM_COLORS.length;
-    return RANDOM_COLORS[index];
-  };
+    return { backgroundColor: RANDOM_COLORS[index] };
+  }, [isSticky, note.color, note.customColor, note.createdAt, note.id]);
 
-  const cardStyle = { backgroundColor: getCardColor() };
-  const previewText = note.metaDescription || (note as any).__contentPreview || getTextPreviewFromHtml(note.content, 140);
+  const previewText = useMemo(
+    () =>
+      note.metaDescription ||
+      (note as any).__contentPreview ||
+      getTextPreviewFromHtml(note.content, 140),
+    [note.metaDescription, (note as any).__contentPreview, note.content],
+  );
 
-  const getTypeBadge = () => {
-    // Check for voice note type first
-    if (note.type === 'voice') {
-      return { icon: Mic, label: 'Voice' };
-    }
-    // Also show mic badge if any voice recordings exist
+  const badge = useMemo(() => {
+    if (note.type === 'voice') return { icon: Mic, label: 'Voice' };
     if (note.voiceRecordings && note.voiceRecordings.length > 0) {
       return { icon: Mic, label: 'Audio File' };
     }
     switch (note.type) {
-      case 'sketch':
-        return { icon: Pen, label: 'Sketch' };
-      case 'sticky':
-        return { icon: StickyNote, label: 'Sticky' };
-      case 'lined':
-        return { icon: AlignLeft, label: 'Lined' };
-      case 'code':
-        return { icon: FileCode, label: 'Code' };
-      case 'linkedin':
-        return { icon: FileText, label: 'LinkedIn' };
-      case 'textformat':
-        return { icon: FileText, label: 'Text Format' };
+      case 'sketch':    return { icon: Pen, label: 'Sketch' };
+      case 'sticky':    return { icon: StickyNote, label: 'Sticky' };
+      case 'lined':     return { icon: AlignLeft, label: 'Lined' };
+      case 'code':      return { icon: FileCode, label: 'Code' };
+      case 'linkedin':  return { icon: FileText, label: 'LinkedIn' };
+      case 'textformat':return { icon: FileText, label: 'Text Format' };
       case 'regular':
-      default:
-        return { icon: FileText, label: 'Regular' };
+      default:          return { icon: FileText, label: 'Regular' };
     }
-  };
+  }, [note.type, note.voiceRecordings?.length]);
 
-  const badge = getTypeBadge();
   const BadgeIcon = badge.icon;
 
   return (
@@ -500,6 +492,37 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+  );
+}, (prev, next) => {
+  // Skip re-renders during scroll when nothing visible to this card changed.
+  // Callback props are expected to be stable (wrap with useCallback in parents).
+  const a = prev.note;
+  const b = next.note;
+  if (a === b) {
+    return (
+      prev.isSelectionMode === next.isSelectionMode &&
+      prev.isSelected === next.isSelected
+    );
+  }
+  return (
+    a.id === b.id &&
+    a.title === b.title &&
+    a.type === b.type &&
+    a.color === b.color &&
+    a.customColor === b.customColor &&
+    a.isPinned === b.isPinned &&
+    a.isFavorite === b.isFavorite &&
+    a.isArchived === b.isArchived &&
+    a.isDeleted === b.isDeleted &&
+    a.metaDescription === b.metaDescription &&
+    (a as any).__contentPreview === (b as any).__contentPreview &&
+    a.content === b.content &&
+    (a.updatedAt instanceof Date ? a.updatedAt.getTime() : +new Date(a.updatedAt as any)) ===
+      (b.updatedAt instanceof Date ? b.updatedAt.getTime() : +new Date(b.updatedAt as any)) &&
+    (a.tagIds?.join(',') ?? '') === (b.tagIds?.join(',') ?? '') &&
+    (a.voiceRecordings?.length ?? 0) === (b.voiceRecordings?.length ?? 0) &&
+    prev.isSelectionMode === next.isSelectionMode &&
+    prev.isSelected === next.isSelected
   );
 });
 NoteCard.displayName = 'NoteCard';

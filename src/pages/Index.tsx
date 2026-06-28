@@ -214,7 +214,19 @@ const Index = () => {
       return false;
     }
 
-    const noteMeta = makeMetadataNote({ ...note, folderId: note.folderId || note.type });
+    // Persist the FULL note to IndexedDB immediately so the edit survives a
+    // refresh. The shared NotesContext only keeps lightweight metadata in
+    // memory, and its debounced bulk-save skips stub-only arrays — without
+    // this single-note write, edits made from the Home dashboard would be
+    // lost on reload.
+    const fullNote: Note = {
+      ...note,
+      folderId: note.folderId || note.type,
+      updatedAt: new Date(),
+    };
+    saveNoteToDBSingle(fullNote);
+
+    const noteMeta = makeMetadataNote(fullNote);
     setNotes((prev) => {
       const existing = prev.find((n) => n.id === note.id);
       if (existing) {
