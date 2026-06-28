@@ -93,11 +93,35 @@ export function FlatTaskList({
   const resolvedUseWindow = useWindow ?? virtualizationSettings.tasks.windowing;
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
   const [parentTop, setParentTop] = useState(0);
   const dragFromRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const autoscrollRafRef = useRef<number | null>(null);
   const dragGenerationRef = useRef(0);
+  const suppressClickUntilRef = useRef(0);
+  const ghostRafRef = useRef<number | null>(null);
+  const pointerDragRef = useRef<{
+    pointerId: number;
+    from: number;
+    over: number;
+    startX: number;
+    startY: number;
+    currentY: number;
+    dragging: boolean;
+    timer: number | null;
+  } | null>(null);
+  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
+  const [pointerDrag, setPointerDrag] = useState<{ from: number; over: number; title: string; y: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const query = window.matchMedia('(pointer: coarse)');
+    const update = () => setIsCoarsePointer(query.matches);
+    update();
+    query.addEventListener?.('change', update);
+    return () => query.removeEventListener?.('change', update);
+  }, []);
 
   useEffect(() => {
     if (!resolvedUseWindow) return;
@@ -216,6 +240,22 @@ export function FlatTaskList({
     }
   }, []);
 
+  const stopGhostRaf = useCallback(() => {
+    if (ghostRafRef.current != null) {
+      cancelAnimationFrame(ghostRafRef.current);
+      ghostRafRef.current = null;
+    }
+  }, []);
+
+  const clearPointerDrag = useCallback(() => {
+    const active = pointerDragRef.current;
+    if (active?.timer != null) window.clearTimeout(active.timer);
+    pointerDragRef.current = null;
+    stopGhostRaf();
+    setPointerDrag(null);
+    if (typeof document !== 'undefined') document.body.classList.remove('flowist-task-dragging');
+  }, [stopGhostRaf]);
+
   const tickAutoscroll = useCallback((clientY: number) => {
     const EDGE = 80;
     const SPEED = 18;
@@ -233,11 +273,12 @@ export function FlatTaskList({
   const cancelDrag = useCallback(() => {
     dragGenerationRef.current += 1;
     stopAutoscroll();
+    clearPointerDrag();
     dragFromRef.current = null;
     setDragOverIndex(null);
-  }, [stopAutoscroll]);
+  }, [clearPointerDrag, stopAutoscroll]);
 
-  const finishReorder = useCallback((from: number | null, to: number, via: 'drop' | 'blank-drop') => {
+  const finishReorder = useCallback((from: number | null, to: number, via: 'drop' | 'blank-drop' | 'pointer-drop') => {
     cancelDrag();
     if (from == null || from < 0 || from >= flat.length || to < 0 || to >= flat.length) {
       toast.error('Could not move task', { id: 'task-reorder' });
@@ -257,6 +298,126 @@ export function FlatTaskList({
     }
   }, [cancelDrag, flat.length, onReorder]);
 
+  const getDropIndexFromClientY = useCallback((clientY: number) => {
+    const rows = virtualizer.getVirtualItems();
+    if (rows.length === 0) return 0;
+
+    let nearest = rows[0]?.index ?? 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    const parentRect = parentRef.current?.getBoundingClientRect();
+    const scrollTop = resolvedUseWindow ? window.scrollY : (parentRef.current?.scrollTop ?? 0);
+
+    for (const item of rows) {
+      const top = resolvedUseWindow
+        ? item.start - window.scrollY
+        : (parentRect?.top ?? 0) + item.start - scrollTop;
+      const center = top + item.size / 2;
+      const distance = Math.abs(clientY - center);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = item.index;
+      }
+    }
+
+    return Math.max(0, Math.min(flat.length - 1, nearest));
+  }, [flat.length, resolvedUseWindow, virtualizer]);
+
+  const paintGhostAt = useCallback((clientY: number) => {
+    if (ghostRafRef.current != null) return;
+    ghostRafRef.current = requestAnimationFrame(() => {
+      ghostRafRef.current = null;
+      if (ghostRef.current) {
+        ghostRef.current.style.transform = `translate3d(0, ${clientY}px, 0) translateY(-50%)`;
+      }
+    });
+  }, []);
+
+  const isInteractiveDragTarget = (target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) return false;
+    return !!target.closest('button, input, textarea, select, a, [role="button"], [contenteditable="true"], [data-no-dnd="true"]');
+  };
+
+  const startPointerDrag = useCallback((event: React.PointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
+    if (!dndEnabled || !isCoarsePointer || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
+    if (event.pointerType === 'pen' && event.buttons !== 1) return;
+
+    const element = event.currentTarget;
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const title = row.task.text || 'Task';
+
+    const active = {
+      pointerId,
+      from: index,
+      over: index,
+      startX,
+      startY,
+      currentY: startY,
+      dragging: false,
+      timer: null as number | null,
+    };
+    pointerDragRef.current = active;
+
+    active.timer = window.setTimeout(() => {
+      const current = pointerDragRef.current;
+      if (!current || current.pointerId !== pointerId) return;
+      current.dragging = true;
+      current.timer = null;
+      dragGenerationRef.current += 1;
+      dragFromRef.current = index;
+      setDragOverIndex(index);
+      setPointerDrag({ from: index, over: index, title, y: current.currentY });
+      try { element.setPointerCapture(pointerId); } catch {}
+      if (typeof document !== 'undefined') document.body.classList.add('flowist-task-dragging');
+      paintGhostAt(current.currentY);
+      if ('vibrate' in navigator) navigator.vibrate?.(8);
+    }, 180);
+  }, [dndEnabled, isCoarsePointer, paintGhostAt]);
+
+  const movePointerDrag = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    const active = pointerDragRef.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - active.startX;
+    const dy = event.clientY - active.startY;
+    active.currentY = event.clientY;
+
+    if (!active.dragging) {
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+        if (active.timer != null) window.clearTimeout(active.timer);
+        pointerDragRef.current = null;
+      }
+      return;
+    }
+
+    event.preventDefault();
+    const over = getDropIndexFromClientY(event.clientY);
+    if (over !== active.over) {
+      active.over = over;
+      setDragOverIndex(over);
+      setPointerDrag((current) => current ? { ...current, over } : current);
+    }
+    paintGhostAt(event.clientY);
+    stopAutoscroll();
+    autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(event.clientY));
+  }, [getDropIndexFromClientY, paintGhostAt, stopAutoscroll, tickAutoscroll]);
+
+  const endPointerDrag = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    const active = pointerDragRef.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+
+    if (active.timer != null) window.clearTimeout(active.timer);
+    if (active.dragging) {
+      event.preventDefault();
+      event.stopPropagation();
+      suppressClickUntilRef.current = Date.now() + 350;
+      finishReorder(active.from, active.over, 'pointer-drop');
+    } else {
+      clearPointerDrag();
+    }
+  }, [clearPointerDrag, finishReorder]);
+
   useEffect(() => {
     const target = resolvedUseWindow ? window : parentRef.current;
     if (!target) return;
@@ -275,6 +436,7 @@ export function FlatTaskList({
   const scrollOffset = resolvedUseWindow ? parentTop : 0;
 
   const dndEnabled = !!onReorder;
+  const nativeDndEnabled = dndEnabled && !isCoarsePointer;
 
   return (
     <div
@@ -284,12 +446,18 @@ export function FlatTaskList({
       data-virt-overscan={resolvedOverscan}
       data-virt-row-height={resolvedRowHeight}
       data-virt-windowing={resolvedUseWindow ? 'window' : 'container'}
-      onDragOver={dndEnabled ? (e) => {
+      onClickCapture={dndEnabled ? (e) => {
+        if (Date.now() < suppressClickUntilRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      } : undefined}
+      onDragOver={nativeDndEnabled ? (e) => {
         if (dragFromRef.current == null) return;
         e.preventDefault();
         try { e.dataTransfer.dropEffect = 'move'; } catch {}
       } : undefined}
-      onDrop={dndEnabled ? (e) => {
+      onDrop={nativeDndEnabled ? (e) => {
         if (dragFromRef.current == null) return;
         e.preventDefault();
         e.stopPropagation();
@@ -311,7 +479,7 @@ export function FlatTaskList({
         }
         finishReorder(dragFromRef.current, to, 'blank-drop');
       } : undefined}
-      onDragLeave={dndEnabled ? (e) => {
+      onDragLeave={nativeDndEnabled ? (e) => {
         const next = e.relatedTarget as Node | null;
         if (!next || !e.currentTarget.contains(next)) {
           const gen = dragGenerationRef.current;
@@ -343,8 +511,12 @@ export function FlatTaskList({
               data-index={vi.index}
               data-active={isActive ? 'true' : 'false'}
               ref={virtualizer.measureElement}
-              draggable={dndEnabled}
-              onDragStart={dndEnabled ? (e) => {
+              draggable={nativeDndEnabled}
+              onPointerDown={dndEnabled ? (e) => startPointerDrag(e, vi.index, row) : undefined}
+              onPointerMove={dndEnabled ? movePointerDrag : undefined}
+              onPointerUp={dndEnabled ? endPointerDrag : undefined}
+              onPointerCancel={dndEnabled ? endPointerDrag : undefined}
+              onDragStart={nativeDndEnabled ? (e) => {
                 dragGenerationRef.current += 1;
                 dragFromRef.current = vi.index;
                 try {
@@ -353,7 +525,7 @@ export function FlatTaskList({
                   e.dataTransfer.setData('application/x-flowist-task-index', String(vi.index));
                 } catch {}
               } : undefined}
-              onDragOver={dndEnabled ? (e) => {
+              onDragOver={nativeDndEnabled ? (e) => {
                 if (dragFromRef.current == null) return;
                 e.preventDefault();
                 try { e.dataTransfer.dropEffect = 'move'; } catch {}
@@ -361,17 +533,17 @@ export function FlatTaskList({
                 stopAutoscroll();
                 autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(e.clientY));
               } : undefined}
-              onDragLeave={dndEnabled ? () => {
+              onDragLeave={nativeDndEnabled ? () => {
                 setDragOverIndex((cur) => (cur === vi.index ? null : cur));
               } : undefined}
-              onDrop={dndEnabled ? (e) => {
+              onDrop={nativeDndEnabled ? (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const payload = Number(e.dataTransfer.getData('application/x-flowist-task-index') || e.dataTransfer.getData('text/plain'));
                 const from = Number.isFinite(payload) ? payload : dragFromRef.current;
                 finishReorder(from, vi.index, 'drop');
               } : undefined}
-              onDragEnd={dndEnabled ? cancelDrag : undefined}
+              onDragEnd={nativeDndEnabled ? cancelDrag : undefined}
               style={{
                 position: 'absolute',
                 top: 0,
@@ -382,6 +554,7 @@ export function FlatTaskList({
                 boxShadow: isDragOver ? 'inset 0 2px 0 0 hsl(var(--primary))' : undefined,
                 opacity: dragFromRef.current === vi.index ? 0.5 : 1,
                 cursor: dndEnabled ? 'grab' : undefined,
+                touchAction: dndEnabled && isCoarsePointer ? 'pan-y' : undefined,
               }}
             >
               {renderRow(row, vi.index, isActive)}
@@ -389,6 +562,19 @@ export function FlatTaskList({
           );
         })}
       </div>
+      {pointerDrag && (
+        <div
+          ref={ghostRef}
+          className="pointer-events-none fixed left-3 right-3 z-[70] rounded-md border border-primary bg-background px-4 py-3 text-sm font-medium shadow-xl"
+          style={{
+            top: 0,
+            transform: `translate3d(0, ${pointerDrag.y}px, 0) translateY(-50%)`,
+            willChange: 'transform',
+          }}
+        >
+          <div className="truncate">{pointerDrag.title}</div>
+        </div>
+      )}
     </div>
   );
 }
