@@ -11,6 +11,8 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import type { Note } from '@/types/note';
+import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
+import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
 
 interface NotesVirtualGridProps {
   notes: Note[];
@@ -31,12 +33,15 @@ export function NotesVirtualGrid({
   notes,
   renderCard,
   getRowKey,
-  estimatedRowHeight = 165,
+  estimatedRowHeight,
 }: NotesVirtualGridProps) {
+  const [virtualizationSettings] = useVirtualizationSettings();
   const parentRef = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState<number>(() =>
     typeof window === 'undefined' ? 2 : getColumnsForWidth(window.innerWidth),
   );
+  const resolvedRowHeight = estimatedRowHeight ?? virtualizationSettings.notes.rowHeight;
+  const resolvedOverscan = getAdaptiveOverscan(virtualizationSettings.notes.overscan, notes.length);
 
   useEffect(() => {
     const onResize = () => setColumns(getColumnsForWidth(window.innerWidth));
@@ -68,17 +73,41 @@ export function NotesVirtualGrid({
 
   const virtualizer = useWindowVirtualizer({
     count: rows.length,
-    estimateSize: () => estimatedRowHeight,
+    estimateSize: () => resolvedRowHeight,
     // 6 rows of overscan (≈18 cards at 3-col) keeps fast flick-scrolling
     // smooth without paying paint cost for ~50 offscreen heavy cards when
     // the user has 5k+ notes with large bodies.
-    overscan: 6,
+    overscan: resolvedOverscan,
     scrollMargin,
     getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
   });
 
+  useEffect(() => {
+    logPerfEvent('render', {
+      label: 'NotesVirtualGrid',
+      itemCount: notes.length,
+      rows: rows.length,
+      columns,
+      overscan: resolvedOverscan,
+      rowHeight: resolvedRowHeight,
+    });
+  }, [columns, notes.length, resolvedOverscan, resolvedRowHeight, rows.length]);
+
+  useEffect(() => startScopedScrollFpsMonitor(window, 'NotesVirtualGrid', {
+    itemCount: notes.length,
+    overscan: resolvedOverscan,
+    rowHeight: resolvedRowHeight,
+  }), [notes.length, resolvedOverscan, resolvedRowHeight]);
+
   return (
-    <div ref={parentRef} style={{ position: 'relative' }}>
+    <div
+      ref={parentRef}
+      data-flowist-virtual-list="notes"
+      data-virt-overscan={resolvedOverscan}
+      data-virt-row-height={resolvedRowHeight}
+      data-virt-windowing="window"
+      style={{ position: 'relative' }}
+    >
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,
@@ -109,7 +138,7 @@ export function NotesVirtualGrid({
                 // even when a single note body is 30k words.
                 contain: 'layout paint style',
                 contentVisibility: 'auto',
-                containIntrinsicSize: `${estimatedRowHeight}px auto`,
+                containIntrinsicSize: `${resolvedRowHeight}px auto`,
               } as React.CSSProperties}
             >
               {row.map((note) => (
