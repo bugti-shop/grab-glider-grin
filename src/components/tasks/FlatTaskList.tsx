@@ -203,8 +203,6 @@ export function FlatTaskList({
     return () => window.removeEventListener('keydown', onKey);
   }, [disableKeyboard, move, activeIndex, flat, onActivate, onToggleComplete, onReorder, virtualizer]);
 
-  if (flat.length === 0 && emptyState) return <>{emptyState}</>;
-
   // Native HTML5 drag-reorder. Works with virtualization because the OS owns
   // the drag image and we only listen on the live rows currently in the DOM.
   // No thread-blocking measurement of off-screen nodes → safe at 24k+ rows.
