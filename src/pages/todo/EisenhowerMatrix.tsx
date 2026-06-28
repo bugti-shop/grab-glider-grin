@@ -425,7 +425,7 @@ const EisenhowerMatrix = () => {
       </header>
 
       <main className="p-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 items-stretch auto-rows-fr">
           {QUADRANTS.map(q => {
             const all = grouped[q.id];
             const items = (showCompleted ? all : all.filter(t => !t.completed));
