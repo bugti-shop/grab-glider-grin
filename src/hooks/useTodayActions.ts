@@ -90,6 +90,18 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     } catch {}
   }, []);
 
+  const persistBulkTasks = useCallback((tasks: TodoItem[]) => {
+    if (tasks.length === 0) return;
+    // Skip the expensive full-array save, but still let the worker recompute the
+    // visible list so duplicated tasks appear right away.
+    markSingleTaskPersisted(false);
+    void import('@/utils/taskStorage').then(({ bulkPutTasksInWorker }) =>
+      bulkPutTasksInWorker(tasks).then((persisted) => {
+        if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
+      }),
+    );
+  }, [markSingleTaskPersisted, t]);
+
   // ── Folder Actions ──
   const handleCreateFolder = useCallback((name: string, color: string, icon?: string, parentId?: string) => {
     if (!requireCapacity('taskFolders', folders.length)) return;
@@ -232,9 +244,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const duplicatedTasks = sectionTasks.slice(0, allowedCount).map((task) => ({ ...task, id: genId(), sectionId: newSection.id }));
 
     setSections(prev => [...prev, newSection]);
-    setItems(prev => [...duplicatedTasks, ...prev]);
+    setItems(prev => {
+      const next = [...duplicatedTasks, ...prev];
+      itemsRef.current = next;
+      return next;
+    });
+    persistBulkTasks(duplicatedTasks);
     toast.success(t('todayPage.sectionDuplicated'));
-  }, [sections, items, selectedFolderId, isPro, requireCapacity, setSections, setItems, t]);
+  }, [sections, items, selectedFolderId, isPro, requireCapacity, setSections, setItems, t, persistBulkTasks]);
 
   const handleMoveSection = useCallback((sectionId: string, targetIndex: number) => {
     const sortedSections = [...sections].sort((a, b) => a.order - b.order);
@@ -536,9 +553,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const duplicated = toDuplicate.map((item, idx) => ({
       ...item, id: genId(), completed: option === 'all-reset' ? false : item.completed, text: withCopySuffix(item.text)
     }));
-    setItems(prev => [...duplicated, ...prev]);
+    setItems(prev => {
+      const next = [...duplicated, ...prev];
+      itemsRef.current = next;
+      return next;
+    });
+    persistBulkTasks(duplicated);
     toast.success(t('todayPage.duplicatedTasks', { count: duplicated.length }));
-  }, [items, selectedFolderId, isPro, requireCapacity, softRequireCreate, setItems, t]);
+  }, [items, selectedFolderId, isPro, requireCapacity, softRequireCreate, setItems, t, persistBulkTasks]);
 
   const convertToNotes = useCallback(async (tasksToConvert: TodoItem[]) => {
     const existingNotes = await loadNotesFromDB();
@@ -606,7 +628,12 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         }
         const dupSlice = selectedItems.slice(0, allowedCount);
         const duplicated = dupSlice.map((item, idx) => ({ ...item, id: genId(), completed: false, text: withCopySuffix(item.text) }));
-        setItems(prev => [...duplicated, ...prev]);
+        setItems(prev => {
+          const next = [...duplicated, ...prev];
+          itemsRef.current = next;
+          return next;
+        });
+        persistBulkTasks(duplicated);
         setSelectedTaskIds(new Set()); setIsSelectionMode(false);
         toast.success(t('todayPage.duplicatedTasks', { count: duplicated.length }));
         break;
@@ -621,7 +648,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         setIsBulkStatusOpen(true); break;
     }
     setIsSelectActionsOpen(false);
-  }, [items, selectedTaskIds, uncompletedItems, requireFeature, setItems, setSelectedTaskIds, setIsSelectionMode, setIsMoveToFolderOpen, setIsPrioritySheetOpen, setIsBulkDateSheetOpen, setIsBulkReminderSheetOpen, setIsBulkRepeatSheetOpen, setIsBulkSectionMoveOpen, setIsBulkStatusOpen, setIsSelectActionsOpen, convertToNotes, t]);
+  }, [items, selectedTaskIds, uncompletedItems, requireFeature, setItems, setSelectedTaskIds, setIsSelectionMode, setIsMoveToFolderOpen, setIsPrioritySheetOpen, setIsBulkDateSheetOpen, setIsBulkReminderSheetOpen, setIsBulkRepeatSheetOpen, setIsBulkSectionMoveOpen, setIsBulkStatusOpen, setIsSelectActionsOpen, convertToNotes, t, persistBulkTasks]);
 
   const handleMoveToFolder = useCallback((folderId: string | null) => {
     const now = new Date();
