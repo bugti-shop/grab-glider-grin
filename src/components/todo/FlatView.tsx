@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { TodoItem, TaskSection } from '@/types/note';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { ChevronRight, ChevronDown } from 'lucide-react';
@@ -61,6 +61,10 @@ export const FlatView = ({
   // to 100k+ rows with constant memory and steady 60fps scroll.
   const useFlatVirtualized = uncompletedItems.length >= VIRTUALIZE_THRESHOLD;
   const flatIndex = useFlatTaskIndex(useFlatVirtualized ? uncompletedItems : undefined);
+  const virtualHeaderSection = useMemo<TaskSection>(() => {
+    const base = sortedSections[0] ?? sections[0] ?? { id: 'default', name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 };
+    return { ...base, id: 'virtual-all-tasks', name: t('grouping.tasks'), order: base.order ?? 0 } as TaskSection;
+  }, [sections, sortedSections, t]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,31 +78,31 @@ export const FlatView = ({
   if (useFlatVirtualized) {
     return (
       <div className="space-y-4" ref={scrollContainerRef}>
+        <div className="rounded-xl border border-border/30 overflow-hidden bg-background">
+          {renderSectionHeader(virtualHeaderSection, false)}
+          {collapsedViewSections.has(`flat-${virtualHeaderSection.id}`) ? null : (
         {/* No nested scroll container — virtualize against the page scroll so
             the list feels infinite and weightless. Bottom navigation and
             menus stay responsive because only the visible window of rows
             ever exists in the DOM. */}
-        <div data-flat-scroll>
-          <FlatTaskList
-            index={flatIndex}
-            rowHeight={compactMode ? 56 : 72}
-            useWindow
-            renderRow={(row) => (
-              <div className="border-b border-border/50">
-                {row.parentChip && (
-                  <div className="px-3 pt-1 text-[10px] text-muted-foreground truncate">
-                    ↳ {row.parentChip}
+            <div data-flat-scroll>
+              <FlatTaskList
+                index={flatIndex}
+                rowHeight={compactMode ? 44 : 58}
+                useWindow
+                renderRow={(row) => (
+                  <div className="border-b border-border/50 bg-background">
+                    {renderTaskItem(row.task)}
                   </div>
                 )}
-                {renderTaskItem(row.task)}
-              </div>
-            )}
-            emptyState={
-              <div className="text-center py-20">
-                <p className="text-muted-foreground">{t('emptyStates.noTasks')}</p>
-              </div>
-            }
-          />
+                emptyState={
+                  <div className="text-center py-20">
+                    <p className="text-muted-foreground">{t('emptyStates.noTasks')}</p>
+                  </div>
+                }
+              />
+            </div>
+          )}
         </div>
 
         {showCompleted && completedItems.length > 0 && (
