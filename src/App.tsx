@@ -408,6 +408,11 @@ const RootRedirect = () => {
   return <Today />;
 };
 
+const ShareIntentBridge = () => {
+  useShareIntent();
+  return null;
+};
+
 const AppRoutes = () => {
   useGlobalShortcuts();
   return (
