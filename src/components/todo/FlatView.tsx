@@ -12,9 +12,11 @@ import { FlatTaskList } from '@/components/tasks/FlatTaskList';
 import { useFlatTaskIndex } from '@/hooks/useFlatTaskIndex';
 import { markRenderStart, trackScrollFps } from '@/utils/perfBenchmark';
 
-// When uncompleted tasks exceed this threshold, switch to a fully-virtualized
-// flat list to keep render and scroll smooth at 100k+ rows.
-const VIRTUALIZE_THRESHOLD = 200;
+// Virtualize aggressively — once a single section can blow past a viewport
+// height, the native DOM cost (event listeners, layout, paint) starts to
+// degrade scrolling and bottom-nav responsiveness. 40 keeps small lists DnD-
+// friendly while ensuring 100k+ lists stay smooth.
+const VIRTUALIZE_THRESHOLD = 40;
 
 interface FlatViewProps {
   sortedSections: TaskSection[];
