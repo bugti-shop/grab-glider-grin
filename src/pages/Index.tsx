@@ -378,12 +378,20 @@ const Index = () => {
     setDraggedNoteId(null);
   };
 
+  const handleCardDragLeave = (e: React.DragEvent) => {
+    const next = e.relatedTarget as Node | null;
+    if (!next || !e.currentTarget.contains(next)) e.currentTarget.blur();
+  };
+
   const handleDrop = (e: React.DragEvent, targetNoteId: string) => {
     e.preventDefault();
     const started = performance.now();
     const draggedId = e.dataTransfer.getData('text/html') || e.dataTransfer.getData('text/plain');
 
-    if (draggedId === targetNoteId) return;
+    if (!draggedId || draggedId === targetNoteId) {
+      setDraggedNoteId(null);
+      return;
+    }
 
     const draggedNote = notes.find(n => n.id === draggedId);
     const targetNote = notes.find(n => n.id === targetNoteId);
@@ -1362,6 +1370,7 @@ const Index = () => {
                           onDragOver={handleDragOver}
                           onDrop={handleDrop}
                           onDragEnd={handleDragEnd}
+                          onDragLeave={handleCardDragLeave}
                           isSelectionMode={isSelectionMode}
                           isSelected={selectedNoteIds.includes(note.id)}
                           onToggleSelection={handleToggleNoteSelection}
@@ -1401,6 +1410,7 @@ const Index = () => {
                           onDragOver={handleDragOver}
                           onDrop={handleDrop}
                           onDragEnd={handleDragEnd}
+                          onDragLeave={handleCardDragLeave}
                           isSelectionMode={isSelectionMode}
                           isSelected={selectedNoteIds.includes(note.id)}
                           onToggleSelection={handleToggleNoteSelection}
@@ -1436,6 +1446,7 @@ const Index = () => {
                             onDragOver={handleDragOver}
                             onDrop={handleDrop}
                             onDragEnd={handleDragEnd}
+                            onDragLeave={handleCardDragLeave}
                             isSelectionMode={isSelectionMode}
                             isSelected={selectedNoteIds.includes(note.id)}
                             onToggleSelection={handleToggleNoteSelection}
@@ -1474,6 +1485,7 @@ const Index = () => {
                           onDragOver={handleDragOver}
                           onDrop={handleDrop}
                           onDragEnd={handleDragEnd}
+                          onDragLeave={handleCardDragLeave}
                           isSelectionMode={isSelectionMode}
                           isSelected={selectedNoteIds.includes(note.id)}
                           onToggleSelection={handleToggleNoteSelection}
