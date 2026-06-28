@@ -19,6 +19,7 @@ import { ResolvedTaskImage } from '@/components/ResolvedTaskImage';
 import { WaveformProgressBar } from '@/components/WaveformProgressBar';
 import { playCompletionSound } from '@/utils/taskSounds';
 import { TASK_CIRCLE, TASK_CHECK_ICON } from '@/utils/taskItemStyles';
+import { getRingFillMs } from '@/utils/ringFillDuration';
 import { loadCustomSmartViews } from '@/utils/customSmartViews';
 import { loadTodoItems } from '@/utils/todoItemsStorage';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -298,6 +299,17 @@ const Today = () => {
   const { swipeState, SWIPE_ACTION_WIDTH, handleFlatTouchStart, handleFlatTouchMove, handleFlatTouchEnd, handleSwipeAction } = swipe;
   const { subtaskSwipeState, handleSubtaskSwipeStart, handleSubtaskSwipeMove, handleSubtaskSwipeEnd } = swipe;
 
+  const showCompletionFill = useCallback((taskId: string) => {
+    const fillMs = getRingFillMs();
+    if (fillMs <= 0) return;
+    setPendingCompleteId(taskId);
+    if (pendingCompleteTimer.current) clearTimeout(pendingCompleteTimer.current);
+    pendingCompleteTimer.current = setTimeout(() => {
+      setPendingCompleteId(null);
+      pendingCompleteTimer.current = null;
+    }, fillMs);
+  }, [setPendingCompleteId, pendingCompleteTimer]);
+
   // ── Render helpers ──
 
   // Render task item in flat layout style for ALL view modes
@@ -317,10 +329,9 @@ const Today = () => {
               <button
                 onClick={() => handleSwipeAction(() => {
                   if (!item.completed) {
-                    setPendingCompleteId(item.id);
+                    showCompletionFill(item.id);
                     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
                     updateItem(item.id, { completed: true });
-                    window.setTimeout(() => setPendingCompleteId(null), 120);
                   } else {
                     updateItem(item.id, { completed: false });
                   }
@@ -389,10 +400,9 @@ const Today = () => {
                   if (item.completed) updateItem(item.id, { completed: false });
                   return;
                 }
-                setPendingCompleteId(item.id);
+                showCompletionFill(item.id);
                 Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
                 updateItem(item.id, { completed: true });
-                window.setTimeout(() => setPendingCompleteId(null), 120);
               }}
               className={cn(
                 TASK_CIRCLE.base, TASK_CIRCLE.marginTop,
