@@ -50,6 +50,7 @@ import { NoteTypeVisibilitySheet } from '@/components/NoteTypeVisibilitySheet';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
 import { withCopySuffix } from '@/utils/duplicateName';
+import { toast } from 'sonner';
 
 const Index = () => {
   const { t } = useTranslation();
