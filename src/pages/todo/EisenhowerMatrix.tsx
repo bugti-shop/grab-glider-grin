@@ -164,8 +164,6 @@ const EisenhowerMatrix = () => {
     return map;
   }, [tasks]);
 
-  const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
-
   const toggleComplete = async (task: TodoItem) => {
     triggerHaptic('light').catch(() => {});
     const becomingComplete = !task.completed;
@@ -173,23 +171,10 @@ const EisenhowerMatrix = () => {
       ? { ...t, completed: becomingComplete, completedAt: becomingComplete ? new Date() : undefined }
       : t);
     setTasks(updated);
-    if (becomingComplete) {
-      setRecentlyCompleted(prev => {
-        const next = new Set(prev);
-        next.add(task.id);
-        return next;
-      });
-      setTimeout(() => {
-        setRecentlyCompleted(prev => {
-          const next = new Set(prev);
-          next.delete(task.id);
-          return next;
-        });
-      }, 900);
-    }
     await saveTasksToDB(updated);
     window.dispatchEvent(new Event('tasksUpdated'));
   };
+
 
   const deleteTask = async (task: TodoItem) => {
     if (!confirm(`Delete "${task.text}"?`)) return;
