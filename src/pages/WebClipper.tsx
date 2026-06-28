@@ -58,7 +58,35 @@ const WebClipper = () => {
   const handleSaveClip = async (clipMode: ClipMode) => {
     setSaving(true);
     try {
-      const noteContent = buildClipNoteBody({ url, selection, content, mode: clipMode, attachment: attachment || undefined, attachmentType });
+      let extractedPdfText = '';
+      let pdfTruncated = false;
+      // For shared PDFs, pull readable text so the note is searchable
+      // beyond just the attachment link.
+      if (attachment && attachmentType === 'pdf') {
+        try {
+          const { extractPdfTextFromUrl } = await import('@/utils/pdfExtract');
+          const result = await extractPdfTextFromUrl(attachment);
+          extractedPdfText = result.text;
+          pdfTruncated = result.truncated;
+        } catch (err) {
+          console.warn('[webClipper] PDF text extraction failed', err);
+        }
+      }
+
+      const mergedContent = extractedPdfText
+        ? [content, extractedPdfText, pdfTruncated ? '_(PDF text truncated)_' : '']
+            .filter(Boolean)
+            .join('\n\n')
+        : content;
+
+      const noteContent = buildClipNoteBody({
+        url,
+        selection,
+        content: mergedContent,
+        mode: clipMode,
+        attachment: attachment || undefined,
+        attachmentType,
+      });
 
       const newNote: Note = {
         id: crypto.randomUUID(),
