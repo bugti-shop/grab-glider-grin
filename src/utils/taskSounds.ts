@@ -219,12 +219,41 @@ const createCompletionSound = (ringtone: CompletionRingtoneId): void => {
   }
 };
 
+// Throttle + concurrency cap to keep rapid task completion smooth on huge lists.
+// Prevents stacking dozens of WebAudio oscillators when user taps 7-8 checkboxes fast.
+let lastPlayedAt = 0;
+let activeVoices = 0;
+const MIN_INTERVAL_MS = 55; // coalesce ultra-rapid taps
+const MAX_CONCURRENT = 3;   // cap overlapping playback
+const APPROX_VOICE_MS = 350;
+
+const scheduleVoiceRelease = () => {
+  activeVoices++;
+  window.setTimeout(() => {
+    activeVoices = Math.max(0, activeVoices - 1);
+  }, APPROX_VOICE_MS);
+};
+
 export const playCompletionSound = (): void => {
   if (!soundEnabled) return;
-  createCompletionSound(selectedRingtone);
+  const now = performance.now();
+  if (now - lastPlayedAt < MIN_INTERVAL_MS) return;
+  if (activeVoices >= MAX_CONCURRENT) return;
+  lastPlayedAt = now;
+  scheduleVoiceRelease();
+  // Defer to idle/next frame so the UI checkbox paint isn't blocked by audio graph setup.
+  const fire = () => createCompletionSound(selectedRingtone);
+  if (typeof (window as any).requestIdleCallback === 'function') {
+    (window as any).requestIdleCallback(fire, { timeout: 50 });
+  } else {
+    window.setTimeout(fire, 0);
+  }
 };
 
 export const previewCompletionRingtone = (ringtone: CompletionRingtoneId): void => {
+  // Preview ignores the rapid-tap throttle but still respects concurrency cap.
+  if (activeVoices >= MAX_CONCURRENT) return;
+  scheduleVoiceRelease();
   createCompletionSound(ringtone);
 };
 
