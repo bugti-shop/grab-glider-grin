@@ -66,7 +66,11 @@ export const FlatView = ({
   // to 100k+ rows with constant memory and steady 60fps scroll.
   const visibleTaskCount = uncompletedItems.length + (showCompleted ? completedItems.length : 0);
   const useFlatVirtualized = visibleTaskCount >= VIRTUALIZE_THRESHOLD;
-  const flatIndex = useFlatTaskIndex(useFlatVirtualized ? uncompletedItems : undefined);
+  const virtualOrderedItems = useMemo(
+    () => useFlatVirtualized ? applyTaskOrder(uncompletedItems, 'flat-virtual') : uncompletedItems,
+    [useFlatVirtualized, uncompletedItems],
+  );
+  const flatIndex = useFlatTaskIndex(useFlatVirtualized ? virtualOrderedItems : undefined);
   const virtualHeaderSection = useMemo<TaskSection>(() => {
     const base = sortedSections[0] ?? sections[0] ?? { id: 'default', name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 };
     return { ...base, name: base.name || t('grouping.tasks'), order: base.order ?? 0 } as TaskSection;
@@ -76,7 +80,7 @@ export const FlatView = ({
   useEffect(() => {
     if (!useFlatVirtualized) return;
     const done = markRenderStart('Today.FlatTaskList');
-    done({ itemCount: uncompletedItems.length });
+    done({ itemCount: virtualOrderedItems.length });
     const el = scrollContainerRef.current?.querySelector<HTMLDivElement>('[data-flat-scroll]');
     if (el) {
       const stop = trackScrollFps(el, 'Today.FlatTaskList');
@@ -84,7 +88,7 @@ export const FlatView = ({
       const raf = requestAnimationFrame(() => checkFlatRowConsistency(scrollContainerRef.current, `virtualized(${uncompletedItems.length})`));
       return () => { stop?.(); cancelAnimationFrame(raf); };
     }
-  }, [useFlatVirtualized, uncompletedItems.length]);
+  }, [useFlatVirtualized, virtualOrderedItems.length]);
 
   // Also sample the non-virtualized path so the baseline is captured from
   // small lists and reused to validate the big-list path.
@@ -100,7 +104,7 @@ export const FlatView = ({
       <div ref={scrollContainerRef}>
         <div className="bg-background">
           {renderVirtualSectionHeader
-            ? renderVirtualSectionHeader(virtualHeaderSection, false, uncompletedItems.length)
+            ? renderVirtualSectionHeader(virtualHeaderSection, false, virtualOrderedItems.length)
             : renderSectionHeader(virtualHeaderSection, false)}
           {collapsedViewSections.has(`flat-${virtualHeaderSection.id}`) ? null : (
             <div data-flat-scroll>
@@ -111,9 +115,10 @@ export const FlatView = ({
                 useWindow={virtualizationSettings.tasks.windowing}
                 onReorder={(from, to) => {
                   if (from === to) return;
-                  const ids = uncompletedItems.map(i => i.id);
+                  const ids = virtualOrderedItems.map(i => i.id);
                   const [moved] = ids.splice(from, 1);
                   ids.splice(to, 0, moved);
+                  updateSectionOrder('flat-virtual', ids);
                   // Persist new order for every section bucket touched so the
                   // flat view stays consistent at scale (sections are merged
                   // into one virtual list when virtualized).
