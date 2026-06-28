@@ -349,6 +349,15 @@ export const useTodayState = () => {
 
   // Offload filtering + sorting to Web Worker
   useEffect(() => {
+    // For a single checkbox/delete tap, the existing worker result is still
+    // usable because we map it back onto the latest task objects below. Avoid
+    // re-serializing 100k+ tasks immediately after every tap.
+    const skipProcessingAt = (window as any).__flowistSkipNextTaskProcessing as number | undefined;
+    if (skipProcessingAt && Date.now() - skipProcessingAt < 1_500) {
+      (window as any).__flowistSkipNextTaskProcessing = 0;
+      return;
+    }
+
     // Expand the selected folder into itself + all descendants so tasks added
     // directly inside subfolders still show when a parent folder is selected.
     const allowedFolderIds = selectedFolderId
