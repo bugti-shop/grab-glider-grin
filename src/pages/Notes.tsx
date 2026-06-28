@@ -161,10 +161,15 @@ const Notes = () => {
     return true;
   }, [isPro, softRequireCreate, softRequireMutate, notes, setNotes]);
 
-  const handleEditNote = (note: Note) => {
-    setSelectedNote(note);
+  const handleEditNote = useCallback((note: Note) => {
+    // Open the modal shell first (urgent) so the tap feels instant on mobile.
+    // Mounting the heavy NoteEditor subtree is then handled as a low-priority
+    // transition, keeping the click→paint path under one frame even at 100k notes.
     setIsEditorOpen(true);
-  };
+    startTransition(() => {
+      setSelectedNote(note);
+    });
+  }, []);
 
   const handleTogglePin = (noteId: string, e: React.MouseEvent) => {
     e.stopPropagation();
