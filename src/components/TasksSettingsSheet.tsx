@@ -248,6 +248,12 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
             }}
             rightElement={!isPro ? <Crown className="h-4 w-4 text-amber-500" /> : undefined}
           />
+          <SettingsRow
+            icon={Beaker}
+            label="Developer — Stress Test"
+            subtitle="Generate 100k+ tasks & auto-report perf"
+            onClick={() => setShowDevPerf(true)}
+          />
         </div>
       </ScrollArea>
     </>
