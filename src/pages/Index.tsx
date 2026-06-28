@@ -8,6 +8,7 @@ import { Note, NoteType, Folder } from '@/types/note';
 import { NoteCard } from '@/components/NoteCard';
 import { NoteEditor } from '@/components/NoteEditor';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { DesktopSidebar } from '@/components/desktop/DesktopSidebar';
 
 
 import { FolderManager } from '@/components/FolderManager';
