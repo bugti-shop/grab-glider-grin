@@ -93,3 +93,51 @@ export function startScrollJankMonitor(): void {
   };
   window.addEventListener('scroll', onScroll, { passive: true, capture: true });
 }
+
+/** Track FPS only while a specific scroll surface is moving. */
+export function startScopedScrollFpsMonitor(
+  target: Window | HTMLElement,
+  label: string,
+  extra: Record<string, any> = {},
+): () => void {
+  if (typeof window === 'undefined') return () => {};
+  let frames = 0;
+  let raf = 0;
+  let scrolling = false;
+  let last = performance.now();
+  let idleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const tick = () => {
+    frames += 1;
+    const now = performance.now();
+    if (now - last >= 1000) {
+      logPerfEvent('fps', { label, fps: frames, ...extra });
+      frames = 0;
+      last = now;
+    }
+    if (scrolling) raf = requestAnimationFrame(tick);
+  };
+
+  const onScroll = () => {
+    if (!scrolling) {
+      scrolling = true;
+      frames = 0;
+      last = performance.now();
+      raf = requestAnimationFrame(tick);
+    }
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      scrolling = false;
+      if (raf) cancelAnimationFrame(raf);
+      if (frames > 0) logPerfEvent('fps', { label, fps: frames, partial: true, ...extra });
+      frames = 0;
+    }, 220);
+  };
+
+  target.addEventListener('scroll', onScroll as EventListener, { passive: true });
+  return () => {
+    target.removeEventListener('scroll', onScroll as EventListener);
+    if (raf) cancelAnimationFrame(raf);
+    if (idleTimer) clearTimeout(idleTimer);
+  };
+}
