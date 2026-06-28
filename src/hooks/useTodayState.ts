@@ -262,6 +262,14 @@ export const useTodayState = () => {
       return;
     }
 
+    // Single-task operations already persist directly with IndexedDB put/delete.
+    // Skipping the next full-array rewrite keeps checkbox taps instant at 100k+.
+    const skipFullSaveAt = (window as any).__flowistSkipNextTaskFullSave as number | undefined;
+    if (skipFullSaveAt && Date.now() - skipFullSaveAt < 2_000) {
+      (window as any).__flowistSkipNextTaskFullSave = 0;
+      return;
+    }
+
     // If this update came from a sync restore, skip dispatching tasksUpdated
     // to prevent re-uploading to Firebase (sync loop)
     const syncFlag = (window as any).__todaySyncFlag;
