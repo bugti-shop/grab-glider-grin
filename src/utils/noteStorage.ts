@@ -1,15 +1,18 @@
 import { Note } from '@/types/note';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
+import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 
 const DB_NAME = 'nota-notes-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'notes';
+const META_STORE_NAME = 'notes_meta';
 const BATCH_SIZE = 2000;
 
 let db: IDBDatabase | null = null;
 
 // In-memory cache for instant reads (mirrors task storage pattern)
 let notesCache: Note[] | null = null;
+let notesCacheIsMetadata = false;
 let notesCacheVersion = 0;
 let lastNoteSaveTime = 0;
 const MIN_SAVE_INTERVAL = 50;
@@ -51,6 +54,28 @@ const hydrateNote = (note: any): Note => ({
   voiceRecordings: hydrateVoiceRecordings(note?.voiceRecordings),
 });
 
+const CONTENT_STUB_FLAG = '__contentStub';
+const CONTENT_PREVIEW_KEY = '__contentPreview';
+const CONTENT_LENGTH_KEY = '__contentLength';
+
+export const isNoteContentStub = (note: Note | null | undefined): boolean => {
+  return Boolean(note && (note as any)[CONTENT_STUB_FLAG]);
+};
+
+export const makeMetadataNote = (note: any): Note => {
+  const hydrated = hydrateNote(note);
+  const fullContent = typeof hydrated.content === 'string' ? hydrated.content : '';
+  const preview = (note as any)[CONTENT_PREVIEW_KEY] || getTextPreviewFromHtml(fullContent, 240);
+  return {
+    ...hydrated,
+    // Keep the list light: cards/search use this preview, editor loads full text by id.
+    content: preview,
+    [CONTENT_STUB_FLAG]: true,
+    [CONTENT_PREVIEW_KEY]: preview,
+    [CONTENT_LENGTH_KEY]: fullContent.length,
+  } as Note;
+};
+
 const serializeNote = (note: Note) => ({
   ...note,
   createdAt: toValidDate(note.createdAt).toISOString(),
@@ -64,9 +89,12 @@ const serializeNote = (note: Note) => ({
   })),
 });
 
+const serializeMetadataNote = (note: Note) => serializeNote(makeMetadataNote(note));
+
 const isDbHealthy = (database: IDBDatabase): boolean => {
   try {
     if (!database.objectStoreNames.contains(STORE_NAME)) return false;
+    if (!database.objectStoreNames.contains(META_STORE_NAME)) return false;
     const tx = database.transaction([STORE_NAME], 'readonly');
     tx.abort();
     return true;
@@ -119,6 +147,13 @@ const openDB = (): Promise<IDBDatabase> => {
         store.createIndex('folderId', 'folderId', { unique: false });
         store.createIndex('type', 'type', { unique: false });
       }
+      if (!database.objectStoreNames.contains(META_STORE_NAME)) {
+        const metaStore = database.createObjectStore(META_STORE_NAME, { keyPath: 'id' });
+        metaStore.createIndex('createdAt', 'createdAt', { unique: false });
+        metaStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+        metaStore.createIndex('folderId', 'folderId', { unique: false });
+        metaStore.createIndex('type', 'type', { unique: false });
+      }
     };
   });
 };
@@ -137,7 +172,7 @@ const withRetry = async <T>(operation: (database: IDBDatabase) => Promise<T>): P
 
 export const loadNotesFromDB = async (): Promise<Note[]> => {
   // Return cached data instantly if available
-  if (notesCache !== null) return notesCache;
+  if (notesCache !== null && !notesCacheIsMetadata) return notesCache;
 
   try {
     return await withRetry((database) => new Promise((resolve, reject) => {
@@ -157,6 +192,7 @@ export const loadNotesFromDB = async (): Promise<Note[]> => {
           }
         }).catch(() => {});
         notesCache = notes;
+        notesCacheIsMetadata = false;
         resolve(notes);
       };
 
@@ -171,25 +207,103 @@ export const loadNotesFromDB = async (): Promise<Note[]> => {
   }
 };
 
+export const loadNotesMetadataFromDB = async (): Promise<Note[]> => {
+  if (notesCache !== null && notesCacheIsMetadata) return notesCache;
+
+  try {
+    return await withRetry((database) => new Promise((resolve, reject) => {
+      const transaction = database.transaction([META_STORE_NAME, STORE_NAME], 'readonly');
+      const metaStore = transaction.objectStore(META_STORE_NAME);
+      const request = metaStore.getAll();
+      const notes: Note[] = [];
+
+      request.onsuccess = () => {
+        if (request.result.length > 0) {
+          const metaNotes = request.result.map(hydrateNote);
+          notesCache = metaNotes;
+          notesCacheIsMetadata = true;
+          resolve(metaNotes);
+          return;
+        }
+
+        // First open after upgrading older installs: derive small card records
+        // once from the full-content store, then persist them for future opens.
+        const fullStore = transaction.objectStore(STORE_NAME);
+        const cursorRequest = fullStore.openCursor();
+        cursorRequest.onsuccess = () => {
+          const cursor = cursorRequest.result;
+          if (!cursor) {
+            notesCache = notes;
+            notesCacheIsMetadata = true;
+            setTimeout(() => {
+              void withRetry((db2) => new Promise<void>((res) => {
+                const tx = db2.transaction([META_STORE_NAME], 'readwrite');
+                const store = tx.objectStore(META_STORE_NAME);
+                notes.forEach((n) => {
+                  try { store.put(serializeMetadataNote(n)); } catch {}
+                });
+                tx.oncomplete = () => res();
+                tx.onerror = () => res();
+              }));
+            }, 0);
+            resolve(notes);
+            return;
+          }
+          notes.push(makeMetadataNote(cursor.value));
+          cursor.continue();
+        };
+        cursorRequest.onerror = () => reject(cursorRequest.error);
+      };
+
+      request.onerror = () => {
+        console.error('Failed to load notes metadata:', request.error);
+        reject(request.error);
+      };
+    }));
+  } catch (error) {
+    console.error('Error loading notes metadata from IndexedDB:', error);
+    return [];
+  }
+};
+
+export const loadNoteFromDB = async (noteId: string): Promise<Note | null> => {
+  try {
+    return await withRetry((database) => new Promise<Note | null>((resolve, reject) => {
+      const transaction = database.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(noteId);
+
+      request.onsuccess = () => resolve(request.result ? hydrateNote(request.result) : null);
+      request.onerror = () => reject(request.error);
+    }));
+  } catch (error) {
+    console.error('Error loading single note from IndexedDB:', error);
+    return null;
+  }
+};
+
 const saveLargeNotesDataset = async (database: IDBDatabase, notes: Note[], skipSyncEvent: boolean): Promise<void> => {
   await new Promise<void>((resolve) => {
-    const clearTx = database.transaction([STORE_NAME], 'readwrite');
-    const clearStore = clearTx.objectStore(STORE_NAME);
-    const clearReq = clearStore.clear();
-    clearReq.onsuccess = () => resolve();
-    clearReq.onerror = () => resolve();
+    const clearTx = database.transaction([STORE_NAME, META_STORE_NAME], 'readwrite');
+    clearTx.objectStore(STORE_NAME).clear();
+    clearTx.objectStore(META_STORE_NAME).clear();
+    clearTx.oncomplete = () => resolve();
+    clearTx.onerror = () => resolve();
   });
 
   for (let i = 0; i < notes.length; i += BATCH_SIZE) {
     const batch = notes.slice(i, i + BATCH_SIZE);
 
     await new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction([STORE_NAME], 'readwrite');
+      const transaction = database.transaction([STORE_NAME, META_STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
+      const metaStore = transaction.objectStore(META_STORE_NAME);
 
       batch.forEach(note => {
         try {
-          store.put(serializeNote(hydrateNote(note)));
+          const hydrated = hydrateNote(note);
+          store.put(serializeNote(hydrated));
+          metaStore.put(serializeMetadataNote(hydrated));
         } catch {}
       });
 
@@ -215,20 +329,30 @@ const flushNotesToDB = async (notes: Note[], skipSyncEvent: boolean): Promise<vo
     }
 
     await withRetry((database) => new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction([STORE_NAME], 'readwrite');
+      const transaction = database.transaction([STORE_NAME, META_STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
+      const metaStore = transaction.objectStore(META_STORE_NAME);
 
       // For large datasets, clear + batch put is faster than diff
       if (notes.length > 500) {
-        const clearReq = store.clear();
+        store.clear();
+        const clearReq = metaStore.clear();
         clearReq.onsuccess = () => {
           notes.forEach(note => {
-            try { store.put(serializeNote(hydrateNote(note))); } catch {}
+            try {
+              const hydrated = hydrateNote(note);
+              store.put(serializeNote(hydrated));
+              metaStore.put(serializeMetadataNote(hydrated));
+            } catch {}
           });
         };
         clearReq.onerror = () => {
           notes.forEach(note => {
-            try { store.put(serializeNote(hydrateNote(note))); } catch {}
+            try {
+              const hydrated = hydrateNote(note);
+              store.put(serializeNote(hydrated));
+              metaStore.put(serializeMetadataNote(hydrated));
+            } catch {}
           });
         };
       } else {
@@ -238,10 +362,15 @@ const flushNotesToDB = async (notes: Note[], skipSyncEvent: boolean): Promise<vo
         getAllRequest.onsuccess = () => {
           const existingKeys = getAllRequest.result as string[];
           existingKeys.forEach(key => {
-            if (!noteIds.has(key)) store.delete(key);
+            if (!noteIds.has(key)) {
+              store.delete(key);
+              metaStore.delete(key);
+            }
           });
           notes.forEach(note => {
-            store.put(serializeNote(hydrateNote(note)));
+            const hydrated = hydrateNote(note);
+            store.put(serializeNote(hydrated));
+            metaStore.put(serializeMetadataNote(hydrated));
           });
         };
       }
@@ -258,6 +387,11 @@ const flushNotesToDB = async (notes: Note[], skipSyncEvent: boolean): Promise<vo
 };
 
 export const saveNotesToDB = async (notes: Note[], skipSyncEvent = false): Promise<void> => {
+  if (notes.some(isNoteContentStub)) {
+    console.warn('[noteStorage] Skipped bulk save for metadata-only notes; use saveNoteToDBSingle for row updates');
+    return;
+  }
+
   // Safety net: refuse to wipe a previously non-empty store with an empty array.
   // This protects against logout/login races where a context momentarily resets
   // its state before the real data finishes loading. Individual note deletes
@@ -279,6 +413,7 @@ export const saveNotesToDB = async (notes: Note[], skipSyncEvent = false): Promi
 
   // Update in-memory cache immediately
   notesCache = notes;
+  notesCacheIsMetadata = false;
   notesCacheVersion++;
 
   // Mirror to Lovable Cloud (offline-queued)
@@ -317,13 +452,29 @@ export const saveNotesToDB = async (notes: Note[], skipSyncEvent = false): Promi
 };
 
 export const saveNoteToDBSingle = async (note: Note, skipCloudSync = false): Promise<void> => {
+  let noteToPersist = hydrateNote(note);
+  if (isNoteContentStub(note)) {
+    const existing = await loadNoteFromDB(note.id);
+    if (existing) {
+      noteToPersist = hydrateNote({
+        ...existing,
+        ...note,
+        content: existing.content,
+        [CONTENT_STUB_FLAG]: undefined,
+        [CONTENT_PREVIEW_KEY]: undefined,
+        [CONTENT_LENGTH_KEY]: undefined,
+      });
+    }
+  }
+
   // Update cache
   if (notesCache) {
+    const cachedNote = notesCacheIsMetadata ? makeMetadataNote(noteToPersist) : noteToPersist;
     const idx = notesCache.findIndex(n => n.id === note.id);
     if (idx >= 0) {
-      notesCache[idx] = hydrateNote(note);
+      notesCache[idx] = cachedNote;
     } else {
-      notesCache.push(hydrateNote(note));
+      notesCache.push(cachedNote);
     }
     notesCacheVersion++;
   }
@@ -331,16 +482,18 @@ export const saveNoteToDBSingle = async (note: Note, skipCloudSync = false): Pro
   // Mirror to Lovable Cloud
   if (!skipCloudSync) {
     import('@/utils/cloudSync/storeBridge').then(({ pushNotes }) => {
-      try { pushNotes([note]); } catch {}
+      try { pushNotes([noteToPersist]); } catch {}
     }).catch(() => {});
   }
 
   try {
     await withRetry((database) => new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction([STORE_NAME], 'readwrite');
+      const transaction = database.transaction([STORE_NAME, META_STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
+      const metaStore = transaction.objectStore(META_STORE_NAME);
 
-      store.put(serializeNote(hydrateNote(note)));
+      store.put(serializeNote(noteToPersist));
+      metaStore.put(serializeMetadataNote(noteToPersist));
 
       transaction.oncomplete = () => {
         window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
@@ -369,9 +522,11 @@ export const deleteNoteFromDB = async (noteId: string, skipCloudSync = false): P
 
   try {
     await withRetry((database) => new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction([STORE_NAME], 'readwrite');
+      const transaction = database.transaction([STORE_NAME, META_STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
+      const metaStore = transaction.objectStore(META_STORE_NAME);
       store.delete(noteId);
+      metaStore.delete(noteId);
 
       transaction.oncomplete = () => {
         window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
@@ -394,6 +549,7 @@ export const deleteNoteFromDB = async (noteId: string, skipCloudSync = false): P
 // Clear notes cache (for fresh data reload)
 export const clearNotesCache = () => {
   notesCache = null;
+  notesCacheIsMetadata = false;
 };
 
 export const getNotesCacheVersion = () => notesCacheVersion;

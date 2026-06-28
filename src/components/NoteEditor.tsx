@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { genId } from '@/utils/genId';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
@@ -293,11 +293,23 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     }
   }, []);
   
-  // Calculate stats
-  const noteStats = calculateNoteStats(content, title);
+  // Calculate stats only when the stats bar is visible. Large 30k–200k word
+  // notes must not be re-scanned on every keystroke or navigation frame.
+  const noteStats = useMemo(
+    () => showStats
+      ? calculateNoteStats(content, title)
+      : { wordCount: 0, characterCount: 0, characterCountNoSpaces: 0, readingTimeMinutes: 0 },
+    [showStats, content, title],
+  );
   
   // Calculate backlinks
   const backlinks = note ? findBacklinks(note, allNotes) : [];
+
+  const extractTasksInitialText = useMemo(() => {
+    if (!showExtractTasks) return '';
+    const plain = stripHtml(content || '').slice(0, 100_000);
+    return `${title ? title + '\n\n' : ''}${plain}`.trim();
+  }, [showExtractTasks, title, content]);
 
   useEffect(() => {
     const loadFolders = async () => {
@@ -2025,7 +2037,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           currentFolderId={null}
           currentSectionId={null}
           initialMode="text"
-          initialText={`${title ? title + '\n\n' : ''}${stripHtml(content || '')}`.trim()}
+          initialText={extractTasksInitialText}
           titleOverride={t('editor.extractTasksTitle', 'Extract tasks from this note')}
           onAddTasks={async (newTasks) => {
             try {

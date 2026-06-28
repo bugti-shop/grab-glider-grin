@@ -12,7 +12,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { format, isSameDay } from 'date-fns';
 import { NoteCard } from '@/components/NoteCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { saveNoteToDBSingle, deleteNoteFromDB } from '@/utils/noteStorage';
+import { saveNoteToDBSingle, deleteNoteFromDB, loadNoteFromDB, isNoteContentStub } from '@/utils/noteStorage';
 import { useNotes } from '@/contexts/NotesContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -119,6 +119,11 @@ const NotesCalendar = () => {
     editingNoteIdRef.current = note.id;
     setEditingNote(note);
     setIsEditorOpen(true);
+    if (isNoteContentStub(note)) {
+      loadNoteFromDB(note.id).then((fullNote) => {
+        if (fullNote) setEditingNote(fullNote);
+      }).catch(() => {});
+    }
   }, []);
 
   const handleCreateNote = useCallback((type: NoteType) => {

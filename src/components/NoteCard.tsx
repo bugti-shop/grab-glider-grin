@@ -11,6 +11,7 @@ import { getNoteProtection, NoteProtection } from '@/utils/noteProtection';
 import { getSetting } from '@/utils/settingsStorage';
 import { logActivity } from '@/utils/activityLogger';
 import { sanitizeDisplayName } from '@/utils/duplicateName';
+import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -236,6 +237,7 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
   };
 
   const cardStyle = { backgroundColor: getCardColor() };
+  const previewText = note.metaDescription || (note as any).__contentPreview || getTextPreviewFromHtml(note.content, 140);
 
   const getTypeBadge = () => {
     // Check for voice note type first
@@ -388,9 +390,9 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
                 <span>{t('notes.sketchDrawing')}</span>
               </div>
             )
-          ) : (note.metaDescription || note.content) && (
+          ) : previewText && (
             <p className="text-sm text-gray-700 mb-3 line-clamp-2 transition-all duration-300">
-              {note.metaDescription || note.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()}
+              {previewText}
             </p>
           )}
 

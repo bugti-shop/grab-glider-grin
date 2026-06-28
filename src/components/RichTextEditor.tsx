@@ -1204,35 +1204,37 @@ export const RichTextEditor = ({
         // Skip if content hasn't changed (prevents unnecessary updates)
         if (newContent === lastContentRef.current) return;
         lastContentRef.current = newContent;
+        const isLargeContent = newContent.length > 50000;
         
-        // Try auto-calculation for math expressions ending with =
-        tryAutoCalculate();
+        // Large notes must stay typing/navigation-fast: avoid extra DOM/selection
+        // scanners on every keystroke and only persist the raw HTML debounced.
+        if (!isLargeContent) {
+          // Try auto-calculation for math expressions ending with =
+          tryAutoCalculate();
         
-        // Smart Detection: check for URLs, emails, phone numbers after space or punctuation
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const textNode = range.startContainer;
-          if (textNode.nodeType === Node.TEXT_NODE) {
-            const text = textNode.textContent || '';
-            const cursorPos = range.startOffset;
-            // Only trigger after space, punctuation, or newline
-            if (cursorPos > 0 && /[\s.,!?)\]}>]/.test(text.charAt(cursorPos - 1))) {
-              applySmartDetection(textNode as Text, cursorPos, smartDetectionSettings);
+          // Smart Detection: check for URLs, emails, phone numbers after space or punctuation
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const textNode = range.startContainer;
+            if (textNode.nodeType === Node.TEXT_NODE) {
+              const text = textNode.textContent || '';
+              const cursorPos = range.startOffset;
+              // Only trigger after space, punctuation, or newline
+              if (cursorPos > 0 && /[\s.,!?)\]}>]/.test(text.charAt(cursorPos - 1))) {
+                applySmartDetection(textNode as Text, cursorPos, smartDetectionSettings);
+              }
             }
           }
+
+          // === Slash command + @mention trigger detection ===
+          detectTriggers();
+
+          // Persist any synced-block edits so other instances/tabs mirror in real time
+          persistSyncedFrom(editorRef.current);
         }
 
-        // === Slash command + @mention trigger detection ===
-        detectTriggers();
 
-        // Persist any synced-block edits so other instances/tabs mirror in real time
-        persistSyncedFrom(editorRef.current);
-
-
-        
-        // For large content (>50KB), debounce the onChange call
-        const isLargeContent = newContent.length > 50000;
         
         if (isLargeContent) {
           // Debounce for large content to prevent UI freeze
@@ -1248,9 +1250,9 @@ export const RichTextEditor = ({
           onChange(newContent);
         }
 
-        // Add to history (but not during composition to avoid flooding)
-        // Also limit history size for large content
-        if (!isComposingRef.current) {
+        // Add to history only for normal-size content. Keeping 10 copies of a
+        // 30k–200k word note freezes mobile WebViews and blocks navigation.
+        if (!isComposingRef.current && !isLargeContent) {
           const maxHistorySize = isLargeContent ? 10 : 50;
           const currentContent = newContent;
           const newHistory = history.slice(Math.max(0, history.length - maxHistorySize), historyIndex + 1);

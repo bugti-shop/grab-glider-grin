@@ -7,6 +7,7 @@ import { getNoteVersions, NoteVersion, formatVersionTimestamp, restoreNoteVersio
 import { History, RotateCcw, FileEdit, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHardwareBackButton } from '@/hooks/useHardwareBackButton';
+import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 
 interface NoteVersionHistorySheetProps {
   isOpen: boolean;
@@ -50,6 +51,7 @@ export const NoteVersionHistorySheet = ({
   }, [isOpen, noteId]);
 
   const handleRestore = (version: NoteVersion) => {
+    if (!version.content && version.contentPreview) return;
     const restored = restoreNoteVersion(version);
     onRestore(restored.content || '', restored.title || '');
     onClose();
@@ -102,14 +104,11 @@ export const NoteVersionHistorySheet = ({
                         {version.title || 'Untitled'}
                       </p>
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                        {version.content
-                          .replace(/<[^>]*>/g, '')
-                          .replace(/&nbsp;/g, ' ')
-                          .slice(0, 150)}
-                        {version.content.length > 150 ? '...' : ''}
+                        {version.contentPreview || getTextPreviewFromHtml(version.content, 150)}
+                        {(version.contentLength || version.content.length) > 150 ? '...' : ''}
                       </p>
                     </div>
-                    {index !== 0 && (
+                    {index !== 0 && version.content && (
                       <Button
                         size="sm"
                         variant="outline"

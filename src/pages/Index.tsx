@@ -41,7 +41,7 @@ import {
 import { triggerHaptic } from '@/utils/haptics';
 import { prefetchRoute } from '@/utils/routePrefetch';
 
-import { saveNoteToDBSingle, deleteNoteFromDB, saveNotesToDB, loadNotesFromDB } from '@/utils/noteStorage';
+import { saveNoteToDBSingle, deleteNoteFromDB, loadNotesMetadataFromDB, loadNoteFromDB, isNoteContentStub, makeMetadataNote } from '@/utils/noteStorage';
 import { getAllSettings, getSetting, setSetting } from '@/utils/settingsStorage';
 import { logActivity } from '@/utils/activityLogger';
 import { useNotes, NoteMeta } from '@/contexts/NotesContext';
@@ -213,13 +213,13 @@ const Index = () => {
       return false;
     }
 
+    const noteMeta = makeMetadataNote({ ...note, folderId: note.folderId || note.type });
     setNotes((prev) => {
       const existing = prev.find((n) => n.id === note.id);
       if (existing) {
-        return prev.map((n) => (n.id === note.id ? note : n));
+        return prev.map((n) => (n.id === note.id ? noteMeta : n));
       }
-      const noteWithFolder = { ...note, folderId: note.folderId || note.type };
-      return [noteWithFolder, ...prev];
+      return [noteMeta, ...prev];
     });
     return true;
   };
@@ -227,56 +227,48 @@ const Index = () => {
   const handleDeleteNote = (id: string) => {
     // Move to trash instead of permanent delete
     setNotes((prev) => {
-      const updatedNotes = prev.map((n) => 
-        n.id === id 
-          ? { ...n, isDeleted: true, deletedAt: new Date() } 
-          : n
-      );
-      // Persist to IndexedDB
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
+      return prev.map((n) => {
+        if (n.id !== id) return n;
+        const updated = { ...n, isDeleted: true, deletedAt: new Date() };
+        saveNoteToDBSingle(updated);
+        return updated;
+      });
     });
     logActivity('note_delete', 'Note moved to trash', { entityId: id, entityType: 'note' });
   };
 
   const handleArchiveNote = (id: string) => {
     setNotes((prev) => {
-      const updatedNotes = prev.map((n) => 
-        n.id === id 
-          ? { ...n, isArchived: true, archivedAt: new Date() } 
-          : n
-      );
-      // Persist to IndexedDB
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
+      return prev.map((n) => {
+        if (n.id !== id) return n;
+        const updated = { ...n, isArchived: true, archivedAt: new Date() };
+        saveNoteToDBSingle(updated);
+        return updated;
+      });
     });
     logActivity('note_archive', 'Note archived', { entityId: id, entityType: 'note' });
   };
 
   const handleRestoreFromTrash = (id: string) => {
     setNotes((prev) => {
-      const updatedNotes = prev.map((n) => 
-        n.id === id 
-          ? { ...n, isDeleted: false, deletedAt: undefined } 
-          : n
-      );
-      // Persist to IndexedDB
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
+      return prev.map((n) => {
+        if (n.id !== id) return n;
+        const updated = { ...n, isDeleted: false, deletedAt: undefined };
+        saveNoteToDBSingle(updated);
+        return updated;
+      });
     });
     logActivity('note_restore', 'Note restored from trash', { entityId: id, entityType: 'note' });
   };
 
   const handleRestoreFromArchive = (id: string) => {
     setNotes((prev) => {
-      const updatedNotes = prev.map((n) => 
-        n.id === id 
-          ? { ...n, isArchived: false, archivedAt: undefined } 
-          : n
-      );
-      // Persist to IndexedDB
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
+      return prev.map((n) => {
+        if (n.id !== id) return n;
+        const updated = { ...n, isArchived: false, archivedAt: undefined };
+        saveNoteToDBSingle(updated);
+        return updated;
+      });
     });
     logActivity('note_restore', 'Note restored from archive', { entityId: id, entityType: 'note' });
   };
@@ -290,15 +282,13 @@ const Index = () => {
 
   const handleEmptyTrash = () => {
     setNotes((prev) => {
-      const updatedNotes = prev.filter((n) => !n.isDeleted);
-      // Persist to IndexedDB
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
+      prev.filter((n) => n.isDeleted).forEach((n) => deleteNoteFromDB(n.id));
+      return prev.filter((n) => !n.isDeleted);
     });
     logActivity('note_delete', 'Trash emptied');
   };
 
-  const handleDuplicateNote = (noteId: string) => {
+  const handleDuplicateNote = async (noteId: string) => {
     const noteToDuplicate = notes.find(n => n.id === noteId);
     if (!noteToDuplicate) return;
 
@@ -307,50 +297,52 @@ const Index = () => {
     if (!requireCapacity('notes', activeNotesCount)) return;
     if (!isPro && !softRequireCreate('notes', activeNotesCount)) return;
 
+    const fullSource = isNoteContentStub(noteToDuplicate)
+      ? (await loadNoteFromDB(noteToDuplicate.id)) || noteToDuplicate
+      : noteToDuplicate;
     const duplicatedNote: Note = {
-      ...noteToDuplicate,
+      ...fullSource,
       id: genId(),
-      title: withCopySuffix(noteToDuplicate.title || 'Untitled'),
+      title: withCopySuffix(fullSource.title || 'Untitled'),
       isPinned: false,
       pinnedOrder: undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     
-    setNotes(prev => [duplicatedNote, ...prev]);
+    setNotes(prev => [makeMetadataNote(duplicatedNote), ...prev]);
+    saveNoteToDBSingle(duplicatedNote);
   };
 
   const handleTogglePin = (noteId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!requireFeature('pin_feature')) return;
     setNotes((prev) => {
-      const updatedNotes = prev.map((n) => {
+      return prev.map((n) => {
         if (n.id === noteId) {
-          return {
+          const updated = {
             ...n,
             isPinned: !n.isPinned,
             pinnedOrder: !n.isPinned ? Date.now() : undefined,
           };
+          saveNoteToDBSingle(updated);
+          return updated;
         }
         return n;
       });
-      // Save to IndexedDB
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
     });
   };
 
   const handleToggleFavorite = (noteId: string) => {
     setNotes((prev) => {
-      const updatedNotes = prev.map((n) => {
+      return prev.map((n) => {
         if (n.id === noteId) {
-          return { ...n, isFavorite: !n.isFavorite };
+          const updated = { ...n, isFavorite: !n.isFavorite };
+          saveNoteToDBSingle(updated);
+          return updated;
         }
         return n;
       });
-      // Save to IndexedDB
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
     });
   };
 
@@ -397,8 +389,7 @@ const Index = () => {
         });
       }
 
-      // Save to IndexedDB
-      saveNotesToDB(updatedNotes);
+      updatedNotes.filter((n) => n.isPinned).forEach((n) => saveNoteToDBSingle(n));
       return updatedNotes;
     });
   };
@@ -481,11 +472,16 @@ const Index = () => {
         return true;
       }
 
-      void loadNotesFromDB().then((fresh) => {
+      void loadNotesMetadataFromDB().then((fresh) => {
         const freshFound = fresh.find(n => n.id === openId);
         if (!freshFound) return;
         setNotes(fresh);
         openNote(freshFound);
+        if (isNoteContentStub(freshFound)) {
+          loadNoteFromDB(freshFound.id).then((fullNote) => {
+            if (fullNote) setSelectedNote(fullNote);
+          }).catch(() => {});
+        }
         try {
           const params = new URLSearchParams(window.location.search);
           if (params.get('openNote') === openId) {
@@ -527,6 +523,11 @@ const Index = () => {
     if (note.type === 'sketch' && !requireFeature('sketch')) return;
     setSelectedNote(note);
     setIsEditorOpen(true);
+    if (isNoteContentStub(note)) {
+      loadNoteFromDB(note.id).then((fullNote) => {
+        if (fullNote) setSelectedNote(fullNote);
+      }).catch(() => {});
+    }
   };
 
   const persistFolders = async (updatedFolders: Folder[]) => {
@@ -582,9 +583,8 @@ const Index = () => {
       updatedAt: new Date(now.getTime() + i),
     } as Note));
 
-    setNotes(prev => [...newNotes, ...prev]);
-    // Persist
-    saveNotesToDB([...newNotes, ...notes]);
+    setNotes(prev => [...newNotes.map(makeMetadataNote), ...prev]);
+    newNotes.forEach((note) => saveNoteToDBSingle(note));
     
     // Select the new folder
     setSelectedFolderId(folderId);
@@ -756,14 +756,12 @@ const Index = () => {
 
   const handleBulkDelete = () => {
     setNotes(prev => {
-      const updatedNotes = prev.map(n =>
-        selectedNoteIds.includes(n.id)
-          ? { ...n, isDeleted: true, deletedAt: new Date() }
-          : n
-      );
-      // Persist to IndexedDB
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
+      return prev.map(n => {
+        if (!selectedNoteIds.includes(n.id)) return n;
+        const updated = { ...n, isDeleted: true, deletedAt: new Date() };
+        saveNoteToDBSingle(updated);
+        return updated;
+      });
     });
     setSelectedNoteIds([]);
     setIsSelectionMode(false);
@@ -771,14 +769,12 @@ const Index = () => {
 
   const handleBulkArchive = () => {
     setNotes(prev => {
-      const updatedNotes = prev.map(n =>
-        selectedNoteIds.includes(n.id)
-          ? { ...n, isArchived: true, archivedAt: new Date() }
-          : n
-      );
-      // Persist to IndexedDB
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
+      return prev.map(n => {
+        if (!selectedNoteIds.includes(n.id)) return n;
+        const updated = { ...n, isArchived: true, archivedAt: new Date() };
+        saveNoteToDBSingle(updated);
+        return updated;
+      });
     });
     setSelectedNoteIds([]);
     setIsSelectionMode(false);
@@ -787,58 +783,58 @@ const Index = () => {
   // New bulk operations
   const handleBulkFavorite = () => {
     setNotes(prev => {
-      const updatedNotes = prev.map(n =>
-        selectedNoteIds.includes(n.id)
-          ? { ...n, isFavorite: true }
-          : n
-      );
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
+      return prev.map(n => {
+        if (!selectedNoteIds.includes(n.id)) return n;
+        const updated = { ...n, isFavorite: true };
+        saveNoteToDBSingle(updated);
+        return updated;
+      });
     });
     setSelectedNoteIds([]);
     setIsSelectionMode(false);
   };
 
-  const handleBulkDuplicate = () => {
-    setNotes(prev => {
-      const activeCount = prev.filter(n => !n.isDeleted).length;
-      const remaining = isPro
-        ? selectedNoteIds.length
-        : Math.max(0, (FREE_CAPACITY_LIMITS_NOTES) - activeCount);
-      const allowed = isPro ? selectedNoteIds : selectedNoteIds.slice(0, remaining);
-      if (allowed.length === 0) {
-        requireCapacity('notes', activeCount);
-        return prev;
-      }
-      const duplicates = allowed
-        .map(id => prev.find(n => n.id === id))
-        .filter(Boolean)
-        .map(note => ({
-          ...note!,
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          title: withCopySuffix(note!.title || 'Untitled'),
-          isPinned: false,
-          pinnedOrder: undefined,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }));
-      const updatedNotes = [...duplicates, ...prev];
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
-    });
+  const handleBulkDuplicate = async () => {
+    const activeCount = notes.filter(n => !n.isDeleted).length;
+    const remaining = isPro
+      ? selectedNoteIds.length
+      : Math.max(0, (FREE_CAPACITY_LIMITS_NOTES) - activeCount);
+    const allowed = isPro ? selectedNoteIds : selectedNoteIds.slice(0, remaining);
+    if (allowed.length === 0) {
+      requireCapacity('notes', activeCount);
+      return;
+    }
+
+    const duplicates: Note[] = [];
+    for (const id of allowed) {
+      const source = notes.find(n => n.id === id);
+      if (!source) continue;
+      const fullSource = isNoteContentStub(source) ? (await loadNoteFromDB(source.id)) || source : source;
+      duplicates.push({
+        ...fullSource,
+        id: genId(),
+        title: withCopySuffix(fullSource.title || 'Untitled'),
+        isPinned: false,
+        pinnedOrder: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+    if (duplicates.length === 0) return;
+    setNotes(prev => [...duplicates.map(makeMetadataNote), ...prev]);
+    duplicates.forEach((n) => saveNoteToDBSingle(n));
     setSelectedNoteIds([]);
     setIsSelectionMode(false);
   };
 
   const handleBulkMoveToFolder = (folderId: string | null) => {
     setNotes(prev => {
-      const updatedNotes = prev.map(n =>
-        selectedNoteIds.includes(n.id)
-          ? { ...n, folderId: folderId || undefined }
-          : n
-      );
-      saveNotesToDB(updatedNotes);
-      return updatedNotes;
+      return prev.map(n => {
+        if (!selectedNoteIds.includes(n.id)) return n;
+        const updated = { ...n, folderId: folderId || undefined };
+        saveNoteToDBSingle(updated);
+        return updated;
+      });
     });
     setSelectedNoteIds([]);
     setIsSelectionMode(false);

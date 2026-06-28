@@ -7,6 +7,7 @@ import { Note } from '@/types/note';
 import { Link2, Search, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHardwareBackButton } from '@/hooks/useHardwareBackButton';
+import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 
 interface NoteLinkingSheetProps {
   isOpen: boolean;
@@ -33,12 +34,14 @@ export const NoteLinkingSheet = ({
   });
 
   const filteredNotes = useMemo(() => {
+    const search = searchQuery.trim().toLowerCase();
     return notes
       .filter(note => note.id !== currentNoteId)
-      .filter(note => 
-        note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        note.content.replace(/<[^>]*>/g, '').toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      .filter(note => {
+        if (!search) return true;
+        const preview = (note as any).__contentPreview || getTextPreviewFromHtml(note.content, 160);
+        return note.title.toLowerCase().includes(search) || preview.toLowerCase().includes(search);
+      })
       .slice(0, 20);
   }, [notes, currentNoteId, searchQuery]);
 
@@ -94,10 +97,7 @@ export const NoteLinkingSheet = ({
                         {note.title || t('widgetSettings.untitled')}
                       </p>
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                        {note.content
-                          .replace(/<[^>]*>/g, '')
-                          .replace(/&nbsp;/g, ' ')
-                          .slice(0, 100)}
+                        {(note as any).__contentPreview || getTextPreviewFromHtml(note.content, 100)}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {new Date(note.updatedAt).toLocaleDateString()}
