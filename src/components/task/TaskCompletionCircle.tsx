@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Check as CheckIcon, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/utils/haptics';
-import { TASK_CIRCLE, TASK_CHECK_ICON, TASK_COMPLETION_DELAY } from '@/utils/taskItemStyles';
+import { TASK_CIRCLE, TASK_CHECK_ICON } from '@/utils/taskItemStyles';
 import { TaskCompletionBurst } from '@/components/TaskCompletionBurst';
 import { getCurrentCombo } from '@/utils/comboSystem';
 import {
@@ -34,7 +34,6 @@ export const TaskCompletionCircle = ({
   const [pendingComplete, setPendingComplete] = useState(false);
   const [showBurst, setShowBurst] = useState(false);
   const [burstIntensity, setBurstIntensity] = useState<'normal' | 'combo' | 'milestone'>('normal');
-  const pendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleBurstDone = useCallback(() => setShowBurst(false), []);
 
@@ -43,10 +42,6 @@ export const TaskCompletionCircle = ({
     if (isBlocked) return;
 
     if (completed || pendingComplete) {
-      if (pendingTimer.current) {
-        clearTimeout(pendingTimer.current);
-        pendingTimer.current = null;
-      }
       setPendingComplete(false);
       setShowBurst(false);
       if (completed) onUncomplete();
@@ -59,12 +54,8 @@ export const TaskCompletionCircle = ({
     setPendingComplete(true);
     setShowBurst(true);
     triggerHaptic('light');
-
-    pendingTimer.current = setTimeout(() => {
-      setPendingComplete(false);
-      pendingTimer.current = null;
-      onComplete();
-    }, TASK_COMPLETION_DELAY);
+    onComplete();
+    window.setTimeout(() => setPendingComplete(false), 120);
   };
 
   return (
