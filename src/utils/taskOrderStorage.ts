@@ -120,9 +120,10 @@ export const applyTaskOrder = <T extends { id: string }>(
   if (savedOrder.length === 0 && !hasRanks) return tasks;
 
   if (hasRanks) {
+    const originalIndex = new Map(tasks.map((task, index) => [task.id, index]));
     return [...tasks].sort((a, b) => {
-      const ai = tasks.indexOf(a);
-      const bi = tasks.indexOf(b);
+      const ai = originalIndex.get(a.id) ?? 0;
+      const bi = originalIndex.get(b.id) ?? 0;
       const ar = Number.isFinite(ranks[a.id]) ? ranks[a.id] : ai * 1024;
       const br = Number.isFinite(ranks[b.id]) ? ranks[b.id] : bi * 1024;
       return ar - br || ai - bi;
