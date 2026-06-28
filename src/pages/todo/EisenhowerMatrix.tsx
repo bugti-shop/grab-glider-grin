@@ -425,7 +425,7 @@ const EisenhowerMatrix = () => {
       </header>
 
       <main className="p-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 items-stretch auto-rows-fr">
           {QUADRANTS.map(q => {
             const all = grouped[q.id];
             const items = (showCompleted ? all : all.filter(t => !t.completed));
@@ -434,7 +434,7 @@ const EisenhowerMatrix = () => {
                 key={q.id}
                 type="button"
                 onClick={() => setParams({ q: q.id })}
-                className="text-left bg-background rounded-2xl p-3 shadow-sm border border-border/40 min-h-[260px] flex flex-col active:scale-[0.98] transition-transform"
+                className="text-left bg-background rounded-2xl p-3 shadow-sm border border-border/40 min-h-[260px] h-full flex flex-col active:scale-[0.98] transition-transform"
                 aria-label={`Open ${q.title}`}
               >
                 <div className="flex items-start gap-2 mb-2">
@@ -445,7 +445,7 @@ const EisenhowerMatrix = () => {
                     {q.shortTitle}
                   </span>
                 </div>
-                <div className="flex-1 space-y-2 overflow-hidden">
+                <div className="flex-1 space-y-2">
                   {loading ? null : items.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center gap-1 py-4">
                       <LayoutGrid className={cn('h-8 w-8 mb-1 opacity-60', q.accent)} />
