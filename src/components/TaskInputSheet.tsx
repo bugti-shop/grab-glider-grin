@@ -850,12 +850,15 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       />
 
       <div
-        className="fixed left-0 right-0 lg:left-1/2 lg:right-auto lg:-translate-x-1/2 lg:w-[min(560px,92vw)] bg-card z-[70] rounded-t-3xl lg:rounded-2xl shadow-2xl pointer-events-auto transition-opacity overflow-y-auto lg:border lg:border-border"
+        className="fixed left-0 right-0 lg:left-1/2 lg:right-auto lg:w-[min(560px,92vw)] bg-card z-[70] rounded-t-3xl lg:rounded-2xl shadow-2xl pointer-events-auto transition-opacity overflow-y-auto lg:border lg:border-border"
         style={{ 
-          bottom: shouldLiftForKeyboard ? `${keyboardHeight}px` : '0px',
+          bottom: isDesktop ? 'auto' : (shouldLiftForKeyboard ? `${keyboardHeight}px` : '0px'),
+          top: isDesktop ? '50%' : undefined,
           paddingBottom: keyboardHeight > 0 ? '0px' : 'max(var(--safe-bottom, 0px), 4px)',
-          maxHeight: isAndroidNative ? '60vh' : (shouldLiftForKeyboard ? `calc(100vh - ${keyboardHeight}px)` : '80vh'),
-          transform: swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined,
+          maxHeight: isDesktop ? '85vh' : (isAndroidNative ? '60vh' : (shouldLiftForKeyboard ? `calc(100vh - ${keyboardHeight}px)` : '80vh')),
+          transform: isDesktop
+            ? `translate(-50%, -50%)${swipeOffset > 0 ? ` translateY(${swipeOffset}px)` : ''}`
+            : (swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined),
           opacity: swipeOffset > 60 ? 0.6 : 1,
         }}
         onClick={(e) => e.stopPropagation()}
