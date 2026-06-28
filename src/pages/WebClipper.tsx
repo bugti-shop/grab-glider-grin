@@ -337,6 +337,18 @@ const WebClipper = () => {
                   {t('webClipper.extractingHint', 'Reading PDF text — your note body will populate shortly.')}
                 </p>
               )}
+              {(stage === 'validating' || stage === 'downloading' || stage === 'extracting') && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancel}
+                  className="w-full mt-1"
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5" />
+                  {t('webClipper.cancel', 'Cancel')}
+                </Button>
+              )}
             </div>
           )}
 
