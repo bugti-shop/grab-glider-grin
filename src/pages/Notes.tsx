@@ -620,7 +620,7 @@ const Notes = () => {
                 onDrop={(e) => handleDrop(e, note.id)}
                 onDragLeave={(e) => {
                   const next = e.relatedTarget as Node | null;
-                  if (!next || !e.currentTarget.contains(next)) e.currentTarget.blur();
+                  if (!next || !e.currentTarget.contains(next)) (e.currentTarget as HTMLElement).blur();
                 }}
                 className={cn(
                   "cursor-pointer transition-colors relative group rounded-lg min-h-[150px] overflow-hidden border border-border/50 hover:shadow-md",

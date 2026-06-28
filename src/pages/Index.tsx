@@ -380,7 +380,7 @@ const Index = () => {
 
   const handleCardDragLeave = (e: React.DragEvent) => {
     const next = e.relatedTarget as Node | null;
-    if (!next || !e.currentTarget.contains(next)) e.currentTarget.blur();
+    if (!next || !e.currentTarget.contains(next)) (e.currentTarget as HTMLElement).blur();
   };
 
   const handleDrop = (e: React.DragEvent, targetNoteId: string) => {
