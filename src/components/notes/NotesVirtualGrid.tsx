@@ -148,7 +148,7 @@ export function NotesVirtualGrid({
                 top: 0,
                 left: 0,
                 width: '100%',
-                transform: `translateY(${vrow.start - (resolvedWindowing ? virtualizer.options.scrollMargin : 0)}px)`,
+                transform: `translateY(${vrow.start - (resolvedWindowing ? scrollMargin : 0)}px)`,
                 display: 'grid',
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                 gap: '0.75rem',
