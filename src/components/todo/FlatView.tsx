@@ -11,6 +11,7 @@ import { VirtualizedTaskList, shouldUseVirtualization } from '@/components/Virtu
 import { FlatTaskList } from '@/components/tasks/FlatTaskList';
 import { useFlatTaskIndex } from '@/hooks/useFlatTaskIndex';
 import { markRenderStart, trackScrollFps } from '@/utils/perfBenchmark';
+import { FLAT_ROW_WRAPPER_CLASS, checkFlatRowConsistency } from '@/utils/rowConsistency';
 
 // Virtualize aggressively — once a single section can blow past a viewport
 // height, the native DOM cost (event listeners, layout, paint) starts to
@@ -77,7 +78,21 @@ export const FlatView = ({
     const done = markRenderStart('Today.FlatTaskList');
     done({ itemCount: uncompletedItems.length });
     const el = scrollContainerRef.current?.querySelector<HTMLDivElement>('[data-flat-scroll]');
-    if (el) return trackScrollFps(el, 'Today.FlatTaskList');
+    if (el) {
+      const stop = trackScrollFps(el, 'Today.FlatTaskList');
+      // Sample row layout after paint to catch any drift between paths.
+      const raf = requestAnimationFrame(() => checkFlatRowConsistency(scrollContainerRef.current, `virtualized(${uncompletedItems.length})`));
+      return () => { stop?.(); cancelAnimationFrame(raf); };
+    }
+  }, [useFlatVirtualized, uncompletedItems.length]);
+
+  // Also sample the non-virtualized path so the baseline is captured from
+  // small lists and reused to validate the big-list path.
+  const dndRootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (useFlatVirtualized) return;
+    const raf = requestAnimationFrame(() => checkFlatRowConsistency(dndRootRef.current, `dnd(${uncompletedItems.length})`));
+    return () => cancelAnimationFrame(raf);
   }, [useFlatVirtualized, uncompletedItems.length]);
 
   if (useFlatVirtualized) {
@@ -94,7 +109,7 @@ export const FlatView = ({
                 rowHeight={compactMode ? 44 : 58}
                 useWindow
                 renderRow={(row) => (
-                  <div className="border-b border-border/50 bg-background">
+                  <div data-flat-row className={FLAT_ROW_WRAPPER_CLASS}>
                     {renderTaskItem(row.task)}
                   </div>
                 )}
@@ -225,7 +240,7 @@ export const FlatView = ({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div>
+      <div ref={dndRootRef}>
         {sortedSections.map((section) => {
           const sectionTasks = uncompletedItems.filter(item => item.sectionId === section.id || (!item.sectionId && section.id === sections[0]?.id));
           const sectionId = section.id === sections[0]?.id ? 'default' : section.id;
@@ -243,7 +258,7 @@ export const FlatView = ({
                       ) : orderedTasks.map((item, index) => (
                         <Draggable key={item.id} draggableId={item.id} index={index}>
                           {(provided, snapshot) => (
-                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("border-b border-border/50", snapshot.isDragging && "shadow-lg ring-2 ring-primary bg-card")}>
+                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} data-flat-row className={cn(FLAT_ROW_WRAPPER_CLASS, snapshot.isDragging && "shadow-lg ring-2 ring-primary bg-card")}>
                               {renderTaskItem(item)}{renderSubtasksInline(item)}
                             </div>
                           )}
