@@ -562,23 +562,21 @@ const Notes = () => {
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-3">
-            {sortedNotes.map((note) => (
+          <NotesVirtualGrid
+            notes={sortedNotes}
+            renderCard={(note) => (
               <div
-                key={note.id}
                 draggable={!note.isArchived && !note.isDeleted}
                 onDragStart={(e) => handleDragStart(e, note.id)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, note.id)}
                 className={cn(
-                  "cursor-pointer transition-colors relative group rounded-2xl",
+                  "cursor-pointer transition-colors relative group rounded-2xl h-full",
                   (note.isArchived || note.isDeleted) && "opacity-75"
                 )}
                 style={{
                   backgroundColor: getCardColor(note),
-                  contentVisibility: 'auto',
-                  containIntrinsicSize: '0 140px',
-                  touchAction: 'manipulation', // kills 300ms mobile tap delay
+                  touchAction: 'manipulation',
                   WebkitTapHighlightColor: 'transparent',
                 }}
                 onClick={() => !note.isDeleted && handleEditNote(note)}
@@ -631,7 +629,7 @@ const Notes = () => {
                                 </>
                               )}
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={(e) => handleMoveToTrash(note.id, e as unknown as React.MouseEvent)}
                               className="text-destructive"
                             >
@@ -647,7 +645,7 @@ const Notes = () => {
                               <RotateCcw className="h-4 w-4 mr-2" />
                               {t('notes.restore')}
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={(e) => handleDeletePermanently(note.id, e as unknown as React.MouseEvent)}
                               className="text-destructive"
                             >
@@ -695,11 +693,10 @@ const Notes = () => {
                     )}
                   </div>
                   {note.title && (
-                    <h2 className="font-bold text-base mb-2 text-foreground pr-10">
+                    <h2 className="font-bold text-base mb-2 text-foreground pr-10 line-clamp-2">
                       {sanitizeDisplayName(note.title)}
                     </h2>
                   )}
-                  {/* Show metaDescription if available, otherwise show content preview */}
                   {(note.metaDescription || note.content) && (
                     <p className="text-sm text-muted-foreground mb-3 line-clamp-4">
                       {note.metaDescription || note.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()}
@@ -711,10 +708,6 @@ const Notes = () => {
                         month: 'numeric',
                         day: 'numeric',
                         year: '2-digit'
-                      })} {new Date(note.updatedAt).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
                       })}
                     </div>
                     {note.isDeleted && note.deletedAt && (
@@ -725,8 +718,8 @@ const Notes = () => {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          />
         )}
       </main>
 
