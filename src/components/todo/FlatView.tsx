@@ -258,7 +258,7 @@ export const FlatView = ({
                       ) : orderedTasks.map((item, index) => (
                         <Draggable key={item.id} draggableId={item.id} index={index}>
                           {(provided, snapshot) => (
-                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("border-b border-border/50", snapshot.isDragging && "shadow-lg ring-2 ring-primary bg-card")}>
+                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} data-flat-row className={cn(FLAT_ROW_WRAPPER_CLASS, snapshot.isDragging && "shadow-lg ring-2 ring-primary bg-card")}>
                               {renderTaskItem(item)}{renderSubtasksInline(item)}
                             </div>
                           )}
