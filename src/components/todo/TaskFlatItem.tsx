@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ResolvedTaskImage } from '@/components/ResolvedTaskImage';
 import { WaveformProgressBar } from '@/components/WaveformProgressBar';
 import { TASK_CIRCLE, TASK_CHECK_ICON } from '@/utils/taskItemStyles';
+import { getRingFillMs } from '@/utils/ringFillDuration';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 interface TaskFlatItemProps {
@@ -78,6 +79,17 @@ export const TaskFlatItem = memo(({
   const totalSubtasks = item.subtasks?.length || 0;
   const { playingVoiceId, voiceProgress, voiceCurrentTime, voiceDuration, voicePlaybackSpeed, resolvedVoiceUrls } = voiceState;
 
+  const showCompletionFill = () => {
+    const fillMs = getRingFillMs();
+    if (fillMs <= 0) return;
+    setPendingCompleteId(item.id);
+    if (pendingCompleteTimer.current) clearTimeout(pendingCompleteTimer.current);
+    pendingCompleteTimer.current = setTimeout(() => {
+      setPendingCompleteId(null);
+      pendingCompleteTimer.current = null;
+    }, fillMs);
+  };
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -93,10 +105,9 @@ export const TaskFlatItem = memo(({
             <button
               onClick={() => onSwipeAction(() => {
                 if (!item.completed) {
-                  setPendingCompleteId(item.id);
+                  showCompletionFill();
                   Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
                   updateItem(item.id, { completed: true });
-                  window.setTimeout(() => setPendingCompleteId(null), 120);
                 } else {
                   updateItem(item.id, { completed: false });
                 }
@@ -165,10 +176,9 @@ export const TaskFlatItem = memo(({
                 if (item.completed) updateItem(item.id, { completed: false });
                 return;
               }
-              setPendingCompleteId(item.id);
+              showCompletionFill();
               Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
               updateItem(item.id, { completed: true });
-              window.setTimeout(() => setPendingCompleteId(null), 120);
             }}
             className={cn(
               TASK_CIRCLE.base, TASK_CIRCLE.marginTop,
