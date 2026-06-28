@@ -73,9 +73,10 @@ const WebClipper = () => {
   /** Try a HEAD request to learn content-length + MIME before downloading. */
   const probeAttachment = async (
     target: string,
+    signal: AbortSignal,
   ): Promise<{ bytes: number | null; mime: string | null }> => {
     try {
-      const res = await fetch(target, { method: 'HEAD' });
+      const res = await fetch(target, { method: 'HEAD', signal });
       if (!res.ok) return { bytes: null, mime: null };
       const len = Number(res.headers.get('content-length') || 0);
       return {
@@ -85,6 +86,12 @@ const WebClipper = () => {
     } catch {
       return { bytes: null, mime: null };
     }
+  };
+
+  const handleCancel = () => {
+    if (!abortRef.current) return;
+    canceledRef.current = true;
+    abortRef.current.abort();
   };
 
   const failWith = (titleKey: string, titleFallback: string, descKey: string, descFallback: string) => {
