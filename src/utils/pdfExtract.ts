@@ -123,8 +123,9 @@ export async function extractPdfTextFromBuffer(
 
   const onProgress = options.onProgress;
   onProgress?.('parse', 0);
+  const signal = options.signal;
   for (let i = 1; i <= pagesToRead; i++) {
-    const page = await doc.getPage(i);
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     const tc = await page.getTextContent();
     const pageText = (tc.items as Array<{ str?: string }>)
       .map((it) => it.str || '')
