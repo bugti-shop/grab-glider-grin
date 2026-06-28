@@ -22,6 +22,8 @@ export interface PdfExtractOptions {
   maxChars?: number;
   /** Abort fetch/decoding after this many ms. Default 15000. */
   timeoutMs?: number;
+  /** External abort signal — lets the caller cancel mid-flight. */
+  signal?: AbortSignal;
   /**
    * Progress callback. `stage` is one of:
    *  - 'download'  : 0..1 download ratio (or undefined if unknown)
@@ -31,7 +33,7 @@ export interface PdfExtractOptions {
   onProgress?: (stage: 'download' | 'parse' | 'done', ratio?: number) => void;
 }
 
-const DEFAULTS: Required<Omit<PdfExtractOptions, 'onProgress'>> = {
+const DEFAULTS: Required<Omit<PdfExtractOptions, 'onProgress' | 'signal'>> = {
   maxPages: 10,
   maxChars: 20000,
   timeoutMs: 15000,
@@ -46,6 +48,13 @@ export async function extractPdfTextFromUrl(
   const onProgress = options.onProgress;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs);
+  // Bridge external signal -> internal controller so callers can cancel.
+  const external = options.signal;
+  const onExternalAbort = () => controller.abort();
+  if (external) {
+    if (external.aborted) controller.abort();
+    else external.addEventListener('abort', onExternalAbort, { once: true });
+  }
   try {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`PDF fetch failed: ${res.status}`);
@@ -58,6 +67,7 @@ export async function extractPdfTextFromUrl(
       onProgress('download', 0);
       // eslint-disable-next-line no-constant-condition
       while (true) {
+        if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
         const { done, value } = await reader.read();
         if (done) break;
         if (value) {
@@ -74,9 +84,10 @@ export async function extractPdfTextFromUrl(
       buf = await res.arrayBuffer();
       onProgress?.('download', 1);
     }
-    return await extractPdfTextFromBuffer(buf, { ...options, onProgress });
+    return await extractPdfTextFromBuffer(buf, { ...options, onProgress, signal: controller.signal });
   } finally {
     clearTimeout(timer);
+    if (external) external.removeEventListener('abort', onExternalAbort);
   }
 }
 
@@ -112,7 +123,9 @@ export async function extractPdfTextFromBuffer(
 
   const onProgress = options.onProgress;
   onProgress?.('parse', 0);
+  const signal = options.signal;
   for (let i = 1; i <= pagesToRead; i++) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     const page = await doc.getPage(i);
     const tc = await page.getTextContent();
     const pageText = (tc.items as Array<{ str?: string }>)

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Note } from '@/types/note';
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIcon, FileType2, AlertTriangle, Download } from 'lucide-react';
+import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIcon, FileType2, AlertTriangle, Download, X } from 'lucide-react';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
 import {
@@ -43,6 +43,8 @@ const WebClipper = () => {
   const [error, setError] = useState<{ title: string; description: string } | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const canceledRef = useRef(false);
 
   // Sanitize incoming params (URL ?title=… &url=… &content=… &selection=… &mode=…).
   // The Share-intent hook and the desktop browser extension both hit this same route.
@@ -71,9 +73,10 @@ const WebClipper = () => {
   /** Try a HEAD request to learn content-length + MIME before downloading. */
   const probeAttachment = async (
     target: string,
+    signal: AbortSignal,
   ): Promise<{ bytes: number | null; mime: string | null }> => {
     try {
-      const res = await fetch(target, { method: 'HEAD' });
+      const res = await fetch(target, { method: 'HEAD', signal });
       if (!res.ok) return { bytes: null, mime: null };
       const len = Number(res.headers.get('content-length') || 0);
       return {
@@ -83,6 +86,12 @@ const WebClipper = () => {
     } catch {
       return { bytes: null, mime: null };
     }
+  };
+
+  const handleCancel = () => {
+    if (!abortRef.current) return;
+    canceledRef.current = true;
+    abortRef.current.abort();
   };
 
   const failWith = (titleKey: string, titleFallback: string, descKey: string, descFallback: string) => {
@@ -98,13 +107,17 @@ const WebClipper = () => {
   const handleSaveClip = async (clipMode: ClipMode) => {
     setSaving(true);
     setError(null);
+    canceledRef.current = false;
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       // 1) Validate attachment (type + size) before doing any heavy work.
       if (attachment) {
         setStage('validating');
         setProgressLabel(t('webClipper.stageValidating', 'Checking file…'));
         setProgress(null);
-        const { bytes, mime } = await probeAttachment(attachment);
+        const { bytes, mime } = await probeAttachment(attachment, controller.signal);
+        if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
         const verdict = validateAttachment(attachmentType, mime, bytes);
         if (!verdict.ok) {
           failWith(
@@ -128,6 +141,7 @@ const WebClipper = () => {
           setProgressLabel(t('webClipper.stageDownloading', 'Downloading PDF…'));
           const { extractPdfTextFromUrl } = await import('@/utils/pdfExtract');
           const result = await extractPdfTextFromUrl(attachment, {
+            signal: controller.signal,
             onProgress: (s, ratio) => {
               if (s === 'download') {
                 setStage('downloading');
@@ -145,6 +159,7 @@ const WebClipper = () => {
           extractedPdfText = result.text;
           pdfTruncated = result.truncated;
         } catch (err) {
+          if (canceledRef.current || (err as Error)?.name === 'AbortError') throw err;
           console.warn('[webClipper] PDF text extraction failed', err);
           // Soft-fail: still save the clip with attachment link, just no extracted body.
           toast({
@@ -201,12 +216,20 @@ const WebClipper = () => {
 
       setTimeout(() => navigate('/notesdashboard'), 1200);
     } catch (error) {
-      console.error('Error saving clip:', error);
-      failWith(
-        'toasts.errorSavingClip', 'Could not save clip',
-        'toasts.somethingWentWrong', 'Something went wrong',
-      );
+      if (canceledRef.current || (error as Error)?.name === 'AbortError') {
+        failWith(
+          'webClipper.canceledTitle', 'Clip canceled',
+          'webClipper.canceledDesc', 'Stopped before the note was saved.',
+        );
+      } else {
+        console.error('Error saving clip:', error);
+        failWith(
+          'toasts.errorSavingClip', 'Could not save clip',
+          'toasts.somethingWentWrong', 'Something went wrong',
+        );
+      }
     } finally {
+      abortRef.current = null;
       setSaving(false);
     }
   };
@@ -313,6 +336,18 @@ const WebClipper = () => {
                 <p className="text-[11px] text-muted-foreground">
                   {t('webClipper.extractingHint', 'Reading PDF text — your note body will populate shortly.')}
                 </p>
+              )}
+              {(stage === 'validating' || stage === 'downloading' || stage === 'extracting') && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancel}
+                  className="w-full mt-1"
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5" />
+                  {t('webClipper.cancel', 'Cancel')}
+                </Button>
               )}
             </div>
           )}
