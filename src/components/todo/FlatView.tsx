@@ -240,7 +240,7 @@ export const FlatView = ({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div>
+      <div ref={dndRootRef}>
         {sortedSections.map((section) => {
           const sectionTasks = uncompletedItems.filter(item => item.sectionId === section.id || (!item.sectionId && section.id === sections[0]?.id));
           const sectionId = section.id === sections[0]?.id ? 'default' : section.id;
