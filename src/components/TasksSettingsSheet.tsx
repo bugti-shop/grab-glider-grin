@@ -77,6 +77,37 @@ const PRIORITY_COLORS = [
 
 type SubPage = 'main' | 'defaults' | 'display' | 'behavior' | 'reminders' | 'priorities';
 
+const RingFillDurationControl = () => {
+  const { t } = useTranslation();
+  const [ms, setMs] = useState<number>(() => getRingFillMs());
+  return (
+    <div className="px-4 py-3 border-b border-border/50">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex-1 pr-4">
+          <span className="text-foreground text-sm block">
+            {t('settings.ringFillDuration', 'Completion ring fill duration')}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {t(
+              'settings.ringFillDurationDesc',
+              'How long the colored fill stays on the checkbox after tap. Completion itself is always instant — set to 0 to disable the animation.',
+            )}
+          </span>
+        </div>
+        <span className="text-xs text-muted-foreground tabular-nums">{ms} ms</span>
+      </div>
+      <Slider
+        min={RING_FILL_MS_MIN}
+        max={RING_FILL_MS_MAX}
+        step={50}
+        value={[ms]}
+        onValueChange={(v) => setMs(v[0] ?? 0)}
+        onValueCommit={(v) => setRingFillMs(v[0] ?? 0)}
+      />
+    </div>
+  );
+};
+
 interface TasksSettingsSheetProps {
   isOpen: boolean;
   onClose: () => void;
