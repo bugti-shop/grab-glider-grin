@@ -1,14 +1,41 @@
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
 /favicon.webp
   Cache-Control: public, max-age=31536000, immutable
 
+/favicon.png
+  Cache-Control: public, max-age=31536000, immutable
+
 /launcher-icon.webp
   Cache-Control: public, max-age=31536000, immutable
 
+/launcher-icon.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/icon-*.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/og-image.jpg
+  Cache-Control: public, max-age=31536000, immutable
+
+/nota-logo.webp
+  Cache-Control: public, max-age=31536000, immutable
+
 /manifest.webmanifest
-  Cache-Control: public, max-age=86400
+  Cache-Control: public, max-age=300, must-revalidate
 
 /registerSW.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/sw-sync.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/
   Cache-Control: public, max-age=0, must-revalidate
