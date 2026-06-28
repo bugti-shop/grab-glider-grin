@@ -31,6 +31,7 @@ interface FlatViewProps {
   renderTaskItem: (item: TodoItem) => React.ReactNode;
   renderSubtasksInline: (item: TodoItem) => React.ReactNode;
   renderSectionHeader: (section: TaskSection, isDragging: boolean) => React.ReactNode;
+  renderVirtualSectionHeader?: (section: TaskSection, isDragging: boolean, taskCountOverride: number) => React.ReactNode;
   updateItem: (id: string, updates: Partial<TodoItem>) => void;
   handleSectionDragEnd: (result: DropResult) => void;
   setOrderVersion: React.Dispatch<React.SetStateAction<number>>;
@@ -49,6 +50,7 @@ export const FlatView = ({
   renderTaskItem,
   renderSubtasksInline,
   renderSectionHeader,
+  renderVirtualSectionHeader,
   updateItem,
   handleSectionDragEnd,
   setOrderVersion,
@@ -79,7 +81,7 @@ export const FlatView = ({
     return (
       <div className="space-y-4" ref={scrollContainerRef}>
         <div className="rounded-xl border border-border/30 overflow-hidden bg-background">
-          {renderSectionHeader(virtualHeaderSection, false)}
+          {(renderVirtualSectionHeader ?? renderSectionHeader)(virtualHeaderSection, false, uncompletedItems.length)}
           {collapsedViewSections.has(`flat-${virtualHeaderSection.id}`) ? null : (
             <div data-flat-scroll>
               <FlatTaskList
