@@ -36,6 +36,7 @@ const AppLockScreen = lazy(() => import("@/components/AppLockScreen").then(m => 
 import { useNotificationListener } from "@/hooks/useNotificationListener";
 import { widgetDataSync } from "@/utils/widgetDataSync";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
+import { useShareIntent } from "@/hooks/useShareIntent";
 import { PerfDiagnosticsPanel } from "@/components/PerfDiagnosticsPanel";
 import { WidgetAddTask, WidgetNewSticky, WidgetNewLined, WidgetNewRegular, WidgetNewSketch } from "@/pages/WidgetEntry";
 
@@ -717,6 +718,11 @@ const AppContent = () => {
   
   // In-app notification listener — captures events from all sources
   useNotificationListener();
+
+  // Share-target listener — receives content shared into the app from
+  // Android's intent-filter or the iOS Share Extension and routes it
+  // into /webclipper. No-op on web.
+  useShareIntent();
 
   // Listen for "secure your subscription" message (purchase without sign-up)
   useEffect(() => {
