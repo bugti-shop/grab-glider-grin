@@ -729,17 +729,21 @@ const Notes = () => {
         )}
       </main>
 
-      <NoteEditor
-        note={selectedNote}
-        isOpen={isEditorOpen}
-        onClose={() => {
-          setIsEditorOpen(false);
-          setSelectedNote(null);
-        }}
-        onSave={handleSaveNote}
-        allNotes={notes}
-        returnTo="/notesdashboard"
-      />
+      {/* Only mount the heavy editor subtree when actually opening a note.
+          Keeps the notes list render path lean at 100k items. */}
+      {isEditorOpen && (
+        <NoteEditor
+          note={selectedNote}
+          isOpen={isEditorOpen}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setSelectedNote(null);
+          }}
+          onSave={handleSaveNote}
+          allNotes={notes}
+          returnTo="/notesdashboard"
+        />
+      )}
 
 
       {/* Tag Management Sheet */}
