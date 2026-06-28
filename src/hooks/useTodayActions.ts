@@ -82,11 +82,11 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
-  const markSingleTaskPersisted = useCallback(() => {
+  const markSingleTaskPersisted = useCallback((skipProcessing = false) => {
     try {
       const now = Date.now();
       (window as any).__flowistSkipNextTaskFullSave = now;
-      (window as any).__flowistSkipNextTaskProcessing = now;
+      if (skipProcessing) (window as any).__flowistSkipNextTaskProcessing = now;
     } catch {}
   }, []);
 
@@ -304,7 +304,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     };
     if (taskAddPosition === 'bottom') setItems(prev => [...prev, newItem]);
     else setItems(prev => [newItem, ...prev]);
-    markSingleTaskPersisted();
+    markSingleTaskPersisted(false);
     void saveTodoItem(newItem).then(({ persisted }) => {
       if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
     });
@@ -372,8 +372,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       updatesWithTimestamp.completedAt = undefined;
     }
 
-    const persistUpdate = () => {
-      markSingleTaskPersisted();
+    const persistUpdate = (skipProcessing = true) => {
+      markSingleTaskPersisted(skipProcessing);
       void updateTodoItem(itemId, updatesWithTimestamp).then((persisted) => {
         if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
       });
@@ -390,7 +390,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
             itemsRef.current = next;
             return next;
           });
-          persistUpdate();
+          persistUpdate(false);
           void saveTodoItem(nextTaskWithTimestamps);
           toast.success(t('todayPage.recurringTaskCompleted'), { icon: '🔄' });
           recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
@@ -416,7 +416,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       itemsRef.current = next;
       return next;
     });
-    persistUpdate();
+    persistUpdate(true);
 
     if (isNewCompletion) {
       recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
@@ -466,7 +466,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       itemsRef.current = next;
       return next;
     });
-    markSingleTaskPersisted();
+    markSingleTaskPersisted(true);
     void deleteTodoItem(itemId);
     toast.success(t('todayPage.taskDeleted'), {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [itemToRestore!, ...prev]); toast.success(t('todayPage.taskRestored')); } },
@@ -483,7 +483,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       itemsRef.current = next;
       return next;
     });
-    markSingleTaskPersisted();
+    markSingleTaskPersisted(true);
     void deleteTodoItem(deletedItem.id);
     setDeleteConfirmItem(null);
     toast.success(t('todayPage.taskDeleted'), {
@@ -500,7 +500,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
     const duplicatedTask: TodoItem = { ...task, id: genId(), completed: false, text: withCopySuffix(task.text) };
     setItems(prev => [duplicatedTask, ...prev]);
-    markSingleTaskPersisted();
+    markSingleTaskPersisted(false);
     void saveTodoItem(duplicatedTask);
   }, [setItems, requireCapacity, softRequireCreate, isPro, markSingleTaskPersisted]);
 
