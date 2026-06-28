@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 import { exportNoteToMarkdown } from '@/utils/markdownExport';
+import { sanitizeDisplayName } from '@/utils/duplicateName';
 import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AppLogo } from '@/components/AppLogo';
