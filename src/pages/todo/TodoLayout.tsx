@@ -104,7 +104,7 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
         </div>
         <div className="h-[1px] bg-border" />
       </header>
-      <main className="pb-14">
+      <main className="pb-14 lg:pb-4">
         {children}
         <div className="text-center py-2">
           <a href="https://www.flowist.me/privacy-policy" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Privacy Policy</a>
@@ -112,7 +112,10 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
           <a href="https://www.flowist.me/terms-and-conditions" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Terms</a>
         </div>
       </main>
-      <TodoBottomNavigation />
+      <div className="lg:hidden">
+        <TodoBottomNavigation />
+      </div>
+      </div>
     </div>
   );
 };
