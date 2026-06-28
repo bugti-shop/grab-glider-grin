@@ -62,7 +62,8 @@ export const FlatView = ({
   // Big-list path: when there are many uncompleted tasks, drop DnD + per-section
   // nesting and render through the shared virtualized FlatTaskList. This scales
   // to 100k+ rows with constant memory and steady 60fps scroll.
-  const useFlatVirtualized = uncompletedItems.length >= VIRTUALIZE_THRESHOLD;
+  const visibleTaskCount = uncompletedItems.length + (showCompleted ? completedItems.length : 0);
+  const useFlatVirtualized = visibleTaskCount >= VIRTUALIZE_THRESHOLD;
   const flatIndex = useFlatTaskIndex(useFlatVirtualized ? uncompletedItems : undefined);
   const virtualHeaderSection = useMemo<TaskSection>(() => {
     const base = sortedSections[0] ?? sections[0] ?? { id: 'default', name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 };
