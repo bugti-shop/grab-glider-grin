@@ -355,12 +355,12 @@ const EisenhowerMatrix = () => {
                   >
                     <span
                       className={cn(
-                        'h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors',
+                        'h-5 w-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-500 ease-out',
                         quad.dot,
                         task.completed && quad.badge
                       )}
                     >
-                      {task.completed && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+                      {task.completed && <Check className="h-3.5 w-3.5 text-white animate-in zoom-in-50 duration-300" strokeWidth={3} />}
                     </span>
                     <span
                       className={cn(
@@ -482,11 +482,11 @@ const EisenhowerMatrix = () => {
                         className="w-full flex items-start gap-2 text-left"
                       >
                         <span className={cn(
-                          'mt-0.5 h-4 w-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors',
+                          'mt-0.5 h-4 w-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-500 ease-out',
                           q.dot,
                           task.completed && q.badge
                         )}>
-                          {task.completed && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                          {task.completed && <Check className="h-3 w-3 text-white animate-in zoom-in-50 duration-300" strokeWidth={3} />}
                         </span>
                         <div className="flex-1 min-w-0">
                           <p className={cn(

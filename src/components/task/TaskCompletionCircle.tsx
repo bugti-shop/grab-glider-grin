@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Check as CheckIcon, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/utils/haptics';
-import { TASK_CIRCLE, TASK_CHECK_ICON } from '@/utils/taskItemStyles';
+import { TASK_CIRCLE, TASK_CHECK_ICON, TASK_COMPLETION_DELAY } from '@/utils/taskItemStyles';
 import { TaskCompletionBurst } from '@/components/TaskCompletionBurst';
 import { getCurrentCombo } from '@/utils/comboSystem';
 import {
@@ -64,7 +64,7 @@ export const TaskCompletionCircle = ({
       setPendingComplete(false);
       pendingTimer.current = null;
       onComplete();
-    }, 120);
+    }, TASK_COMPLETION_DELAY);
   };
 
   return (

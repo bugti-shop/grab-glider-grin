@@ -18,7 +18,7 @@ import { subDays } from 'date-fns';
 import { ResolvedTaskImage } from '@/components/ResolvedTaskImage';
 import { WaveformProgressBar } from '@/components/WaveformProgressBar';
 import { playCompletionSound } from '@/utils/taskSounds';
-import { TASK_CIRCLE, TASK_CHECK_ICON } from '@/utils/taskItemStyles';
+import { TASK_CIRCLE, TASK_CHECK_ICON, TASK_COMPLETION_DELAY } from '@/utils/taskItemStyles';
 import { loadCustomSmartViews } from '@/utils/customSmartViews';
 import { loadTodoItems } from '@/utils/todoItemsStorage';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -323,7 +323,7 @@ const Today = () => {
                       setPendingCompleteId(null);
                       pendingCompleteTimer.current = null;
                       updateItem(item.id, { completed: true });
-                    }, 120);
+                    }, TASK_COMPLETION_DELAY);
                   } else {
                     updateItem(item.id, { completed: false });
                   }
@@ -398,7 +398,7 @@ const Today = () => {
                   setPendingCompleteId(null);
                   pendingCompleteTimer.current = null;
                   updateItem(item.id, { completed: true });
-                }, 120);
+                }, TASK_COMPLETION_DELAY);
               }}
               className={cn(
                 TASK_CIRCLE.base, TASK_CIRCLE.marginTop,

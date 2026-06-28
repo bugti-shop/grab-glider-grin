@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ResolvedTaskImage } from '@/components/ResolvedTaskImage';
 import { WaveformProgressBar } from '@/components/WaveformProgressBar';
-import { TASK_CIRCLE, TASK_CHECK_ICON } from '@/utils/taskItemStyles';
+import { TASK_CIRCLE, TASK_CHECK_ICON, TASK_COMPLETION_DELAY } from '@/utils/taskItemStyles';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 interface TaskFlatItemProps {
@@ -99,7 +99,7 @@ export const TaskFlatItem = memo(({
                     setPendingCompleteId(null);
                     pendingCompleteTimer.current = null;
                     updateItem(item.id, { completed: true });
-                  }, 120);
+                  }, TASK_COMPLETION_DELAY);
                 } else {
                   updateItem(item.id, { completed: false });
                 }
@@ -174,7 +174,7 @@ export const TaskFlatItem = memo(({
                 setPendingCompleteId(null);
                 pendingCompleteTimer.current = null;
                 updateItem(item.id, { completed: true });
-              }, 120);
+              }, TASK_COMPLETION_DELAY);
             }}
             className={cn(
               TASK_CIRCLE.base, TASK_CIRCLE.marginTop,

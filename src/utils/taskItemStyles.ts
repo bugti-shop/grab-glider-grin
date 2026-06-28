@@ -8,7 +8,7 @@ export const TASK_CIRCLE = {
   /** Vertical offset for circle alignment relative to task title */
   marginTop: '-mt-0.5',
   /** Base circle classes */
-  base: 'flex-shrink-0 rounded-full border-2 flex items-center justify-center transition-all duration-300',
+  base: 'flex-shrink-0 rounded-full border-2 flex items-center justify-center transition-all duration-500 ease-out',
   /** Completed state */
   completed: 'border-0 bg-muted-foreground/30',
   /** Pending complete state */
@@ -20,7 +20,7 @@ export const TASK_CIRCLE = {
 export const TASK_CHECK_ICON = {
   size: 'h-3.5 w-3.5',
   sizeCompact: 'h-2.5 w-2.5',
-  base: 'transition-all duration-200',
+  base: 'transition-all duration-300 ease-out',
   pendingAnimation: 'animate-in zoom-in-50',
   pendingColor: '#fff',
   completedColor: 'hsl(var(--muted-foreground) / 0.5)',
@@ -54,5 +54,5 @@ export const TASK_SWIPE = {
   threshold: 60,
 } as const;
 
-export const TASK_COMPLETION_DELAY = 760;
+export const TASK_COMPLETION_DELAY = 520;
 export const TASK_HAPTIC_DOUBLE_TAP_DELAY = 100;
