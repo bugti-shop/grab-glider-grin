@@ -13,14 +13,11 @@ import { useFlatTaskIndex } from '@/hooks/useFlatTaskIndex';
 import { markRenderStart, trackScrollFps } from '@/utils/perfBenchmark';
 import { FLAT_ROW_WRAPPER_CLASS, checkFlatRowConsistency } from '@/utils/rowConsistency';
 
-// Virtualize aggressively — once a single section can blow past a viewport
-// height, the native DOM cost (event listeners, layout, paint) starts to
-// degrade scrolling and bottom-nav responsiveness. 40 keeps small lists DnD-
-// friendly while ensuring 100k+ lists stay smooth.
-// Keep the exact original draggable/section UI for normal lists. Virtualization
-// only kicks in for truly large lists, and that path still renders the same
-// section header + separator row style.
-const VIRTUALIZE_THRESHOLD = 1000;
+// Keep the exact original row UI, but switch away from DnD before it can choke
+// scrolling/navigation. 480 rows was already enough to make @hello-pangea/dnd
+// expensive on mobile, so the scalable path starts early while preserving the
+// same flat row + separator appearance.
+const VIRTUALIZE_THRESHOLD = 120;
 
 interface FlatViewProps {
   sortedSections: TaskSection[];
@@ -97,8 +94,8 @@ export const FlatView = ({
 
   if (useFlatVirtualized) {
     return (
-      <div className="space-y-4" ref={scrollContainerRef}>
-        <div className="rounded-xl border border-border/30 overflow-hidden bg-background">
+      <div ref={scrollContainerRef}>
+        <div className="bg-background">
           {renderVirtualSectionHeader
             ? renderVirtualSectionHeader(virtualHeaderSection, false, uncompletedItems.length)
             : renderSectionHeader(virtualHeaderSection, false)}
