@@ -7,6 +7,7 @@ import { genId } from '@/utils/genId';
 import { withCopySuffix } from '@/utils/duplicateName';
 import { TodoItem, Folder, Priority, Note, TaskSection } from '@/types/note';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
+import { saveTodoItem, updateTodoItem, deleteTodoItem, saveTodoItems } from '@/utils/todoItemsStorage';
 import { useTranslation } from 'react-i18next';
 import { recordCompletion, TASK_STREAK_KEY } from '@/utils/streakStorage';
 import { createNextRecurringTask } from '@/utils/recurringTasks';
@@ -295,6 +296,9 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     };
     if (taskAddPosition === 'bottom') setItems(prev => [...prev, newItem]);
     else setItems(prev => [newItem, ...prev]);
+    void saveTodoItem(newItem).then(({ persisted }) => {
+      if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
+    });
     setInputSectionId(null);
     if (newItem.reminderTime) {
       import('@/utils/reminderScheduler').then(({ scheduleTaskReminder }) => {
@@ -326,7 +330,13 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       priority, dueDate: dueDate || new Date(), createdAt: now, modifiedAt: now,
     }));
     if (newItems.length === 0) return;
-    setItems(prev => [...newItems, ...prev]);
+    setItems(prev => {
+      const next = [...newItems, ...prev];
+      void saveTodoItems(next).then(({ persisted }) => {
+        if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
+      });
+      return next;
+    });
     toast.success(t('todayPage.addedTasks', { count: newItems.length }));
     setInputSectionId(null);
   }, [selectedFolderId, inputSectionId, sections, setItems, setInputSectionId, t, isPro, softRequireCreate, requireCapacity]);
@@ -353,13 +363,25 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       updatesWithTimestamp.completedAt = undefined;
     }
 
+    const persistUpdate = () => {
+      void updateTodoItem(itemId, updatesWithTimestamp).then((persisted) => {
+        if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
+      });
+    };
+
     // Handle recurring tasks
     if (currentItem && isNewCompletion) {
       if (currentItem.repeatType && currentItem.repeatType !== 'none') {
         const nextTask = createNextRecurringTask(currentItem);
         if (nextTask) {
           const nextTaskWithTimestamps = { ...nextTask, createdAt: now, modifiedAt: now };
-          setItems(prev => [nextTaskWithTimestamps, ...prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i)]);
+          setItems(prev => {
+            const next = [nextTaskWithTimestamps, ...prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i)];
+            itemsRef.current = next;
+            return next;
+          });
+          persistUpdate();
+          void saveTodoItem(nextTaskWithTimestamps);
           toast.success(t('todayPage.recurringTaskCompleted'), { icon: '🔄' });
           recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
             if (streakResult.newMilestone) {
@@ -379,7 +401,12 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       }
     }
 
-    setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i));
+    setItems(prev => {
+      const next = prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i);
+      itemsRef.current = next;
+      return next;
+    });
+    persistUpdate();
 
     if (isNewCompletion) {
       recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
@@ -422,10 +449,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       return;
     }
     
-    try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
     const itemToRestore = deletedItem;
-    setItems(prev => prev.filter(item => item.id !== itemId));
-    import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => pushTaskDelete(itemId)).catch(() => {});
+    setItems(prev => {
+      const next = prev.filter(item => item.id !== itemId);
+      itemsRef.current = next;
+      return next;
+    });
+    void deleteTodoItem(itemId);
     toast.success(t('todayPage.taskDeleted'), {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [itemToRestore!, ...prev]); toast.success(t('todayPage.taskRestored')); } },
       duration: 5000,
@@ -434,10 +465,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
   const confirmDelete = useCallback(async () => {
     if (!deleteConfirmItem) return;
-    try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
     const deletedItem = deleteConfirmItem;
-    setItems(prev => prev.filter(item => item.id !== deletedItem.id));
-    import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => pushTaskDelete(deletedItem.id)).catch(() => {});
+    setItems(prev => {
+      const next = prev.filter(item => item.id !== deletedItem.id);
+      itemsRef.current = next;
+      return next;
+    });
+    void deleteTodoItem(deletedItem.id);
     setDeleteConfirmItem(null);
     toast.success(t('todayPage.taskDeleted'), {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [deletedItem, ...prev]); toast.success(t('todayPage.taskRestored')); } },
@@ -450,9 +485,10 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const folderTasksCount = itemsRef.current.filter(t => (t.folderId || null) === (task.folderId || null)).length;
     if (!requireCapacity('tasksPerFolder', folderTasksCount)) return;
     if (!isPro && !softRequireCreate('tasks', itemsRef.current.length)) return;
-    try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
     const duplicatedTask: TodoItem = { ...task, id: genId(), completed: false, text: withCopySuffix(task.text) };
     setItems(prev => [duplicatedTask, ...prev]);
+    void saveTodoItem(duplicatedTask);
   }, [setItems, requireCapacity, softRequireCreate, isPro]);
 
   // ── Selection / Bulk ──
