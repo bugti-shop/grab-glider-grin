@@ -5,7 +5,7 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-import { applyTaskOrder, updateSectionOrder } from '@/utils/taskOrderStorage';
+import { applyTaskOrder, moveTaskInSectionOrder, updateSectionOrder } from '@/utils/taskOrderStorage';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { VirtualizedTaskList, shouldUseVirtualization } from '@/components/VirtualizedTaskList';
 import { FlatTaskList } from '@/components/tasks/FlatTaskList';
@@ -116,16 +116,10 @@ export const FlatView = ({
                 onReorder={(from, to) => {
                   if (from === to) return;
                   const ids = virtualOrderedItems.map(i => i.id);
-                  const [moved] = ids.splice(from, 1);
-                  ids.splice(to, 0, moved);
-                  updateSectionOrder('flat-virtual', ids);
+                  moveTaskInSectionOrder('flat-virtual', ids, from, to);
                   // Persist new order for every section bucket touched so the
                   // flat view stays consistent at scale (sections are merged
                   // into one virtual list when virtualized).
-                  for (const section of sections) {
-                    updateSectionOrder(`flat-section-${section.id}`, ids);
-                  }
-                  updateSectionOrder(`flat-section-default`, ids);
                   setOrderVersion(v => v + 1);
                   try { Haptics.impact({ style: ImpactStyle.Light }); } catch {}
                 }}
