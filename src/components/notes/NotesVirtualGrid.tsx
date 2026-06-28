@@ -69,9 +69,10 @@ export function NotesVirtualGrid({
   const virtualizer = useWindowVirtualizer({
     count: rows.length,
     estimateSize: () => estimatedRowHeight,
-    // Larger overscan keeps cards pre-painted above/below the viewport so fast
-    // flick-scrolling never reveals empty space at 60fps even on 100k notes.
-    overscan: 16,
+    // 6 rows of overscan (≈18 cards at 3-col) keeps fast flick-scrolling
+    // smooth without paying paint cost for ~50 offscreen heavy cards when
+    // the user has 5k+ notes with large bodies.
+    overscan: 6,
     scrollMargin,
     getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
   });
@@ -103,7 +104,13 @@ export function NotesVirtualGrid({
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                 gap: '0.75rem',
                 paddingBottom: '0.75rem',
-              }}
+                // Skip layout/paint for offscreen rows that the virtualizer
+                // still holds during scroll handoff — keeps frame budget flat
+                // even when a single note body is 30k words.
+                contain: 'layout paint style',
+                contentVisibility: 'auto',
+                containIntrinsicSize: `${estimatedRowHeight}px auto`,
+              } as React.CSSProperties}
             >
               {row.map((note) => (
                 <div key={note.id} style={{ minWidth: 0 }}>
