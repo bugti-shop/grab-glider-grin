@@ -109,7 +109,7 @@ export const FlatView = ({
                 rowHeight={compactMode ? 44 : 58}
                 useWindow
                 renderRow={(row) => (
-                  <div className="border-b border-border/50 bg-background">
+                  <div data-flat-row className={FLAT_ROW_WRAPPER_CLASS}>
                     {renderTaskItem(row.task)}
                   </div>
                 )}
