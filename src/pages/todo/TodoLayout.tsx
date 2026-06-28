@@ -41,7 +41,7 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
           paddingTop: 'var(--safe-top, 0px)',
         }}
       >
-        <div className="container mx-auto px-3 sm:px-4 pt-3 pb-1.5">
+        <div className="w-full max-w-5xl xl:max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 pt-3 pb-1.5">
           <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
               <div className="lg:hidden flex items-center gap-2">
@@ -106,7 +106,9 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
         <div className="h-[1px] bg-border" />
       </header>
       <main className="pb-14 lg:pb-4">
-        {children}
+        <div className="w-full max-w-5xl xl:max-w-6xl mx-auto lg:px-4">
+          {children}
+        </div>
         <div className="text-center py-2">
           <a href="https://www.flowist.me/privacy-policy" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Privacy Policy</a>
           <span className="text-[10px] text-background mx-1">·</span>

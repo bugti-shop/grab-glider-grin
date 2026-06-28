@@ -4,6 +4,7 @@ import { Note } from '@/types/note';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { NoteEditor } from '@/components/NoteEditor';
 import { Layers, Settings, Pin, Download, ListTodo, FileText, Archive, ArchiveRestore, Trash2, RotateCcw, Sun, Moon, Search, X, Crown, Tag } from 'lucide-react';
+import { DesktopSidebar } from '@/components/desktop/DesktopSidebar';
 
 
 import { debouncedSaveNotes, saveNoteToDBSingle, saveNotesToDB, deleteNoteFromDB } from '@/utils/noteStorage';
@@ -380,9 +381,11 @@ const Notes = () => {
   };
 
   return (
-    <div className="min-h-screen min-h-screen-dynamic bg-background pb-14">
+    <div className="min-h-screen min-h-screen-dynamic bg-background pb-14 lg:pb-0 lg:flex">
+      <DesktopSidebar />
+      <div className="flex-1 min-w-0 lg:flex lg:flex-col">
       <header className="bg-background sticky top-0 z-10" style={{ paddingTop: 'var(--safe-top, 0px)' }}>
-         <div className="container mx-auto px-2 xs:px-3 sm:px-4 pt-3 pb-2">
+         <div className="w-full max-w-5xl xl:max-w-6xl mx-auto px-2 xs:px-3 sm:px-4 lg:px-8 pt-3 pb-2">
           <div className="flex items-center justify-between gap-1 xs:gap-2">
             <div className="flex items-center gap-1.5 xs:gap-2 min-w-0 flex-shrink-0">
               <AppLogo />
@@ -443,7 +446,7 @@ const Notes = () => {
         <div className="h-[1px] bg-border" />
       </header>
 
-      <main className="container mx-auto px-2 xs:px-3 sm:px-4 py-3 xs:py-4 sm:py-6">
+      <main className="w-full max-w-5xl xl:max-w-6xl mx-auto px-2 xs:px-3 sm:px-4 lg:px-8 py-3 xs:py-4 sm:py-6">
         {/* Archive & Trash Tabs - Simplified to only Archive and Trash */}
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'active' | 'archived' | 'trash')} className="mb-4">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
@@ -552,7 +555,7 @@ const Notes = () => {
             )}
           </div>
         ) : (
-          <div className="columns-2 gap-3 space-y-3">
+          <div className="columns-2 lg:columns-3 xl:columns-4 gap-3 space-y-3">
             {sortedNotes.map((note) => (
               <div
                 key={note.id}
@@ -733,7 +736,10 @@ const Notes = () => {
         onOpenChange={setShowTagManager}
       />
 
-      <BottomNavigation />
+      <div className="lg:hidden">
+        <BottomNavigation />
+      </div>
+      </div>
     </div>
   );
 };
