@@ -81,7 +81,9 @@ export const FlatView = ({
     return (
       <div className="space-y-4" ref={scrollContainerRef}>
         <div className="rounded-xl border border-border/30 overflow-hidden bg-background">
-          {(renderVirtualSectionHeader ?? renderSectionHeader)(virtualHeaderSection, false, uncompletedItems.length)}
+          {renderVirtualSectionHeader
+            ? renderVirtualSectionHeader(virtualHeaderSection, false, uncompletedItems.length)
+            : renderSectionHeader(virtualHeaderSection, false)}
           {collapsedViewSections.has(`flat-${virtualHeaderSection.id}`) ? null : (
             <div data-flat-scroll>
               <FlatTaskList
