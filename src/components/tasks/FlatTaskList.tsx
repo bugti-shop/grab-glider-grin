@@ -14,7 +14,7 @@
  *   Space   → fire `onToggleComplete(row)` (tasks only)
  * The active row gets `data-active="true"` so callers can style it.
  */
-import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode, type PointerEvent } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
 import type { TodoItem } from '@/types/note';
@@ -161,6 +161,7 @@ export function FlatTaskList({
   });
 
   const virtualizer = resolvedUseWindow ? windowVirtualizer : containerVirtualizer;
+  const dndEnabled = !!onReorder;
 
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
@@ -337,7 +338,7 @@ export function FlatTaskList({
     return !!target.closest('button, input, textarea, select, a, [role="button"], [contenteditable="true"], [data-no-dnd="true"]');
   };
 
-  const startPointerDrag = useCallback((event: React.PointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
+  const startPointerDrag = useCallback((event: PointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
     if (!dndEnabled || !isCoarsePointer || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
     if (event.pointerType === 'pen' && event.buttons !== 1) return;
 
@@ -375,7 +376,7 @@ export function FlatTaskList({
     }, 180);
   }, [dndEnabled, isCoarsePointer, paintGhostAt]);
 
-  const movePointerDrag = useCallback((event: React.PointerEvent<HTMLElement>) => {
+  const movePointerDrag = useCallback((event: PointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
 
@@ -403,7 +404,7 @@ export function FlatTaskList({
     autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(event.clientY));
   }, [getDropIndexFromClientY, paintGhostAt, stopAutoscroll, tickAutoscroll]);
 
-  const endPointerDrag = useCallback((event: React.PointerEvent<HTMLElement>) => {
+  const endPointerDrag = useCallback((event: PointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
 
@@ -435,7 +436,6 @@ export function FlatTaskList({
   const totalSize = virtualizer.getTotalSize();
   const scrollOffset = resolvedUseWindow ? parentTop : 0;
 
-  const dndEnabled = !!onReorder;
   const nativeDndEnabled = dndEnabled && !isCoarsePointer;
 
   return (
