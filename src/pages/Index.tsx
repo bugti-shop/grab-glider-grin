@@ -1592,6 +1592,7 @@ const Index = () => {
         <span className="text-[10px] text-background mx-1">·</span>
         <a href="https://www.flowist.me/terms-and-conditions" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Terms</a>
       </div>
+      </div>
     </div>
   );
 };
