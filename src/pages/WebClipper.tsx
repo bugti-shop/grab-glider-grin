@@ -37,6 +37,12 @@ const WebClipper = () => {
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [stage, setStage] = useState<Stage>('idle');
+  const [progress, setProgress] = useState<number | null>(null);
+  const [progressLabel, setProgressLabel] = useState('');
+  const [error, setError] = useState<{ title: string; description: string } | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
 
   // Sanitize incoming params (URL ?title=… &url=… &content=… &selection=… &mode=…).
   // The Share-intent hook and the desktop browser extension both hit this same route.
@@ -62,23 +68,98 @@ const WebClipper = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picking]);
 
+  /** Try a HEAD request to learn content-length + MIME before downloading. */
+  const probeAttachment = async (
+    target: string,
+  ): Promise<{ bytes: number | null; mime: string | null }> => {
+    try {
+      const res = await fetch(target, { method: 'HEAD' });
+      if (!res.ok) return { bytes: null, mime: null };
+      const len = Number(res.headers.get('content-length') || 0);
+      return {
+        bytes: Number.isFinite(len) && len > 0 ? len : null,
+        mime: res.headers.get('content-type'),
+      };
+    } catch {
+      return { bytes: null, mime: null };
+    }
+  };
+
+  const failWith = (titleKey: string, titleFallback: string, descKey: string, descFallback: string) => {
+    const titleMsg = t(titleKey, titleFallback);
+    const descMsg = t(descKey, descFallback);
+    setError({ title: titleMsg, description: descMsg });
+    toast({ title: titleMsg, description: descMsg, variant: 'destructive' });
+    setStage('idle');
+    setProgress(null);
+    setSaving(false);
+  };
+
   const handleSaveClip = async (clipMode: ClipMode) => {
     setSaving(true);
+    setError(null);
     try {
+      // 1) Validate attachment (type + size) before doing any heavy work.
+      if (attachment) {
+        setStage('validating');
+        setProgressLabel(t('webClipper.stageValidating', 'Checking file…'));
+        setProgress(null);
+        const { bytes, mime } = await probeAttachment(attachment);
+        const verdict = validateAttachment(attachmentType, mime, bytes);
+        if (!verdict.ok) {
+          failWith(
+            'webClipper.attachmentRejected',
+            'Attachment not supported',
+            verdict.errorKey || 'webClipper.errUnsupported',
+            verdict.errorFallback || 'This file is not supported.',
+          );
+          return;
+        }
+      }
+
       let extractedPdfText = '';
       let pdfTruncated = false;
       // For shared PDFs, pull readable text so the note is searchable
       // beyond just the attachment link.
       if (attachment && attachmentType === 'pdf') {
         try {
+          setStage('downloading');
+          setProgress(0);
+          setProgressLabel(t('webClipper.stageDownloading', 'Downloading PDF…'));
           const { extractPdfTextFromUrl } = await import('@/utils/pdfExtract');
-          const result = await extractPdfTextFromUrl(attachment);
+          const result = await extractPdfTextFromUrl(attachment, {
+            onProgress: (s, ratio) => {
+              if (s === 'download') {
+                setStage('downloading');
+                setProgressLabel(t('webClipper.stageDownloading', 'Downloading PDF…'));
+                setProgress(typeof ratio === 'number' ? Math.round(ratio * 100) : null);
+              } else if (s === 'parse') {
+                setStage('extracting');
+                setProgressLabel(t('webClipper.stageExtracting', 'Extracting text from PDF…'));
+                setProgress(typeof ratio === 'number' ? Math.round(ratio * 100) : null);
+              } else {
+                setProgress(100);
+              }
+            },
+          });
           extractedPdfText = result.text;
           pdfTruncated = result.truncated;
         } catch (err) {
           console.warn('[webClipper] PDF text extraction failed', err);
+          // Soft-fail: still save the clip with attachment link, just no extracted body.
+          toast({
+            title: t('webClipper.pdfExtractFailed', 'PDF text unavailable'),
+            description: t('webClipper.pdfExtractFailedDesc', 'Saved the link, but could not read the PDF text.'),
+          });
         }
       }
+
+      // Image attachments: wait briefly for preview load (handled by <img onLoad>).
+      // No blocking — we proceed but UI reflects loading state.
+
+      setStage('embedding');
+      setProgress(null);
+      setProgressLabel(t('webClipper.stageEmbedding', 'Building note…'));
 
       const mergedContent = extractedPdfText
         ? [content, extractedPdfText, pdfTruncated ? '_(PDF text truncated)_' : '']
@@ -105,10 +186,14 @@ const WebClipper = () => {
         updatedAt: new Date(),
       };
 
+      setStage('saving');
+      setProgressLabel(t('webClipper.stageSaving', 'Saving to notes…'));
       const existingNotes = await loadNotesFromDB();
       await saveNotesToDB([newNote, ...existingNotes]);
 
       setSaved(true);
+      setStage('idle');
+      setProgress(null);
       toast({
         title: t('toasts.webClipSaved', 'Web clip saved'),
         description: t('toasts.clipSavedDesc', { title, defaultValue: `Saved "${title}" to your notes` }),
@@ -117,11 +202,10 @@ const WebClipper = () => {
       setTimeout(() => navigate('/notesdashboard'), 1200);
     } catch (error) {
       console.error('Error saving clip:', error);
-      toast({
-        title: t('toasts.errorSavingClip', 'Could not save clip'),
-        description: t('toasts.somethingWentWrong', 'Something went wrong'),
-        variant: 'destructive',
-      });
+      failWith(
+        'toasts.errorSavingClip', 'Could not save clip',
+        'toasts.somethingWentWrong', 'Something went wrong',
+      );
     } finally {
       setSaving(false);
     }
