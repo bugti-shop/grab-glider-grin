@@ -82,6 +82,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   // Keep a ref to items for reliable access in async callbacks
   const itemsRef = useRef(items);
   itemsRef.current = items;
+  const deferredCompletionTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const markSingleTaskPersisted = useCallback((skipProcessing = false) => {
     try {
@@ -392,6 +393,13 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     if (updates.completed === false && currentItem?.completed) {
       updatesWithTimestamp.completedAt = undefined;
     }
+    if (updates.completed === false) {
+      const pendingTimer = deferredCompletionTimersRef.current.get(itemId);
+      if (pendingTimer) {
+        clearTimeout(pendingTimer);
+        deferredCompletionTimersRef.current.delete(itemId);
+      }
+    }
 
     const persistUpdate = (skipProcessing = true) => {
       markSingleTaskPersisted(skipProcessing);
@@ -449,10 +457,12 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       // the critical 900ms checkbox paint window. This keeps the colored ring
       // duration stable even when thousands of tasks exist.
       persistUpdate(true);
-      window.setTimeout(() => {
+      const timer = window.setTimeout(() => {
+        deferredCompletionTimersRef.current.delete(itemId);
         markSingleTaskPersisted(true);
         commitStateUpdate();
       }, getRingFillMs());
+      deferredCompletionTimersRef.current.set(itemId, timer);
     } else {
       commitStateUpdate();
       persistUpdate(true);
