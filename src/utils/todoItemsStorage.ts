@@ -9,7 +9,10 @@ import { compressImage, isCompressibleImage } from '@/utils/imageCompression';
 import { 
   loadTasksFromDB, 
   saveTasksToDB, 
-  migrateFromLocalStorage 
+  migrateFromLocalStorage,
+  putTaskInDB,
+  updateTaskInDB,
+  deleteTaskFromDB,
 } from '@/utils/taskStorage';
 
 const TODO_ITEMS_KEY = 'todoItems';
@@ -95,6 +98,38 @@ export const saveTodoItems = async (
     console.error('Failed to save tasks:', e);
     return { items: migrated, changed, persisted: false };
   }
+};
+
+export const saveTodoItem = async (
+  item: TodoItem,
+  skipSyncEvent = false,
+): Promise<{ item: TodoItem; changed: boolean; persisted: boolean }> => {
+  const { items, changed } = await offloadTodoItemsMedia([item]);
+  const migrated = items[0] ?? item;
+
+  try {
+    await putTaskInDB(migrated, skipSyncEvent);
+    if (!skipSyncEvent) debouncedSyncTasksToDrive();
+    return { item: migrated, changed, persisted: true };
+  } catch (e) {
+    console.error('Failed to save task:', e);
+    return { item: migrated, changed, persisted: false };
+  }
+};
+
+export const updateTodoItem = async (
+  itemId: string,
+  updates: Partial<TodoItem>,
+): Promise<boolean> => {
+  const persisted = await updateTaskInDB(itemId, updates);
+  debouncedSyncTasksToDrive();
+  return persisted;
+};
+
+export const deleteTodoItem = async (itemId: string): Promise<boolean> => {
+  const persisted = await deleteTaskFromDB(itemId);
+  debouncedSyncTasksToDrive();
+  return persisted;
 };
 
 export const offloadTodoItemsMedia = async (
