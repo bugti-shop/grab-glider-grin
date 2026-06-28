@@ -261,18 +261,68 @@ const WebClipper = () => {
                   : t('webClipper.imageAttachment', 'Image attachment')}
               </p>
               {attachmentType === 'image' ? (
-                <img
-                  src={attachment}
-                  alt={title}
-                  className="rounded-lg max-h-48 w-auto border border-border object-contain"
-                  loading="lazy"
-                />
+                <div className="relative">
+                  {!imageLoaded && !imageFailed && (
+                    <div className="flex items-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 p-4 text-xs text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t('webClipper.imageLoading', 'Loading image preview…')}
+                    </div>
+                  )}
+                  <img
+                    src={attachment}
+                    alt={title}
+                    onLoad={() => setImageLoaded(true)}
+                    onError={() => setImageFailed(true)}
+                    className={cn(
+                      'rounded-lg max-h-48 w-auto border border-border object-contain',
+                      !imageLoaded && 'hidden',
+                    )}
+                  />
+                  {imageFailed && (
+                    <p className="text-xs text-destructive">
+                      {t('webClipper.imageFailed', 'Could not load image preview.')}
+                    </p>
+                  )}
+                </div>
               ) : (
-                <a href={attachment} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline break-all">
+                <a href={attachment} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline break-all inline-flex items-center gap-1">
+                  <Download className="h-3 w-3" />
                   {attachment.length > 60 ? attachment.substring(0, 60) + '…' : attachment}
                 </a>
               )}
+              <p className="text-[11px] text-muted-foreground">
+                {attachmentType === 'pdf'
+                  ? t('webClipper.pdfLimit', { defaultValue: `Max ${formatBytes(ATTACHMENT_LIMITS.pdfBytes)} per PDF.`, size: formatBytes(ATTACHMENT_LIMITS.pdfBytes) })
+                  : t('webClipper.imageLimit', { defaultValue: `Max ${formatBytes(ATTACHMENT_LIMITS.imageBytes)} per image.`, size: formatBytes(ATTACHMENT_LIMITS.imageBytes) })}
+              </p>
             </div>
+          )}
+
+          {/* Live progress for download / extract / embed / save stages. */}
+          {saving && stage !== 'idle' && !error && (
+            <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+              <div className="flex items-center gap-2 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="font-medium">{progressLabel || t('webClipper.working', 'Working…')}</span>
+                {typeof progress === 'number' && (
+                  <span className="ml-auto text-xs text-muted-foreground tabular-nums">{progress}%</span>
+                )}
+              </div>
+              <Progress value={typeof progress === 'number' ? progress : undefined} className="h-1.5" />
+              {stage === 'extracting' && (
+                <p className="text-[11px] text-muted-foreground">
+                  {t('webClipper.extractingHint', 'Reading PDF text — your note body will populate shortly.')}
+                </p>
+              )}
+            </div>
+          )}
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>{error.title}</AlertTitle>
+              <AlertDescription>{error.description}</AlertDescription>
+            </Alert>
           )}
 
           {selection && (
