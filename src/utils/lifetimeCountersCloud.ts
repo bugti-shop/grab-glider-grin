@@ -177,6 +177,7 @@ export const pullAndMergeLifetimeCounters = async (): Promise<void> => {
  */
 export const pushLifetimeCounter = async (kind: SoftLimitKind, value: number): Promise<void> => {
   try {
+    if (!(await hasAuthenticatedUser())) return;
     const { identifier, type } = await getIdentifier();
     const col = COLUMN_MAP[kind];
 
