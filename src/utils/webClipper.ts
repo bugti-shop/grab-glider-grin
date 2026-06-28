@@ -47,7 +47,54 @@ export function parseClipMode(value: string | null | undefined): ClipMode {
   const v = String(value || '').toLowerCase();
   if (v === 'selection') return 'selection';
   if (v === 'fullpage' || v === 'full-page' || v === 'full_page') return 'fullpage';
+  if (v === 'image' || v === 'img') return 'image';
+  if (v === 'pdf') return 'pdf';
   return 'article';
+}
+
+const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|bmp|heic|heif|avif|svg)(\?|#|$)/i;
+const PDF_EXT_RE = /\.pdf(\?|#|$)/i;
+
+/** Detect attachment kind from a MIME type and/or URL. */
+export function detectAttachmentKind(
+  mime?: string | null,
+  url?: string | null,
+): 'image' | 'pdf' | null {
+  const m = (mime || '').toLowerCase();
+  if (m.startsWith('image/')) return 'image';
+  if (m === 'application/pdf') return 'pdf';
+  const u = url || '';
+  if (IMAGE_EXT_RE.test(u)) return 'image';
+  if (PDF_EXT_RE.test(u)) return 'pdf';
+  return null;
+}
+
+/**
+ * De-duplicate repeated share intents within SHARE_DEDUP_WINDOW_MS.
+ * Android can re-fire `checkSendIntentReceived` on cold start + resume +
+ * `sendIntentReceived` event for the same payload. Returns `true` when the
+ * payload was just handled and should be ignored.
+ */
+export function isDuplicateShare(
+  signature: string,
+  now: number = Date.now(),
+  storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof sessionStorage !== 'undefined' ? sessionStorage : null,
+): boolean {
+  if (!signature || !storage) return false;
+  try {
+    const KEY = '__flowist_last_share__';
+    const raw = storage.getItem(KEY);
+    if (raw) {
+      const prev = JSON.parse(raw) as { sig: string; t: number };
+      if (prev && prev.sig === signature && now - prev.t < SHARE_DEDUP_WINDOW_MS) {
+        return true;
+      }
+    }
+    storage.setItem(KEY, JSON.stringify({ sig: signature, t: now }));
+  } catch {
+    /* sessionStorage unavailable — fall through, no dedup */
+  }
+  return false;
 }
 
 /**
