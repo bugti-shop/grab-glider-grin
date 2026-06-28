@@ -127,6 +127,7 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
   const [settings, setSettings] = useState<NotesSettings>(DEFAULT_NOTES_SETTINGS);
   const [currentPage, setCurrentPage] = useState<SubPage>('main');
   const [isLoading, setIsLoading] = useState(true);
+  const [showDevPerf, setShowDevPerf] = useState(false);
 
   useHardwareBackButton({
     onBack: () => {
@@ -290,6 +291,11 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
               setCurrentPage('advancedEditing');
             }}
             rightElement={!isPro ? <Crown className="h-4 w-4 text-amber-500" /> : undefined}
+          />
+          <SettingsRow
+            label="Developer — Stress Test"
+            subtitle="Generate 100k+ notes & auto-report perf"
+            onClick={() => setShowDevPerf(true)}
           />
         </div>
       </ScrollArea>
@@ -649,13 +655,16 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
   );
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 flex flex-col">
-        {currentPage === 'main' && renderMainPage()}
-        {currentPage === 'defaultFont' && renderDefaultFontPage()}
-        {currentPage === 'advancedEditing' && renderAdvancedEditingPage()}
-      </SheetContent>
-    </Sheet>
+    <>
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 flex flex-col">
+          {currentPage === 'main' && renderMainPage()}
+          {currentPage === 'defaultFont' && renderDefaultFontPage()}
+          {currentPage === 'advancedEditing' && renderAdvancedEditingPage()}
+        </SheetContent>
+      </Sheet>
+      <DevPerfSheet isOpen={showDevPerf} onClose={() => setShowDevPerf(false)} />
+    </>
   );
 };
 
