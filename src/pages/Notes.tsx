@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useDeferredValue, useTransition, useMemo } from 'react';
+import { useState, useCallback, useEffect, useDeferredValue, useTransition, useMemo, startTransition } from 'react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Note } from '@/types/note';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -161,10 +161,15 @@ const Notes = () => {
     return true;
   }, [isPro, softRequireCreate, softRequireMutate, notes, setNotes]);
 
-  const handleEditNote = (note: Note) => {
-    setSelectedNote(note);
+  const handleEditNote = useCallback((note: Note) => {
+    // Open the modal shell first (urgent) so the tap feels instant on mobile.
+    // Mounting the heavy NoteEditor subtree is then handled as a low-priority
+    // transition, keeping the click→paint path under one frame even at 100k notes.
     setIsEditorOpen(true);
-  };
+    startTransition(() => {
+      setSelectedNote(note);
+    });
+  }, []);
 
   const handleTogglePin = (noteId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -572,6 +577,8 @@ const Notes = () => {
                   backgroundColor: getCardColor(note),
                   contentVisibility: 'auto',
                   containIntrinsicSize: '0 140px',
+                  touchAction: 'manipulation', // kills 300ms mobile tap delay
+                  WebkitTapHighlightColor: 'transparent',
                 }}
                 onClick={() => !note.isDeleted && handleEditNote(note)}
               >
@@ -722,17 +729,21 @@ const Notes = () => {
         )}
       </main>
 
-      <NoteEditor
-        note={selectedNote}
-        isOpen={isEditorOpen}
-        onClose={() => {
-          setIsEditorOpen(false);
-          setSelectedNote(null);
-        }}
-        onSave={handleSaveNote}
-        allNotes={notes}
-        returnTo="/notesdashboard"
-      />
+      {/* Only mount the heavy editor subtree when actually opening a note.
+          Keeps the notes list render path lean at 100k items. */}
+      {isEditorOpen && (
+        <NoteEditor
+          note={selectedNote}
+          isOpen={isEditorOpen}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setSelectedNote(null);
+          }}
+          onSave={handleSaveNote}
+          allNotes={notes}
+          returnTo="/notesdashboard"
+        />
+      )}
 
 
       {/* Tag Management Sheet */}
