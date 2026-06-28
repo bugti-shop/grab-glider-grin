@@ -10,6 +10,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { getNoteProtection, NoteProtection } from '@/utils/noteProtection';
 import { getSetting } from '@/utils/settingsStorage';
 import { logActivity } from '@/utils/activityLogger';
+import { sanitizeDisplayName } from '@/utils/duplicateName';
 import {
   DropdownMenu,
   DropdownMenuContent,
