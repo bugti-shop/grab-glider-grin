@@ -95,6 +95,22 @@ const getIdentifier = async (): Promise<{ identifier: string; type: 'email' | 'd
   return { identifier: getOrCreateDeviceId(), type: 'device' };
 };
 
+/**
+ * Returns true only when a real signed-in user exists. We use this to skip
+ * cloud reads/writes for signed-out sessions — RLS on user_lifetime_counters
+ * rejects anonymous device-id rows with a 401 that pollutes the console and
+ * provides no value to the user. Lifetime counters work entirely from
+ * localStorage in that case.
+ */
+const hasAuthenticatedUser = async (): Promise<boolean> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return !!data?.session?.user?.id;
+  } catch {
+    return false;
+  }
+};
+
 // ── Cloud sync ──
 
 /**
