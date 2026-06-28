@@ -80,6 +80,13 @@ export const DesktopSidebar = () => {
     return () => window.removeEventListener('resize', onResize);
   }, [collapsed]);
 
+  // Global Ctrl/Cmd+B → toggle from anywhere in the app.
+  useEffect(() => {
+    const onToggle = () => setCollapsed((v) => !v);
+    window.addEventListener('desktop-sidebar:toggle', onToggle);
+    return () => window.removeEventListener('desktop-sidebar:toggle', onToggle);
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     const load = async () => {
