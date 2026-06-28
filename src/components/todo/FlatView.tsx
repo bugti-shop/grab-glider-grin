@@ -106,6 +106,21 @@ export const FlatView = ({
                 index={flatIndex}
                 rowHeight={compactMode ? 44 : 58}
                 useWindow
+                onReorder={(from, to) => {
+                  if (from === to) return;
+                  const ids = uncompletedItems.map(i => i.id);
+                  const [moved] = ids.splice(from, 1);
+                  ids.splice(to, 0, moved);
+                  // Persist new order for every section bucket touched so the
+                  // flat view stays consistent at scale (sections are merged
+                  // into one virtual list when virtualized).
+                  for (const section of sections) {
+                    updateSectionOrder(`flat-section-${section.id}`, ids);
+                  }
+                  updateSectionOrder(`flat-section-default`, ids);
+                  setOrderVersion(v => v + 1);
+                  try { Haptics.impact({ style: ImpactStyle.Light }); } catch {}
+                }}
                 renderRow={(row) => (
                   <div data-flat-row className={FLAT_ROW_WRAPPER_CLASS}>
                     {renderTaskItem(row.task)}
