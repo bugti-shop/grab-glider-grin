@@ -726,16 +726,19 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
   );
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 flex flex-col">
-        {currentPage === 'main' && renderMainPage()}
-        {currentPage === 'defaults' && renderDefaultsPage()}
-        {currentPage === 'display' && renderDisplayPage()}
-        {currentPage === 'reminders' && renderRemindersPage()}
-        {currentPage === 'behavior' && renderBehaviorPage()}
-        {currentPage === 'priorities' && renderPrioritiesPage()}
-      </SheetContent>
-    </Sheet>
+    <>
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 flex flex-col">
+          {currentPage === 'main' && renderMainPage()}
+          {currentPage === 'defaults' && renderDefaultsPage()}
+          {currentPage === 'display' && renderDisplayPage()}
+          {currentPage === 'reminders' && renderRemindersPage()}
+          {currentPage === 'behavior' && renderBehaviorPage()}
+          {currentPage === 'priorities' && renderPrioritiesPage()}
+        </SheetContent>
+      </Sheet>
+      <DevPerfSheet isOpen={showDevPerf} onClose={() => setShowDevPerf(false)} />
+    </>
   );
 };
 
