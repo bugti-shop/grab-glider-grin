@@ -133,6 +133,29 @@ const WebClipper = () => {
             </div>
           )}
 
+          {attachment && (
+            <div className="space-y-2">
+              <p className="font-medium text-sm text-muted-foreground flex items-center gap-1.5">
+                {attachmentType === 'pdf' ? <FileType2 className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
+                {attachmentType === 'pdf'
+                  ? t('webClipper.pdfAttachment', 'PDF attachment')
+                  : t('webClipper.imageAttachment', 'Image attachment')}
+              </p>
+              {attachmentType === 'image' ? (
+                <img
+                  src={attachment}
+                  alt={title}
+                  className="rounded-lg max-h-48 w-auto border border-border object-contain"
+                  loading="lazy"
+                />
+              ) : (
+                <a href={attachment} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline break-all">
+                  {attachment.length > 60 ? attachment.substring(0, 60) + '…' : attachment}
+                </a>
+              )}
+            </div>
+          )}
+
           {selection && (
             <div className="space-y-2">
               <p className="font-medium text-sm text-muted-foreground">
