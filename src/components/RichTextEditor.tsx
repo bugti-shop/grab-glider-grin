@@ -1248,9 +1248,9 @@ export const RichTextEditor = ({
           onChange(newContent);
         }
 
-        // Add to history (but not during composition to avoid flooding)
-        // Also limit history size for large content
-        if (!isComposingRef.current) {
+        // Add to history only for normal-size content. Keeping 10 copies of a
+        // 30k–200k word note freezes mobile WebViews and blocks navigation.
+        if (!isComposingRef.current && !isLargeContent) {
           const maxHistorySize = isLargeContent ? 10 : 50;
           const currentContent = newContent;
           const newHistory = history.slice(Math.max(0, history.length - maxHistorySize), historyIndex + 1);

@@ -1,10 +1,13 @@
 import { Note } from '@/types/note';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
+import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 
 export interface NoteVersion {
   id: string;
   noteId: string;
   content: string;
+  contentPreview?: string;
+  contentLength?: number;
   title: string;
   timestamp: Date;
   changeType: 'create' | 'edit' | 'restore';
@@ -12,6 +15,7 @@ export interface NoteVersion {
 
 const STORAGE_KEY = 'note_versions';
 const MAX_VERSIONS_PER_NOTE = 50;
+const MAX_FULL_VERSION_CHARS = 120_000;
 
 export const getNoteVersions = async (noteId: string): Promise<NoteVersion[]> => {
   const allVersions = await getSetting<NoteVersion[]>(STORAGE_KEY, []);
@@ -22,6 +26,32 @@ export const getNoteVersions = async (noteId: string): Promise<NoteVersion[]> =>
 };
 
 export const saveNoteVersion = async (note: Note, changeType: 'create' | 'edit' | 'restore' = 'edit'): Promise<void> => {
+  if (note.content.length > MAX_FULL_VERSION_CHARS) {
+    const preview = getTextPreviewFromHtml(note.content, 1000);
+    const existingVersions = await getSetting<NoteVersion[]>(STORAGE_KEY, []);
+    const latestVersion = existingVersions.find(v => v.noteId === note.id);
+    if (latestVersion?.contentPreview === preview && latestVersion.title === note.title) return;
+
+    const metadataVersion: NoteVersion = {
+      id: `${note.id}_${Date.now()}`,
+      noteId: note.id,
+      content: '',
+      contentPreview: preview,
+      contentLength: note.content.length,
+      title: note.title,
+      timestamp: new Date(),
+      changeType,
+    };
+    existingVersions.unshift(metadataVersion);
+    const noteVersions = existingVersions.filter(v => v.noteId === note.id);
+    const filtered = noteVersions.length > MAX_VERSIONS_PER_NOTE
+      ? existingVersions.filter(v => !new Set(noteVersions.slice(MAX_VERSIONS_PER_NOTE).map(x => x.id)).has(v.id))
+      : existingVersions;
+    await setSetting(STORAGE_KEY, filtered);
+    window.dispatchEvent(new Event('noteVersionsUpdated'));
+    return;
+  }
+
   const allVersions = await getSetting<NoteVersion[]>(STORAGE_KEY, []);
   
   // Check if content actually changed

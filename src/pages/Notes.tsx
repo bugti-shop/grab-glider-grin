@@ -8,7 +8,7 @@ import { DesktopSidebar } from '@/components/desktop/DesktopSidebar';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 
 
-import { debouncedSaveNotes, saveNoteToDBSingle, saveNotesToDB, deleteNoteFromDB } from '@/utils/noteStorage';
+import { saveNoteToDBSingle, deleteNoteFromDB, loadNoteFromDB, isNoteContentStub, makeMetadataNote } from '@/utils/noteStorage';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +23,7 @@ import { prefetchRoute } from '@/utils/routePrefetch';
 
 import { useTranslation } from 'react-i18next';
 import { useNotes } from '@/contexts/NotesContext';
+import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 
 import {
   DropdownMenu,
@@ -147,15 +148,15 @@ const Notes = () => {
       return false;
     }
 
+    const noteMeta = makeMetadataNote(note);
     setNotes(prevNotes => {
       const existingIndex = prevNotes.findIndex((n) => n.id === note.id);
       let updatedNotes;
       if (existingIndex >= 0) {
-        updatedNotes = prevNotes.map((n) => (n.id === note.id ? note : n));
+        updatedNotes = prevNotes.map((n) => (n.id === note.id ? noteMeta : n));
       } else {
-        updatedNotes = [note, ...prevNotes];
+        updatedNotes = [noteMeta, ...prevNotes];
       }
-      debouncedSaveNotes(updatedNotes, 1000);
       saveNoteToDBSingle(note);
       return updatedNotes;
     });
@@ -170,82 +171,98 @@ const Notes = () => {
     startTransition(() => {
       setSelectedNote(note);
     });
+
+    if (isNoteContentStub(note)) {
+      loadNoteFromDB(note.id).then((fullNote) => {
+        if (fullNote) {
+          startTransition(() => setSelectedNote(fullNote));
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   const handleTogglePin = (noteId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isPro && isNewFreeUser && !softRequireMutate()) return;
     if (!requireFeature('pin_feature')) return;
+    let changedNote: Note | null = null;
     const updatedNotes = notes.map((n) => {
       if (n.id === noteId) {
-        return {
+        changedNote = {
           ...n,
           isPinned: !n.isPinned,
           pinnedOrder: !n.isPinned ? Date.now() : undefined,
         };
+        return changedNote;
       }
       return n;
     });
     setNotes(updatedNotes);
-    debouncedSaveNotes(updatedNotes);
+    if (changedNote) saveNoteToDBSingle(changedNote);
   };
 
   const handleToggleArchive = (noteId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isPro && isNewFreeUser && !softRequireMutate()) return;
     const noteBeforeUpdate = notes.find(n => n.id === noteId);
+    let changedNote: Note | null = null;
     const updatedNotes = notes.map((n) => {
       if (n.id === noteId) {
         const isArchiving = !n.isArchived;
-        return {
+        changedNote = {
           ...n,
           isArchived: isArchiving,
           archivedAt: isArchiving ? new Date() : undefined,
           isPinned: isArchiving ? false : n.isPinned,
         };
+        return changedNote;
       }
       return n;
     });
     setNotes(updatedNotes);
-    debouncedSaveNotes(updatedNotes);
+    if (changedNote) saveNoteToDBSingle(changedNote);
     toast.success(noteBeforeUpdate?.isArchived ? t('toasts.noteRestored') : t('toasts.noteArchived'));
   };
 
   const handleMoveToTrash = (noteId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isPro && isNewFreeUser && !softRequireMutate()) return;
+    let changedNote: Note | null = null;
     const updatedNotes = notes.map((n) => {
       if (n.id === noteId) {
-        return {
+        changedNote = {
           ...n,
           isDeleted: true,
           deletedAt: new Date(),
           isArchived: false,
           isPinned: false,
         };
+        return changedNote;
       }
       return n;
     });
     setNotes(updatedNotes);
-    debouncedSaveNotes(updatedNotes);
+    if (changedNote) saveNoteToDBSingle(changedNote);
     toast.success(t('toasts.noteMoved'));
   };
 
   const handleRestoreFromTrash = (noteId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isPro && isNewFreeUser && !softRequireMutate()) return;
+    let changedNote: Note | null = null;
     const updatedNotes = notes.map((n) => {
       if (n.id === noteId) {
-        return {
+        changedNote = {
           ...n,
           isDeleted: false,
           deletedAt: undefined,
         };
+        return changedNote;
       }
       return n;
     });
     setNotes(updatedNotes);
-    debouncedSaveNotes(updatedNotes);
+    if (changedNote) saveNoteToDBSingle(changedNote);
     toast.success(t('toasts.noteRestored'));
   };
 
@@ -271,7 +288,8 @@ const Notes = () => {
         return true;
       });
       if (updatedNotes.length === prev.length) return prev; // no change — skip re-render
-      debouncedSaveNotes(updatedNotes);
+      prev.filter((n) => n.isDeleted && n.deletedAt && new Date(n.deletedAt) <= thirtyDaysAgo)
+        .forEach((n) => deleteNoteFromDB(n.id));
       return updatedNotes;
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -317,7 +335,9 @@ const Notes = () => {
     }
 
     setNotes(updatedNotes);
-    debouncedSaveNotes(updatedNotes);
+    updatedNotes
+      .filter((n) => n.isPinned)
+      .forEach((n) => saveNoteToDBSingle(n));
   };
 
   // Filter notes using lightweight metadata for instant performance
@@ -372,9 +392,10 @@ const Notes = () => {
   };
 
   const handleEmptyTrash = () => {
+    const trashed = notes.filter(n => n.isDeleted);
     const updatedNotes = notes.filter(n => !n.isDeleted);
     setNotes(updatedNotes);
-    saveNotesToDB(updatedNotes);
+    trashed.forEach(n => deleteNoteFromDB(n.id));
     toast.success(t('notes.trashEmptied'));
   };
 
@@ -564,14 +585,17 @@ const Notes = () => {
         ) : (
           <NotesVirtualGrid
             notes={sortedNotes}
-            renderCard={(note) => (
+            getRowKey={(row) => row.map((note) => `${note.id}:${note.updatedAt instanceof Date ? note.updatedAt.getTime() : new Date(note.updatedAt).getTime()}`).join('|')}
+            renderCard={(note) => {
+              const previewText = note.metaDescription || (notesMetaById.get(note.id)?.contentPreview ?? getTextPreviewFromHtml(note.content, 180));
+              return (
               <div
                 draggable={!note.isArchived && !note.isDeleted}
                 onDragStart={(e) => handleDragStart(e, note.id)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, note.id)}
                 className={cn(
-                  "cursor-pointer transition-colors relative group rounded-2xl h-full",
+                  "cursor-pointer transition-colors relative group rounded-2xl h-[152px] overflow-hidden",
                   (note.isArchived || note.isDeleted) && "opacity-75"
                 )}
                 style={{
@@ -581,7 +605,7 @@ const Notes = () => {
                 }}
                 onClick={() => !note.isDeleted && handleEditNote(note)}
               >
-                <div className="p-4 rounded-2xl">
+                <div className="p-4 rounded-2xl h-full flex flex-col">
                   <div className="absolute top-2 right-2 flex gap-1">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -697,12 +721,12 @@ const Notes = () => {
                       {sanitizeDisplayName(note.title)}
                     </h2>
                   )}
-                  {(note.metaDescription || note.content) && (
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-4">
-                      {note.metaDescription || note.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim()}
+                  {previewText && (
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-3 min-h-[3.75rem]">
+                      {previewText}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap mt-auto">
                     <div className="inline-block px-3 py-1 rounded-full border border-foreground/20 text-xs text-foreground">
                       {new Date(note.updatedAt).toLocaleDateString('en-US', {
                         month: 'numeric',
@@ -718,7 +742,7 @@ const Notes = () => {
                   </div>
                 </div>
               </div>
-            )}
+            )}}
           />
         )}
       </main>

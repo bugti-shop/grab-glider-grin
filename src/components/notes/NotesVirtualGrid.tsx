@@ -15,6 +15,7 @@ import type { Note } from '@/types/note';
 interface NotesVirtualGridProps {
   notes: Note[];
   renderCard: (note: Note) => ReactNode;
+  getRowKey?: (row: Note[], index: number) => string;
   /** Approximate row height in px. Cards are roughly equal because the
    *  text is line-clamped to 4 lines + fixed header/footer chrome. */
   estimatedRowHeight?: number;
@@ -29,6 +30,7 @@ function getColumnsForWidth(w: number): number {
 export function NotesVirtualGrid({
   notes,
   renderCard,
+  getRowKey,
   estimatedRowHeight = 200,
 }: NotesVirtualGridProps) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -69,7 +71,7 @@ export function NotesVirtualGrid({
     estimateSize: () => estimatedRowHeight,
     overscan: 6,
     scrollMargin,
-    getItemKey: (idx) => rows[idx]?.[0]?.id ?? idx,
+    getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
   });
 
   return (

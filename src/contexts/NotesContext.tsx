@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Note } from '@/types/note';
-import { loadNotesFromDB, saveNotesToDB, saveNoteToDBSingle, deleteNoteFromDB, migrateNotesToIndexedDB } from '@/utils/noteStorage';
+import { loadNotesMetadataFromDB, saveNotesToDB, saveNoteToDBSingle, deleteNoteFromDB, migrateNotesToIndexedDB, makeMetadataNote, isNoteContentStub } from '@/utils/noteStorage';
 import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 import { useSubscription, SOFT_FREE_LIMITS } from '@/contexts/SubscriptionContext';
 
@@ -51,7 +51,7 @@ const extractNoteMeta = (note: Note): NoteMeta => ({
   reminderTime: note.reminderTime,
   createdAt: note.createdAt,
   updatedAt: note.updatedAt,
-  contentPreview: getTextPreviewFromHtml(note.content, 200),
+  contentPreview: (note as any).__contentPreview || getTextPreviewFromHtml(note.content, 200),
   hasFullContent: true,
 });
 
@@ -135,7 +135,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.log('[NotesContext] Initializing notes...');
         const startTime = performance.now();
         await migrateNotesToIndexedDB();
-        const loadedNotes = await loadNotesFromDB();
+        const loadedNotes = await loadNotesMetadataFromDB();
 
         if (isMounted) {
           setNotes(loadedNotes);
@@ -165,12 +165,12 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     const handleNotesUpdated = () => {
-      loadNotesFromDB().then(setNotes).catch(console.error);
+      loadNotesMetadataFromDB().then(setNotes).catch(console.error);
     };
     const handleNotesRestored = () => {
       // Mark that this state change came from sync — don't re-upload
       isFromSyncRef.current = true;
-      loadNotesFromDB().then(setNotes).catch(console.error);
+      loadNotesMetadataFromDB().then(setNotes).catch(console.error);
     };
 
     window.addEventListener('notesUpdated', handleNotesUpdated);
@@ -195,6 +195,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     prevSaveNotesRef.current = notes;
     notesLengthRef.current = notes.length;
     if (!changed) return;
+    if (notes.some(isNoteContentStub)) return;
 
     // If this update came from a sync restore, save locally but don't dispatch
     // notesUpdated (which would trigger re-upload to Firebase → infinite loop)
@@ -255,14 +256,15 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (!softRequireMutateRef.current()) return;
       }
     }
+    const noteMeta = makeMetadataNote(note);
     setNotes(prev => {
       const existingIdx = prev.findIndex(n => n.id === note.id);
       if (existingIdx >= 0) {
         const updated = [...prev];
-        updated[existingIdx] = note;
+        updated[existingIdx] = noteMeta;
         return updated;
       }
-      return [note, ...prev];
+      return [noteMeta, ...prev];
     });
 
     try {
@@ -332,7 +334,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const refreshNotes = useCallback(async () => {
     try {
-      const loadedNotes = await loadNotesFromDB();
+      const loadedNotes = await loadNotesMetadataFromDB();
       setNotes(loadedNotes);
     } catch (error) {
       console.error('[NotesContext] Error refreshing notes:', error);
