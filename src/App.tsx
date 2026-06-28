@@ -36,6 +36,7 @@ const AppLockScreen = lazy(() => import("@/components/AppLockScreen").then(m => 
 import { useNotificationListener } from "@/hooks/useNotificationListener";
 import { widgetDataSync } from "@/utils/widgetDataSync";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
+import { PerfDiagnosticsPanel } from "@/components/PerfDiagnosticsPanel";
 import { WidgetAddTask, WidgetNewSticky, WidgetNewLined, WidgetNewRegular, WidgetNewSketch } from "@/pages/WidgetEntry";
 
 const StreakMilestoneCelebration = lazy(() => import("@/components/StreakMilestoneCelebration").then(m => ({ default: m.StreakMilestoneCelebration })));
@@ -818,6 +819,7 @@ const AppContent = () => {
     <>
       <Toaster />
       <Sonner />
+      <PerfDiagnosticsPanel />
       
       {showOnboarding && (
         <Suspense fallback={<BrandedFallback />}>

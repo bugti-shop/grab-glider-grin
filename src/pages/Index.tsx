@@ -48,6 +48,7 @@ import { useNotes, NoteMeta } from '@/contexts/NotesContext';
 import { NoteTypeVisibilitySheet } from '@/components/NoteTypeVisibilitySheet';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
+import { withCopySuffix } from '@/utils/duplicateName';
 
 const Index = () => {
   const { t } = useTranslation();
@@ -309,7 +310,7 @@ const Index = () => {
     const duplicatedNote: Note = {
       ...noteToDuplicate,
       id: genId(),
-      title: `${noteToDuplicate.title || 'Untitled'} (Copy)`,
+      title: withCopySuffix(noteToDuplicate.title || 'Untitled'),
       isPinned: false,
       pinnedOrder: undefined,
       createdAt: new Date(),
@@ -815,7 +816,7 @@ const Index = () => {
         .map(note => ({
           ...note!,
           id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          title: `${note!.title || 'Untitled'} (Copy)`,
+          title: withCopySuffix(note!.title || 'Untitled'),
           isPinned: false,
           pinnedOrder: undefined,
           createdAt: new Date(),

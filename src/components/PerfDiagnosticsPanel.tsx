@@ -1,0 +1,124 @@
+/**
+ * PerfDiagnosticsPanel — lightweight floating overlay showing live FPS,
+ * total render count, virtualized DOM-row count, and long-task warnings.
+ *
+ * Toggle: press Ctrl/Cmd + Shift + P, or set
+ *   localStorage.setItem('perf:panel','1')
+ * Read-only: never mutates app state, safe to leave running.
+ */
+import { useEffect, useRef, useState } from 'react';
+
+interface Stats {
+  fps: number;
+  renders: number;
+  virtRows: number;
+  longTasks: number;
+  lastLongTaskMs: number;
+}
+
+const STORAGE_KEY = 'perf:panel';
+
+export function PerfDiagnosticsPanel() {
+  const [visible, setVisible] = useState<boolean>(() => {
+    try { return localStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
+  });
+  const [stats, setStats] = useState<Stats>({ fps: 0, renders: 0, virtRows: 0, longTasks: 0, lastLongTaskMs: 0 });
+  const renderCountRef = useRef(0);
+
+  // Toggle hotkey
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+        e.preventDefault();
+        setVisible(v => {
+          const nv = !v;
+          try { nv ? localStorage.setItem(STORAGE_KEY, '1') : localStorage.removeItem(STORAGE_KEY); } catch {}
+          return nv;
+        });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Count every React commit anywhere in the tree by hooking MutationObserver
+  // on the body — cheap proxy for "DOM changed".
+  useEffect(() => {
+    if (!visible) return;
+    const obs = new MutationObserver(() => { renderCountRef.current += 1; });
+    obs.observe(document.body, { childList: true, subtree: true });
+    return () => obs.disconnect();
+  }, [visible]);
+
+  // FPS + virtualized row count sampler
+  useEffect(() => {
+    if (!visible) return;
+    let frames = 0;
+    let last = performance.now();
+    let raf = 0;
+    const loop = () => {
+      frames++;
+      const now = performance.now();
+      if (now - last >= 1000) {
+        const virtRows = document.querySelectorAll('[data-index]').length;
+        setStats(s => ({ ...s, fps: frames, virtRows, renders: renderCountRef.current }));
+        frames = 0;
+        last = now;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [visible]);
+
+  // Long-task observer
+  useEffect(() => {
+    if (!visible) return;
+    if (typeof PerformanceObserver === 'undefined') return;
+    let po: PerformanceObserver | null = null;
+    try {
+      po = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (entry.duration > 50) {
+            setStats(s => ({ ...s, longTasks: s.longTasks + 1, lastLongTaskMs: Math.round(entry.duration) }));
+          }
+        }
+      });
+      po.observe({ entryTypes: ['longtask'] });
+    } catch {}
+    return () => { try { po?.disconnect(); } catch {} };
+  }, [visible]);
+
+  if (!visible) return null;
+
+  const fpsColor = stats.fps >= 55 ? '#22c55e' : stats.fps >= 30 ? '#eab308' : '#ef4444';
+
+  return (
+    <div
+      role="status"
+      aria-label="Performance diagnostics"
+      style={{
+        position: 'fixed', bottom: 12, right: 12, zIndex: 99999,
+        background: 'rgba(15,23,42,0.92)', color: '#fff',
+        font: '11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace',
+        padding: '8px 10px', borderRadius: 8, minWidth: 160,
+        boxShadow: '0 4px 16px rgba(0,0,0,0.35)', pointerEvents: 'auto',
+        userSelect: 'none',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <strong>perf</strong>
+        <button
+          onClick={() => { setVisible(false); try { localStorage.removeItem(STORAGE_KEY); } catch {} }}
+          style={{ background: 'transparent', color: '#94a3b8', border: 0, cursor: 'pointer', padding: 0 }}
+          aria-label="Close performance panel"
+        >×</button>
+      </div>
+      <div>FPS: <span style={{ color: fpsColor }}>{stats.fps}</span></div>
+      <div>Virt rows: {stats.virtRows}</div>
+      <div>DOM mutations: {stats.renders}</div>
+      <div>Long tasks: {stats.longTasks}{stats.lastLongTaskMs ? ` (${stats.lastLongTaskMs}ms)` : ''}</div>
+      <div style={{ marginTop: 4, color: '#94a3b8' }}>⌘/Ctrl+Shift+P</div>
+    </div>
+  );
+}

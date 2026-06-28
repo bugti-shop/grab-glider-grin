@@ -212,7 +212,8 @@ const Upcoming = () => {
 
   const duplicateTask = async (task: TodoItem) => {
     try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
-    const duplicatedTask: TodoItem = { ...task, id: genId(), completed: false, text: `${task.text} (Copy)` };
+    const { withCopySuffix } = await import('@/utils/duplicateName');
+    const duplicatedTask: TodoItem = { ...task, id: genId(), completed: false, text: withCopySuffix(task.text) };
     const updatedAllItems = [duplicatedTask, ...allItems];
     setAllItems(updatedAllItems);
     await saveTodoItems(updatedAllItems);
