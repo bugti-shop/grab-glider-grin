@@ -6,8 +6,15 @@
  * state, and tap handlers live inside the caller-supplied row component, so
  * every surface (Today, Upcoming, History, Calendar, Folder, Smart lists)
  * can reuse this without losing its bespoke interactions.
+ *
+ * Keyboard navigation:
+ *   ↑ / k   → move highlight up
+ *   ↓ / j   → move highlight down
+ *   Enter   → fire `onActivate(row)` (open detail)
+ *   Space   → fire `onToggleComplete(row)` (tasks only)
+ * The active row gets `data-active="true"` so callers can style it.
  */
-import { useRef, useMemo, type ReactNode } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { TodoItem } from '@/types/note';
 import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/tasks/flattenTasks';
@@ -24,11 +31,25 @@ export interface FlatTaskListProps {
   /** Optional fixed max-height (defaults to viewport-driven). */
   maxHeight?: number | string;
   /** Per-row renderer. Must return a single element of fixed height. */
-  renderRow: (row: FlatTaskRow, index: number) => ReactNode;
+  renderRow: (row: FlatTaskRow, index: number, isActive: boolean) => ReactNode;
   /** Optional empty-state when there are zero rows. */
   emptyState?: ReactNode;
+  /** Enter key on highlighted row — open detail / edit. */
+  onActivate?: (row: FlatTaskRow) => void;
+  /** Space key on highlighted row — toggle task complete. */
+  onToggleComplete?: (row: FlatTaskRow) => void;
+  /** Disable keyboard navigation (default false). */
+  disableKeyboard?: boolean;
   className?: string;
 }
+
+const isTypingInForm = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  if (target.isContentEditable) return true;
+  return false;
+};
 
 export function FlatTaskList({
   items,
@@ -38,6 +59,9 @@ export function FlatTaskList({
   maxHeight,
   renderRow,
   emptyState,
+  onActivate,
+  onToggleComplete,
+  disableKeyboard = false,
   className,
 }: FlatTaskListProps) {
   const flatIndex = useMemo(() => index ?? flattenTasks(items), [index, items]);
@@ -51,6 +75,52 @@ export function FlatTaskList({
     overscan,
     getItemKey: (i) => flat[i]?.task?.id ?? i,
   });
+
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
+
+  // Clamp active index whenever the list shrinks.
+  useEffect(() => {
+    if (activeIndex >= flat.length) setActiveIndex(flat.length - 1);
+  }, [flat.length, activeIndex]);
+
+  const move = useCallback(
+    (delta: number) => {
+      setActiveIndex((cur) => {
+        const next = Math.max(0, Math.min(flat.length - 1, (cur < 0 ? 0 : cur) + delta));
+        virtualizer.scrollToIndex(next, { align: 'auto' });
+        return next;
+      });
+    },
+    [flat.length, virtualizer],
+  );
+
+  useEffect(() => {
+    if (disableKeyboard) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (isTypingInForm(e.target)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key;
+      if (key === 'ArrowDown' || key === 'j' || key === 'J') {
+        e.preventDefault();
+        move(1);
+      } else if (key === 'ArrowUp' || key === 'k' || key === 'K') {
+        e.preventDefault();
+        move(-1);
+      } else if (key === 'Enter') {
+        if (activeIndex >= 0 && flat[activeIndex] && onActivate) {
+          e.preventDefault();
+          onActivate(flat[activeIndex]);
+        }
+      } else if (key === ' ' || key === 'Spacebar') {
+        if (activeIndex >= 0 && flat[activeIndex] && onToggleComplete) {
+          e.preventDefault();
+          onToggleComplete(flat[activeIndex]);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [disableKeyboard, move, activeIndex, flat, onActivate, onToggleComplete]);
 
   if (flat.length === 0 && emptyState) return <>{emptyState}</>;
 
@@ -72,10 +142,12 @@ export function FlatTaskList({
         {virtualItems.map((vi) => {
           const row = flat[vi.index];
           if (!row) return null;
+          const isActive = vi.index === activeIndex;
           return (
             <div
               key={vi.key}
               data-index={vi.index}
+              data-active={isActive ? 'true' : 'false'}
               ref={virtualizer.measureElement}
               style={{
                 position: 'absolute',
@@ -85,7 +157,7 @@ export function FlatTaskList({
                 transform: `translateY(${vi.start}px)`,
               }}
             >
-              {renderRow(row, vi.index)}
+              {renderRow(row, vi.index, isActive)}
             </div>
           );
         })}
