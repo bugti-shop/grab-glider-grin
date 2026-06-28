@@ -72,15 +72,16 @@ export const moveTaskInSectionOrder = (
   const currentOrder = loadTaskOrder();
   const existing = currentOrder[sectionId];
   const ranks: Record<string, number> = isSparseOrder(existing) ? { ...existing.ranks } : {};
+  const originalIndex = new Map(orderedTaskIds.map((id, index) => [id, index]));
   const withoutMoved = orderedTaskIds.filter((id) => id !== movedId);
   const beforeId = toIndex > 0 ? withoutMoved[toIndex - 1] : undefined;
   const afterId = withoutMoved[toIndex] ?? undefined;
-  const fallbackRank = (id: string | undefined, fallbackIndex: number) => {
+  const fallbackRank = (id: string | undefined) => {
     if (!id) return undefined;
-    return Number.isFinite(ranks[id]) ? ranks[id] : fallbackIndex * 1024;
+    return Number.isFinite(ranks[id]) ? ranks[id] : (originalIndex.get(id) ?? 0) * 1024;
   };
-  const beforeRank = fallbackRank(beforeId, Math.max(0, toIndex - 1));
-  const afterRank = fallbackRank(afterId, toIndex);
+  const beforeRank = fallbackRank(beforeId);
+  const afterRank = fallbackRank(afterId);
 
   let nextRank: number;
   if (beforeRank === undefined && afterRank === undefined) nextRank = 0;
