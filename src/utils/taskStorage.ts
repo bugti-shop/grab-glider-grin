@@ -21,6 +21,20 @@ const MIN_SAVE_INTERVAL = 50; // Minimum 50ms between saves
 let pendingFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingFlushItems: TodoItem[] | null = null;
 let pendingSkipSyncEvent = false;
+let taskUpdatedDispatchTimer: ReturnType<typeof setTimeout> | null = null;
+
+const dispatchTasksUpdated = (debounceMs = 0) => {
+  if (typeof window === 'undefined') return;
+  if (debounceMs <= 0) {
+    window.dispatchEvent(new Event('tasksUpdated'));
+    return;
+  }
+  if (taskUpdatedDispatchTimer) clearTimeout(taskUpdatedDispatchTimer);
+  taskUpdatedDispatchTimer = setTimeout(() => {
+    taskUpdatedDispatchTimer = null;
+    window.dispatchEvent(new Event('tasksUpdated'));
+  }, debounceMs);
+};
 
 // Connection pooling - reuse database connection (never close)
 let dbConnection: IDBDatabase | null = null;
@@ -235,7 +249,7 @@ const flushTasksToDB = async (items: TodoItem[], skipSyncEvent = false): Promise
         if (items.length === 0) {
           tasksCache = items;
           cacheVersion++;
-          if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+          if (!skipSyncEvent) dispatchTasksUpdated();
           resolve(true);
           return;
         }
@@ -260,13 +274,13 @@ const flushTasksToDB = async (items: TodoItem[], skipSyncEvent = false): Promise
       };
       
       transaction.oncomplete = () => {
-        if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+        if (!skipSyncEvent) dispatchTasksUpdated();
         resolve(true);
       };
       
       transaction.onerror = () => {
         console.warn('Transaction error, data may be partially saved');
-        if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+        if (!skipSyncEvent) dispatchTasksUpdated();
         resolve(true);
       };
     });
@@ -312,7 +326,7 @@ const saveLargeDataset = async (db: IDBDatabase, items: TodoItem[], skipSyncEven
       }
     }
 
-    if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+    if (!skipSyncEvent) dispatchTasksUpdated();
     
     return true;
   } catch (e) {
@@ -358,11 +372,11 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
             try { pushTasks([updatedForSync!]); } catch {}
           }).catch(() => {});
         }
-        window.dispatchEvent(new Event('tasksUpdated'));
+        dispatchTasksUpdated(400);
         resolve(true);
       };
       transaction.onerror = () => {
-        window.dispatchEvent(new Event('tasksUpdated'));
+        dispatchTasksUpdated(400);
         resolve(true);
       };
     });
@@ -395,11 +409,11 @@ export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promis
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       transaction.objectStore(STORE_NAME).put(hydrated);
       transaction.oncomplete = () => {
-        if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+        if (!skipSyncEvent) dispatchTasksUpdated(250);
         resolve(true);
       };
       transaction.onerror = () => {
-        if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+        if (!skipSyncEvent) dispatchTasksUpdated(250);
         resolve(true);
       };
     });
@@ -421,11 +435,11 @@ export const clearAllTasksFromDB = async (): Promise<boolean> => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
       transaction.objectStore(STORE_NAME).clear();
       transaction.oncomplete = () => {
-        window.dispatchEvent(new Event('tasksUpdated'));
+        dispatchTasksUpdated();
         resolve(true);
       };
       transaction.onerror = () => {
-        window.dispatchEvent(new Event('tasksUpdated'));
+        dispatchTasksUpdated();
         resolve(true);
       };
     });
@@ -457,7 +471,7 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
       store.delete(taskId);
       
       transaction.oncomplete = () => {
-        window.dispatchEvent(new Event('tasksUpdated'));
+        dispatchTasksUpdated(250);
         // Track deletion for cross-device sync and upload immediately
         import('@/utils/deletionTracker').then(({ trackDeletion, loadDeletions }) => {
           trackDeletion(taskId, 'tasks');
@@ -468,7 +482,7 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
         resolve(true);
       };
       transaction.onerror = () => {
-        window.dispatchEvent(new Event('tasksUpdated'));
+        dispatchTasksUpdated(250);
         resolve(true);
       };
     });
