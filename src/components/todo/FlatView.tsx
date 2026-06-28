@@ -12,9 +12,11 @@ import { FlatTaskList } from '@/components/tasks/FlatTaskList';
 import { useFlatTaskIndex } from '@/hooks/useFlatTaskIndex';
 import { markRenderStart, trackScrollFps } from '@/utils/perfBenchmark';
 
-// When uncompleted tasks exceed this threshold, switch to a fully-virtualized
-// flat list to keep render and scroll smooth at 100k+ rows.
-const VIRTUALIZE_THRESHOLD = 200;
+// Virtualize aggressively — once a single section can blow past a viewport
+// height, the native DOM cost (event listeners, layout, paint) starts to
+// degrade scrolling and bottom-nav responsiveness. 40 keeps small lists DnD-
+// friendly while ensuring 100k+ lists stay smooth.
+const VIRTUALIZE_THRESHOLD = 40;
 
 interface FlatViewProps {
   sortedSections: TaskSection[];
@@ -72,14 +74,15 @@ export const FlatView = ({
   if (useFlatVirtualized) {
     return (
       <div className="space-y-4" ref={scrollContainerRef}>
-        <div
-          data-flat-scroll
-          className="rounded-xl border border-border/30 bg-muted/20 overflow-hidden"
-          style={{ height: 'min(70vh, 700px)' }}
-        >
+        {/* No nested scroll container — virtualize against the page scroll so
+            the list feels infinite and weightless. Bottom navigation and
+            menus stay responsive because only the visible window of rows
+            ever exists in the DOM. */}
+        <div data-flat-scroll>
           <FlatTaskList
             index={flatIndex}
             rowHeight={compactMode ? 56 : 72}
+            useWindow
             renderRow={(row) => (
               <div className="border-b border-border/50">
                 {row.parentChip && (
@@ -90,7 +93,6 @@ export const FlatView = ({
                 {renderTaskItem(row.task)}
               </div>
             )}
-
             emptyState={
               <div className="text-center py-20">
                 <p className="text-muted-foreground">{t('emptyStates.noTasks')}</p>
@@ -111,13 +113,18 @@ export const FlatView = ({
                   </div>
                 </button>
               </CollapsibleTrigger>
-              <CollapsibleContent className={cn("space-y-2 mt-2", compactMode && "space-y-1 mt-1")}>
-                {completedItems.slice(0, 200).map(renderTaskItem)}
-                {completedItems.length > 200 && (
-                  <div className="px-2 py-1 text-xs text-muted-foreground text-center">
-                    +{completedItems.length - 200} {t('grouping.completed').toLowerCase()}
-                  </div>
-                )}
+              <CollapsibleContent className={cn("mt-2", compactMode && "mt-1")}>
+                <FlatTaskList
+                  items={completedItems}
+                  rowHeight={compactMode ? 56 : 72}
+                  useWindow
+                  disableKeyboard
+                  renderRow={(row) => (
+                    <div className="border-b border-border/50">
+                      {renderTaskItem(row.task)}
+                    </div>
+                  )}
+                />
               </CollapsibleContent>
             </div>
           </Collapsible>

@@ -15,7 +15,7 @@
  * The active row gets `data-active="true"` so callers can style it.
  */
 import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import type { TodoItem } from '@/types/note';
 import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/tasks/flattenTasks';
 
@@ -28,8 +28,14 @@ export interface FlatTaskListProps {
   rowHeight?: number;
   /** Number of rows to render outside the viewport (default 8). */
   overscan?: number;
-  /** Optional fixed max-height (defaults to viewport-driven). */
+  /** Optional fixed max-height (defaults to viewport-driven). Ignored when useWindow. */
   maxHeight?: number | string;
+  /**
+   * When true, virtualize against the document/window scroll so the list
+   * participates in the page's natural scroll (no nested scrollbar). This is
+   * what Todoist does — one infinite scroll regardless of list length.
+   */
+  useWindow?: boolean;
   /** Per-row renderer. Must return a single element of fixed height. */
   renderRow: (row: FlatTaskRow, index: number, isActive: boolean) => ReactNode;
   /** Optional empty-state when there are zero rows. */
@@ -57,6 +63,7 @@ export function FlatTaskList({
   rowHeight = 56,
   overscan = 8,
   maxHeight,
+  useWindow = false,
   renderRow,
   emptyState,
   onActivate,
@@ -68,13 +75,44 @@ export function FlatTaskList({
   const flat = flatIndex.flat;
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const virtualizer = useVirtualizer({
+  const [parentTop, setParentTop] = useState(0);
+
+  useEffect(() => {
+    if (!useWindow) return;
+    const update = () => {
+      if (!parentRef.current) return;
+      const rect = parentRef.current.getBoundingClientRect();
+      setParentTop(rect.top + window.scrollY);
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, { passive: true, capture: true });
+    // Recompute once after layout settles (fonts, images).
+    const t = window.setTimeout(update, 100);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, { capture: true } as any);
+      window.clearTimeout(t);
+    };
+  }, [useWindow]);
+
+  const containerVirtualizer = useVirtualizer({
     count: flat.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => rowHeight,
     overscan,
     getItemKey: (i) => flat[i]?.task?.id ?? i,
   });
+
+  const windowVirtualizer = useWindowVirtualizer({
+    count: flat.length,
+    estimateSize: () => rowHeight,
+    overscan,
+    getItemKey: (i) => flat[i]?.task?.id ?? i,
+    scrollMargin: parentTop,
+  });
+
+  const virtualizer = useWindow ? windowVirtualizer : containerVirtualizer;
 
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
@@ -126,17 +164,22 @@ export function FlatTaskList({
 
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
+  const scrollOffset = useWindow ? parentTop : 0;
 
   return (
     <div
       ref={parentRef}
       className={className}
-      style={{
-        height: maxHeight ?? '100%',
-        overflow: 'auto',
-        contain: 'strict',
-        WebkitOverflowScrolling: 'touch',
-      }}
+      style={
+        useWindow
+          ? { position: 'relative', width: '100%' }
+          : {
+              height: maxHeight ?? '100%',
+              overflow: 'auto',
+              contain: 'strict',
+              WebkitOverflowScrolling: 'touch',
+            }
+      }
     >
       <div style={{ height: totalSize, position: 'relative', width: '100%' }}>
         {virtualItems.map((vi) => {
@@ -148,13 +191,13 @@ export function FlatTaskList({
               key={vi.key}
               data-index={vi.index}
               data-active={isActive ? 'true' : 'false'}
-              ref={virtualizer.measureElement}
+              ref={useWindow ? undefined : virtualizer.measureElement}
               style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 width: '100%',
-                transform: `translateY(${vi.start}px)`,
+                transform: `translateY(${vi.start - scrollOffset}px)`,
               }}
             >
               {renderRow(row, vi.index, isActive)}
