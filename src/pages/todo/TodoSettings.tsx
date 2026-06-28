@@ -578,6 +578,152 @@ const TodoSettings = () => {
           </div>
 
 
+          {/* Completion Sounds */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setShowCompletionSoundsExpanded(!showCompletionSoundsExpanded)}
+              className="w-full flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted transition-colors"
+            >
+              <div className="text-left min-w-0">
+                <span className="text-foreground text-sm block">Task completion ringtone</span>
+                <span className="text-xs text-muted-foreground block truncate">
+                  {COMPLETION_RINGTONE_OPTIONS.find((o) => o.id === completionRingtone)?.label || 'Flowist Bell'}
+                </span>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showCompletionSoundsExpanded && "rotate-180")} />
+            </button>
+            {showCompletionSoundsExpanded && (
+              <div className="bg-muted/30">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+                  <div className="flex-1 pr-4">
+                    <span className="text-foreground text-sm block">Completion sound</span>
+                    <span className="text-xs text-muted-foreground">Play a short tone when a task is completed</span>
+                  </div>
+                  <Switch checked={completionSoundEnabled} onCheckedChange={handleCompletionSoundToggle} />
+                </div>
+
+                <RangeSetting
+                  label="Volume"
+                  value={Math.round(completionVolume * 100)}
+                  min={0}
+                  max={100}
+                  step={5}
+                  suffix="%"
+                  onChange={(value) => handleVolumeChange(value / 100)}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
+                  {COMPLETION_RINGTONE_OPTIONS.map((option) => {
+                    const selected = completionRingtone === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => handleRingtoneChange(option.id)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
+                          selected ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-muted"
+                        )}
+                      >
+                        <span className="text-lg" aria-hidden="true">{option.icon}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-foreground truncate">{option.label}</span>
+                          <span className="block text-xs text-muted-foreground truncate">{option.description}</span>
+                        </span>
+                        {selected ? <Check className="h-4 w-4 text-primary shrink-0" /> : <Play className="h-4 w-4 text-muted-foreground shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+
+          {/* Performance Section */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setShowPerformanceExpanded(!showPerformanceExpanded)}
+              className="w-full flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted transition-colors"
+            >
+              <div className="text-left min-w-0">
+                <span className="text-foreground text-sm block">Performance & virtualization</span>
+                <span className="text-xs text-muted-foreground block truncate">
+                  Notes overscan {virtualizationSettings.notes.overscan}, Tasks overscan {virtualizationSettings.tasks.overscan}
+                </span>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showPerformanceExpanded && "rotate-180")} />
+            </button>
+            {showPerformanceExpanded && (
+              <div className="bg-muted/30">
+                <div className="px-4 py-3 border-b border-border/50 text-xs text-muted-foreground">
+                  Press Ctrl/⌘ + Shift + P to show the live FPS, long-task, virtual-row, scroll-jank, and reorder panel.
+                </div>
+                <RangeSetting
+                  label="Notes overscan"
+                  value={virtualizationSettings.notes.overscan}
+                  min={2}
+                  max={24}
+                  onChange={(value) => updateVirtualization((current) => ({ ...current, notes: { ...current.notes, overscan: value } }))}
+                />
+                <RangeSetting
+                  label="Notes row estimate"
+                  value={virtualizationSettings.notes.rowHeight}
+                  min={120}
+                  max={260}
+                  step={5}
+                  suffix="px"
+                  onChange={(value) => updateVirtualization((current) => ({ ...current, notes: { ...current.notes, rowHeight: value } }))}
+                />
+                <RangeSetting
+                  label="Tasks overscan"
+                  value={virtualizationSettings.tasks.overscan}
+                  min={4}
+                  max={36}
+                  onChange={(value) => updateVirtualization((current) => ({ ...current, tasks: { ...current.tasks, overscan: value } }))}
+                />
+                <RangeSetting
+                  label="Tasks row estimate"
+                  value={virtualizationSettings.tasks.rowHeight}
+                  min={46}
+                  max={88}
+                  step={2}
+                  suffix="px"
+                  onChange={(value) => updateVirtualization((current) => ({ ...current, tasks: { ...current.tasks, rowHeight: value } }))}
+                />
+                <RangeSetting
+                  label="Compact task row estimate"
+                  value={virtualizationSettings.tasks.compactRowHeight}
+                  min={36}
+                  max={64}
+                  step={2}
+                  suffix="px"
+                  onChange={(value) => updateVirtualization((current) => ({ ...current, tasks: { ...current.tasks, compactRowHeight: value } }))}
+                />
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+                  <div className="flex-1 pr-4">
+                    <span className="text-foreground text-sm block">Task window scrolling</span>
+                    <span className="text-xs text-muted-foreground">Use document-level windowing for very large task lists</span>
+                  </div>
+                  <Switch
+                    checked={virtualizationSettings.tasks.windowing}
+                    onCheckedChange={(checked) => updateVirtualization((current) => ({ ...current, tasks: { ...current.tasks, windowing: checked } }))}
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    setVirtualizationSettings(resetVirtualizationSettings());
+                    toast.success('Performance settings reset');
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors"
+                >
+                  <span className="text-foreground text-sm inline-flex items-center gap-2"><RotateCcw className="h-4 w-4" /> Reset safe defaults</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </div>
+            )}
+          </div>
+
+
           <div className="border border-border rounded-lg overflow-hidden">
             <SectionHeading title={t('settings.security', 'Security')} />
             <SettingsRow 
