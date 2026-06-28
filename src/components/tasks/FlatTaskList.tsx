@@ -63,7 +63,7 @@ export function FlatTaskList({
   items,
   index,
   rowHeight = 56,
-  overscan = 8,
+  overscan = 24,
   maxHeight,
   useWindow = false,
   renderRow,
