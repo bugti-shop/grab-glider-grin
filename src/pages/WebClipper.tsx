@@ -216,12 +216,20 @@ const WebClipper = () => {
 
       setTimeout(() => navigate('/notesdashboard'), 1200);
     } catch (error) {
-      console.error('Error saving clip:', error);
-      failWith(
-        'toasts.errorSavingClip', 'Could not save clip',
-        'toasts.somethingWentWrong', 'Something went wrong',
-      );
+      if (canceledRef.current || (error as Error)?.name === 'AbortError') {
+        failWith(
+          'webClipper.canceledTitle', 'Clip canceled',
+          'webClipper.canceledDesc', 'Stopped before the note was saved.',
+        );
+      } else {
+        console.error('Error saving clip:', error);
+        failWith(
+          'toasts.errorSavingClip', 'Could not save clip',
+          'toasts.somethingWentWrong', 'Something went wrong',
+        );
+      }
     } finally {
+      abortRef.current = null;
       setSaving(false);
     }
   };
