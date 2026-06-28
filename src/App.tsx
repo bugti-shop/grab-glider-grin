@@ -718,6 +718,11 @@ const AppContent = () => {
   // In-app notification listener — captures events from all sources
   useNotificationListener();
 
+  // Share-target listener — receives content shared into the app from
+  // Android's intent-filter or the iOS Share Extension and routes it
+  // into /webclipper. No-op on web.
+  useShareIntent();
+
   // Listen for "secure your subscription" message (purchase without sign-up)
   useEffect(() => {
     const handler = async () => {
