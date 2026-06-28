@@ -11,9 +11,13 @@ export const MAX_LENGTHS = {
   url: 2048,
   content: 50000,
   selection: 10000,
+  attachment: 4096,
 } as const;
 
-export type ClipMode = 'article' | 'selection' | 'fullpage';
+export type ClipMode = 'article' | 'selection' | 'fullpage' | 'image' | 'pdf';
+
+/** Window (ms) within which an identical share payload is treated as a duplicate. */
+export const SHARE_DEDUP_WINDOW_MS = 8000;
 
 /** Allow http/https only. Reject `javascript:`, `data:`, malformed strings, etc. */
 export function validateUrl(urlString: string): string {
@@ -43,7 +47,54 @@ export function parseClipMode(value: string | null | undefined): ClipMode {
   const v = String(value || '').toLowerCase();
   if (v === 'selection') return 'selection';
   if (v === 'fullpage' || v === 'full-page' || v === 'full_page') return 'fullpage';
+  if (v === 'image' || v === 'img') return 'image';
+  if (v === 'pdf') return 'pdf';
   return 'article';
+}
+
+const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|bmp|heic|heif|avif|svg)(\?|#|$)/i;
+const PDF_EXT_RE = /\.pdf(\?|#|$)/i;
+
+/** Detect attachment kind from a MIME type and/or URL. */
+export function detectAttachmentKind(
+  mime?: string | null,
+  url?: string | null,
+): 'image' | 'pdf' | null {
+  const m = (mime || '').toLowerCase();
+  if (m.startsWith('image/')) return 'image';
+  if (m === 'application/pdf') return 'pdf';
+  const u = url || '';
+  if (IMAGE_EXT_RE.test(u)) return 'image';
+  if (PDF_EXT_RE.test(u)) return 'pdf';
+  return null;
+}
+
+/**
+ * De-duplicate repeated share intents within SHARE_DEDUP_WINDOW_MS.
+ * Android can re-fire `checkSendIntentReceived` on cold start + resume +
+ * `sendIntentReceived` event for the same payload. Returns `true` when the
+ * payload was just handled and should be ignored.
+ */
+export function isDuplicateShare(
+  signature: string,
+  now: number = Date.now(),
+  storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof sessionStorage !== 'undefined' ? sessionStorage : null,
+): boolean {
+  if (!signature || !storage) return false;
+  try {
+    const KEY = '__flowist_last_share__';
+    const raw = storage.getItem(KEY);
+    if (raw) {
+      const prev = JSON.parse(raw) as { sig: string; t: number };
+      if (prev && prev.sig === signature && now - prev.t < SHARE_DEDUP_WINDOW_MS) {
+        return true;
+      }
+    }
+    storage.setItem(KEY, JSON.stringify({ sig: signature, t: now }));
+  } catch {
+    /* sessionStorage unavailable — fall through, no dedup */
+  }
+  return false;
 }
 
 /**
@@ -73,10 +124,27 @@ export function buildClipNoteBody(opts: {
   selection?: string;
   content?: string;
   mode?: ClipMode;
+  attachment?: string;
+  attachmentType?: 'image' | 'pdf' | null;
 }): string {
-  const { url, selection, content, mode = 'article' } = opts;
+  const { url, selection, content, mode = 'article', attachment, attachmentType } = opts;
   let body = '';
   if (url) body += `**Source:** ${escapeMarkdown(url)}\n\n`;
+
+  // Attachment first — gives the note a visible preview at the top.
+  if (attachment) {
+    const safe = validateUrl(attachment);
+    if (safe) {
+      if (attachmentType === 'image' || mode === 'image') {
+        body += `![clip](${safe})\n\n`;
+      } else if (attachmentType === 'pdf' || mode === 'pdf') {
+        body += `📎 [PDF attachment](${safe})\n\n`;
+      } else {
+        body += `[attachment](${safe})\n\n`;
+      }
+    }
+  }
+
   if (mode === 'selection' && selection) {
     body += `> ${escapeMarkdown(selection)}\n\n`;
     return body.trim();
@@ -93,12 +161,25 @@ export function buildClipperUrl(payload: {
   selection?: string;
   content?: string;
   mode?: ClipMode;
+  attachment?: string;
+  attachmentType?: 'image' | 'pdf' | null;
 }): string {
   const params = new URLSearchParams();
   if (payload.title) params.set('title', payload.title.substring(0, MAX_LENGTHS.title));
   if (payload.url) params.set('url', payload.url.substring(0, MAX_LENGTHS.url));
   if (payload.selection) params.set('selection', payload.selection.substring(0, MAX_LENGTHS.selection));
   if (payload.content) params.set('content', payload.content.substring(0, MAX_LENGTHS.content));
+  if (payload.attachment) params.set('attachment', payload.attachment.substring(0, MAX_LENGTHS.attachment));
+  if (payload.attachmentType) params.set('attachmentType', payload.attachmentType);
   if (payload.mode) params.set('mode', payload.mode);
   return `/webclipper?${params.toString()}`;
+}
+
+/** Build a stable signature for a share payload (used by isDuplicateShare). */
+export function buildShareSignature(parts: {
+  url?: string;
+  text?: string;
+  attachment?: string;
+}): string {
+  return [parts.url || '', parts.attachment || '', (parts.text || '').slice(0, 200)].join('|');
 }

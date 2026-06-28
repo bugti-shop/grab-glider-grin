@@ -5,7 +5,7 @@ import { Note } from '@/types/note';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Loader2, ExternalLink, FileText, Quote, Globe } from 'lucide-react';
+import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIcon, FileType2 } from 'lucide-react';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
 import {
@@ -37,17 +37,19 @@ const WebClipper = () => {
   const url = validateUrl(sanitizeParam(searchParams.get('url'), MAX_LENGTHS.url));
   const content = sanitizeParam(searchParams.get('content'), MAX_LENGTHS.content);
   const selection = sanitizeParam(searchParams.get('selection'), MAX_LENGTHS.selection);
+  const attachment = validateUrl(sanitizeParam(searchParams.get('attachment'), MAX_LENGTHS.attachment));
+  const rawAttachmentType = (searchParams.get('attachmentType') || '').toLowerCase();
+  const attachmentType: 'image' | 'pdf' | null =
+    rawAttachmentType === 'image' || rawAttachmentType === 'pdf' ? rawAttachmentType : null;
   const initialMode = parseClipMode(searchParams.get('mode'));
 
-  // If the caller passed an explicit `mode` we auto-save immediately
-  // (browser extension / iOS Share Extension flow). Otherwise we show a
-  // mode picker so the user can choose Article / Selection / Full page.
-  const explicitMode = searchParams.has('mode');
+  // Explicit mode OR an attachment payload auto-saves immediately (no picker).
+  const explicitMode = searchParams.has('mode') || !!attachment;
   const [mode, setMode] = useState<ClipMode>(initialMode);
   const [picking, setPicking] = useState(!explicitMode);
 
   useEffect(() => {
-    if (!picking && (title || url || content || selection)) {
+    if (!picking && (title || url || content || selection || attachment)) {
       void handleSaveClip(mode);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,7 +58,7 @@ const WebClipper = () => {
   const handleSaveClip = async (clipMode: ClipMode) => {
     setSaving(true);
     try {
-      const noteContent = buildClipNoteBody({ url, selection, content, mode: clipMode });
+      const noteContent = buildClipNoteBody({ url, selection, content, mode: clipMode, attachment: attachment || undefined, attachmentType });
 
       const newNote: Note = {
         id: crypto.randomUUID(),
@@ -126,6 +128,29 @@ const WebClipper = () => {
                 >
                   <ExternalLink className="h-3 w-3 shrink-0" />
                   {url.length > 60 ? url.substring(0, 60) + '…' : url}
+                </a>
+              )}
+            </div>
+          )}
+
+          {attachment && (
+            <div className="space-y-2">
+              <p className="font-medium text-sm text-muted-foreground flex items-center gap-1.5">
+                {attachmentType === 'pdf' ? <FileType2 className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
+                {attachmentType === 'pdf'
+                  ? t('webClipper.pdfAttachment', 'PDF attachment')
+                  : t('webClipper.imageAttachment', 'Image attachment')}
+              </p>
+              {attachmentType === 'image' ? (
+                <img
+                  src={attachment}
+                  alt={title}
+                  className="rounded-lg max-h-48 w-auto border border-border object-contain"
+                  loading="lazy"
+                />
+              ) : (
+                <a href={attachment} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline break-all">
+                  {attachment.length > 60 ? attachment.substring(0, 60) + '…' : attachment}
                 </a>
               )}
             </div>

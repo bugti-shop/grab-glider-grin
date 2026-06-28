@@ -15,7 +15,15 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
-import { buildClipperUrl, extractUrlAndText, parseClipMode } from '@/utils/webClipper';
+import {
+  buildClipperUrl,
+  buildShareSignature,
+  detectAttachmentKind,
+  extractUrlAndText,
+  isDuplicateShare,
+  parseClipMode,
+  validateUrl,
+} from '@/utils/webClipper';
 
 type SendIntentResult = {
   title?: string;
@@ -36,24 +44,47 @@ export function useShareIntent() {
 
     const handlePayload = (raw: SendIntentResult | null | undefined) => {
       if (cancelled || !raw) return;
-      // Combine all fields the plugin might populate; different sources
-      // (Chrome link share vs text-selection share vs iOS extension) use
-      // different keys.
+
+      // 1. Try to interpret raw.url as a direct file/asset reference first
+      //    (image share from gallery, PDF share from Files, etc.).
+      const directUrl = raw.url || raw.webUrl || '';
+      const attachmentKind = detectAttachmentKind(raw.type, directUrl);
+      const safeDirect = validateUrl(directUrl);
+
+      // 2. Otherwise, fall back to text/URL parsing from the combined blob.
       const blob = [raw.title, raw.description, raw.url, raw.webUrl]
         .filter(Boolean)
         .join('\n')
         .trim();
-      if (!blob) return;
+      const { url: parsedUrl, text } = extractUrlAndText(blob);
 
-      const { url, text } = extractUrlAndText(blob);
-      // Heuristic: a pure URL share = "article" mode, a long text payload
-      // with no URL = "selection" mode, everything else = article.
-      const mode = !url && text ? parseClipMode('selection') : parseClipMode('article');
+      const url = attachmentKind ? '' : parsedUrl;
+      const attachment = attachmentKind && safeDirect ? safeDirect : undefined;
+
+      if (!url && !text && !attachment) return;
+
+      // 3. De-dup repeated fires (cold start + resume + sendIntentReceived).
+      const signature = buildShareSignature({ url: url || attachment, text, attachment });
+      if (isDuplicateShare(signature)) return;
+
+      // 4. Mode selection: image/pdf attachments override; pure URL = article;
+      //    pure text = selection.
+      const mode = attachmentKind
+        ? parseClipMode(attachmentKind)
+        : !url && text
+          ? parseClipMode('selection')
+          : parseClipMode('article');
+
+      const fallbackTitle = attachment
+        ? attachmentKind === 'pdf' ? 'Shared PDF' : 'Shared image'
+        : url ? new URL(url).hostname : 'Shared clip';
 
       const target = buildClipperUrl({
-        title: raw.title || (url ? new URL(url).hostname : 'Shared clip'),
+        title: raw.title || fallbackTitle,
         url,
         selection: text || undefined,
+        attachment,
+        attachmentType: attachmentKind,
         mode,
       });
       navigate(target, { replace: false });
