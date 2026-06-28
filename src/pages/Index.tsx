@@ -309,7 +309,7 @@ const Index = () => {
     const duplicatedNote: Note = {
       ...noteToDuplicate,
       id: genId(),
-      title: `${noteToDuplicate.title || 'Untitled'} (Copy)`,
+      title: withCopySuffix(noteToDuplicate.title || 'Untitled'),
       isPinned: false,
       pinnedOrder: undefined,
       createdAt: new Date(),
@@ -815,7 +815,7 @@ const Index = () => {
         .map(note => ({
           ...note!,
           id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          title: `${note!.title || 'Untitled'} (Copy)`,
+          title: withCopySuffix(note!.title || 'Untitled'),
           isPinned: false,
           pinnedOrder: undefined,
           createdAt: new Date(),
