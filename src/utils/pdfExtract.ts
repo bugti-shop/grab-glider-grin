@@ -110,6 +110,8 @@ export async function extractPdfTextFromBuffer(
   let total = 0;
   let truncated = pageCount > pagesToRead;
 
+  const onProgress = options.onProgress;
+  onProgress?.('parse', 0);
   for (let i = 1; i <= pagesToRead; i++) {
     const page = await doc.getPage(i);
     const tc = await page.getTextContent();
@@ -124,10 +126,12 @@ export async function extractPdfTextFromBuffer(
       total += pageText.length + 2;
       if (total >= opts.maxChars) {
         truncated = true;
+        onProgress?.('parse', 1);
         break;
       }
     }
     page.cleanup?.();
+    onProgress?.('parse', i / pagesToRead);
   }
   doc.cleanup?.();
   doc.destroy?.();
@@ -137,6 +141,7 @@ export async function extractPdfTextFromBuffer(
     text = text.slice(0, opts.maxChars).trimEnd();
     truncated = true;
   }
+  onProgress?.('done', 1);
 
   return { text, pageCount, truncated };
 }
