@@ -5,7 +5,9 @@ import { Note } from '@/types/note';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIcon, FileType2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIcon, FileType2, AlertTriangle, Download } from 'lucide-react';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
 import {
@@ -15,6 +17,9 @@ import {
   sanitizeParam,
   parseClipMode,
   buildClipNoteBody,
+  validateAttachment,
+  formatBytes,
+  ATTACHMENT_LIMITS,
 } from '@/utils/webClipper';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
@@ -22,6 +27,8 @@ const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: strin
   { id: 'selection', icon: Quote,    titleKey: 'webClipper.modeSelection', descKey: 'webClipper.modeSelectionDesc', fallbackTitle: 'Selection',   fallbackDesc: 'Save only the highlighted text' },
   { id: 'fullpage',  icon: Globe,    titleKey: 'webClipper.modeFullPage',  descKey: 'webClipper.modeFullPageDesc',  fallbackTitle: 'Full page',   fallbackDesc: 'Save the entire page content' },
 ];
+
+type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'embedding' | 'saving';
 
 const WebClipper = () => {
   const [searchParams] = useSearchParams();
