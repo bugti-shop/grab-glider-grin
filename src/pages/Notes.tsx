@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 import { exportNoteToMarkdown } from '@/utils/markdownExport';
+import { sanitizeDisplayName } from '@/utils/duplicateName';
 import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AppLogo } from '@/components/AppLogo';
@@ -555,7 +556,7 @@ const Notes = () => {
             )}
           </div>
         ) : (
-          <div className="columns-2 lg:columns-3 xl:columns-4 gap-3 space-y-3">
+          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 xl:grid-cols-3">
             {sortedNotes.map((note) => (
               <div
                 key={note.id}
@@ -564,10 +565,14 @@ const Notes = () => {
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, note.id)}
                 className={cn(
-                  "break-inside-avoid cursor-move transition-all hover:scale-105 relative group",
+                  "cursor-pointer transition-colors relative group rounded-2xl",
                   (note.isArchived || note.isDeleted) && "opacity-75"
                 )}
-                style={{ backgroundColor: getCardColor(note) }}
+                style={{
+                  backgroundColor: getCardColor(note),
+                  contentVisibility: 'auto',
+                  containIntrinsicSize: '0 140px',
+                }}
                 onClick={() => !note.isDeleted && handleEditNote(note)}
               >
                 <div className="p-4 rounded-2xl">
@@ -683,7 +688,7 @@ const Notes = () => {
                   </div>
                   {note.title && (
                     <h2 className="font-bold text-base mb-2 text-foreground pr-10">
-                      {note.title}
+                      {sanitizeDisplayName(note.title)}
                     </h2>
                   )}
                   {/* Show metaDescription if available, otherwise show content preview */}

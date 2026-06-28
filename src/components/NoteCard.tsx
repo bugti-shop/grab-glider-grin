@@ -10,6 +10,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { getNoteProtection, NoteProtection } from '@/utils/noteProtection';
 import { getSetting } from '@/utils/settingsStorage';
 import { logActivity } from '@/utils/activityLogger';
+import { sanitizeDisplayName } from '@/utils/duplicateName';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -362,7 +363,7 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
               </div>
             )}
           {note.title && (
-              <h3 className="font-semibold text-base line-clamp-1 text-gray-900 flex-1">{note.title}</h3>
+              <h3 className="font-semibold text-base line-clamp-1 text-gray-900 flex-1">{sanitizeDisplayName(note.title)}</h3>
             )}
             {note.isPinned && (
               <Pin className="h-4 w-4 text-warning fill-warning shrink-0" />
