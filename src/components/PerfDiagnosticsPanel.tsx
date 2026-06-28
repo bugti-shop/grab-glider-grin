@@ -20,15 +20,20 @@ interface Stats {
   lastBulkAddVia: string;
   scrollJankCount: number;
   lastScrollJankMs: number;
+  noteFps: number;
+  taskFps: number;
+  lastReorderMs: number;
+  lastReorderOk: boolean | null;
 }
 
 const STORAGE_KEY = 'perf:panel';
+const PANEL_EVENT = 'flowist:perf-panel';
 
 export function PerfDiagnosticsPanel() {
   const [visible, setVisible] = useState<boolean>(() => {
     try { return localStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
   });
-  const [stats, setStats] = useState<Stats>({ fps: 0, renders: 0, virtRows: 0, longTasks: 0, lastLongTaskMs: 0, lastBulkAddMs: 0, lastBulkAddCount: 0, lastBulkAddVia: '', scrollJankCount: 0, lastScrollJankMs: 0 });
+  const [stats, setStats] = useState<Stats>({ fps: 0, renders: 0, virtRows: 0, longTasks: 0, lastLongTaskMs: 0, lastBulkAddMs: 0, lastBulkAddCount: 0, lastBulkAddVia: '', scrollJankCount: 0, lastScrollJankMs: 0, noteFps: 0, taskFps: 0, lastReorderMs: 0, lastReorderOk: null });
   const renderCountRef = useRef(0);
 
   // Toggle hotkey
@@ -43,8 +48,18 @@ export function PerfDiagnosticsPanel() {
         });
       }
     };
+    const onPanelEvent = (event: Event) => {
+      const detail = (event as CustomEvent<{ visible?: boolean }>).detail;
+      const next = detail?.visible ?? true;
+      setVisible(next);
+      try { next ? localStorage.setItem(STORAGE_KEY, '1') : localStorage.removeItem(STORAGE_KEY); } catch {}
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener(PANEL_EVENT, onPanelEvent);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener(PANEL_EVENT, onPanelEvent);
+    };
   }, []);
 
   // Count every React commit anywhere in the tree by hooking MutationObserver
@@ -123,6 +138,18 @@ export function PerfDiagnosticsPanel() {
           scrollJankCount: s.scrollJankCount + 1,
           lastScrollJankMs: ev.data.gapMs ?? 0,
         }));
+      } else if (ev.kind === 'fps') {
+        setStats((s) => ({
+          ...s,
+          noteFps: ev.data.label === 'NotesVirtualGrid' ? (ev.data.fps ?? 0) : s.noteFps,
+          taskFps: ev.data.label === 'FlatTaskList' ? (ev.data.fps ?? 0) : s.taskFps,
+        }));
+      } else if (ev.kind === 'reorder') {
+        setStats((s) => ({
+          ...s,
+          lastReorderMs: ev.data.ms ?? 0,
+          lastReorderOk: ev.data.ok ?? null,
+        }));
       }
     });
     return unsub;
@@ -154,9 +181,12 @@ export function PerfDiagnosticsPanel() {
         >×</button>
       </div>
       <div>FPS: <span style={{ color: fpsColor }}>{stats.fps}</span></div>
+      <div>Notes FPS: {stats.noteFps || '—'}</div>
+      <div>Tasks FPS: {stats.taskFps || '—'}</div>
       <div>Virt rows: {stats.virtRows}</div>
       <div>DOM mutations: {stats.renders}</div>
       <div>Long tasks: {stats.longTasks}{stats.lastLongTaskMs ? ` (${stats.lastLongTaskMs}ms)` : ''}</div>
+      <div>Reorder: {stats.lastReorderOk == null ? '—' : stats.lastReorderOk ? `ok ${stats.lastReorderMs}ms` : 'failed'}</div>
       <div>Scroll jank: {stats.scrollJankCount}{stats.lastScrollJankMs ? ` (${stats.lastScrollJankMs}ms)` : ''}</div>
       <div>
         Bulk add: {stats.lastBulkAddCount

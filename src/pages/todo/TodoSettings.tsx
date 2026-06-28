@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
-import { ChevronRight, Check, ChevronDown, Crown } from 'lucide-react';
+import { ChevronRight, Check, ChevronDown, Crown, Play, RotateCcw } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTranslation } from 'react-i18next';
 import { Switch } from '@/components/ui/switch';
@@ -24,6 +24,21 @@ import { downloadBackup, downloadData, restoreFromBackup } from '@/utils/dataBac
 import { createNativeBackup, isNativePlatform } from '@/utils/nativeBackup';
 import { BackupSuccessDialog } from '@/components/BackupSuccessDialog';
 import { FeedbackDialog } from '@/components/FeedbackDialog';
+import {
+  COMPLETION_RINGTONE_OPTIONS,
+  CompletionRingtoneId,
+  getCompletionRingtone,
+  isCompletionSoundEnabled,
+  previewCompletionRingtone,
+  setCompletionRingtone,
+  setCompletionSoundEnabled,
+  setCompletionSoundVolume,
+} from '@/utils/taskSounds';
+import {
+  resetVirtualizationSettings,
+  useVirtualizationSettings,
+  VirtualizationSettings,
+} from '@/utils/virtualizationSettings';
 
 
 import { Capacitor } from '@capacitor/core';
@@ -52,6 +67,7 @@ const TodoSettings = () => {
   const { currentTheme, setTheme } = useDarkMode();
   const { requireFeature, isPro, openPaywall } = useSubscription();
   const toolbarOrder = useToolbarOrder();
+  const [virtualizationSettings, setVirtualizationSettings] = useVirtualizationSettings();
   
   // Dialog states
   const [showThemeDialog, setShowThemeDialog] = useState(false);
@@ -65,6 +81,8 @@ const TodoSettings = () => {
   const [showAppLockSetup, setShowAppLockSetup] = useState(false);
   const [showNotificationsExpanded, setShowNotificationsExpanded] = useState(false);
   const [showMoreTabsExpanded, setShowMoreTabsExpanded] = useState(false);
+  const [showPerformanceExpanded, setShowPerformanceExpanded] = useState(false);
+  const [showCompletionSoundsExpanded, setShowCompletionSoundsExpanded] = useState(false);
   const [showQuickAddDialog, setShowQuickAddDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
@@ -85,6 +103,9 @@ const TodoSettings = () => {
   const [noteRemindersEnabled, setNoteRemindersEnabled] = useState(true);
   const [dailyDigestEnabled, setDailyDigestEnabled] = useState(false);
   const [overdueAlertsEnabled, setOverdueAlertsEnabled] = useState(true);
+  const [completionSoundEnabled, setCompletionSoundEnabledState] = useState(true);
+  const [completionRingtone, setCompletionRingtoneState] = useState<CompletionRingtoneId>('flowist-bell');
+  const [completionVolume, setCompletionVolumeState] = useState(0.5);
   const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0];
 
   // Load settings
@@ -93,6 +114,9 @@ const TodoSettings = () => {
     getSetting<boolean>('noteRemindersEnabled', true).then(setNoteRemindersEnabled);
     getSetting<boolean>('dailyDigestEnabled', false).then(setDailyDigestEnabled);
     getSetting<boolean>('overdueAlertsEnabled', true).then(setOverdueAlertsEnabled);
+    isCompletionSoundEnabled().then(setCompletionSoundEnabledState);
+    getCompletionRingtone().then(setCompletionRingtoneState);
+    getSetting<number>('taskCompletionVolume', 0.5).then((v) => setCompletionVolumeState(Math.max(0, Math.min(1, Number(v) || 0.5))));
     
   }, []);
 
@@ -126,6 +150,29 @@ const TodoSettings = () => {
     setOverdueAlertsEnabled(enabled);
     await setSetting('overdueAlertsEnabled', enabled);
     toast.success(enabled ? t('settings.overdueAlertsEnabled', 'Overdue alerts enabled') : t('settings.overdueAlertsDisabled', 'Overdue alerts disabled'));
+  };
+
+  const handleCompletionSoundToggle = (enabled: boolean) => {
+    setCompletionSoundEnabledState(enabled);
+    setCompletionSoundEnabled(enabled);
+    toast.success(enabled ? 'Task completion sound enabled' : 'Task completion sound disabled');
+  };
+
+  const handleRingtoneChange = (ringtone: CompletionRingtoneId) => {
+    setCompletionRingtoneState(ringtone);
+    setCompletionRingtone(ringtone);
+    previewCompletionRingtone(ringtone);
+    toast.success('Completion ringtone updated');
+  };
+
+  const handleVolumeChange = (value: number) => {
+    const next = Math.max(0, Math.min(1, value));
+    setCompletionVolumeState(next);
+    setCompletionSoundVolume(next);
+  };
+
+  const updateVirtualization = (updater: (current: VirtualizationSettings) => VirtualizationSettings) => {
+    setVirtualizationSettings(updater(virtualizationSettings));
   };
 
 
@@ -303,6 +350,40 @@ const TodoSettings = () => {
   const SectionHeading = ({ title }: { title: string }) => (
     <div className="px-4 py-2 bg-muted/50">
       <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{title}</span>
+    </div>
+  );
+
+  const RangeSetting = ({
+    label,
+    value,
+    min,
+    max,
+    step = 1,
+    onChange,
+    suffix = '',
+  }: {
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    step?: number;
+    onChange: (value: number) => void;
+    suffix?: string;
+  }) => (
+    <div className="px-4 py-3 border-b border-border/50">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <span className="text-foreground text-sm">{label}</span>
+        <span className="text-xs text-muted-foreground tabular-nums">{value}{suffix}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-primary"
+      />
     </div>
   );
 
@@ -492,6 +573,170 @@ const TodoSettings = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+
+
+          {/* Completion Sounds */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setShowCompletionSoundsExpanded(!showCompletionSoundsExpanded)}
+              className="w-full flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted transition-colors"
+            >
+              <div className="text-left min-w-0">
+                <span className="text-foreground text-sm block">Task completion ringtone</span>
+                <span className="text-xs text-muted-foreground block truncate">
+                  {COMPLETION_RINGTONE_OPTIONS.find((o) => o.id === completionRingtone)?.label || 'Flowist Bell'}
+                </span>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showCompletionSoundsExpanded && "rotate-180")} />
+            </button>
+            {showCompletionSoundsExpanded && (
+              <div className="bg-muted/30">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+                  <div className="flex-1 pr-4">
+                    <span className="text-foreground text-sm block">Completion sound</span>
+                    <span className="text-xs text-muted-foreground">Play a short tone when a task is completed</span>
+                  </div>
+                  <Switch checked={completionSoundEnabled} onCheckedChange={handleCompletionSoundToggle} />
+                </div>
+
+                <RangeSetting
+                  label="Volume"
+                  value={Math.round(completionVolume * 100)}
+                  min={0}
+                  max={100}
+                  step={5}
+                  suffix="%"
+                  onChange={(value) => handleVolumeChange(value / 100)}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3">
+                  {COMPLETION_RINGTONE_OPTIONS.map((option) => {
+                    const selected = completionRingtone === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => handleRingtoneChange(option.id)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
+                          selected ? "border-primary bg-primary/10" : "border-border bg-background hover:bg-muted"
+                        )}
+                      >
+                        <span className="text-lg" aria-hidden="true">{option.icon}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-foreground truncate">{option.label}</span>
+                          <span className="block text-xs text-muted-foreground truncate">{option.description}</span>
+                        </span>
+                        {selected ? <Check className="h-4 w-4 text-primary shrink-0" /> : <Play className="h-4 w-4 text-muted-foreground shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+
+          {/* Performance Section */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => setShowPerformanceExpanded(!showPerformanceExpanded)}
+              className="w-full flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted transition-colors"
+            >
+              <div className="text-left min-w-0">
+                <span className="text-foreground text-sm block">Performance & virtualization</span>
+                <span className="text-xs text-muted-foreground block truncate">
+                  Notes overscan {virtualizationSettings.notes.overscan}, Tasks overscan {virtualizationSettings.tasks.overscan}
+                </span>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showPerformanceExpanded && "rotate-180")} />
+            </button>
+            {showPerformanceExpanded && (
+              <div className="bg-muted/30">
+                <button
+                  onClick={() => {
+                    try { localStorage.setItem('perf:panel', '1'); } catch {}
+                    window.dispatchEvent(new CustomEvent('flowist:perf-panel', { detail: { visible: true } }));
+                    toast.success('Diagnostics panel enabled');
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 border-b border-border/50 hover:bg-muted transition-colors"
+                >
+                  <span className="text-foreground text-sm">Show live diagnostics panel</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+                <RangeSetting
+                  label="Notes overscan"
+                  value={virtualizationSettings.notes.overscan}
+                  min={2}
+                  max={24}
+                  onChange={(value) => updateVirtualization((current) => ({ ...current, notes: { ...current.notes, overscan: value } }))}
+                />
+                <RangeSetting
+                  label="Notes row estimate"
+                  value={virtualizationSettings.notes.rowHeight}
+                  min={120}
+                  max={260}
+                  step={5}
+                  suffix="px"
+                  onChange={(value) => updateVirtualization((current) => ({ ...current, notes: { ...current.notes, rowHeight: value } }))}
+                />
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+                  <div className="flex-1 pr-4">
+                    <span className="text-foreground text-sm block">Notes window scrolling</span>
+                    <span className="text-xs text-muted-foreground">Use document-level windowing for very large note grids</span>
+                  </div>
+                  <Switch
+                    checked={virtualizationSettings.notes.windowing}
+                    onCheckedChange={(checked) => updateVirtualization((current) => ({ ...current, notes: { ...current.notes, windowing: checked } }))}
+                  />
+                </div>
+                <RangeSetting
+                  label="Tasks overscan"
+                  value={virtualizationSettings.tasks.overscan}
+                  min={4}
+                  max={36}
+                  onChange={(value) => updateVirtualization((current) => ({ ...current, tasks: { ...current.tasks, overscan: value } }))}
+                />
+                <RangeSetting
+                  label="Tasks row estimate"
+                  value={virtualizationSettings.tasks.rowHeight}
+                  min={46}
+                  max={88}
+                  step={2}
+                  suffix="px"
+                  onChange={(value) => updateVirtualization((current) => ({ ...current, tasks: { ...current.tasks, rowHeight: value } }))}
+                />
+                <RangeSetting
+                  label="Compact task row estimate"
+                  value={virtualizationSettings.tasks.compactRowHeight}
+                  min={36}
+                  max={64}
+                  step={2}
+                  suffix="px"
+                  onChange={(value) => updateVirtualization((current) => ({ ...current, tasks: { ...current.tasks, compactRowHeight: value } }))}
+                />
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+                  <div className="flex-1 pr-4">
+                    <span className="text-foreground text-sm block">Task window scrolling</span>
+                    <span className="text-xs text-muted-foreground">Use document-level windowing for very large task lists</span>
+                  </div>
+                  <Switch
+                    checked={virtualizationSettings.tasks.windowing}
+                    onCheckedChange={(checked) => updateVirtualization((current) => ({ ...current, tasks: { ...current.tasks, windowing: checked } }))}
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    setVirtualizationSettings(resetVirtualizationSettings());
+                    toast.success('Performance settings reset');
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors"
+                >
+                  <span className="text-foreground text-sm inline-flex items-center gap-2"><RotateCcw className="h-4 w-4" /> Reset safe defaults</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
               </div>
             )}
           </div>

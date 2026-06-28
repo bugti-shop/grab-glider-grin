@@ -9,8 +9,10 @@
  * page scroll behaves natively).
  */
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { useWindowVirtualizer } from '@tanstack/react-virtual';
+import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import type { Note } from '@/types/note';
+import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
+import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
 
 interface NotesVirtualGridProps {
   notes: Note[];
@@ -31,12 +33,16 @@ export function NotesVirtualGrid({
   notes,
   renderCard,
   getRowKey,
-  estimatedRowHeight = 165,
+  estimatedRowHeight,
 }: NotesVirtualGridProps) {
+  const [virtualizationSettings] = useVirtualizationSettings();
   const parentRef = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState<number>(() =>
     typeof window === 'undefined' ? 2 : getColumnsForWidth(window.innerWidth),
   );
+  const resolvedRowHeight = estimatedRowHeight ?? virtualizationSettings.notes.rowHeight;
+  const resolvedOverscan = getAdaptiveOverscan(virtualizationSettings.notes.overscan, notes.length);
+  const resolvedWindowing = virtualizationSettings.notes.windowing;
 
   useEffect(() => {
     const onResize = () => setColumns(getColumnsForWidth(window.innerWidth));
@@ -66,19 +72,62 @@ export function NotesVirtualGrid({
     return () => window.removeEventListener('resize', measure);
   }, [columns, notes.length]);
 
-  const virtualizer = useWindowVirtualizer({
+  const containerVirtualizer = useVirtualizer({
     count: rows.length,
-    estimateSize: () => estimatedRowHeight,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => resolvedRowHeight,
+    overscan: resolvedOverscan,
+    getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
+  });
+
+  const windowVirtualizer = useWindowVirtualizer({
+    count: rows.length,
+    estimateSize: () => resolvedRowHeight,
     // 6 rows of overscan (≈18 cards at 3-col) keeps fast flick-scrolling
     // smooth without paying paint cost for ~50 offscreen heavy cards when
     // the user has 5k+ notes with large bodies.
-    overscan: 6,
+    overscan: resolvedOverscan,
     scrollMargin,
     getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
   });
 
+  const virtualizer = resolvedWindowing ? windowVirtualizer : containerVirtualizer;
+
+  useEffect(() => {
+    logPerfEvent('render', {
+      label: 'NotesVirtualGrid',
+      itemCount: notes.length,
+      rows: rows.length,
+      columns,
+      overscan: resolvedOverscan,
+      rowHeight: resolvedRowHeight,
+      windowing: resolvedWindowing ? 'window' : 'container',
+    });
+  }, [columns, notes.length, resolvedOverscan, resolvedRowHeight, resolvedWindowing, rows.length]);
+
+  useEffect(() => {
+    const target = resolvedWindowing ? window : parentRef.current;
+    if (!target) return;
+    return startScopedScrollFpsMonitor(target, 'NotesVirtualGrid', {
+    itemCount: notes.length,
+    overscan: resolvedOverscan,
+    rowHeight: resolvedRowHeight,
+      windowing: resolvedWindowing ? 'window' : 'container',
+    });
+  }, [notes.length, resolvedOverscan, resolvedRowHeight, resolvedWindowing]);
+
   return (
-    <div ref={parentRef} style={{ position: 'relative' }}>
+    <div
+      ref={parentRef}
+      data-flowist-virtual-list="notes"
+      data-virt-overscan={resolvedOverscan}
+      data-virt-row-height={resolvedRowHeight}
+      data-virt-windowing={resolvedWindowing ? 'window' : 'container'}
+      style={resolvedWindowing
+        ? { position: 'relative' }
+        : { position: 'relative', height: 'min(72vh, 900px)', overflow: 'auto', WebkitOverflowScrolling: 'touch', contain: 'strict' }
+      }
+    >
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,
@@ -99,7 +148,7 @@ export function NotesVirtualGrid({
                 top: 0,
                 left: 0,
                 width: '100%',
-                transform: `translateY(${vrow.start - virtualizer.options.scrollMargin}px)`,
+                transform: `translateY(${vrow.start - (resolvedWindowing ? scrollMargin : 0)}px)`,
                 display: 'grid',
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                 gap: '0.75rem',
@@ -109,7 +158,7 @@ export function NotesVirtualGrid({
                 // even when a single note body is 30k words.
                 contain: 'layout paint style',
                 contentVisibility: 'auto',
-                containIntrinsicSize: `${estimatedRowHeight}px auto`,
+                containIntrinsicSize: `${resolvedRowHeight}px auto`,
               } as React.CSSProperties}
             >
               {row.map((note) => (
