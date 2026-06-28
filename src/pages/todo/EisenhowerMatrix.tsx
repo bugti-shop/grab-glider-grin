@@ -251,7 +251,7 @@ const EisenhowerMatrix = () => {
       return null;
     }
     const allItems = grouped[activeQ];
-    const visibleByCompletion = showCompleted ? allItems : allItems.filter(t => !t.completed);
+    const visibleByCompletion = showCompleted ? allItems : allItems.filter(t => !t.completed || recentlyCompleted.has(t.id));
     const items = visibleByCompletion.filter(t => matchesFilter(t, filter));
     return (
       <div className="min-h-screen bg-muted/30 pb-20">
