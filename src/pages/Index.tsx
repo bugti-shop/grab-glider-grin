@@ -6,6 +6,7 @@ const FREE_CAPACITY_LIMITS_NOTES = FREE_CAPACITY_LIMITS.notes;
 import { cn } from '@/lib/utils';
 import { Note, NoteType, Folder } from '@/types/note';
 import { NoteCard } from '@/components/NoteCard';
+import { logPerfEvent } from '@/utils/perfLogger';
 import { NoteEditor } from '@/components/NoteEditor';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { DesktopSidebar } from '@/components/desktop/DesktopSidebar';
@@ -364,6 +365,7 @@ const Index = () => {
   const handleDragStart = (e: React.DragEvent, noteId: string) => {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/html', noteId);
+    e.dataTransfer.setData('text/plain', noteId);
     setDraggedNoteId(noteId);
   };
 
@@ -378,15 +380,26 @@ const Index = () => {
 
   const handleDrop = (e: React.DragEvent, targetNoteId: string) => {
     e.preventDefault();
-    const draggedId = e.dataTransfer.getData('text/html');
+    const started = performance.now();
+    const draggedId = e.dataTransfer.getData('text/html') || e.dataTransfer.getData('text/plain');
 
     if (draggedId === targetNoteId) return;
 
     const draggedNote = notes.find(n => n.id === draggedId);
     const targetNote = notes.find(n => n.id === targetNoteId);
 
-    if (!draggedNote || !targetNote) return;
-    if (draggedNote.isPinned !== targetNote.isPinned) return;
+    if (!draggedNote || !targetNote) {
+      logPerfEvent('reorder', { list: 'notes-dashboard', ok: false, reason: 'missing-note' });
+      toast.error('Could not move note', { id: 'note-reorder' });
+      setDraggedNoteId(null);
+      return;
+    }
+    if (draggedNote.isPinned !== targetNote.isPinned) {
+      logPerfEvent('reorder', { list: 'notes-dashboard', ok: false, reason: 'pinned-boundary' });
+      toast.error('Move notes inside the same section', { id: 'note-reorder' });
+      setDraggedNoteId(null);
+      return;
+    }
 
     setNotes((prev) => {
       const updatedNotes = [...prev];
@@ -405,8 +418,11 @@ const Index = () => {
       }
 
       updatedNotes.filter((n) => n.isPinned).forEach((n) => saveNoteToDBSingle(n));
+      logPerfEvent('reorder', { list: 'notes-dashboard', ok: true, count: prev.length, ms: Math.round(performance.now() - started) });
+      toast.success('Note moved', { id: 'note-reorder', duration: 900 });
       return updatedNotes;
     });
+    setDraggedNoteId(null);
   };
 
   const handleCreateNote = (type: NoteType) => {

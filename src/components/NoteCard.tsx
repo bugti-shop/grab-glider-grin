@@ -32,6 +32,7 @@ interface NoteCardProps {
   onDragOver?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent, targetNoteId: string) => void;
   onDragEnd?: () => void;
+  onDragLeave?: (e: React.DragEvent) => void;
   // Selection mode props
   isSelectionMode?: boolean;
   isSelected?: boolean;
@@ -64,7 +65,7 @@ const RANDOM_COLORS = [
   'hsl(60, 90%, 75%)',
 ];
 
-export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, onToggleFavorite, onMoveToFolder, onDragStart, onDragOver, onDrop, onDragEnd, isSelectionMode = false, isSelected = false, onToggleSelection, onDuplicate, onHide, onProtect }: NoteCardProps) => {
+export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, onToggleFavorite, onMoveToFolder, onDragStart, onDragOver, onDrop, onDragEnd, onDragLeave, isSelectionMode = false, isSelected = false, onToggleSelection, onDuplicate, onHide, onProtect }: NoteCardProps) => {
   const { t } = useTranslation();
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -340,6 +341,7 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
         onDragOver={onDragOver}
         onDrop={onDrop ? (e) => onDrop(e, note.id) : undefined}
         onDragEnd={onDragEnd}
+        onDragLeave={onDragLeave}
         className={cn(
           'group relative overflow-hidden cursor-pointer',
           'w-full hover:shadow-md border border-border/50',

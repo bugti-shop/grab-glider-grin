@@ -24,6 +24,7 @@ import { prefetchRoute } from '@/utils/routePrefetch';
 import { useTranslation } from 'react-i18next';
 import { useNotes } from '@/contexts/NotesContext';
 import { getTextPreviewFromHtml } from '@/utils/contentPreview';
+import { logPerfEvent } from '@/utils/perfLogger';
 
 import {
   DropdownMenu,
@@ -297,6 +298,7 @@ const Notes = () => {
   const handleDragStart = (e: React.DragEvent, noteId: string) => {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/html', noteId);
+    e.dataTransfer.setData('text/plain', noteId);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -306,17 +308,26 @@ const Notes = () => {
 
   const handleDrop = (e: React.DragEvent, targetNoteId: string) => {
     e.preventDefault();
-    const draggedNoteId = e.dataTransfer.getData('text/html');
+    const started = performance.now();
+    const draggedNoteId = e.dataTransfer.getData('text/html') || e.dataTransfer.getData('text/plain');
 
     if (draggedNoteId === targetNoteId) return;
 
     const draggedNote = notes.find(n => n.id === draggedNoteId);
     const targetNote = notes.find(n => n.id === targetNoteId);
 
-    if (!draggedNote || !targetNote) return;
+    if (!draggedNote || !targetNote) {
+      logPerfEvent('reorder', { list: 'notes', ok: false, reason: 'missing-note' });
+      toast.error('Could not move note', { id: 'note-reorder' });
+      return;
+    }
 
     // Only allow reordering within pinned or unpinned sections
-    if (draggedNote.isPinned !== targetNote.isPinned) return;
+    if (draggedNote.isPinned !== targetNote.isPinned) {
+      logPerfEvent('reorder', { list: 'notes', ok: false, reason: 'pinned-boundary' });
+      toast.error('Move notes inside the same section', { id: 'note-reorder' });
+      return;
+    }
 
     const updatedNotes = [...notes];
     const draggedIndex = updatedNotes.findIndex(n => n.id === draggedNoteId);
@@ -338,6 +349,8 @@ const Notes = () => {
     updatedNotes
       .filter((n) => n.isPinned)
       .forEach((n) => saveNoteToDBSingle(n));
+    logPerfEvent('reorder', { list: 'notes', ok: true, count: notes.length, ms: Math.round(performance.now() - started) });
+    toast.success('Note moved', { id: 'note-reorder', duration: 900 });
   };
 
   // Filter notes using lightweight metadata for instant performance
@@ -605,6 +618,10 @@ const Notes = () => {
                 onDragStart={(e) => handleDragStart(e, note.id)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, note.id)}
+                onDragLeave={(e) => {
+                  const next = e.relatedTarget as Node | null;
+                  if (!next || !e.currentTarget.contains(next)) e.currentTarget.blur();
+                }}
                 className={cn(
                   "cursor-pointer transition-colors relative group rounded-lg min-h-[150px] overflow-hidden border border-border/50 hover:shadow-md",
                   (note.isArchived || note.isDeleted) && "opacity-75"
