@@ -46,10 +46,13 @@ const EXPANDED_WIDTH = '17rem'; // ~ w-64/w-72
 const COLLAPSED_WIDTH = '4rem'; // w-16
 
 const applySidebarWidth = (collapsed: boolean) => {
-  if (typeof document === 'undefined') return;
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  // Only apply on lg+ where the sidebar is actually visible; on mobile keep 0px
+  // so fullscreen overlays (e.g. TaskDetailPage) cover the whole viewport.
+  const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
   document.documentElement.style.setProperty(
     '--desktop-sidebar-width',
-    collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH
+    isDesktop ? (collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH) : '0px'
   );
 };
 
