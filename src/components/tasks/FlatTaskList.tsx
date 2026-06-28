@@ -193,6 +193,36 @@ export function FlatTaskList({
   const totalSize = virtualizer.getTotalSize();
   const scrollOffset = useWindow ? parentTop : 0;
 
+  // Native HTML5 drag-reorder. Works with virtualization because the OS owns
+  // the drag image and we only listen on the live rows currently in the DOM.
+  // No thread-blocking measurement of off-screen nodes → safe at 24k+ rows.
+  const dragFromRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const autoscrollRafRef = useRef<number | null>(null);
+
+  const stopAutoscroll = useCallback(() => {
+    if (autoscrollRafRef.current != null) {
+      cancelAnimationFrame(autoscrollRafRef.current);
+      autoscrollRafRef.current = null;
+    }
+  }, []);
+
+  const tickAutoscroll = useCallback((clientY: number) => {
+    const EDGE = 80;
+    const SPEED = 18;
+    const vh = window.innerHeight;
+    let dy = 0;
+    if (clientY < EDGE) dy = -SPEED * ((EDGE - clientY) / EDGE);
+    else if (clientY > vh - EDGE) dy = SPEED * ((clientY - (vh - EDGE)) / EDGE);
+    if (dy !== 0) {
+      const scroller = useWindow ? window : parentRef.current;
+      if (scroller && 'scrollBy' in scroller) (scroller as Window | HTMLElement).scrollBy({ top: dy });
+    }
+    autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(clientY));
+  }, [useWindow]);
+
+  const dndEnabled = !!onReorder;
+
   return (
     <div
       ref={parentRef}
@@ -213,19 +243,53 @@ export function FlatTaskList({
           const row = flat[vi.index];
           if (!row) return null;
           const isActive = vi.index === activeIndex;
+          const isDragOver = dragOverIndex === vi.index;
           return (
             <div
               key={vi.key}
               data-index={vi.index}
               data-active={isActive ? 'true' : 'false'}
               ref={virtualizer.measureElement}
+              draggable={dndEnabled}
+              onDragStart={dndEnabled ? (e) => {
+                dragFromRef.current = vi.index;
+                try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(vi.index)); } catch {}
+              } : undefined}
+              onDragOver={dndEnabled ? (e) => {
+                if (dragFromRef.current == null) return;
+                e.preventDefault();
+                try { e.dataTransfer.dropEffect = 'move'; } catch {}
+                setDragOverIndex(vi.index);
+                stopAutoscroll();
+                autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(e.clientY));
+              } : undefined}
+              onDragLeave={dndEnabled ? () => {
+                setDragOverIndex((cur) => (cur === vi.index ? null : cur));
+              } : undefined}
+              onDrop={dndEnabled ? (e) => {
+                e.preventDefault();
+                stopAutoscroll();
+                const from = dragFromRef.current;
+                const to = vi.index;
+                dragFromRef.current = null;
+                setDragOverIndex(null);
+                if (from != null && from !== to && onReorder) onReorder(from, to);
+              } : undefined}
+              onDragEnd={dndEnabled ? () => {
+                stopAutoscroll();
+                dragFromRef.current = null;
+                setDragOverIndex(null);
+              } : undefined}
               style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 width: '100%',
-                 contain: 'layout paint style',
+                contain: 'layout paint style',
                 transform: `translateY(${vi.start - scrollOffset}px)`,
+                boxShadow: isDragOver ? 'inset 0 2px 0 0 hsl(var(--primary))' : undefined,
+                opacity: dragFromRef.current === vi.index ? 0.5 : 1,
+                cursor: dndEnabled ? 'grab' : undefined,
               }}
             >
               {renderRow(row, vi.index, isActive)}
