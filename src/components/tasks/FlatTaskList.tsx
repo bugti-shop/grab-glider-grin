@@ -63,6 +63,7 @@ export function FlatTaskList({
   rowHeight = 56,
   overscan = 8,
   maxHeight,
+  useWindow = false,
   renderRow,
   emptyState,
   onActivate,
@@ -74,13 +75,26 @@ export function FlatTaskList({
   const flat = flatIndex.flat;
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const virtualizer = useVirtualizer({
+
+  // Track the parent element's offset within the document so the window
+  // virtualizer knows where rows actually begin.
+  const containerVirtualizer = useVirtualizer({
     count: flat.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => rowHeight,
     overscan,
     getItemKey: (i) => flat[i]?.task?.id ?? i,
   });
+
+  const windowVirtualizer = useWindowVirtualizer({
+    count: flat.length,
+    estimateSize: () => rowHeight,
+    overscan,
+    getItemKey: (i) => flat[i]?.task?.id ?? i,
+    scrollMargin: parentRef.current?.offsetTop ?? 0,
+  });
+
+  const virtualizer = useWindow ? windowVirtualizer : containerVirtualizer;
 
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
@@ -132,17 +146,22 @@ export function FlatTaskList({
 
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
+  const scrollOffset = useWindow ? (parentRef.current?.offsetTop ?? 0) : 0;
 
   return (
     <div
       ref={parentRef}
       className={className}
-      style={{
-        height: maxHeight ?? '100%',
-        overflow: 'auto',
-        contain: 'strict',
-        WebkitOverflowScrolling: 'touch',
-      }}
+      style={
+        useWindow
+          ? { position: 'relative', width: '100%' }
+          : {
+              height: maxHeight ?? '100%',
+              overflow: 'auto',
+              contain: 'strict',
+              WebkitOverflowScrolling: 'touch',
+            }
+      }
     >
       <div style={{ height: totalSize, position: 'relative', width: '100%' }}>
         {virtualItems.map((vi) => {
@@ -154,13 +173,13 @@ export function FlatTaskList({
               key={vi.key}
               data-index={vi.index}
               data-active={isActive ? 'true' : 'false'}
-              ref={virtualizer.measureElement}
+              ref={useWindow ? undefined : virtualizer.measureElement}
               style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 width: '100%',
-                transform: `translateY(${vi.start}px)`,
+                transform: `translateY(${vi.start - scrollOffset}px)`,
               }}
             >
               {renderRow(row, vi.index, isActive)}
