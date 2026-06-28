@@ -22,6 +22,8 @@ export interface PdfExtractOptions {
   maxChars?: number;
   /** Abort fetch/decoding after this many ms. Default 15000. */
   timeoutMs?: number;
+  /** External abort signal — lets the caller cancel mid-flight. */
+  signal?: AbortSignal;
   /**
    * Progress callback. `stage` is one of:
    *  - 'download'  : 0..1 download ratio (or undefined if unknown)
@@ -31,7 +33,7 @@ export interface PdfExtractOptions {
   onProgress?: (stage: 'download' | 'parse' | 'done', ratio?: number) => void;
 }
 
-const DEFAULTS: Required<Omit<PdfExtractOptions, 'onProgress'>> = {
+const DEFAULTS: Required<Omit<PdfExtractOptions, 'onProgress' | 'signal'>> = {
   maxPages: 10,
   maxChars: 20000,
   timeoutMs: 15000,
