@@ -124,6 +124,9 @@ const hasAuthenticatedUser = async (): Promise<boolean> => {
  */
 export const pullAndMergeLifetimeCounters = async (): Promise<void> => {
   try {
+    // Skip cloud reads entirely while signed-out so RLS does not log a 401 in
+    // the browser console. Local counters keep working unchanged.
+    if (!(await hasAuthenticatedUser())) return;
     const { identifier, type } = await getIdentifier();
     const { data, error } = await db
       .from('user_lifetime_counters')
