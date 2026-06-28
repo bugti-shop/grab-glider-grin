@@ -11,6 +11,7 @@ import { VirtualizedTaskList, shouldUseVirtualization } from '@/components/Virtu
 import { FlatTaskList } from '@/components/tasks/FlatTaskList';
 import { useFlatTaskIndex } from '@/hooks/useFlatTaskIndex';
 import { markRenderStart, trackScrollFps } from '@/utils/perfBenchmark';
+import { FLAT_ROW_WRAPPER_CLASS, checkFlatRowConsistency } from '@/utils/rowConsistency';
 
 // Virtualize aggressively — once a single section can blow past a viewport
 // height, the native DOM cost (event listeners, layout, paint) starts to
