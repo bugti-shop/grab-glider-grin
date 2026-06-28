@@ -82,6 +82,10 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
+  const markSingleTaskPersisted = () => {
+    try { (window as any).__flowistSkipNextTaskFullSave = Date.now(); } catch {}
+  };
+
   // ── Folder Actions ──
   const handleCreateFolder = useCallback((name: string, color: string, icon?: string, parentId?: string) => {
     if (!requireCapacity('taskFolders', folders.length)) return;
@@ -296,6 +300,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     };
     if (taskAddPosition === 'bottom') setItems(prev => [...prev, newItem]);
     else setItems(prev => [newItem, ...prev]);
+    markSingleTaskPersisted();
     void saveTodoItem(newItem).then(({ persisted }) => {
       if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
     });
@@ -364,6 +369,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     }
 
     const persistUpdate = () => {
+      markSingleTaskPersisted();
       void updateTodoItem(itemId, updatesWithTimestamp).then((persisted) => {
         if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
       });
@@ -456,6 +462,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       itemsRef.current = next;
       return next;
     });
+    markSingleTaskPersisted();
     void deleteTodoItem(itemId);
     toast.success(t('todayPage.taskDeleted'), {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [itemToRestore!, ...prev]); toast.success(t('todayPage.taskRestored')); } },
@@ -472,6 +479,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       itemsRef.current = next;
       return next;
     });
+    markSingleTaskPersisted();
     void deleteTodoItem(deletedItem.id);
     setDeleteConfirmItem(null);
     toast.success(t('todayPage.taskDeleted'), {
@@ -488,6 +496,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
     const duplicatedTask: TodoItem = { ...task, id: genId(), completed: false, text: withCopySuffix(task.text) };
     setItems(prev => [duplicatedTask, ...prev]);
+    markSingleTaskPersisted();
     void saveTodoItem(duplicatedTask);
   }, [setItems, requireCapacity, softRequireCreate, isPro]);
 
