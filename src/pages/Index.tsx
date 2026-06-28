@@ -8,6 +8,7 @@ import { Note, NoteType, Folder } from '@/types/note';
 import { NoteCard } from '@/components/NoteCard';
 import { NoteEditor } from '@/components/NoteEditor';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { DesktopSidebar } from '@/components/desktop/DesktopSidebar';
 
 
 import { FolderManager } from '@/components/FolderManager';
@@ -946,7 +947,9 @@ const Index = () => {
   const hasAnyVisibleNotes = favoriteNotes.length > 0 || regularNotes.length > 0;
 
   return (
-    <div className="min-h-screen min-h-screen-dynamic bg-background pb-14">
+    <div className="min-h-screen min-h-screen-dynamic bg-background pb-14 lg:pb-0 lg:flex">
+      <DesktopSidebar />
+      <div className="flex-1 min-w-0 lg:flex lg:flex-col">
       <header 
         className="sticky top-0 bg-background z-10"
         style={{
@@ -1589,6 +1592,7 @@ const Index = () => {
         <a href="https://www.flowist.me/privacy-policy" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Privacy Policy</a>
         <span className="text-[10px] text-background mx-1">·</span>
         <a href="https://www.flowist.me/terms-and-conditions" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Terms</a>
+      </div>
       </div>
     </div>
   );

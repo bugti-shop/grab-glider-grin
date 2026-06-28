@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   Plus,
@@ -16,6 +16,8 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
+  FileText,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AppLogo } from '@/components/AppLogo';
@@ -30,9 +32,8 @@ interface NavItem {
   path: string;
 }
 
-const MAIN_NAV: NavItem[] = [
+const TASKS_NAV: NavItem[] = [
   { id: 'today', label: 'Today', icon: Home, path: '/todo/today' },
-  
   { id: 'calendar', label: 'Calendar', icon: Calendar, path: '/todo/calendar' },
   { id: 'habits', label: 'Habits', icon: ListChecks, path: '/todo/habits' },
   { id: 'matrix', label: 'Matrix', icon: LayoutGrid, path: '/todo/matrix' },
@@ -41,20 +42,30 @@ const MAIN_NAV: NavItem[] = [
   { id: 'notes', label: 'Notes', icon: StickyNote, path: '/notesdashboard' },
 ];
 
+const NOTES_NAV: NavItem[] = [
+  { id: 'notesHome', label: 'Notes Home', icon: Home, path: '/notesdashboard' },
+  { id: 'allNotes', label: 'All Notes', icon: FileText, path: '/notes' },
+  { id: 'notesCalendar', label: 'Calendar', icon: Calendar, path: '/calendar' },
+  { id: 'tasks', label: 'Tasks', icon: ListChecks, path: '/todo/today' },
+];
+
 const COLLAPSE_KEY = 'desktop-sidebar-collapsed';
-const EXPANDED_WIDTH = '17rem'; // ~ w-64/w-72
-const COLLAPSED_WIDTH = '4rem'; // w-16
+const EXPANDED_WIDTH = '17rem';
+const COLLAPSED_WIDTH = '4rem';
 
 const applySidebarWidth = (collapsed: boolean) => {
   if (typeof document === 'undefined' || typeof window === 'undefined') return;
-  // Only apply on lg+ where the sidebar is actually visible; on mobile keep 0px
-  // so fullscreen overlays (e.g. TaskDetailPage) cover the whole viewport.
   const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
   document.documentElement.style.setProperty(
     '--desktop-sidebar-width',
     isDesktop ? (collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH) : '0px'
   );
 };
+
+const isNotesPath = (pathname: string) =>
+  pathname.startsWith('/notesdashboard') ||
+  pathname.startsWith('/notes') ||
+  pathname.startsWith('/calendar');
 
 export const DesktopSidebar = () => {
   const navigate = useNavigate();
@@ -70,6 +81,17 @@ export const DesktopSidebar = () => {
     }
   });
 
+  const notesContext = isNotesPath(location.pathname);
+  const MAIN_NAV = notesContext ? NOTES_NAV : TASKS_NAV;
+
+  const filteredFolders = useMemo(
+    () =>
+      folders.filter((f) =>
+        notesContext ? f.type === 'notes' || f.type === 'both' : f.type === 'tasks' || f.type === 'both'
+      ),
+    [folders, notesContext]
+  );
+
   useEffect(() => {
     applySidebarWidth(collapsed);
     try {
@@ -80,7 +102,6 @@ export const DesktopSidebar = () => {
     return () => window.removeEventListener('resize', onResize);
   }, [collapsed]);
 
-  // Global Ctrl/Cmd+B → toggle from anywhere in the app.
   useEffect(() => {
     const onToggle = () => setCollapsed((v) => !v);
     window.addEventListener('desktop-sidebar:toggle', onToggle);
@@ -92,9 +113,7 @@ export const DesktopSidebar = () => {
     const load = async () => {
       try {
         const f = await loadFolders();
-        if (mounted) {
-          setFolders(f.filter((x) => x.type === 'tasks' || x.type === 'both'));
-        }
+        if (mounted) setFolders(f);
       } catch {}
     };
     load();
@@ -106,14 +125,34 @@ export const DesktopSidebar = () => {
     };
   }, []);
 
-  const handleAddTask = useCallback(() => {
+  const handlePrimaryAction = useCallback(() => {
     triggerHaptic('light').catch(() => {});
-    navigate('/todo/today?add=1');
-  }, [navigate]);
+    if (notesContext) {
+      navigate('/notesdashboard?new=1');
+    } else {
+      navigate('/todo/today?add=1');
+    }
+  }, [navigate, notesContext]);
 
   const toggleCollapsed = () => {
     triggerHaptic('light').catch(() => {});
     setCollapsed((v) => !v);
+  };
+
+  const primaryLabel = notesContext
+    ? t('notes.newNote', 'New Note')
+    : t('tasks.addTask', 'Add Task');
+
+  const folderLabel = notesContext
+    ? t('folders.notesTitle', 'Note Folders')
+    : t('folders.title', 'My Folders');
+
+  const handleFolderNav = (folder: Folder) => {
+    if (notesContext) {
+      navigate(`/notes?folder=${folder.id}`);
+    } else {
+      navigate(`/todo/today?folder=${folder.id}`);
+    }
   };
 
   return (
@@ -123,7 +162,6 @@ export const DesktopSidebar = () => {
         collapsed ? 'w-16' : 'w-64 xl:w-72'
       )}
     >
-      {/* Brand + Collapse toggle */}
       <div
         className={cn(
           'flex items-center h-14 border-b border-border',
@@ -134,6 +172,11 @@ export const DesktopSidebar = () => {
           <div className="flex items-center gap-2 min-w-0">
             <AppLogo />
             <span className="font-bold text-base truncate">Flowist</span>
+            {notesContext && (
+              <span className="ml-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                Notes
+              </span>
+            )}
           </div>
         )}
         <button
@@ -142,31 +185,29 @@ export const DesktopSidebar = () => {
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? (
-            <PanelLeftOpen className="h-4 w-4" />
-          ) : (
-            <PanelLeftClose className="h-4 w-4" />
-          )}
+          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>
       </div>
 
-      {/* Add Task */}
       <div className={cn('pt-3 pb-2', collapsed ? 'px-2' : 'px-3')}>
         <button
-          onClick={handleAddTask}
+          onClick={handlePrimaryAction}
           className={cn(
             'w-full flex items-center rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 active:scale-[0.98] transition-all',
             collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'
           )}
-          title={collapsed ? t('tasks.addTask', 'Add Task') : undefined}
+          title={collapsed ? primaryLabel : undefined}
         >
-          <Plus className="h-5 w-5 flex-shrink-0" />
-          {!collapsed && <span>{t('tasks.addTask', 'Add Task')}</span>}
+          {notesContext ? (
+            <BookOpen className="h-5 w-5 flex-shrink-0" />
+          ) : (
+            <Plus className="h-5 w-5 flex-shrink-0" />
+          )}
+          {!collapsed && <span>{primaryLabel}</span>}
         </button>
       </div>
 
-      {/* Main nav */}
-      <nav className={cn('py-1 flex flex-col gap-0.5', collapsed ? 'px-2' : 'px-2')}>
+      <nav className={cn('py-1 flex flex-col gap-0.5 px-2')}>
         {MAIN_NAV.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -178,28 +219,23 @@ export const DesktopSidebar = () => {
               className={cn(
                 'flex items-center rounded-lg text-sm font-medium transition-colors',
                 collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-                isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-foreground/80 hover:bg-muted'
+                isActive ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted'
               )}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
-              {!collapsed && (
-                <span className="truncate">{t(`nav.${item.id}`, item.label)}</span>
-              )}
+              {!collapsed && <span className="truncate">{t(`nav.${item.id}`, item.label)}</span>}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Folders */}
       {!collapsed && (
         <div className="mt-3 px-2 flex-1 overflow-y-auto min-h-0">
           <button
             onClick={() => setFoldersOpen((v) => !v)}
             className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
           >
-            <span>{t('folders.title', 'My Folders')}</span>
+            <span>{folderLabel}</span>
             {foldersOpen ? (
               <ChevronDown className="h-3.5 w-3.5" />
             ) : (
@@ -208,15 +244,15 @@ export const DesktopSidebar = () => {
           </button>
           {foldersOpen && (
             <div className="flex flex-col gap-0.5 mt-1">
-              {folders.length === 0 ? (
+              {filteredFolders.length === 0 ? (
                 <p className="px-3 py-2 text-xs text-muted-foreground">
                   {t('folders.empty', 'No folders yet')}
                 </p>
               ) : (
-                folders.map((folder) => (
+                filteredFolders.map((folder) => (
                   <button
                     key={folder.id}
-                    onClick={() => navigate(`/todo/today?folder=${folder.id}`)}
+                    onClick={() => handleFolderNav(folder)}
                     className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground/80 hover:bg-muted transition-colors text-left"
                   >
                     <FolderIcon
@@ -233,13 +269,7 @@ export const DesktopSidebar = () => {
       )}
       {collapsed && <div className="flex-1 min-h-0" />}
 
-      {/* Profile + Settings */}
-      <div
-        className={cn(
-          'border-t border-border flex flex-col gap-0.5',
-          collapsed ? 'p-2' : 'p-2'
-        )}
-      >
+      <div className={cn('border-t border-border flex flex-col gap-0.5 p-2')}>
         <NavLink
           to="/profile"
           title={collapsed ? t('nav.profile', 'Profile') : undefined}
