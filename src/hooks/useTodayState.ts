@@ -477,11 +477,14 @@ export const useTodayState = () => {
   }, [processedItems, deferredSearch, workerResult, worker.isAvailable]);
 
   const uncompletedItems = useMemo(
-    () => searchFilteredItems.filter(item => !item.completed),
-    [searchFilteredItems]
+    () => searchFilteredItems.filter(item => !item.completed || item.id === pendingCompleteId),
+    [searchFilteredItems, pendingCompleteId]
   );
 
-  const completedItems = useMemo(() => searchFilteredItems.filter(item => item.completed), [searchFilteredItems]);
+  const completedItems = useMemo(
+    () => searchFilteredItems.filter(item => item.completed && item.id !== pendingCompleteId),
+    [searchFilteredItems, pendingCompleteId]
+  );
 
   const sortedSections = useMemo(() => {
     const visibleTaskSectionIds = new Set(searchFilteredItems.map(item => item.sectionId).filter(Boolean) as string[]);
