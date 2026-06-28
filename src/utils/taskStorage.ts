@@ -532,8 +532,13 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
       return { migrated: false, count: existingItems.length };
     }
     
-    // Save to IndexedDB
-    await saveTasksToDB(items);
+    // Only legacy localStorage should be imported once. If the user has already
+    // been using IndexedDB (or just deleted all tasks), stale localStorage must
+    // not resurrect old sample/template tasks.
+    const hasExplicitMigrationMarker = localStorage.getItem(LOCAL_STORAGE_MIGRATION_DONE_KEY) === 'true';
+    if (!hasExplicitMigrationMarker) {
+      await saveTasksToDB(items);
+    }
     
     // Clear localStorage to free quota
     localStorage.removeItem(TODO_ITEMS_KEY);
