@@ -4,6 +4,7 @@
  */
 import { useCallback, useRef } from 'react';
 import { genId } from '@/utils/genId';
+import { withCopySuffix } from '@/utils/duplicateName';
 import { TodoItem, Folder, Priority, Note, TaskSection } from '@/types/note';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { useTranslation } from 'react-i18next';
@@ -211,7 +212,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     if (!requireCapacity('sectionsPerFolder', folderSectionsCount)) return;
 
     const maxOrder = Math.max(...sections.map(s => s.order), 0);
-    const newSection: TaskSection = { ...section, id: genId(), name: `${section.name} (Copy)`, order: maxOrder + 1, updatedAt: new Date() } as TaskSection;
+    const newSection: TaskSection = { ...section, id: genId(), name: withCopySuffix(section.name), order: maxOrder + 1, updatedAt: new Date() } as TaskSection;
     const sectionTasks = items.filter(i => i.sectionId === sectionId && !i.completed);
 
     // Cap duplicated tasks to remaining per-folder and global soft limits
@@ -450,7 +451,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     if (!requireCapacity('tasksPerFolder', folderTasksCount)) return;
     if (!isPro && !softRequireCreate('tasks', itemsRef.current.length)) return;
     try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
-    const duplicatedTask: TodoItem = { ...task, id: genId(), completed: false, text: `${task.text} (Copy)` };
+    const duplicatedTask: TodoItem = { ...task, id: genId(), completed: false, text: withCopySuffix(task.text) };
     setItems(prev => [duplicatedTask, ...prev]);
   }, [setItems, requireCapacity, softRequireCreate, isPro]);
 
@@ -481,7 +482,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     toDuplicate = toDuplicate.slice(0, allowedCount);
 
     const duplicated = toDuplicate.map((item, idx) => ({
-      ...item, id: genId(), completed: option === 'all-reset' ? false : item.completed, text: `${item.text} (Copy)`
+      ...item, id: genId(), completed: option === 'all-reset' ? false : item.completed, text: withCopySuffix(item.text)
     }));
     setItems(prev => [...duplicated, ...prev]);
     toast.success(t('todayPage.duplicatedTasks', { count: duplicated.length }));
@@ -552,7 +553,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
           return;
         }
         const dupSlice = selectedItems.slice(0, allowedCount);
-        const duplicated = dupSlice.map((item, idx) => ({ ...item, id: genId(), completed: false, text: `${item.text} (Copy)` }));
+        const duplicated = dupSlice.map((item, idx) => ({ ...item, id: genId(), completed: false, text: withCopySuffix(item.text) }));
         setItems(prev => [...duplicated, ...prev]);
         setSelectedTaskIds(new Set()); setIsSelectionMode(false);
         toast.success(t('todayPage.duplicatedTasks', { count: duplicated.length }));
