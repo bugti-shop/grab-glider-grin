@@ -11,7 +11,15 @@ export type CompletionRingtoneId =
   | 'wood-tap'
   | 'sparkle'
   | 'minimal-click'
-  | 'celebration';
+  | 'celebration'
+  | 'deep-ding'
+  | 'glass-drop'
+  | 'calm-bell'
+  | 'quick-tick'
+  | 'success-rise'
+  | 'bubble-pop'
+  | 'keyboard-tap'
+  | 'angel-chime';
 
 export interface CompletionRingtoneOption {
   id: CompletionRingtoneId;
@@ -31,6 +39,14 @@ export const COMPLETION_RINGTONE_OPTIONS: CompletionRingtoneOption[] = [
   { id: 'sparkle', label: 'Sparkle', description: 'Light success shimmer', icon: '💫' },
   { id: 'minimal-click', label: 'Minimal Click', description: 'Quiet productivity click', icon: '✓' },
   { id: 'celebration', label: 'Celebration', description: 'Small completed-task flourish', icon: '🎉' },
+  { id: 'deep-ding', label: 'Deep Ding', description: 'Low soft desk bell', icon: '🔔' },
+  { id: 'glass-drop', label: 'Glass Drop', description: 'Clean crystal drop', icon: '💧' },
+  { id: 'calm-bell', label: 'Calm Bell', description: 'Relaxed two-tone bell', icon: '🛎️' },
+  { id: 'quick-tick', label: 'Quick Tick', description: 'Ultra-fast task tick', icon: '✅' },
+  { id: 'success-rise', label: 'Success Rise', description: 'Tiny upward success cue', icon: '📈' },
+  { id: 'bubble-pop', label: 'Bubble Pop', description: 'Soft rounded pop', icon: '🫧' },
+  { id: 'keyboard-tap', label: 'Keyboard Tap', description: 'Subtle mechanical tap', icon: '⌨️' },
+  { id: 'angel-chime', label: 'Angel Chime', description: 'Airy high chime', icon: '🌟' },
 ];
 
 let soundEnabled = true;
@@ -156,6 +172,39 @@ const createCompletionSound = (ringtone: CompletionRingtoneId): void => {
         playTone(ctx, master, t + 0.055, 988, 0.16, 0.13, 'triangle');
         playTone(ctx, master, t + 0.11, 1318, 0.22, 0.12, 'triangle');
         playNoise(ctx, master, t + 0.03, 0.09, 0.03);
+        break;
+      case 'deep-ding':
+        playTone(ctx, master, t, 392, 0.34, 0.24, 'sine');
+        playTone(ctx, master, t + 0.035, 588, 0.26, 0.08, 'sine');
+        break;
+      case 'glass-drop':
+        playTone(ctx, master, t, 1568, 0.16, 0.13, 'sine', 1174);
+        playTone(ctx, master, t + 0.035, 2349, 0.12, 0.05, 'sine');
+        break;
+      case 'calm-bell':
+        playTone(ctx, master, t, 659, 0.28, 0.19, 'sine');
+        playTone(ctx, master, t + 0.08, 880, 0.3, 0.12, 'sine');
+        break;
+      case 'quick-tick':
+        playTone(ctx, master, t, 1400, 0.045, 0.11, 'triangle');
+        break;
+      case 'success-rise':
+        playTone(ctx, master, t, 523, 0.1, 0.12, 'triangle');
+        playTone(ctx, master, t + 0.055, 659, 0.1, 0.11, 'triangle');
+        playTone(ctx, master, t + 0.11, 784, 0.16, 0.1, 'triangle');
+        break;
+      case 'bubble-pop':
+        playTone(ctx, master, t, 360, 0.08, 0.18, 'sine', 720);
+        playTone(ctx, master, t + 0.045, 720, 0.06, 0.08, 'sine', 540);
+        break;
+      case 'keyboard-tap':
+        playTone(ctx, master, t, 950, 0.025, 0.08, 'square');
+        playNoise(ctx, master, t, 0.025, 0.025);
+        break;
+      case 'angel-chime':
+        playTone(ctx, master, t, 1760, 0.18, 0.08, 'sine');
+        playTone(ctx, master, t + 0.05, 2637, 0.22, 0.05, 'sine');
+        playTone(ctx, master, t + 0.12, 3520, 0.18, 0.025, 'sine');
         break;
       case 'flowist-bell':
       default:
