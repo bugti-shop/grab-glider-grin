@@ -28,7 +28,7 @@ export function PerfDiagnosticsPanel() {
   const [visible, setVisible] = useState<boolean>(() => {
     try { return localStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
   });
-  const [stats, setStats] = useState<Stats>({ fps: 0, renders: 0, virtRows: 0, longTasks: 0, lastLongTaskMs: 0 });
+  const [stats, setStats] = useState<Stats>({ fps: 0, renders: 0, virtRows: 0, longTasks: 0, lastLongTaskMs: 0, lastBulkAddMs: 0, lastBulkAddCount: 0, lastBulkAddVia: '', scrollJankCount: 0, lastScrollJankMs: 0 });
   const renderCountRef = useRef(0);
 
   // Toggle hotkey
