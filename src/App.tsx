@@ -412,6 +412,7 @@ const AppRoutes = () => {
   useGlobalShortcuts();
   return (
     <BrowserRouter>
+      <ShareIntentBridge />
       <NavigationBackProvider>
         <NavigationLoader />
         <DashboardTracker />
