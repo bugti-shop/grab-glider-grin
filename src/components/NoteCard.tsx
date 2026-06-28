@@ -493,5 +493,36 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
       </DropdownMenu>
     </div>
   );
+}, (prev, next) => {
+  // Skip re-renders during scroll when nothing visible to this card changed.
+  // Callback props are expected to be stable (wrap with useCallback in parents).
+  const a = prev.note;
+  const b = next.note;
+  if (a === b) {
+    return (
+      prev.isSelectionMode === next.isSelectionMode &&
+      prev.isSelected === next.isSelected
+    );
+  }
+  return (
+    a.id === b.id &&
+    a.title === b.title &&
+    a.type === b.type &&
+    a.color === b.color &&
+    a.customColor === b.customColor &&
+    a.isPinned === b.isPinned &&
+    a.isFavorite === b.isFavorite &&
+    a.isArchived === b.isArchived &&
+    a.isDeleted === b.isDeleted &&
+    a.metaDescription === b.metaDescription &&
+    (a as any).__contentPreview === (b as any).__contentPreview &&
+    a.content === b.content &&
+    (a.updatedAt instanceof Date ? a.updatedAt.getTime() : +new Date(a.updatedAt as any)) ===
+      (b.updatedAt instanceof Date ? b.updatedAt.getTime() : +new Date(b.updatedAt as any)) &&
+    (a.tagIds?.join(',') ?? '') === (b.tagIds?.join(',') ?? '') &&
+    (a.voiceRecordings?.length ?? 0) === (b.voiceRecordings?.length ?? 0) &&
+    prev.isSelectionMode === next.isSelectionMode &&
+    prev.isSelected === next.isSelected
+  );
 });
 NoteCard.displayName = 'NoteCard';
