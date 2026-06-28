@@ -3,7 +3,7 @@
  * user already designed, but only paints rows currently in the viewport so
  * the UI stays identical and fast from 1 → 100,000 notes.
  *
- * Layout: 2 columns on mobile, 3 on lg, 4 on xl — chunked into rows so we
+ * Layout: 1 column on mobile, 2 on lg, 3 on xl — chunked into rows so we
  * can virtualize with stable row heights via @tanstack/react-virtual's
  * useWindowVirtualizer (no nested scroll container = bottom nav stays put,
  * page scroll behaves natively).
@@ -22,16 +22,16 @@ interface NotesVirtualGridProps {
 }
 
 function getColumnsForWidth(w: number): number {
-  if (w >= 1280) return 4; // xl
-  if (w >= 1024) return 3; // lg
-  return 2; // mobile/tablet — restores the original 2-col card grid
+  if (w >= 1280) return 3; // xl
+  if (w >= 1024) return 2; // lg
+  return 1; // mobile/tablet — original full-width note card UI
 }
 
 export function NotesVirtualGrid({
   notes,
   renderCard,
   getRowKey,
-  estimatedRowHeight = 200,
+  estimatedRowHeight = 165,
 }: NotesVirtualGridProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState<number>(() =>
