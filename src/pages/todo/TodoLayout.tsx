@@ -7,6 +7,7 @@ import { FileText, Search, Sun, Moon, X, Crown } from 'lucide-react';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
+import { DesktopSidebar } from '@/components/desktop/DesktopSidebar';
 
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { AppLogo } from '@/components/AppLogo';
@@ -29,7 +30,9 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
 
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background lg:flex">
+      <DesktopSidebar />
+      <div className="flex-1 min-w-0 lg:flex lg:flex-col">
       <header 
         className="sticky top-0 bg-background z-30"
         style={{
@@ -41,9 +44,10 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
         <div className="container mx-auto px-3 sm:px-4 pt-3 pb-1.5">
           <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-              <AppLogo />
-              <h1 className="text-lg sm:text-xl font-bold truncate">{title}</h1>
-              
+              <div className="lg:hidden flex items-center gap-2">
+                <AppLogo />
+              </div>
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{title}</h1>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               
@@ -101,7 +105,7 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
         </div>
         <div className="h-[1px] bg-border" />
       </header>
-      <main className="pb-14">
+      <main className="pb-14 lg:pb-4">
         {children}
         <div className="text-center py-2">
           <a href="https://www.flowist.me/privacy-policy" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Privacy Policy</a>
@@ -109,7 +113,10 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
           <a href="https://www.flowist.me/terms-and-conditions" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Terms</a>
         </div>
       </main>
-      <TodoBottomNavigation />
+      <div className="lg:hidden">
+        <TodoBottomNavigation />
+      </div>
+      </div>
     </div>
   );
 };
