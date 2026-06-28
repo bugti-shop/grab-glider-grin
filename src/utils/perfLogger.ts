@@ -11,7 +11,7 @@
  * Zero-dependency. Safe in SSR (all browser APIs are guarded).
  */
 
-export type PerfKind = 'bulkAdd' | 'render' | 'scrollJank' | 'longTask';
+export type PerfKind = 'bulkAdd' | 'render' | 'scrollJank' | 'longTask' | 'fps' | 'reorder';
 
 export interface PerfEvent {
   kind: PerfKind;
