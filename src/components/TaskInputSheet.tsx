@@ -128,6 +128,16 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   // so the sheet at bottom:0 already sits above the keyboard — don't double-lift.
   const keyboardHeight = useKeyboardHeight();
   const isAndroidNative = typeof document !== 'undefined' && document.body.classList.contains('android-app');
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsDesktop(mql.matches);
+    mql.addEventListener?.('change', onChange);
+    return () => mql.removeEventListener?.('change', onChange);
+  }, []);
   const shouldLiftForKeyboard = keyboardHeight > 0 && !isAndroidNative;
   
   // Load custom priorities
@@ -835,17 +845,20 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/20 z-[60]"
+        className="fixed inset-0 bg-black/20 lg:bg-black/40 z-[60]"
         onClick={preventBackdropClose ? undefined : onClose}
       />
 
       <div
-        className="fixed left-0 right-0 bg-card z-[70] rounded-t-3xl shadow-2xl pointer-events-auto transition-opacity overflow-y-auto"
+        className="fixed left-0 right-0 lg:left-1/2 lg:right-auto lg:w-[min(560px,92vw)] bg-card z-[70] rounded-t-3xl lg:rounded-2xl shadow-2xl pointer-events-auto transition-opacity overflow-y-auto lg:border lg:border-border"
         style={{ 
-          bottom: shouldLiftForKeyboard ? `${keyboardHeight}px` : '0px',
+          bottom: isDesktop ? 'auto' : (shouldLiftForKeyboard ? `${keyboardHeight}px` : '0px'),
+          top: isDesktop ? '50%' : undefined,
           paddingBottom: keyboardHeight > 0 ? '0px' : 'max(var(--safe-bottom, 0px), 4px)',
-          maxHeight: isAndroidNative ? '60vh' : (shouldLiftForKeyboard ? `calc(100vh - ${keyboardHeight}px)` : '80vh'),
-          transform: swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined,
+          maxHeight: isDesktop ? '85vh' : (isAndroidNative ? '60vh' : (shouldLiftForKeyboard ? `calc(100vh - ${keyboardHeight}px)` : '80vh')),
+          transform: isDesktop
+            ? `translate(-50%, -50%)${swipeOffset > 0 ? ` translateY(${swipeOffset}px)` : ''}`
+            : (swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined),
           opacity: swipeOffset > 60 ? 0.6 : 1,
         }}
         onClick={(e) => e.stopPropagation()}
