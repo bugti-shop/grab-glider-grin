@@ -156,6 +156,18 @@ export const loadTasksFromDB = async (): Promise<TodoItem[]> => {
       request.onsuccess = () => {
         try {
           const items = request.result.map(hydrateItem);
+          // Automated UI/data check: strip any legacy "(Copy)" suffixes that
+          // older versions of the app may have persisted. We re-save in the
+          // background if anything actually changed.
+          import('@/utils/duplicateName').then(({ sanitizeCopySuffixes }) => {
+            const { items: cleaned, changed } = sanitizeCopySuffixes(items);
+            if (changed) {
+              tasksCache = cleaned;
+              // Skip sync push — this is a cosmetic local cleanup that the
+              // next legitimate save will mirror to the cloud.
+              setTimeout(() => { void bulkPutTasksInDB(cleaned, true); }, 0);
+            }
+          }).catch(() => {});
           tasksCache = items;
           resolve(items);
         } catch (e) {
