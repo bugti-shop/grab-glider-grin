@@ -25,6 +25,11 @@ All colors MUST be HSL.
   -webkit-tap-highlight-color: transparent;
 }
 
+body.flowist-task-dragging {
+  user-select: none;
+  overscroll-behavior: contain;
+}
+
 @layer base {
   :root {
     --keyboard-inset: 0px;
