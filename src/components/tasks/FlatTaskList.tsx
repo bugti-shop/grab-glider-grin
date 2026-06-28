@@ -26,7 +26,9 @@ export interface FlatTaskListProps {
   index?: FlatTaskIndex;
   /** Estimated row height in px. Keep consistent with the rendered row. */
   rowHeight?: number;
-  /** Number of rows to render outside the viewport (default 8). */
+  /** Number of rows to render outside the viewport (default 24 — generous
+   *  buffer so flick-scrolling never reveals a blank white band before the
+   *  virtualizer catches up). */
   overscan?: number;
   /** Optional fixed max-height (defaults to viewport-driven). Ignored when useWindow. */
   maxHeight?: number | string;
@@ -61,7 +63,7 @@ export function FlatTaskList({
   items,
   index,
   rowHeight = 56,
-  overscan = 8,
+  overscan = 24,
   maxHeight,
   useWindow = false,
   renderRow,

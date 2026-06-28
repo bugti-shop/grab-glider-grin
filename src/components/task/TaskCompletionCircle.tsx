@@ -54,8 +54,12 @@ export const TaskCompletionCircle = ({
     setPendingComplete(true);
     setShowBurst(true);
     triggerHaptic('light');
+    // Fire the actual completion immediately so the data model updates fast,
+    // but keep the colored "filled ring" visible for ~900ms so the user gets
+    // the satisfying paint-fill animation before the row collapses to its
+    // muted completed state.
     onComplete();
-    window.setTimeout(() => setPendingComplete(false), 120);
+    window.setTimeout(() => setPendingComplete(false), 900);
   };
 
   return (

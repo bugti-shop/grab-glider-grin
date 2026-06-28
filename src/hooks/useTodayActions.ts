@@ -339,16 +339,19 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       priority, dueDate: dueDate || new Date(), createdAt: now, modifiedAt: now,
     }));
     if (newItems.length === 0) return;
-    setItems(prev => {
-      const next = [...newItems, ...prev];
-      void saveTodoItems(next).then(({ persisted }) => {
+    // Additive insert: never rewrite the whole tasks store. With 100k+ existing
+    // tasks, full-array saves blocked the main thread for seconds; bulk-put
+    // streams new rows in batches and keeps the UI responsive.
+    setItems(prev => [...newItems, ...prev]);
+    markSingleTaskPersisted(true);
+    void import('@/utils/taskStorage').then(({ bulkPutTasksInDB }) =>
+      bulkPutTasksInDB(newItems).then((persisted) => {
         if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
-      });
-      return next;
-    });
+      }),
+    );
     toast.success(t('todayPage.addedTasks', { count: newItems.length }));
     setInputSectionId(null);
-  }, [selectedFolderId, inputSectionId, sections, setItems, setInputSectionId, t, isPro, softRequireCreate, requireCapacity]);
+  }, [selectedFolderId, inputSectionId, sections, setItems, setInputSectionId, t, isPro, softRequireCreate, requireCapacity, markSingleTaskPersisted]);
 
   const updateItem = useCallback(async (itemId: string, updates: Partial<TodoItem>) => {
     const onlyCompletion = Object.keys(updates).every(k => k === 'completed' || k === 'completedAt' || k === 'modifiedAt');

@@ -437,6 +437,59 @@ export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promis
   }
 };
 
+// Bulk additive insert/replace for many tasks at once. Unlike saveTasksToDB
+// this does NOT clear the store — so adding 100 (or 100k) new tasks does not
+// rewrite the existing ones. Used by batch-add flows to avoid multi-second
+// freezes on large stores.
+export const bulkPutTasksInDB = async (
+  newTasks: TodoItem[],
+  skipSyncEvent = false,
+): Promise<boolean> => {
+  if (newTasks.length === 0) return true;
+  markLocalStorageMigrationDone();
+
+  const hydrated = newTasks.map(hydrateItem);
+
+  // Update in-memory cache immediately so the UI sees them on the next read.
+  if (tasksCache) {
+    const byId = new Map(tasksCache.map((t) => [t.id, t] as const));
+    hydrated.forEach((t) => byId.set(t.id, t));
+    tasksCache = Array.from(byId.values());
+  } else {
+    tasksCache = hydrated.slice();
+  }
+  cacheVersion++;
+
+  if (!skipSyncEvent) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
+      try { pushTasks(hydrated); } catch {}
+    }).catch(() => {});
+  }
+
+  try {
+    const db = await openDB();
+    for (let i = 0; i < hydrated.length; i += BATCH_SIZE) {
+      const batch = hydrated.slice(i, i + BATCH_SIZE);
+      await new Promise<void>((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        batch.forEach((item) => { try { store.put(item); } catch {} });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+      // Yield to the main thread between batches so scrolling/typing stay live.
+      if (i + BATCH_SIZE < hydrated.length) {
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+    }
+    if (!skipSyncEvent) dispatchTasksUpdated(150);
+    return true;
+  } catch (e) {
+    console.warn('Bulk put tasks failed, cache is still updated:', e);
+    return true;
+  }
+};
+
 // Dedicated reset path for developer/performance tools. This intentionally
 // bypasses the empty-array safety guard in saveTasksToDB while clearing cache.
 export const clearAllTasksFromDB = async (): Promise<boolean> => {
