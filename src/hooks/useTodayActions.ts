@@ -94,9 +94,10 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
   const persistBulkTasks = useCallback((tasks: TodoItem[]) => {
     if (tasks.length === 0) return;
-    // Skip the expensive full-array save, but still let the worker recompute the
-    // visible list so duplicated tasks appear right away.
-    markSingleTaskPersisted(false);
+    // Skip both the expensive full-array save AND the immediate worker
+    // re-filter/sort. The state layer prepends local-only rows optimistically,
+    // so duplicating 200+ tasks appears instantly without a post-click hang.
+    markSingleTaskPersisted(true);
     void import('@/utils/taskStorage').then(({ bulkPutTasksInWorker }) =>
       bulkPutTasksInWorker(tasks).then((persisted) => {
         if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
