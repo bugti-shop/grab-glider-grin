@@ -262,6 +262,14 @@ export const useTodayState = () => {
       return;
     }
 
+    // Single-task operations already persist directly with IndexedDB put/delete.
+    // Skipping the next full-array rewrite keeps checkbox taps instant at 100k+.
+    const skipFullSaveAt = (window as any).__flowistSkipNextTaskFullSave as number | undefined;
+    if (skipFullSaveAt && Date.now() - skipFullSaveAt < 2_000) {
+      (window as any).__flowistSkipNextTaskFullSave = 0;
+      return;
+    }
+
     // If this update came from a sync restore, skip dispatching tasksUpdated
     // to prevent re-uploading to Firebase (sync loop)
     const syncFlag = (window as any).__todaySyncFlag;
@@ -341,6 +349,15 @@ export const useTodayState = () => {
 
   // Offload filtering + sorting to Web Worker
   useEffect(() => {
+    // For a single checkbox/delete tap, the existing worker result is still
+    // usable because we map it back onto the latest task objects below. Avoid
+    // re-serializing 100k+ tasks immediately after every tap.
+    const skipProcessingAt = (window as any).__flowistSkipNextTaskProcessing as number | undefined;
+    if (skipProcessingAt && Date.now() - skipProcessingAt < 1_500) {
+      (window as any).__flowistSkipNextTaskProcessing = 0;
+      return;
+    }
+
     // Expand the selected folder into itself + all descendants so tasks added
     // directly inside subfolders still show when a parent folder is selected.
     const allowedFolderIds = selectedFolderId
@@ -439,13 +456,12 @@ export const useTodayState = () => {
   // Use worker result when available, fallback otherwise
   const processedItems = useMemo(() => {
     if (workerResult && worker.isAvailable) {
-      // Worker returns IDs-only results, but we need to map back to full items
-      // Worker returns MinimalTask objects — match by id to get full TodoItem references
-      const workerIds = new Set([...workerResult.uncompleted, ...workerResult.completed].map((t: any) => t.id));
-      // Preserve original item references, maintain worker ordering
-      const idOrder = new Map<string, number>();
-      [...workerResult.uncompleted, ...workerResult.completed].forEach((t: any, i: number) => idOrder.set(t.id, i));
-      return items.filter(i => workerIds.has(i.id)).sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0));
+      // Preserve worker ordering without sorting the full local array again.
+      // Sorting 100k tasks on every checkbox tap made the whole app feel stuck.
+      const byId = new Map(items.map(i => [i.id, i]));
+      return [...workerResult.uncompleted, ...workerResult.completed]
+        .map((t: any) => byId.get(t.id))
+        .filter(Boolean) as TodoItem[];
     }
     return processedItemsFallback || [];
   }, [workerResult, worker.isAvailable, items, processedItemsFallback]);

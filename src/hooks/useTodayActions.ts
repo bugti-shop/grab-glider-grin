@@ -7,6 +7,7 @@ import { genId } from '@/utils/genId';
 import { withCopySuffix } from '@/utils/duplicateName';
 import { TodoItem, Folder, Priority, Note, TaskSection } from '@/types/note';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
+import { saveTodoItem, updateTodoItem, deleteTodoItem, saveTodoItems } from '@/utils/todoItemsStorage';
 import { useTranslation } from 'react-i18next';
 import { recordCompletion, TASK_STREAK_KEY } from '@/utils/streakStorage';
 import { createNextRecurringTask } from '@/utils/recurringTasks';
@@ -80,6 +81,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   // Keep a ref to items for reliable access in async callbacks
   const itemsRef = useRef(items);
   itemsRef.current = items;
+
+  const markSingleTaskPersisted = useCallback((skipProcessing = false) => {
+    try {
+      const now = Date.now();
+      (window as any).__flowistSkipNextTaskFullSave = now;
+      if (skipProcessing) (window as any).__flowistSkipNextTaskProcessing = now;
+    } catch {}
+  }, []);
 
   // ── Folder Actions ──
   const handleCreateFolder = useCallback((name: string, color: string, icon?: string, parentId?: string) => {
@@ -295,13 +304,17 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     };
     if (taskAddPosition === 'bottom') setItems(prev => [...prev, newItem]);
     else setItems(prev => [newItem, ...prev]);
+    markSingleTaskPersisted(false);
+    void saveTodoItem(newItem).then(({ persisted }) => {
+      if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
+    });
     setInputSectionId(null);
     if (newItem.reminderTime) {
       import('@/utils/reminderScheduler').then(({ scheduleTaskReminder }) => {
         scheduleTaskReminder(newItem.id, newItem.text, new Date(newItem.reminderTime!), newItem.isUrgent).catch(console.warn);
       });
     }
-  }, [inputSectionId, defaultSectionId, sections, taskAddPosition, setItems, setInputSectionId, isPro, softRequireCreate, requireCapacity, selectedFolderId]);
+  }, [inputSectionId, defaultSectionId, sections, taskAddPosition, setItems, setInputSectionId, isPro, softRequireCreate, requireCapacity, selectedFolderId, markSingleTaskPersisted, t]);
 
 
   const handleBatchAddTasks = useCallback(async (taskTexts: string[], sectionId?: string, folderId?: string, priority?: Priority, dueDate?: Date) => {
@@ -326,7 +339,13 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       priority, dueDate: dueDate || new Date(), createdAt: now, modifiedAt: now,
     }));
     if (newItems.length === 0) return;
-    setItems(prev => [...newItems, ...prev]);
+    setItems(prev => {
+      const next = [...newItems, ...prev];
+      void saveTodoItems(next).then(({ persisted }) => {
+        if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
+      });
+      return next;
+    });
     toast.success(t('todayPage.addedTasks', { count: newItems.length }));
     setInputSectionId(null);
   }, [selectedFolderId, inputSectionId, sections, setItems, setInputSectionId, t, isPro, softRequireCreate, requireCapacity]);
@@ -353,13 +372,26 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       updatesWithTimestamp.completedAt = undefined;
     }
 
+    const persistUpdate = (skipProcessing = true) => {
+      markSingleTaskPersisted(skipProcessing);
+      void updateTodoItem(itemId, updatesWithTimestamp).then((persisted) => {
+        if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
+      });
+    };
+
     // Handle recurring tasks
     if (currentItem && isNewCompletion) {
       if (currentItem.repeatType && currentItem.repeatType !== 'none') {
         const nextTask = createNextRecurringTask(currentItem);
         if (nextTask) {
           const nextTaskWithTimestamps = { ...nextTask, createdAt: now, modifiedAt: now };
-          setItems(prev => [nextTaskWithTimestamps, ...prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i)]);
+          setItems(prev => {
+            const next = [nextTaskWithTimestamps, ...prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i)];
+            itemsRef.current = next;
+            return next;
+          });
+          persistUpdate(false);
+          void saveTodoItem(nextTaskWithTimestamps);
           toast.success(t('todayPage.recurringTaskCompleted'), { icon: '🔄' });
           recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
             if (streakResult.newMilestone) {
@@ -379,7 +411,12 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       }
     }
 
-    setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i));
+    setItems(prev => {
+      const next = prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i);
+      itemsRef.current = next;
+      return next;
+    });
+    persistUpdate(true);
 
     if (isNewCompletion) {
       recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
@@ -406,7 +443,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         duration: 5000,
       });
     }
-  }, [setItems, t, softRequireMutate]);
+  }, [setItems, t, softRequireMutate, markSingleTaskPersisted]);
 
   const deleteItem = useCallback(async (itemId: string, _showUndo: boolean = false, skipConfirm: boolean = false) => {
     if (!softRequireMutate()) return;
@@ -422,38 +459,50 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       return;
     }
     
-    try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
     const itemToRestore = deletedItem;
-    setItems(prev => prev.filter(item => item.id !== itemId));
-    import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => pushTaskDelete(itemId)).catch(() => {});
+    setItems(prev => {
+      const next = prev.filter(item => item.id !== itemId);
+      itemsRef.current = next;
+      return next;
+    });
+    markSingleTaskPersisted(true);
+    void deleteTodoItem(itemId);
     toast.success(t('todayPage.taskDeleted'), {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [itemToRestore!, ...prev]); toast.success(t('todayPage.taskRestored')); } },
       duration: 5000,
     });
-  }, [tasksSettings.confirmBeforeDelete, setItems, setDeleteConfirmItem, t, softRequireMutate]);
+  }, [tasksSettings.confirmBeforeDelete, setItems, setDeleteConfirmItem, t, softRequireMutate, markSingleTaskPersisted]);
 
   const confirmDelete = useCallback(async () => {
     if (!deleteConfirmItem) return;
-    try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
     const deletedItem = deleteConfirmItem;
-    setItems(prev => prev.filter(item => item.id !== deletedItem.id));
-    import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => pushTaskDelete(deletedItem.id)).catch(() => {});
+    setItems(prev => {
+      const next = prev.filter(item => item.id !== deletedItem.id);
+      itemsRef.current = next;
+      return next;
+    });
+    markSingleTaskPersisted(true);
+    void deleteTodoItem(deletedItem.id);
     setDeleteConfirmItem(null);
     toast.success(t('todayPage.taskDeleted'), {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [deletedItem, ...prev]); toast.success(t('todayPage.taskRestored')); } },
       duration: 5000,
     });
-  }, [deleteConfirmItem, setItems, setDeleteConfirmItem, t]);
+  }, [deleteConfirmItem, setItems, setDeleteConfirmItem, t, markSingleTaskPersisted]);
 
   const duplicateTask = useCallback(async (task: TodoItem) => {
     // Enforce per-folder + global free-plan limits on duplicates
     const folderTasksCount = itemsRef.current.filter(t => (t.folderId || null) === (task.folderId || null)).length;
     if (!requireCapacity('tasksPerFolder', folderTasksCount)) return;
     if (!isPro && !softRequireCreate('tasks', itemsRef.current.length)) return;
-    try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
+    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
     const duplicatedTask: TodoItem = { ...task, id: genId(), completed: false, text: withCopySuffix(task.text) };
     setItems(prev => [duplicatedTask, ...prev]);
-  }, [setItems, requireCapacity, softRequireCreate, isPro]);
+    markSingleTaskPersisted(false);
+    void saveTodoItem(duplicatedTask);
+  }, [setItems, requireCapacity, softRequireCreate, isPro, markSingleTaskPersisted]);
 
   // ── Selection / Bulk ──
   const handleSelectTask = useCallback((taskId: string) => {

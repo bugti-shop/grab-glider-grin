@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Beaker, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { genId } from '@/utils/genId';
 import { TodoItem, Note } from '@/types/note';
-import { loadTasksFromDB, saveTasksToDB } from '@/utils/taskStorage';
+import { clearAllTasksFromDB, loadTasksFromDB, saveTasksToDB } from '@/utils/taskStorage';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { toast } from 'sonner';
 
@@ -152,7 +152,8 @@ export const DevPerfSheet = ({ isOpen, onClose }: Props) => {
         await saveNotesToDB([...fresh, ...existing], false);
       }
       const generateMs = Math.round(performance.now() - t0);
-      window.dispatchEvent(new Event(kind === 'tasks' ? 'todosUpdated' : 'notesUpdated'));
+      window.dispatchEvent(new Event(kind === 'tasks' ? 'tasksRestored' : 'notesUpdated'));
+      if (kind === 'tasks') window.dispatchEvent(new Event('tasksUpdated'));
       setPhase('Measuring scroll FPS…');
       // Let React commit the new list before measuring.
       await new Promise(r => setTimeout(r, 600));
@@ -186,22 +187,27 @@ export const DevPerfSheet = ({ isOpen, onClose }: Props) => {
     if (!confirm(`Delete ALL ${kind}? This cannot be undone.`)) return;
     setBusy('clear');
     try {
-      // Direct IDB wipe — bypass the empty-array safety guard.
-      const dbName = kind === 'tasks' ? 'nota-tasks-db' : 'nota-notes-db';
-      const storeName = kind === 'tasks' ? 'tasks' : 'notes';
-      await new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open(dbName);
-        req.onsuccess = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains(storeName)) { db.close(); resolve(); return; }
-          const tx = db.transaction(storeName, 'readwrite');
-          tx.objectStore(storeName).clear();
-          tx.oncomplete = () => { db.close(); resolve(); };
-          tx.onerror = () => { db.close(); reject(tx.error); };
-        };
-        req.onerror = () => reject(req.error);
-      });
-      window.dispatchEvent(new Event(kind === 'tasks' ? 'todosUpdated' : 'notesUpdated'));
+      if (kind === 'tasks') {
+        await clearAllTasksFromDB();
+        window.dispatchEvent(new Event('tasksRestored'));
+        window.dispatchEvent(new Event('tasksUpdated'));
+      } else {
+        const dbName = 'nota-notes-db';
+        const storeName = 'notes';
+        await new Promise<void>((resolve, reject) => {
+          const req = indexedDB.open(dbName);
+          req.onsuccess = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(storeName)) { db.close(); resolve(); return; }
+            const tx = db.transaction(storeName, 'readwrite');
+            tx.objectStore(storeName).clear();
+            tx.oncomplete = () => { db.close(); resolve(); };
+            tx.onerror = () => { db.close(); reject(tx.error); };
+          };
+          req.onerror = () => reject(req.error);
+        });
+        window.dispatchEvent(new Event('notesUpdated'));
+      }
       toast.success(`Cleared all ${kind}`);
       setReport(null);
     } catch (e) {

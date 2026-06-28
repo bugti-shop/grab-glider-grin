@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ResolvedTaskImage } from '@/components/ResolvedTaskImage';
 import { WaveformProgressBar } from '@/components/WaveformProgressBar';
-import { TASK_CIRCLE, TASK_CHECK_ICON, TASK_COMPLETION_DELAY } from '@/utils/taskItemStyles';
+import { TASK_CIRCLE, TASK_CHECK_ICON } from '@/utils/taskItemStyles';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 interface TaskFlatItemProps {
@@ -95,11 +95,8 @@ export const TaskFlatItem = memo(({
                 if (!item.completed) {
                   setPendingCompleteId(item.id);
                   Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-                  pendingCompleteTimer.current = setTimeout(() => {
-                    setPendingCompleteId(null);
-                    pendingCompleteTimer.current = null;
-                    updateItem(item.id, { completed: true });
-                  }, TASK_COMPLETION_DELAY);
+                  updateItem(item.id, { completed: true });
+                  window.setTimeout(() => setPendingCompleteId(null), 120);
                 } else {
                   updateItem(item.id, { completed: false });
                 }
@@ -170,11 +167,8 @@ export const TaskFlatItem = memo(({
               }
               setPendingCompleteId(item.id);
               Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-              pendingCompleteTimer.current = setTimeout(() => {
-                setPendingCompleteId(null);
-                pendingCompleteTimer.current = null;
-                updateItem(item.id, { completed: true });
-              }, TASK_COMPLETION_DELAY);
+              updateItem(item.id, { completed: true });
+              window.setTimeout(() => setPendingCompleteId(null), 120);
             }}
             className={cn(
               TASK_CIRCLE.base, TASK_CIRCLE.marginTop,

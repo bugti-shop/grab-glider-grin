@@ -82,16 +82,18 @@ export function FlatTaskList({
     const update = () => {
       if (!parentRef.current) return;
       const rect = parentRef.current.getBoundingClientRect();
-      setParentTop(rect.top + window.scrollY);
+      const nextTop = rect.top + window.scrollY;
+      setParentTop((current) => (Math.abs(current - nextTop) > 1 ? nextTop : current));
     };
     update();
     window.addEventListener('resize', update);
-    window.addEventListener('scroll', update, { passive: true, capture: true });
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    if (observer && parentRef.current) observer.observe(parentRef.current);
     // Recompute once after layout settles (fonts, images).
     const t = window.setTimeout(update, 100);
     return () => {
       window.removeEventListener('resize', update);
-      window.removeEventListener('scroll', update, { capture: true } as any);
+      observer?.disconnect();
       window.clearTimeout(t);
     };
   }, [useWindow]);
@@ -191,7 +193,7 @@ export function FlatTaskList({
               key={vi.key}
               data-index={vi.index}
               data-active={isActive ? 'true' : 'false'}
-              ref={useWindow ? undefined : virtualizer.measureElement}
+              ref={virtualizer.measureElement}
               style={{
                 position: 'absolute',
                 top: 0,

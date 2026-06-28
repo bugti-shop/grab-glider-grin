@@ -11,6 +11,15 @@ const DB_VERSION = 3;
 const STORE_NAME = 'tasks';
 const META_STORE = 'meta';
 const BATCH_SIZE = 5000; // Process 5000 items at a time for better performance
+const TODO_ITEMS_KEY = 'todoItems';
+const LOCAL_STORAGE_MIGRATION_DONE_KEY = 'todoItems_idb_migration_done_v1';
+
+const markLocalStorageMigrationDone = () => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_MIGRATION_DONE_KEY, 'true');
+    localStorage.removeItem(TODO_ITEMS_KEY);
+  } catch {}
+};
 
 // In-memory cache with LRU eviction for large datasets
 let tasksCache: TodoItem[] | null = null;
@@ -20,6 +29,20 @@ const MIN_SAVE_INTERVAL = 50; // Minimum 50ms between saves
 let pendingFlushTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingFlushItems: TodoItem[] | null = null;
 let pendingSkipSyncEvent = false;
+let taskUpdatedDispatchTimer: ReturnType<typeof setTimeout> | null = null;
+
+const dispatchTasksUpdated = (debounceMs = 0) => {
+  if (typeof window === 'undefined') return;
+  if (debounceMs <= 0) {
+    window.dispatchEvent(new Event('tasksUpdated'));
+    return;
+  }
+  if (taskUpdatedDispatchTimer) clearTimeout(taskUpdatedDispatchTimer);
+  taskUpdatedDispatchTimer = setTimeout(() => {
+    taskUpdatedDispatchTimer = null;
+    window.dispatchEvent(new Event('tasksUpdated'));
+  }, debounceMs);
+};
 
 // Connection pooling - reuse database connection (never close)
 let dbConnection: IDBDatabase | null = null;
@@ -169,6 +192,10 @@ export const saveTasksToDB = async (items: TodoItem[], skipSyncEvent = false): P
     }
   }
 
+  // IndexedDB is the source of truth. Clear old localStorage mirrors so deleted
+  // sample/template tasks cannot be imported again on the next launch.
+  markLocalStorageMigrationDone();
+
   // ALWAYS update in-memory cache immediately so any sync reads see latest data
   tasksCache = items;
   cacheVersion++;
@@ -234,7 +261,7 @@ const flushTasksToDB = async (items: TodoItem[], skipSyncEvent = false): Promise
         if (items.length === 0) {
           tasksCache = items;
           cacheVersion++;
-          if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+          if (!skipSyncEvent) dispatchTasksUpdated();
           resolve(true);
           return;
         }
@@ -259,13 +286,13 @@ const flushTasksToDB = async (items: TodoItem[], skipSyncEvent = false): Promise
       };
       
       transaction.oncomplete = () => {
-        if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+        if (!skipSyncEvent) dispatchTasksUpdated();
         resolve(true);
       };
       
       transaction.onerror = () => {
         console.warn('Transaction error, data may be partially saved');
-        if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+        if (!skipSyncEvent) dispatchTasksUpdated();
         resolve(true);
       };
     });
@@ -311,7 +338,7 @@ const saveLargeDataset = async (db: IDBDatabase, items: TodoItem[], skipSyncEven
       }
     }
 
-    if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+    if (!skipSyncEvent) dispatchTasksUpdated();
     
     return true;
   } catch (e) {
@@ -322,11 +349,15 @@ const saveLargeDataset = async (db: IDBDatabase, items: TodoItem[], skipSyncEven
 
 // Update a single task without rewriting everything
 export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>): Promise<boolean> => {
+  markLocalStorageMigrationDone();
+  let updatedForSync: TodoItem | null = null;
+
   // Update cache immediately
   if (tasksCache) {
     const index = tasksCache.findIndex(t => t.id === taskId);
     if (index >= 0) {
       tasksCache[index] = { ...tasksCache[index], ...updates };
+      updatedForSync = tasksCache[index];
       cacheVersion++;
     }
   }
@@ -343,16 +374,22 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
         const existing = getRequest.result;
         if (existing) {
           const updated = { ...existing, ...updates };
+          updatedForSync = hydrateItem(updated);
           store.put(updated);
         }
       };
       
       transaction.oncomplete = () => {
-        window.dispatchEvent(new Event('tasksUpdated'));
+        if (updatedForSync) {
+          import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
+            try { pushTasks([updatedForSync!]); } catch {}
+          }).catch(() => {});
+        }
+        dispatchTasksUpdated(400);
         resolve(true);
       };
       transaction.onerror = () => {
-        window.dispatchEvent(new Event('tasksUpdated'));
+        dispatchTasksUpdated(400);
         resolve(true);
       };
     });
@@ -362,8 +399,74 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
   }
 };
 
+// Insert or replace a single task without rewriting the whole tasks store.
+export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promise<boolean> => {
+  markLocalStorageMigrationDone();
+  const hydrated = hydrateItem(task);
+
+  if (tasksCache) {
+    const index = tasksCache.findIndex(t => t.id === hydrated.id);
+    if (index >= 0) tasksCache[index] = hydrated;
+    else tasksCache = [hydrated, ...tasksCache];
+    cacheVersion++;
+  }
+
+  if (!skipSyncEvent) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
+      try { pushTasks([hydrated]); } catch {}
+    }).catch(() => {});
+  }
+
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      transaction.objectStore(STORE_NAME).put(hydrated);
+      transaction.oncomplete = () => {
+        if (!skipSyncEvent) dispatchTasksUpdated(250);
+        resolve(true);
+      };
+      transaction.onerror = () => {
+        if (!skipSyncEvent) dispatchTasksUpdated(250);
+        resolve(true);
+      };
+    });
+  } catch (e) {
+    console.warn('Put task failed, cache is still updated:', e);
+    return true;
+  }
+};
+
+// Dedicated reset path for developer/performance tools. This intentionally
+// bypasses the empty-array safety guard in saveTasksToDB while clearing cache.
+export const clearAllTasksFromDB = async (): Promise<boolean> => {
+  markLocalStorageMigrationDone();
+  tasksCache = [];
+  cacheVersion++;
+
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      transaction.objectStore(STORE_NAME).clear();
+      transaction.oncomplete = () => {
+        dispatchTasksUpdated();
+        resolve(true);
+      };
+      transaction.onerror = () => {
+        dispatchTasksUpdated();
+        resolve(true);
+      };
+    });
+  } catch (e) {
+    console.warn('Clear all tasks failed, cache has still been cleared:', e);
+    return true;
+  }
+};
+
 // Delete a task
 export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
+  markLocalStorageMigrationDone();
   // Update cache immediately
   if (tasksCache) {
     tasksCache = tasksCache.filter(t => t.id !== taskId);
@@ -384,7 +487,7 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
       store.delete(taskId);
       
       transaction.oncomplete = () => {
-        window.dispatchEvent(new Event('tasksUpdated'));
+        dispatchTasksUpdated(250);
         // Track deletion for cross-device sync and upload immediately
         import('@/utils/deletionTracker').then(({ trackDeletion, loadDeletions }) => {
           trackDeletion(taskId, 'tasks');
@@ -395,7 +498,7 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
         resolve(true);
       };
       transaction.onerror = () => {
-        window.dispatchEvent(new Event('tasksUpdated'));
+        dispatchTasksUpdated(250);
         resolve(true);
       };
     });
@@ -407,7 +510,12 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
 
 // Migrate from localStorage to IndexedDB (silent, non-blocking)
 export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; count: number }> => {
-  const TODO_ITEMS_KEY = 'todoItems';
+  try {
+    if (localStorage.getItem(LOCAL_STORAGE_MIGRATION_DONE_KEY) === 'true') {
+      localStorage.removeItem(TODO_ITEMS_KEY);
+      return { migrated: false, count: 0 };
+    }
+  } catch {}
   
   let saved: string | null = null;
   try {
@@ -417,6 +525,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
   }
   
   if (!saved) {
+    markLocalStorageMigrationDone();
     return { migrated: false, count: 0 };
   }
   
@@ -425,6 +534,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
     const items: TodoItem[] = Array.isArray(parsed) ? parsed.map(hydrateItem) : [];
     
     if (items.length === 0) {
+      markLocalStorageMigrationDone();
       return { migrated: false, count: 0 };
     }
     
@@ -432,15 +542,20 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
     const existingItems = await loadTasksFromDB();
     if (existingItems.length > 0) {
       // Already migrated, just clear localStorage to free space
-      localStorage.removeItem(TODO_ITEMS_KEY);
+      markLocalStorageMigrationDone();
       return { migrated: false, count: existingItems.length };
     }
     
-    // Save to IndexedDB
-    await saveTasksToDB(items);
+    // Only legacy localStorage should be imported once. If the user has already
+    // been using IndexedDB (or just deleted all tasks), stale localStorage must
+    // not resurrect old sample/template tasks.
+    const hasExplicitMigrationMarker = localStorage.getItem(LOCAL_STORAGE_MIGRATION_DONE_KEY) === 'true';
+    if (!hasExplicitMigrationMarker) {
+      await saveTasksToDB(items);
+    }
     
     // Clear localStorage to free quota
-    localStorage.removeItem(TODO_ITEMS_KEY);
+    markLocalStorageMigrationDone();
     
     console.log(`Migrated ${items.length} tasks from localStorage to IndexedDB`);
     return { migrated: true, count: items.length };
