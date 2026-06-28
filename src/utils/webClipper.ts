@@ -11,9 +11,13 @@ export const MAX_LENGTHS = {
   url: 2048,
   content: 50000,
   selection: 10000,
+  attachment: 4096,
 } as const;
 
-export type ClipMode = 'article' | 'selection' | 'fullpage';
+export type ClipMode = 'article' | 'selection' | 'fullpage' | 'image' | 'pdf';
+
+/** Window (ms) within which an identical share payload is treated as a duplicate. */
+export const SHARE_DEDUP_WINDOW_MS = 8000;
 
 /** Allow http/https only. Reject `javascript:`, `data:`, malformed strings, etc. */
 export function validateUrl(urlString: string): string {
