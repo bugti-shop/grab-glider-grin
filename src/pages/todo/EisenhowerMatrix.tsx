@@ -236,7 +236,7 @@ const EisenhowerMatrix = () => {
       return null;
     }
     const allItems = grouped[activeQ];
-    const visibleByCompletion = showCompleted ? allItems : allItems.filter(t => !t.completed || recentlyCompleted.has(t.id));
+    const visibleByCompletion = showCompleted ? allItems : allItems.filter(t => !t.completed);
     const items = visibleByCompletion.filter(t => matchesFilter(t, filter));
     return (
       <div className="min-h-screen bg-muted/30 pb-20">
@@ -431,7 +431,7 @@ const EisenhowerMatrix = () => {
         <div className="grid grid-cols-2 gap-3 items-stretch auto-rows-fr">
           {QUADRANTS.map(q => {
             const all = grouped[q.id];
-            const items = (showCompleted ? all : all.filter(t => !t.completed || recentlyCompleted.has(t.id)));
+            const items = (showCompleted ? all : all.filter(t => !t.completed));
             return (
               <button
                 key={q.id}
