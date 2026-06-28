@@ -42,7 +42,7 @@ import {
 import { triggerHaptic } from '@/utils/haptics';
 import { prefetchRoute } from '@/utils/routePrefetch';
 
-import { saveNoteToDBSingle, deleteNoteFromDB, loadNotesMetadataFromDB, loadNoteFromDB, isNoteContentStub, makeMetadataNote } from '@/utils/noteStorage';
+import { saveNoteToDBSingle, deleteNoteFromDB, loadNotesMetadataFromDB, loadNoteFromDB, isNoteContentStub, makeMetadataNote, bulkPutNotesInDB } from '@/utils/noteStorage';
 import { getAllSettings, getSetting, setSetting } from '@/utils/settingsStorage';
 import { logActivity } from '@/utils/activityLogger';
 import { useNotes, NoteMeta } from '@/contexts/NotesContext';
