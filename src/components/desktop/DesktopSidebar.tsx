@@ -32,7 +32,7 @@ interface NavItem {
 
 const MAIN_NAV: NavItem[] = [
   { id: 'today', label: 'Today', icon: Home, path: '/todo/today' },
-  { id: 'upcoming', label: 'Upcoming', icon: Calendar, path: '/todo/upcoming' },
+  
   { id: 'calendar', label: 'Calendar', icon: Calendar, path: '/todo/calendar' },
   { id: 'habits', label: 'Habits', icon: ListChecks, path: '/todo/habits' },
   { id: 'matrix', label: 'Matrix', icon: LayoutGrid, path: '/todo/matrix' },
