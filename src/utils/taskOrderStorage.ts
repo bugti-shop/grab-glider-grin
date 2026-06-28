@@ -121,14 +121,29 @@ export const applyTaskOrder = <T extends { id: string }>(
   if (savedOrder.length === 0 && !hasRanks) return tasks;
 
   if (hasRanks) {
-    const originalIndex = new Map(tasks.map((task, index) => [task.id, index]));
-    return [...tasks].sort((a, b) => {
-      const ai = originalIndex.get(a.id) ?? 0;
-      const bi = originalIndex.get(b.id) ?? 0;
-      const ar = Number.isFinite(ranks[a.id]) ? ranks[a.id] : ai * 1024;
-      const br = Number.isFinite(ranks[b.id]) ? ranks[b.id] : bi * 1024;
-      return ar - br || ai - bi;
-    });
+    const rankedTasks = tasks
+      .filter((task) => Number.isFinite(ranks[task.id]))
+      .sort((a, b) => ranks[a.id] - ranks[b.id]);
+    const rankedIds = new Set(rankedTasks.map((task) => task.id));
+    const orderedTasks: T[] = [];
+    let rankedIndex = 0;
+
+    for (let i = 0; i < tasks.length; i += 1) {
+      const fallbackRank = i * 1024;
+      while (rankedIndex < rankedTasks.length && ranks[rankedTasks[rankedIndex].id] <= fallbackRank) {
+        orderedTasks.push(rankedTasks[rankedIndex]);
+        rankedIndex += 1;
+      }
+      const task = tasks[i];
+      if (!rankedIds.has(task.id)) orderedTasks.push(task);
+    }
+
+    while (rankedIndex < rankedTasks.length) {
+      orderedTasks.push(rankedTasks[rankedIndex]);
+      rankedIndex += 1;
+    }
+
+    return orderedTasks;
   }
   
   const orderedTasks: T[] = [];
