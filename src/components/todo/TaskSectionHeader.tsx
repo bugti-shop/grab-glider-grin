@@ -23,13 +23,14 @@ interface TaskSectionHeaderProps {
   onDuplicateSection: (sectionId: string) => void;
   onMoveSection: (section: TaskSection) => void;
   onDeleteSection: (sectionId: string) => void;
+  taskCountOverride?: number;
 }
 
 export const TaskSectionHeader = ({
   section, sections, isDragging = false, uncompletedItems, viewMode,
   collapsedViewSections, onToggleSectionCollapse,
   onEditSection, onAddTaskToSection, onAddSection,
-  onDuplicateSection, onMoveSection, onDeleteSection,
+  onDuplicateSection, onMoveSection, onDeleteSection, taskCountOverride,
 }: TaskSectionHeaderProps) => {
   const { t } = useTranslation();
   const sectionTasks = uncompletedItems.filter(item => item.sectionId === section.id || (!item.sectionId && section.id === sections[0]?.id));
@@ -51,7 +52,7 @@ export const TaskSectionHeader = ({
       <div className="flex-1 flex items-center gap-3 px-3 py-2.5 bg-muted/30">
         <span className="text-muted-foreground" style={{ color: section.color }}>{getViewModeIcon()}</span>
         <span className="text-sm font-semibold">{section.name}</span>
-        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{sectionTasks.length}</span>
+        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{taskCountOverride ?? sectionTasks.length}</span>
       </div>
       <button onClick={() => onToggleSectionCollapse(section.id)} className="p-2 hover:bg-muted/50 transition-colors">
         {collapsedViewSections.has(`flat-${section.id}`) ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
