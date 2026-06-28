@@ -11,7 +11,15 @@ const DB_VERSION = 3;
 const STORE_NAME = 'tasks';
 const META_STORE = 'meta';
 const BATCH_SIZE = 5000; // Process 5000 items at a time for better performance
+const TODO_ITEMS_KEY = 'todoItems';
 const LOCAL_STORAGE_MIGRATION_DONE_KEY = 'todoItems_idb_migration_done_v1';
+
+const markLocalStorageMigrationDone = () => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_MIGRATION_DONE_KEY, 'true');
+    localStorage.removeItem(TODO_ITEMS_KEY);
+  } catch {}
+};
 
 // In-memory cache with LRU eviction for large datasets
 let tasksCache: TodoItem[] | null = null;
@@ -183,6 +191,10 @@ export const saveTasksToDB = async (items: TodoItem[], skipSyncEvent = false): P
       return false;
     }
   }
+
+  // IndexedDB is the source of truth. Clear old localStorage mirrors so deleted
+  // sample/template tasks cannot be imported again on the next launch.
+  markLocalStorageMigrationDone();
 
   // ALWAYS update in-memory cache immediately so any sync reads see latest data
   tasksCache = items;
@@ -451,6 +463,7 @@ export const clearAllTasksFromDB = async (): Promise<boolean> => {
 
 // Delete a task
 export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
+  markLocalStorageMigrationDone();
   // Update cache immediately
   if (tasksCache) {
     tasksCache = tasksCache.filter(t => t.id !== taskId);
@@ -494,7 +507,6 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
 
 // Migrate from localStorage to IndexedDB (silent, non-blocking)
 export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; count: number }> => {
-  const TODO_ITEMS_KEY = 'todoItems';
   try {
     if (localStorage.getItem(LOCAL_STORAGE_MIGRATION_DONE_KEY) === 'true') {
       localStorage.removeItem(TODO_ITEMS_KEY);
@@ -510,7 +522,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
   }
   
   if (!saved) {
-    try { localStorage.setItem(LOCAL_STORAGE_MIGRATION_DONE_KEY, 'true'); } catch {}
+    markLocalStorageMigrationDone();
     return { migrated: false, count: 0 };
   }
   
@@ -519,7 +531,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
     const items: TodoItem[] = Array.isArray(parsed) ? parsed.map(hydrateItem) : [];
     
     if (items.length === 0) {
-      try { localStorage.setItem(LOCAL_STORAGE_MIGRATION_DONE_KEY, 'true'); } catch {}
+      markLocalStorageMigrationDone();
       return { migrated: false, count: 0 };
     }
     
@@ -527,8 +539,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
     const existingItems = await loadTasksFromDB();
     if (existingItems.length > 0) {
       // Already migrated, just clear localStorage to free space
-      localStorage.removeItem(TODO_ITEMS_KEY);
-      try { localStorage.setItem(LOCAL_STORAGE_MIGRATION_DONE_KEY, 'true'); } catch {}
+      markLocalStorageMigrationDone();
       return { migrated: false, count: existingItems.length };
     }
     
@@ -541,8 +552,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
     }
     
     // Clear localStorage to free quota
-    localStorage.removeItem(TODO_ITEMS_KEY);
-    try { localStorage.setItem(LOCAL_STORAGE_MIGRATION_DONE_KEY, 'true'); } catch {}
+    markLocalStorageMigrationDone();
     
     console.log(`Migrated ${items.length} tasks from localStorage to IndexedDB`);
     return { migrated: true, count: items.length };
