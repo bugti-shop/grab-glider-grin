@@ -53,6 +53,11 @@ export const resetAllLifetimeCounters = async (): Promise<void> => {
     });
     localStorage.removeItem(LAST_SYNC_KEY);
   } catch {}
+  // Signed-out users have no cloud row to touch (RLS would 401). Local wipe
+  // above is enough; the cloud row will be created/synced on next sign-in.
+  if (!(await hasAuthenticatedUser())) {
+    return;
+  }
 
   try {
     const { identifier, type } = await getIdentifier();
