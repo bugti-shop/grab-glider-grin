@@ -37,17 +37,19 @@ const WebClipper = () => {
   const url = validateUrl(sanitizeParam(searchParams.get('url'), MAX_LENGTHS.url));
   const content = sanitizeParam(searchParams.get('content'), MAX_LENGTHS.content);
   const selection = sanitizeParam(searchParams.get('selection'), MAX_LENGTHS.selection);
+  const attachment = validateUrl(sanitizeParam(searchParams.get('attachment'), MAX_LENGTHS.attachment));
+  const rawAttachmentType = (searchParams.get('attachmentType') || '').toLowerCase();
+  const attachmentType: 'image' | 'pdf' | null =
+    rawAttachmentType === 'image' || rawAttachmentType === 'pdf' ? rawAttachmentType : null;
   const initialMode = parseClipMode(searchParams.get('mode'));
 
-  // If the caller passed an explicit `mode` we auto-save immediately
-  // (browser extension / iOS Share Extension flow). Otherwise we show a
-  // mode picker so the user can choose Article / Selection / Full page.
-  const explicitMode = searchParams.has('mode');
+  // Explicit mode OR an attachment payload auto-saves immediately (no picker).
+  const explicitMode = searchParams.has('mode') || !!attachment;
   const [mode, setMode] = useState<ClipMode>(initialMode);
   const [picking, setPicking] = useState(!explicitMode);
 
   useEffect(() => {
-    if (!picking && (title || url || content || selection)) {
+    if (!picking && (title || url || content || selection || attachment)) {
       void handleSaveClip(mode);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,7 +58,7 @@ const WebClipper = () => {
   const handleSaveClip = async (clipMode: ClipMode) => {
     setSaving(true);
     try {
-      const noteContent = buildClipNoteBody({ url, selection, content, mode: clipMode });
+      const noteContent = buildClipNoteBody({ url, selection, content, mode: clipMode, attachment: attachment || undefined, attachmentType });
 
       const newNote: Note = {
         id: crypto.randomUUID(),
