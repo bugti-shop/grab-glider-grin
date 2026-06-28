@@ -6,6 +6,8 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { getRingFillMs, setRingFillMs, RING_FILL_MS_MIN, RING_FILL_MS_MAX } from '@/utils/ringFillDuration';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
