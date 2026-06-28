@@ -164,7 +164,7 @@ export function FlatTaskList({
 
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
-  const scrollOffset = useWindow ? (parentRef.current?.offsetTop ?? 0) : 0;
+  const scrollOffset = useWindow ? parentTop : 0;
 
   return (
     <div
