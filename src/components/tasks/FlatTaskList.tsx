@@ -46,6 +46,14 @@ export interface FlatTaskListProps {
   onActivate?: (row: FlatTaskRow) => void;
   /** Space key on highlighted row — toggle task complete. */
   onToggleComplete?: (row: FlatTaskRow) => void;
+  /**
+   * Alt + ↑/↓ on highlighted row — reorder. Receives current flat indices.
+   * Provided as a keyboard fallback because @hello-pangea/dnd is intentionally
+   * disabled in the virtualized path (it can't reorder off-screen rows on
+   * 24k+ lists). Long-press touch reorder is layered on top of this in the
+   * row renderer when implemented per-surface.
+   */
+  onReorder?: (fromIndex: number, toIndex: number) => void;
   /** Disable keyboard navigation (default false). */
   disableKeyboard?: boolean;
   className?: string;
@@ -70,6 +78,7 @@ export function FlatTaskList({
   emptyState,
   onActivate,
   onToggleComplete,
+  onReorder,
   disableKeyboard = false,
   className,
 }: FlatTaskListProps) {
