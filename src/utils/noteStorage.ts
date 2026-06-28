@@ -147,6 +147,15 @@ export const loadNotesFromDB = async (): Promise<Note[]> => {
 
       request.onsuccess = () => {
         const notes = request.result.map(hydrateNote);
+        // Strip any legacy "(Copy)" suffix that older versions persisted into
+        // note titles. Done in the background — never blocks the load.
+        import('@/utils/duplicateName').then(({ sanitizeCopySuffixes }) => {
+          const { items: cleaned, changed } = sanitizeCopySuffixes(notes as any);
+          if (changed) {
+            notesCache = cleaned as Note[];
+            setTimeout(() => { void saveNotesToDB(cleaned as Note[], true); }, 0);
+          }
+        }).catch(() => {});
         notesCache = notes;
         resolve(notes);
       };
