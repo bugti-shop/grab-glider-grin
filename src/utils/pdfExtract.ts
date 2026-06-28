@@ -48,6 +48,13 @@ export async function extractPdfTextFromUrl(
   const onProgress = options.onProgress;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs);
+  // Bridge external signal -> internal controller so callers can cancel.
+  const external = options.signal;
+  const onExternalAbort = () => controller.abort();
+  if (external) {
+    if (external.aborted) controller.abort();
+    else external.addEventListener('abort', onExternalAbort, { once: true });
+  }
   try {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`PDF fetch failed: ${res.status}`);
@@ -60,6 +67,7 @@ export async function extractPdfTextFromUrl(
       onProgress('download', 0);
       // eslint-disable-next-line no-constant-condition
       while (true) {
+        if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
         const { done, value } = await reader.read();
         if (done) break;
         if (value) {
@@ -76,9 +84,10 @@ export async function extractPdfTextFromUrl(
       buf = await res.arrayBuffer();
       onProgress?.('download', 1);
     }
-    return await extractPdfTextFromBuffer(buf, { ...options, onProgress });
+    return await extractPdfTextFromBuffer(buf, { ...options, onProgress, signal: controller.signal });
   } finally {
     clearTimeout(timer);
+    if (external) external.removeEventListener('abort', onExternalAbort);
   }
 }
 
