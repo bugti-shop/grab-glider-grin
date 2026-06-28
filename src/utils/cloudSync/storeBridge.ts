@@ -10,7 +10,7 @@
  * Only rows whose local id is a UUID round-trip to the cloud. Legacy non-UUID
  * ids stay local-only until they are migrated.
  */
-import { enqueueWrite } from './writeQueue';
+import { enqueueWrite, enqueueWrites } from './writeQueue';
 import { mappers, type MappedTable } from './mappers';
 import type { SyncRow } from './syncTables';
 import type { SyncChangeDetail } from './syncEngine';
@@ -60,10 +60,12 @@ export function pushNoteDelete(id: string): void {
 }
 
 export function pushTasks(tasks: TodoItem[]): void {
+  const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const t of tasks) {
     const row = mappers.tasks.toCloud(t as any);
-    if (row) enqueueWrite('tasks', (t as any).isDeleted ? 'delete' : 'upsert', row as any);
+    if (row) writes.push({ table: 'tasks', op: (t as any).isDeleted ? 'delete' : 'upsert', row: row as any });
   }
+  enqueueWrites(writes);
 }
 export function pushTaskDelete(id: string): void {
   enqueueWrite('tasks', 'delete', { id });

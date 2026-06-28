@@ -44,6 +44,24 @@ const dispatchTasksUpdated = (debounceMs = 0) => {
   }, debounceMs);
 };
 
+const scheduleTaskCloudPush = (tasks: TodoItem[]) => {
+  if (!tasks.length) return;
+  const run = () => {
+    import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
+      try { pushTasks(tasks); } catch {}
+    }).catch(() => {});
+  };
+  if (typeof window === 'undefined' || tasks.length < 250) {
+    run();
+    return;
+  }
+  const idleWindow = window as Window & {
+    requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  };
+  if (idleWindow.requestIdleCallback) idleWindow.requestIdleCallback(run, { timeout: 3000 });
+  else window.setTimeout(run, 0);
+};
+
 // Connection pooling - reuse database connection (never close)
 let dbConnection: IDBDatabase | null = null;
 let dbConnectionPromise: Promise<IDBDatabase> | null = null;
@@ -472,11 +490,7 @@ export const bulkPutTasksInDB = async (
   }
   cacheVersion++;
 
-  if (!skipSyncEvent) {
-    import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
-      try { pushTasks(hydrated); } catch {}
-    }).catch(() => {});
-  }
+  if (!skipSyncEvent) scheduleTaskCloudPush(hydrated);
 
   try {
     const db = await openDB();
@@ -577,11 +591,7 @@ export const bulkPutTasksInWorker = async (
   }
   cacheVersion++;
 
-  if (!skipSyncEvent) {
-    import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
-      try { pushTasks(hydrated); } catch {}
-    }).catch(() => {});
-  }
+  if (!skipSyncEvent) scheduleTaskCloudPush(hydrated);
 
   const worker = getBulkWorker();
   if (!worker) {

@@ -22,6 +22,7 @@ import { updateSectionOrder } from '@/utils/taskOrderStorage';
 import { getAllSettings, setSetting } from '@/utils/settingsStorage';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
+import { getRingFillMs } from '@/utils/ringFillDuration';
 
 interface UseTodayActionsProps {
   items: TodoItem[];
@@ -81,6 +82,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   // Keep a ref to items for reliable access in async callbacks
   const itemsRef = useRef(items);
   itemsRef.current = items;
+  const deferredCompletionTimersRef = useRef<Map<string, number>>(new Map());
 
   const markSingleTaskPersisted = useCallback((skipProcessing = false) => {
     try {
@@ -89,6 +91,19 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       if (skipProcessing) (window as any).__flowistSkipNextTaskProcessing = now;
     } catch {}
   }, []);
+
+  const persistBulkTasks = useCallback((tasks: TodoItem[]) => {
+    if (tasks.length === 0) return;
+    // Skip both the expensive full-array save AND the immediate worker
+    // re-filter/sort. The state layer prepends local-only rows optimistically,
+    // so duplicating 200+ tasks appears instantly without a post-click hang.
+    markSingleTaskPersisted(true);
+    void import('@/utils/taskStorage').then(({ bulkPutTasksInWorker }) =>
+      bulkPutTasksInWorker(tasks).then((persisted) => {
+        if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
+      }),
+    );
+  }, [markSingleTaskPersisted, t]);
 
   // ── Folder Actions ──
   const handleCreateFolder = useCallback((name: string, color: string, icon?: string, parentId?: string) => {
@@ -232,9 +247,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const duplicatedTasks = sectionTasks.slice(0, allowedCount).map((task) => ({ ...task, id: genId(), sectionId: newSection.id }));
 
     setSections(prev => [...prev, newSection]);
-    setItems(prev => [...duplicatedTasks, ...prev]);
+    setItems(prev => {
+      const next = [...duplicatedTasks, ...prev];
+      itemsRef.current = next;
+      return next;
+    });
+    persistBulkTasks(duplicatedTasks);
     toast.success(t('todayPage.sectionDuplicated'));
-  }, [sections, items, selectedFolderId, isPro, requireCapacity, setSections, setItems, t]);
+  }, [sections, items, selectedFolderId, isPro, requireCapacity, setSections, setItems, t, persistBulkTasks]);
 
   const handleMoveSection = useCallback((sectionId: string, targetIndex: number) => {
     const sortedSections = [...sections].sort((a, b) => a.order - b.order);
@@ -366,13 +386,24 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
     if (isNewCompletion) {
       updatesWithTimestamp.completedAt = now;
-      playCompletionSound();
+      // Do not create/resume AudioContext inside the checkbox click handler —
+      // that can steal tens of milliseconds on Android when large lists are in
+      // memory. The visual fill + data update happen first; sound follows on
+      // the next task without blocking the tap.
+      window.setTimeout(() => playCompletionSound(), 0);
       import('@/utils/reminderScheduler').then(({ cancelTaskReminder }) => {
         cancelTaskReminder(itemId).catch(console.warn);
       });
     }
     if (updates.completed === false && currentItem?.completed) {
       updatesWithTimestamp.completedAt = undefined;
+    }
+    if (updates.completed === false) {
+      const pendingTimer = deferredCompletionTimersRef.current.get(itemId);
+      if (pendingTimer) {
+        clearTimeout(pendingTimer);
+        deferredCompletionTimersRef.current.delete(itemId);
+      }
     }
 
     const persistUpdate = (skipProcessing = true) => {
@@ -414,12 +445,33 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       }
     }
 
-    setItems(prev => {
+    const commitStateUpdate = () => setItems(prev => {
       const next = prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i);
       itemsRef.current = next;
       return next;
     });
-    persistUpdate(true);
+
+    const canDeferCompletionPaint =
+      isNewCompletion &&
+      currentItem &&
+      (!currentItem.repeatType || currentItem.repeatType === 'none') &&
+      Object.keys(updates).every(k => k === 'completed' || k === 'completedAt' || k === 'modifiedAt');
+
+    if (canDeferCompletionPaint) {
+      // Persist immediately, but keep React's large-list filter/sort work out of
+      // the critical 900ms checkbox paint window. This keeps the colored ring
+      // duration stable even when thousands of tasks exist.
+      persistUpdate(true);
+      const timer = window.setTimeout(() => {
+        deferredCompletionTimersRef.current.delete(itemId);
+        markSingleTaskPersisted(true);
+        commitStateUpdate();
+      }, getRingFillMs());
+      deferredCompletionTimersRef.current.set(itemId, timer);
+    } else {
+      commitStateUpdate();
+      persistUpdate(true);
+    }
 
     if (isNewCompletion) {
       recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
@@ -536,9 +588,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const duplicated = toDuplicate.map((item, idx) => ({
       ...item, id: genId(), completed: option === 'all-reset' ? false : item.completed, text: withCopySuffix(item.text)
     }));
-    setItems(prev => [...duplicated, ...prev]);
+    setItems(prev => {
+      const next = [...duplicated, ...prev];
+      itemsRef.current = next;
+      return next;
+    });
+    persistBulkTasks(duplicated);
     toast.success(t('todayPage.duplicatedTasks', { count: duplicated.length }));
-  }, [items, selectedFolderId, isPro, requireCapacity, softRequireCreate, setItems, t]);
+  }, [items, selectedFolderId, isPro, requireCapacity, softRequireCreate, setItems, t, persistBulkTasks]);
 
   const convertToNotes = useCallback(async (tasksToConvert: TodoItem[]) => {
     const existingNotes = await loadNotesFromDB();
@@ -606,7 +663,12 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         }
         const dupSlice = selectedItems.slice(0, allowedCount);
         const duplicated = dupSlice.map((item, idx) => ({ ...item, id: genId(), completed: false, text: withCopySuffix(item.text) }));
-        setItems(prev => [...duplicated, ...prev]);
+        setItems(prev => {
+          const next = [...duplicated, ...prev];
+          itemsRef.current = next;
+          return next;
+        });
+        persistBulkTasks(duplicated);
         setSelectedTaskIds(new Set()); setIsSelectionMode(false);
         toast.success(t('todayPage.duplicatedTasks', { count: duplicated.length }));
         break;
@@ -621,7 +683,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         setIsBulkStatusOpen(true); break;
     }
     setIsSelectActionsOpen(false);
-  }, [items, selectedTaskIds, uncompletedItems, requireFeature, setItems, setSelectedTaskIds, setIsSelectionMode, setIsMoveToFolderOpen, setIsPrioritySheetOpen, setIsBulkDateSheetOpen, setIsBulkReminderSheetOpen, setIsBulkRepeatSheetOpen, setIsBulkSectionMoveOpen, setIsBulkStatusOpen, setIsSelectActionsOpen, convertToNotes, t]);
+  }, [items, selectedTaskIds, uncompletedItems, requireFeature, setItems, setSelectedTaskIds, setIsSelectionMode, setIsMoveToFolderOpen, setIsPrioritySheetOpen, setIsBulkDateSheetOpen, setIsBulkReminderSheetOpen, setIsBulkRepeatSheetOpen, setIsBulkSectionMoveOpen, setIsBulkStatusOpen, setIsSelectActionsOpen, convertToNotes, t, persistBulkTasks]);
 
   const handleMoveToFolder = useCallback((folderId: string | null) => {
     const now = new Date();

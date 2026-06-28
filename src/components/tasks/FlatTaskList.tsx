@@ -63,7 +63,7 @@ export function FlatTaskList({
   items,
   index,
   rowHeight = 56,
-  overscan = 24,
+  overscan = 48,
   maxHeight,
   useWindow = false,
   renderRow,
@@ -201,6 +201,7 @@ export function FlatTaskList({
                 top: 0,
                 left: 0,
                 width: '100%',
+                 contain: 'layout paint style',
                 transform: `translateY(${vi.start - scrollOffset}px)`,
               }}
             >

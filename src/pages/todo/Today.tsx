@@ -397,7 +397,7 @@ const Today = () => {
                     pendingCompleteTimer.current = null;
                   }
                   setPendingCompleteId(null);
-                  if (item.completed) updateItem(item.id, { completed: false });
+                  if (item.completed || isPending) updateItem(item.id, { completed: false });
                   return;
                 }
                 showCompletionFill(item.id);
