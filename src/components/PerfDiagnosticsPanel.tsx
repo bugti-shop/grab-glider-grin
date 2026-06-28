@@ -95,6 +95,39 @@ export function PerfDiagnosticsPanel() {
     return () => { try { po?.disconnect(); } catch {} };
   }, [visible]);
 
+  // Perf-logger subscription — surface bulkAdd + scrollJank events live.
+  useEffect(() => {
+    if (!visible) return;
+    startScrollJankMonitor();
+    // Seed from existing history so the panel isn't empty on open.
+    const recentBulk = getRecentPerfEvents('bulkAdd', 1)[0];
+    const recentJank = getRecentPerfEvents('scrollJank', 1)[0];
+    setStats((s) => ({
+      ...s,
+      lastBulkAddMs: recentBulk?.data?.ms ?? s.lastBulkAddMs,
+      lastBulkAddCount: recentBulk?.data?.count ?? s.lastBulkAddCount,
+      lastBulkAddVia: recentBulk?.data?.via ?? s.lastBulkAddVia,
+      lastScrollJankMs: recentJank?.data?.gapMs ?? s.lastScrollJankMs,
+    }));
+    const unsub = subscribePerfLog((ev) => {
+      if (ev.kind === 'bulkAdd') {
+        setStats((s) => ({
+          ...s,
+          lastBulkAddMs: ev.data.ms ?? 0,
+          lastBulkAddCount: ev.data.count ?? 0,
+          lastBulkAddVia: ev.data.via ?? '',
+        }));
+      } else if (ev.kind === 'scrollJank') {
+        setStats((s) => ({
+          ...s,
+          scrollJankCount: s.scrollJankCount + 1,
+          lastScrollJankMs: ev.data.gapMs ?? 0,
+        }));
+      }
+    });
+    return unsub;
+  }, [visible]);
+
   if (!visible) return null;
 
   const fpsColor = stats.fps >= 55 ? '#22c55e' : stats.fps >= 30 ? '#eab308' : '#ef4444';
