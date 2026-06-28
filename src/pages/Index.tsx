@@ -17,6 +17,7 @@ import { NoteTemplateSheet } from '@/components/NoteTemplateSheet';
 
 import { MasonryNotesGrid } from '@/components/MasonryNotesGrid';
 import { VirtualizedNotesGrid, VirtualizedNotesList, shouldVirtualizeNotes } from '@/components/VirtualizedNotesGrid';
+import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { useNoteTypeVisibility } from '@/hooks/useNoteTypeVisibility';
 import { getVisibleFeatures } from '@/utils/noteTypeVisibility';
 import { useDarkMode } from '@/hooks/useDarkMode';
@@ -1280,28 +1281,29 @@ const Index = () => {
                       <Star className="h-5 w-5 text-warning fill-warning" />
                       {t('notes.favorites')}
                     </h2>
-                    {shouldVirtualizeNotes(favoriteNotes.length) ? (
-                      <VirtualizedNotesGrid
-                        notes={favoriteNotes}
-                        onEdit={handleEditNote}
-                        onDelete={handleDeleteNote}
-                        onArchive={handleArchiveNote}
-                        isSelectionMode={isSelectionMode}
-                        selectedNoteIds={selectedNoteIds}
-                        onToggleSelection={handleToggleNoteSelection}
-                        className="h-[300px]"
-                      />
-                    ) : (
-                      <MasonryNotesGrid
-                        notes={favoriteNotes}
-                        onEdit={handleEditNote}
-                        onDelete={handleDeleteNote}
-                        onArchive={handleArchiveNote}
-                        isSelectionMode={isSelectionMode}
-                        selectedNoteIds={selectedNoteIds}
-                        onToggleSelection={handleToggleNoteSelection}
-                      />
-                    )}
+                    <NotesVirtualGrid
+                      notes={favoriteNotes}
+                      getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
+                      renderCard={(note) => (
+                        <NoteCard
+                          note={note}
+                          onEdit={handleEditNote}
+                          onDelete={handleDeleteNote}
+                          onArchive={handleArchiveNote}
+                          onTogglePin={handleTogglePin}
+                          onToggleFavorite={handleToggleFavorite}
+                          onMoveToFolder={handleMoveNoteToFolder}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
+                          onDragEnd={handleDragEnd}
+                          isSelectionMode={isSelectionMode}
+                          isSelected={selectedNoteIds.includes(note.id)}
+                          onToggleSelection={handleToggleNoteSelection}
+                          onDuplicate={handleDuplicateNote}
+                        />
+                      )}
+                    />
+
                   </div>
                 )}
                 
@@ -1318,44 +1320,11 @@ const Index = () => {
                     {favoriteNotes.length > 0 && (
                       <h2 className="text-lg font-semibold text-muted-foreground mb-3">{t('notes.allNotes')}</h2>
                     )}
-                    {shouldVirtualizeNotes(regularNotes.length) ? (
-                      <VirtualizedNotesGrid
-                        notes={regularNotes}
-                        onEdit={handleEditNote}
-                        onDelete={handleDeleteNote}
-                        onArchive={handleArchiveNote}
-                        isSelectionMode={isSelectionMode}
-                        selectedNoteIds={selectedNoteIds}
-                        onToggleSelection={handleToggleNoteSelection}
-                        className="h-[calc(100vh-350px)]"
-                      />
-                    ) : (
-                      <MasonryNotesGrid
-                        notes={regularNotes}
-                        onEdit={handleEditNote}
-                        onDelete={handleDeleteNote}
-                        onArchive={handleArchiveNote}
-                        isSelectionMode={isSelectionMode}
-                        selectedNoteIds={selectedNoteIds}
-                        onToggleSelection={handleToggleNoteSelection}
-                      />
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                {/* List View (Default) */}
-                {/* Favorites Section */}
-                {favoriteNotes.length > 0 && (
-                  <div className="mb-6">
-                    <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
-                      <Star className="h-5 w-5 text-warning fill-warning" />
-                      {t('notes.favorites')}
-                    </h2>
-                      <div className="space-y-3">
-                        {favoriteNotes.map((note) => (
-                        <div key={note.id} className="cv-auto-note"><NoteCard
+                    <NotesVirtualGrid
+                      notes={regularNotes}
+                      getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
+                      renderCard={(note) => (
+                        <NoteCard
                           note={note}
                           onEdit={handleEditNote}
                           onDelete={handleDeleteNote}
@@ -1370,9 +1339,44 @@ const Index = () => {
                           isSelected={selectedNoteIds.includes(note.id)}
                           onToggleSelection={handleToggleNoteSelection}
                           onDuplicate={handleDuplicateNote}
-                        /></div>
-                      ))}
-                    </div>
+                        />
+                      )}
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {/* List View (Default) */}
+                {/* Favorites Section */}
+                {favoriteNotes.length > 0 && (
+                  <div className="mb-6">
+                    <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
+                      <Star className="h-5 w-5 text-warning fill-warning" />
+                      {t('notes.favorites')}
+                    </h2>
+                      <NotesVirtualGrid
+                        notes={favoriteNotes}
+                        getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
+                        renderCard={(note) => (
+                          <NoteCard
+                            note={note}
+                            onEdit={handleEditNote}
+                            onDelete={handleDeleteNote}
+                            onArchive={handleArchiveNote}
+                            onTogglePin={handleTogglePin}
+                            onToggleFavorite={handleToggleFavorite}
+                            onMoveToFolder={handleMoveNoteToFolder}
+                            onDragOver={handleDragOver}
+                            onDrop={handleDrop}
+                            onDragEnd={handleDragEnd}
+                            isSelectionMode={isSelectionMode}
+                            isSelected={selectedNoteIds.includes(note.id)}
+                            onToggleSelection={handleToggleNoteSelection}
+                            onDuplicate={handleDuplicateNote}
+                          />
+                        )}
+                      />
                   </div>
                 )}
 
@@ -1389,40 +1393,28 @@ const Index = () => {
                     {favoriteNotes.length > 0 && (
                       <h2 className="text-lg font-semibold text-muted-foreground mb-3">{t('notes.allNotes')}</h2>
                     )}
-                    {shouldVirtualizeNotes(regularNotes.length) ? (
-                      <VirtualizedNotesList
-                        notes={regularNotes}
-                        onEdit={handleEditNote}
-                        onDelete={handleDeleteNote}
-                        onArchive={handleArchiveNote}
-                        isSelectionMode={isSelectionMode}
-                        selectedNoteIds={selectedNoteIds}
-                        onToggleSelection={handleToggleNoteSelection}
-                        className="h-[calc(100vh-350px)]"
-                      />
-                    ) : (
-                      <div className="space-y-3">
-                        {regularNotes.map((note) => (
-                          <div key={note.id} className="cv-auto-note"><NoteCard
-                            note={note}
-                            onEdit={handleEditNote}
-                            onDelete={handleDeleteNote}
-                            onArchive={handleArchiveNote}
-                            onTogglePin={handleTogglePin}
-                            onToggleFavorite={handleToggleFavorite}
-                            onMoveToFolder={handleMoveNoteToFolder}
-                            onDragOver={handleDragOver}
-                            onDrop={handleDrop}
-                            onDragEnd={handleDragEnd}
-                            isSelectionMode={isSelectionMode}
-                            isSelected={selectedNoteIds.includes(note.id)}
-                            onToggleSelection={handleToggleNoteSelection}
-                            onDuplicate={handleDuplicateNote}
-                            
-                          /></div>
-                        ))}
-                      </div>
-                    )}
+                    <NotesVirtualGrid
+                      notes={regularNotes}
+                      getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
+                      renderCard={(note) => (
+                        <NoteCard
+                          note={note}
+                          onEdit={handleEditNote}
+                          onDelete={handleDeleteNote}
+                          onArchive={handleArchiveNote}
+                          onTogglePin={handleTogglePin}
+                          onToggleFavorite={handleToggleFavorite}
+                          onMoveToFolder={handleMoveNoteToFolder}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
+                          onDragEnd={handleDragEnd}
+                          isSelectionMode={isSelectionMode}
+                          isSelected={selectedNoteIds.includes(note.id)}
+                          onToggleSelection={handleToggleNoteSelection}
+                          onDuplicate={handleDuplicateNote}
+                        />
+                      )}
+                    />
                   </>
                 )}
               </>
