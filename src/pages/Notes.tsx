@@ -577,6 +577,8 @@ const Notes = () => {
                   backgroundColor: getCardColor(note),
                   contentVisibility: 'auto',
                   containIntrinsicSize: '0 140px',
+                  touchAction: 'manipulation', // kills 300ms mobile tap delay
+                  WebkitTapHighlightColor: 'transparent',
                 }}
                 onClick={() => !note.isDeleted && handleEditNote(note)}
               >
