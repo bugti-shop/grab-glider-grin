@@ -43,6 +43,8 @@ const WebClipper = () => {
   const [error, setError] = useState<{ title: string; description: string } | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const canceledRef = useRef(false);
 
   // Sanitize incoming params (URL ?title=… &url=… &content=… &selection=… &mode=…).
   // The Share-intent hook and the desktop browser extension both hit this same route.
