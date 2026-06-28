@@ -81,10 +81,6 @@ export const FlatView = ({
         <div className="rounded-xl border border-border/30 overflow-hidden bg-background">
           {renderSectionHeader(virtualHeaderSection, false)}
           {collapsedViewSections.has(`flat-${virtualHeaderSection.id}`) ? null : (
-        {/* No nested scroll container — virtualize against the page scroll so
-            the list feels infinite and weightless. Bottom navigation and
-            menus stay responsive because only the visible window of rows
-            ever exists in the DOM. */}
             <div data-flat-scroll>
               <FlatTaskList
                 index={flatIndex}
