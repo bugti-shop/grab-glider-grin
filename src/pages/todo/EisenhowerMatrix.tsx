@@ -437,11 +437,11 @@ const EisenhowerMatrix = () => {
                 className="text-left bg-background rounded-2xl p-3 shadow-sm border border-border/40 min-h-[260px] flex flex-col active:scale-[0.98] transition-transform"
                 aria-label={`Open ${q.title}`}
               >
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-start gap-2 mb-2">
                   <span className={cn('h-5 w-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0', q.badge)}>
                     {q.romanLabel}
                   </span>
-                  <span className={cn('text-xs font-bold truncate', q.accent)}>
+                  <span className={cn('text-[11px] font-bold leading-tight break-words', q.accent)}>
                     {q.shortTitle}
                   </span>
                 </div>
