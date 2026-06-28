@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ChevronRight, ChevronLeft, Type, Wand2, FileText, SpellCheck, Bold, Italic, Underline, Strikethrough, Highlighter, Crown } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Type, Wand2, FileText, SpellCheck, Bold, Italic, Underline, Strikethrough, Highlighter, Crown, Beaker } from 'lucide-react';
+import { DevPerfSheet } from '@/components/DevPerfSheet';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -126,6 +127,7 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
   const [settings, setSettings] = useState<NotesSettings>(DEFAULT_NOTES_SETTINGS);
   const [currentPage, setCurrentPage] = useState<SubPage>('main');
   const [isLoading, setIsLoading] = useState(true);
+  const [showDevPerf, setShowDevPerf] = useState(false);
 
   useHardwareBackButton({
     onBack: () => {
@@ -289,6 +291,11 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
               setCurrentPage('advancedEditing');
             }}
             rightElement={!isPro ? <Crown className="h-4 w-4 text-amber-500" /> : undefined}
+          />
+          <SettingsRow
+            label="Developer — Stress Test"
+            subtitle="Generate 100k+ notes & auto-report perf"
+            onClick={() => setShowDevPerf(true)}
           />
         </div>
       </ScrollArea>
@@ -648,13 +655,16 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
   );
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 flex flex-col">
-        {currentPage === 'main' && renderMainPage()}
-        {currentPage === 'defaultFont' && renderDefaultFontPage()}
-        {currentPage === 'advancedEditing' && renderAdvancedEditingPage()}
-      </SheetContent>
-    </Sheet>
+    <>
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 flex flex-col">
+          {currentPage === 'main' && renderMainPage()}
+          {currentPage === 'defaultFont' && renderDefaultFontPage()}
+          {currentPage === 'advancedEditing' && renderAdvancedEditingPage()}
+        </SheetContent>
+      </Sheet>
+      <DevPerfSheet isOpen={showDevPerf} onClose={() => setShowDevPerf(false)} />
+    </>
   );
 };
 

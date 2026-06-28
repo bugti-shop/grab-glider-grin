@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ChevronRight, ChevronLeft, ListTodo, Settings2, Bell, Trash2, Flag, Plus, Pencil, X, Check, Crown } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ListTodo, Settings2, Bell, Trash2, Flag, Plus, Pencil, X, Check, Crown, Beaker } from 'lucide-react';
+import { DevPerfSheet } from '@/components/DevPerfSheet';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -93,6 +94,7 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
   const [newPriorityColor, setNewPriorityColor] = useState('#3B82F6');
   const [isAddingPriority, setIsAddingPriority] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showDevPerf, setShowDevPerf] = useState(false);
 
   useHardwareBackButton({
     onBack: () => {
@@ -246,6 +248,12 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
               setCurrentPage('priorities');
             }}
             rightElement={!isPro ? <Crown className="h-4 w-4 text-amber-500" /> : undefined}
+          />
+          <SettingsRow
+            icon={Beaker}
+            label="Developer — Stress Test"
+            subtitle="Generate 100k+ tasks & auto-report perf"
+            onClick={() => setShowDevPerf(true)}
           />
         </div>
       </ScrollArea>
@@ -718,16 +726,19 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
   );
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 flex flex-col">
-        {currentPage === 'main' && renderMainPage()}
-        {currentPage === 'defaults' && renderDefaultsPage()}
-        {currentPage === 'display' && renderDisplayPage()}
-        {currentPage === 'reminders' && renderRemindersPage()}
-        {currentPage === 'behavior' && renderBehaviorPage()}
-        {currentPage === 'priorities' && renderPrioritiesPage()}
-      </SheetContent>
-    </Sheet>
+    <>
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 flex flex-col">
+          {currentPage === 'main' && renderMainPage()}
+          {currentPage === 'defaults' && renderDefaultsPage()}
+          {currentPage === 'display' && renderDisplayPage()}
+          {currentPage === 'reminders' && renderRemindersPage()}
+          {currentPage === 'behavior' && renderBehaviorPage()}
+          {currentPage === 'priorities' && renderPrioritiesPage()}
+        </SheetContent>
+      </Sheet>
+      <DevPerfSheet isOpen={showDevPerf} onClose={() => setShowDevPerf(false)} />
+    </>
   );
 };
 
