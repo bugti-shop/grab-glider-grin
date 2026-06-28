@@ -168,10 +168,12 @@ export function FlatTaskList({
           if (target >= 0 && target < flat.length) {
             e.preventDefault();
             try {
+              const started = performance.now();
               onReorder(activeIndex, target);
-              logPerfEvent('reorder', { list: 'tasks', via: 'keyboard', from: activeIndex, to: target, count: flat.length });
+              logPerfEvent('reorder', { list: 'tasks', via: 'keyboard', ok: true, from: activeIndex, to: target, count: flat.length, ms: Math.round(performance.now() - started) });
               toast.success('Task moved', { id: 'task-reorder', duration: 900 });
-            } catch {
+            } catch (error) {
+              logPerfEvent('reorder', { list: 'tasks', via: 'keyboard', ok: false, from: activeIndex, to: target, count: flat.length, error: String((error as Error)?.message ?? error) });
               toast.error('Could not move task', { id: 'task-reorder' });
             }
             setActiveIndex(target);
