@@ -14,6 +14,82 @@ export const MAX_LENGTHS = {
   attachment: 4096,
 } as const;
 
+/** Hard caps on shared attachments. Surface friendly errors past these. */
+export const ATTACHMENT_LIMITS = {
+  /** 15 MB — keeps notes light and IndexedDB happy. */
+  imageBytes: 15 * 1024 * 1024,
+  /** 25 MB — PDFs we'll fetch & extract text from. */
+  pdfBytes: 25 * 1024 * 1024,
+} as const;
+
+/** MIME allow-lists. Anything else is rejected with a friendly error. */
+export const ALLOWED_IMAGE_MIME = [
+  'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+  'image/bmp', 'image/heic', 'image/heif', 'image/avif', 'image/svg+xml',
+] as const;
+export const ALLOWED_PDF_MIME = ['application/pdf'] as const;
+
+export interface AttachmentValidation {
+  ok: boolean;
+  /** Human-readable error key + fallback. */
+  errorKey?: string;
+  errorFallback?: string;
+  /** Resolved size in bytes if known. */
+  bytes?: number;
+  /** Resolved/sniffed MIME if known. */
+  mime?: string;
+}
+
+/** Format bytes for friendly messages. */
+export function formatBytes(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.min(units.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+  return `${(n / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+/**
+ * Validate an attachment by kind, MIME and (optionally) byte length.
+ * Pure / sync — used in tests; live HEAD checks live in WebClipper.tsx.
+ */
+export function validateAttachment(
+  kind: 'image' | 'pdf' | null,
+  mime: string | null | undefined,
+  bytes: number | null | undefined,
+): AttachmentValidation {
+  if (!kind) {
+    return { ok: false, errorKey: 'webClipper.errUnsupported', errorFallback: 'This file type is not supported.' };
+  }
+  const m = (mime || '').toLowerCase();
+  if (kind === 'image') {
+    if (m && !(ALLOWED_IMAGE_MIME as readonly string[]).includes(m)) {
+      return { ok: false, errorKey: 'webClipper.errImageType', errorFallback: `Unsupported image type (${m}).`, mime: m };
+    }
+    if (typeof bytes === 'number' && bytes > ATTACHMENT_LIMITS.imageBytes) {
+      return {
+        ok: false,
+        errorKey: 'webClipper.errImageTooLarge',
+        errorFallback: `Image is too large (${formatBytes(bytes)}). Max ${formatBytes(ATTACHMENT_LIMITS.imageBytes)}.`,
+        bytes, mime: m,
+      };
+    }
+  }
+  if (kind === 'pdf') {
+    if (m && !(ALLOWED_PDF_MIME as readonly string[]).includes(m)) {
+      return { ok: false, errorKey: 'webClipper.errPdfType', errorFallback: `Unsupported PDF type (${m}).`, mime: m };
+    }
+    if (typeof bytes === 'number' && bytes > ATTACHMENT_LIMITS.pdfBytes) {
+      return {
+        ok: false,
+        errorKey: 'webClipper.errPdfTooLarge',
+        errorFallback: `PDF is too large (${formatBytes(bytes)}). Max ${formatBytes(ATTACHMENT_LIMITS.pdfBytes)}.`,
+        bytes, mime: m,
+      };
+    }
+  }
+  return { ok: true, bytes: bytes ?? undefined, mime: m || undefined };
+}
+
 export type ClipMode = 'article' | 'selection' | 'fullpage' | 'image' | 'pdf';
 
 /** Window (ms) within which an identical share payload is treated as a duplicate. */

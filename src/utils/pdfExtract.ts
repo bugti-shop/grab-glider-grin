@@ -22,9 +22,16 @@ export interface PdfExtractOptions {
   maxChars?: number;
   /** Abort fetch/decoding after this many ms. Default 15000. */
   timeoutMs?: number;
+  /**
+   * Progress callback. `stage` is one of:
+   *  - 'download'  : 0..1 download ratio (or undefined if unknown)
+   *  - 'parse'     : 0..1 ratio of pages parsed
+   *  - 'done'      : extraction complete
+   */
+  onProgress?: (stage: 'download' | 'parse' | 'done', ratio?: number) => void;
 }
 
-const DEFAULTS: Required<PdfExtractOptions> = {
+const DEFAULTS: Required<Omit<PdfExtractOptions, 'onProgress'>> = {
   maxPages: 10,
   maxChars: 20000,
   timeoutMs: 15000,
@@ -36,13 +43,38 @@ export async function extractPdfTextFromUrl(
   options: PdfExtractOptions = {},
 ): Promise<PdfExtractResult> {
   const opts = { ...DEFAULTS, ...options };
+  const onProgress = options.onProgress;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs);
   try {
     const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`PDF fetch failed: ${res.status}`);
-    const buf = await res.arrayBuffer();
-    return await extractPdfTextFromBuffer(buf, opts);
+    const total = Number(res.headers.get('content-length') || 0);
+    let buf: ArrayBuffer;
+    if (res.body && total > 0 && onProgress) {
+      const reader = res.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let received = 0;
+      onProgress('download', 0);
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          chunks.push(value);
+          received += value.length;
+          onProgress('download', Math.min(1, received / total));
+        }
+      }
+      const merged = new Uint8Array(received);
+      let off = 0;
+      for (const c of chunks) { merged.set(c, off); off += c.length; }
+      buf = merged.buffer;
+    } else {
+      buf = await res.arrayBuffer();
+      onProgress?.('download', 1);
+    }
+    return await extractPdfTextFromBuffer(buf, { ...options, onProgress });
   } finally {
     clearTimeout(timer);
   }
@@ -78,6 +110,8 @@ export async function extractPdfTextFromBuffer(
   let total = 0;
   let truncated = pageCount > pagesToRead;
 
+  const onProgress = options.onProgress;
+  onProgress?.('parse', 0);
   for (let i = 1; i <= pagesToRead; i++) {
     const page = await doc.getPage(i);
     const tc = await page.getTextContent();
@@ -92,10 +126,12 @@ export async function extractPdfTextFromBuffer(
       total += pageText.length + 2;
       if (total >= opts.maxChars) {
         truncated = true;
+        onProgress?.('parse', 1);
         break;
       }
     }
     page.cleanup?.();
+    onProgress?.('parse', i / pagesToRead);
   }
   doc.cleanup?.();
   doc.destroy?.();
@@ -105,6 +141,7 @@ export async function extractPdfTextFromBuffer(
     text = text.slice(0, opts.maxChars).trimEnd();
     truncated = true;
   }
+  onProgress?.('done', 1);
 
   return { text, pageCount, truncated };
 }
