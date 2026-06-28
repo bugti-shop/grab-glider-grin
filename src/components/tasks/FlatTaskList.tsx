@@ -75,9 +75,27 @@ export function FlatTaskList({
   const flat = flatIndex.flat;
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const [parentTop, setParentTop] = useState(0);
 
-  // Track the parent element's offset within the document so the window
-  // virtualizer knows where rows actually begin.
+  useEffect(() => {
+    if (!useWindow) return;
+    const update = () => {
+      if (!parentRef.current) return;
+      const rect = parentRef.current.getBoundingClientRect();
+      setParentTop(rect.top + window.scrollY);
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, { passive: true, capture: true });
+    // Recompute once after layout settles (fonts, images).
+    const t = window.setTimeout(update, 100);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, { capture: true } as any);
+      window.clearTimeout(t);
+    };
+  }, [useWindow]);
+
   const containerVirtualizer = useVirtualizer({
     count: flat.length,
     getScrollElement: () => parentRef.current,
@@ -91,7 +109,7 @@ export function FlatTaskList({
     estimateSize: () => rowHeight,
     overscan,
     getItemKey: (i) => flat[i]?.task?.id ?? i,
-    scrollMargin: parentRef.current?.offsetTop ?? 0,
+    scrollMargin: parentTop,
   });
 
   const virtualizer = useWindow ? windowVirtualizer : containerVirtualizer;
