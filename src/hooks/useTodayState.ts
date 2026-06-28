@@ -457,11 +457,18 @@ export const useTodayState = () => {
   const processedItems = useMemo(() => {
     if (workerResult && worker.isAvailable) {
       // Preserve worker ordering without sorting the full local array again.
-      // Sorting 100k tasks on every checkbox tap made the whole app feel stuck.
+      // Sorting / serializing 100k tasks after every checkbox tap or bulk
+      // duplicate made the whole app feel stuck.  If we intentionally skipped a
+      // worker pass for a bulk insert, prepend the new local-only ids so the UI
+      // still shows them instantly without forcing a heavy worker round-trip.
       const byId = new Map(items.map(i => [i.id, i]));
-      return [...workerResult.uncompleted, ...workerResult.completed]
+      const workerOrdered = [...workerResult.uncompleted, ...workerResult.completed];
+      const workerIds = new Set(workerOrdered.map((t: any) => t.id));
+      const optimisticExtras = items.filter(i => !workerIds.has(i.id));
+      const ordered = workerOrdered
         .map((t: any) => byId.get(t.id))
         .filter(Boolean) as TodoItem[];
+      return [...optimisticExtras, ...ordered];
     }
     return processedItemsFallback || [];
   }, [workerResult, worker.isAvailable, items, processedItemsFallback]);
