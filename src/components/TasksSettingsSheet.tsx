@@ -94,6 +94,7 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
   const [newPriorityColor, setNewPriorityColor] = useState('#3B82F6');
   const [isAddingPriority, setIsAddingPriority] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showDevPerf, setShowDevPerf] = useState(false);
 
   useHardwareBackButton({
     onBack: () => {
