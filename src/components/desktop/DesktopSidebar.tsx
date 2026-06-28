@@ -75,6 +75,9 @@ export const DesktopSidebar = () => {
     try {
       localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
     } catch {}
+    const onResize = () => applySidebarWidth(collapsed);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, [collapsed]);
 
   useEffect(() => {
