@@ -44,9 +44,10 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
         <div className="container mx-auto px-3 sm:px-4 pt-3 pb-1.5">
           <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-              <AppLogo />
-              <h1 className="text-lg sm:text-xl font-bold truncate">{title}</h1>
-              
+              <div className="lg:hidden flex items-center gap-2">
+                <AppLogo />
+              </div>
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{title}</h1>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               
