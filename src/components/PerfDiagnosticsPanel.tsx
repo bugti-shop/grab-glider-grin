@@ -7,6 +7,7 @@
  * Read-only: never mutates app state, safe to leave running.
  */
 import { useEffect, useRef, useState } from 'react';
+import { getRecentPerfEvents, startScrollJankMonitor, subscribePerfLog } from '@/utils/perfLogger';
 
 interface Stats {
   fps: number;
@@ -14,6 +15,11 @@ interface Stats {
   virtRows: number;
   longTasks: number;
   lastLongTaskMs: number;
+  lastBulkAddMs: number;
+  lastBulkAddCount: number;
+  lastBulkAddVia: string;
+  scrollJankCount: number;
+  lastScrollJankMs: number;
 }
 
 const STORAGE_KEY = 'perf:panel';
