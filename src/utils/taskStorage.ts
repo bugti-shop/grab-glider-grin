@@ -11,6 +11,7 @@ const DB_VERSION = 3;
 const STORE_NAME = 'tasks';
 const META_STORE = 'meta';
 const BATCH_SIZE = 5000; // Process 5000 items at a time for better performance
+const LOCAL_STORAGE_MIGRATION_DONE_KEY = 'todoItems_idb_migration_done_v1';
 
 // In-memory cache with LRU eviction for large datasets
 let tasksCache: TodoItem[] | null = null;
@@ -322,11 +323,14 @@ const saveLargeDataset = async (db: IDBDatabase, items: TodoItem[], skipSyncEven
 
 // Update a single task without rewriting everything
 export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>): Promise<boolean> => {
+  let updatedForSync: TodoItem | null = null;
+
   // Update cache immediately
   if (tasksCache) {
     const index = tasksCache.findIndex(t => t.id === taskId);
     if (index >= 0) {
       tasksCache[index] = { ...tasksCache[index], ...updates };
+      updatedForSync = tasksCache[index];
       cacheVersion++;
     }
   }
@@ -343,11 +347,17 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
         const existing = getRequest.result;
         if (existing) {
           const updated = { ...existing, ...updates };
+          updatedForSync = hydrateItem(updated);
           store.put(updated);
         }
       };
       
       transaction.oncomplete = () => {
+        if (updatedForSync) {
+          import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
+            try { pushTasks([updatedForSync!]); } catch {}
+          }).catch(() => {});
+        }
         window.dispatchEvent(new Event('tasksUpdated'));
         resolve(true);
       };
@@ -359,6 +369,69 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
   } catch (e) {
     console.warn('Update task failed, cache is still updated:', e);
     return true; // Graceful degradation
+  }
+};
+
+// Insert or replace a single task without rewriting the whole tasks store.
+export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promise<boolean> => {
+  const hydrated = hydrateItem(task);
+
+  if (tasksCache) {
+    const index = tasksCache.findIndex(t => t.id === hydrated.id);
+    if (index >= 0) tasksCache[index] = hydrated;
+    else tasksCache = [hydrated, ...tasksCache];
+    cacheVersion++;
+  }
+
+  if (!skipSyncEvent) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
+      try { pushTasks([hydrated]); } catch {}
+    }).catch(() => {});
+  }
+
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      transaction.objectStore(STORE_NAME).put(hydrated);
+      transaction.oncomplete = () => {
+        if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+        resolve(true);
+      };
+      transaction.onerror = () => {
+        if (!skipSyncEvent) window.dispatchEvent(new Event('tasksUpdated'));
+        resolve(true);
+      };
+    });
+  } catch (e) {
+    console.warn('Put task failed, cache is still updated:', e);
+    return true;
+  }
+};
+
+// Dedicated reset path for developer/performance tools. This intentionally
+// bypasses the empty-array safety guard in saveTasksToDB while clearing cache.
+export const clearAllTasksFromDB = async (): Promise<boolean> => {
+  tasksCache = [];
+  cacheVersion++;
+
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      transaction.objectStore(STORE_NAME).clear();
+      transaction.oncomplete = () => {
+        window.dispatchEvent(new Event('tasksUpdated'));
+        resolve(true);
+      };
+      transaction.onerror = () => {
+        window.dispatchEvent(new Event('tasksUpdated'));
+        resolve(true);
+      };
+    });
+  } catch (e) {
+    console.warn('Clear all tasks failed, cache has still been cleared:', e);
+    return true;
   }
 };
 
@@ -408,6 +481,12 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
 // Migrate from localStorage to IndexedDB (silent, non-blocking)
 export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; count: number }> => {
   const TODO_ITEMS_KEY = 'todoItems';
+  try {
+    if (localStorage.getItem(LOCAL_STORAGE_MIGRATION_DONE_KEY) === 'true') {
+      localStorage.removeItem(TODO_ITEMS_KEY);
+      return { migrated: false, count: 0 };
+    }
+  } catch {}
   
   let saved: string | null = null;
   try {
@@ -417,6 +496,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
   }
   
   if (!saved) {
+    try { localStorage.setItem(LOCAL_STORAGE_MIGRATION_DONE_KEY, 'true'); } catch {}
     return { migrated: false, count: 0 };
   }
   
@@ -425,6 +505,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
     const items: TodoItem[] = Array.isArray(parsed) ? parsed.map(hydrateItem) : [];
     
     if (items.length === 0) {
+      try { localStorage.setItem(LOCAL_STORAGE_MIGRATION_DONE_KEY, 'true'); } catch {}
       return { migrated: false, count: 0 };
     }
     
@@ -433,6 +514,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
     if (existingItems.length > 0) {
       // Already migrated, just clear localStorage to free space
       localStorage.removeItem(TODO_ITEMS_KEY);
+      try { localStorage.setItem(LOCAL_STORAGE_MIGRATION_DONE_KEY, 'true'); } catch {}
       return { migrated: false, count: existingItems.length };
     }
     
@@ -441,6 +523,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
     
     // Clear localStorage to free quota
     localStorage.removeItem(TODO_ITEMS_KEY);
+    try { localStorage.setItem(LOCAL_STORAGE_MIGRATION_DONE_KEY, 'true'); } catch {}
     
     console.log(`Migrated ${items.length} tasks from localStorage to IndexedDB`);
     return { migrated: true, count: items.length };
