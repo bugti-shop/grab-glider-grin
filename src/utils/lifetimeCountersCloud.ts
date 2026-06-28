@@ -210,6 +210,7 @@ export const pushLifetimeCounter = async (kind: SoftLimitKind, value: number): P
  */
 export const pushAllLifetimeCounters = async (): Promise<void> => {
   try {
+    if (!(await hasAuthenticatedUser())) return;
     const { identifier, type } = await getIdentifier();
     const payload: Record<string, any> = { identifier, identifier_type: type };
     (Object.keys(COLUMN_MAP) as SoftLimitKind[]).forEach((kind) => {
