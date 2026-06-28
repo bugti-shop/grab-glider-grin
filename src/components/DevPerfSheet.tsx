@@ -187,15 +187,15 @@ export const DevPerfSheet = ({ isOpen, onClose }: Props) => {
     setBusy('clear');
     try {
       // Direct IDB wipe — bypass the empty-array safety guard.
-      const dbName = 'flowist_db';
+      const dbName = kind === 'tasks' ? 'nota-tasks-db' : 'nota-notes-db';
+      const storeName = kind === 'tasks' ? 'tasks' : 'notes';
       await new Promise<void>((resolve, reject) => {
         const req = indexedDB.open(dbName);
         req.onsuccess = () => {
           const db = req.result;
-          const store = kind === 'tasks' ? 'todo_items' : 'notes';
-          if (!db.objectStoreNames.contains(store)) { db.close(); resolve(); return; }
-          const tx = db.transaction(store, 'readwrite');
-          tx.objectStore(store).clear();
+          if (!db.objectStoreNames.contains(storeName)) { db.close(); resolve(); return; }
+          const tx = db.transaction(storeName, 'readwrite');
+          tx.objectStore(storeName).clear();
           tx.oncomplete = () => { db.close(); resolve(); };
           tx.onerror = () => { db.close(); reject(tx.error); };
         };
