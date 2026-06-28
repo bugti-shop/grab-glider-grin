@@ -82,7 +82,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   // Keep a ref to items for reliable access in async callbacks
   const itemsRef = useRef(items);
   itemsRef.current = items;
-  const deferredCompletionTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const deferredCompletionTimersRef = useRef<Map<string, number>>(new Map());
 
   const markSingleTaskPersisted = useCallback((skipProcessing = false) => {
     try {
