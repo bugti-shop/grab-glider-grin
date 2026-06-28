@@ -16,7 +16,10 @@ import { markRenderStart, trackScrollFps } from '@/utils/perfBenchmark';
 // height, the native DOM cost (event listeners, layout, paint) starts to
 // degrade scrolling and bottom-nav responsiveness. 40 keeps small lists DnD-
 // friendly while ensuring 100k+ lists stay smooth.
-const VIRTUALIZE_THRESHOLD = 40;
+// Keep the exact original draggable/section UI for normal lists. Virtualization
+// only kicks in for truly large lists, and that path still renders the same
+// section header + separator row style.
+const VIRTUALIZE_THRESHOLD = 1000;
 
 interface FlatViewProps {
   sortedSections: TaskSection[];
