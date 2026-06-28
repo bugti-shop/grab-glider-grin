@@ -35,6 +35,7 @@ import { useSubscriptionExpiry } from "@/hooks/useSubscriptionExpiry";
 const AppLockScreen = lazy(() => import("@/components/AppLockScreen").then(m => ({ default: m.AppLockScreen })));
 import { useNotificationListener } from "@/hooks/useNotificationListener";
 import { widgetDataSync } from "@/utils/widgetDataSync";
+import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { WidgetAddTask, WidgetNewSticky, WidgetNewLined, WidgetNewRegular, WidgetNewSketch } from "@/pages/WidgetEntry";
 
 const StreakMilestoneCelebration = lazy(() => import("@/components/StreakMilestoneCelebration").then(m => ({ default: m.StreakMilestoneCelebration })));
@@ -406,6 +407,7 @@ const RootRedirect = () => {
 };
 
 const AppRoutes = () => {
+  useGlobalShortcuts();
   return (
     <BrowserRouter>
       <NavigationBackProvider>

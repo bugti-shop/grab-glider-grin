@@ -34,9 +34,12 @@ const sheetVariants = cva(
   {
     variants: {
       side: {
-        top: "inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
+        // On desktop (lg+) "top" and "bottom" input sheets render as a
+        // centered modal so forms (Task input, Note editor, folder/section
+        // create) feel like a proper dialog instead of stretching edge-to-edge.
+        top: "inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top lg:inset-x-auto lg:top-[12vh] lg:left-1/2 lg:-translate-x-1/2 lg:w-full lg:max-w-xl lg:max-h-[80vh] lg:overflow-y-auto lg:rounded-2xl lg:border",
         bottom:
-          "inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+          "inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom lg:inset-x-auto lg:bottom-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-full lg:max-w-xl lg:max-h-[80vh] lg:overflow-y-auto lg:rounded-2xl lg:border-t",
         left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
         right:
           "inset-y-0 right-0 h-full w-3/4  border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
