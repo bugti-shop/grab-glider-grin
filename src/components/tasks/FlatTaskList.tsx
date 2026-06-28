@@ -15,7 +15,7 @@
  * The active row gets `data-active="true"` so callers can style it.
  */
 import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import type { TodoItem } from '@/types/note';
 import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/tasks/flattenTasks';
 
@@ -28,8 +28,14 @@ export interface FlatTaskListProps {
   rowHeight?: number;
   /** Number of rows to render outside the viewport (default 8). */
   overscan?: number;
-  /** Optional fixed max-height (defaults to viewport-driven). */
+  /** Optional fixed max-height (defaults to viewport-driven). Ignored when useWindow. */
   maxHeight?: number | string;
+  /**
+   * When true, virtualize against the document/window scroll so the list
+   * participates in the page's natural scroll (no nested scrollbar). This is
+   * what Todoist does — one infinite scroll regardless of list length.
+   */
+  useWindow?: boolean;
   /** Per-row renderer. Must return a single element of fixed height. */
   renderRow: (row: FlatTaskRow, index: number, isActive: boolean) => ReactNode;
   /** Optional empty-state when there are zero rows. */
