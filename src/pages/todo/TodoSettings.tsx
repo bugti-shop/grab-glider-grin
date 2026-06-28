@@ -682,6 +682,16 @@ const TodoSettings = () => {
                   suffix="px"
                   onChange={(value) => updateVirtualization((current) => ({ ...current, notes: { ...current.notes, rowHeight: value } }))}
                 />
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+                  <div className="flex-1 pr-4">
+                    <span className="text-foreground text-sm block">Notes window scrolling</span>
+                    <span className="text-xs text-muted-foreground">Use document-level windowing for very large note grids</span>
+                  </div>
+                  <Switch
+                    checked={virtualizationSettings.notes.windowing}
+                    onCheckedChange={(checked) => updateVirtualization((current) => ({ ...current, notes: { ...current.notes, windowing: checked } }))}
+                  />
+                </div>
                 <RangeSetting
                   label="Tasks overscan"
                   value={virtualizationSettings.tasks.overscan}

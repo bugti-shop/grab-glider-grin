@@ -9,7 +9,7 @@
  * page scroll behaves natively).
  */
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import { useWindowVirtualizer } from '@tanstack/react-virtual';
+import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import type { Note } from '@/types/note';
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
@@ -42,6 +42,7 @@ export function NotesVirtualGrid({
   );
   const resolvedRowHeight = estimatedRowHeight ?? virtualizationSettings.notes.rowHeight;
   const resolvedOverscan = getAdaptiveOverscan(virtualizationSettings.notes.overscan, notes.length);
+  const resolvedWindowing = virtualizationSettings.notes.windowing;
 
   useEffect(() => {
     const onResize = () => setColumns(getColumnsForWidth(window.innerWidth));
@@ -71,7 +72,15 @@ export function NotesVirtualGrid({
     return () => window.removeEventListener('resize', measure);
   }, [columns, notes.length]);
 
-  const virtualizer = useWindowVirtualizer({
+  const containerVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => resolvedRowHeight,
+    overscan: resolvedOverscan,
+    getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
+  });
+
+  const windowVirtualizer = useWindowVirtualizer({
     count: rows.length,
     estimateSize: () => resolvedRowHeight,
     // 6 rows of overscan (≈18 cards at 3-col) keeps fast flick-scrolling
@@ -82,6 +91,8 @@ export function NotesVirtualGrid({
     getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
   });
 
+  const virtualizer = resolvedWindowing ? windowVirtualizer : containerVirtualizer;
+
   useEffect(() => {
     logPerfEvent('render', {
       label: 'NotesVirtualGrid',
@@ -90,14 +101,20 @@ export function NotesVirtualGrid({
       columns,
       overscan: resolvedOverscan,
       rowHeight: resolvedRowHeight,
+      windowing: resolvedWindowing ? 'window' : 'container',
     });
-  }, [columns, notes.length, resolvedOverscan, resolvedRowHeight, rows.length]);
+  }, [columns, notes.length, resolvedOverscan, resolvedRowHeight, resolvedWindowing, rows.length]);
 
-  useEffect(() => startScopedScrollFpsMonitor(window, 'NotesVirtualGrid', {
+  useEffect(() => {
+    const target = resolvedWindowing ? window : parentRef.current;
+    if (!target) return;
+    return startScopedScrollFpsMonitor(target, 'NotesVirtualGrid', {
     itemCount: notes.length,
     overscan: resolvedOverscan,
     rowHeight: resolvedRowHeight,
-  }), [notes.length, resolvedOverscan, resolvedRowHeight]);
+      windowing: resolvedWindowing ? 'window' : 'container',
+    });
+  }, [notes.length, resolvedOverscan, resolvedRowHeight, resolvedWindowing]);
 
   return (
     <div
@@ -105,8 +122,11 @@ export function NotesVirtualGrid({
       data-flowist-virtual-list="notes"
       data-virt-overscan={resolvedOverscan}
       data-virt-row-height={resolvedRowHeight}
-      data-virt-windowing="window"
-      style={{ position: 'relative' }}
+      data-virt-windowing={resolvedWindowing ? 'window' : 'container'}
+      style={resolvedWindowing
+        ? { position: 'relative' }
+        : { position: 'relative', height: 'min(72vh, 900px)', overflow: 'auto', WebkitOverflowScrolling: 'touch', contain: 'strict' }
+      }
     >
       <div
         style={{
@@ -128,7 +148,7 @@ export function NotesVirtualGrid({
                 top: 0,
                 left: 0,
                 width: '100%',
-                transform: `translateY(${vrow.start - virtualizer.options.scrollMargin}px)`,
+                transform: `translateY(${vrow.start - (resolvedWindowing ? virtualizer.options.scrollMargin : 0)}px)`,
                 display: 'grid',
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                 gap: '0.75rem',
