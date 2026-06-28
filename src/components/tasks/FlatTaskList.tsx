@@ -19,7 +19,7 @@ import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
 import type { TodoItem } from '@/types/note';
 import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/tasks/flattenTasks';
-import { logPerfEvent } from '@/utils/perfLogger';
+import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
 
 export interface FlatTaskListProps {
@@ -252,6 +252,17 @@ export function FlatTaskList({
       toast.error('Could not move task', { id: 'task-reorder' });
     }
   }, [cancelDrag, flat.length, onReorder]);
+
+  useEffect(() => {
+    const target = resolvedUseWindow ? window : parentRef.current;
+    if (!target) return;
+    return startScopedScrollFpsMonitor(target, 'FlatTaskList', {
+      itemCount: flat.length,
+      overscan: resolvedOverscan,
+      rowHeight: resolvedRowHeight,
+      windowing: resolvedUseWindow ? 'window' : 'container',
+    });
+  }, [flat.length, resolvedOverscan, resolvedRowHeight, resolvedUseWindow]);
 
   if (flat.length === 0 && emptyState) return <>{emptyState}</>;
 
