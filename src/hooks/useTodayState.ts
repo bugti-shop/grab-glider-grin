@@ -447,13 +447,12 @@ export const useTodayState = () => {
   // Use worker result when available, fallback otherwise
   const processedItems = useMemo(() => {
     if (workerResult && worker.isAvailable) {
-      // Worker returns IDs-only results, but we need to map back to full items
-      // Worker returns MinimalTask objects — match by id to get full TodoItem references
-      const workerIds = new Set([...workerResult.uncompleted, ...workerResult.completed].map((t: any) => t.id));
-      // Preserve original item references, maintain worker ordering
-      const idOrder = new Map<string, number>();
-      [...workerResult.uncompleted, ...workerResult.completed].forEach((t: any, i: number) => idOrder.set(t.id, i));
-      return items.filter(i => workerIds.has(i.id)).sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0));
+      // Preserve worker ordering without sorting the full local array again.
+      // Sorting 100k tasks on every checkbox tap made the whole app feel stuck.
+      const byId = new Map(items.map(i => [i.id, i]));
+      return [...workerResult.uncompleted, ...workerResult.completed]
+        .map((t: any) => byId.get(t.id))
+        .filter(Boolean) as TodoItem[];
     }
     return processedItemsFallback || [];
   }, [workerResult, worker.isAvailable, items, processedItemsFallback]);
