@@ -502,6 +502,118 @@ export const bulkPutTasksInDB = async (
   }
 };
 
+// ── Bulk insert via Web Worker ──────────────────────────────────────────────
+// Same contract as `bulkPutTasksInDB` but the actual IndexedDB writes happen
+// on a worker thread, so adding 100k tasks never blocks scroll, navigation,
+// or the completion-ring animation. Falls back to the main-thread path if
+// the worker fails to spawn (older browsers, blocked module workers, etc.).
+let bulkWorker: Worker | null = null;
+let bulkWorkerFailed = false;
+let bulkReqCounter = 0;
+type BulkCallback = {
+  resolve: (ok: boolean) => void;
+  onProgress?: (p: { written: number; total: number }) => void;
+};
+const bulkCallbacks = new Map<number, BulkCallback>();
+
+const getBulkWorker = (): Worker | null => {
+  if (bulkWorkerFailed) return null;
+  if (bulkWorker) return bulkWorker;
+  try {
+    bulkWorker = new Worker(
+      new URL('../workers/bulkTaskWorker.ts', import.meta.url),
+      { type: 'module' },
+    );
+    bulkWorker.onmessage = (e: MessageEvent) => {
+      const { id, type, written, total, duration } = e.data || {};
+      const cb = bulkCallbacks.get(id);
+      if (!cb) return;
+      if (type === 'progress') {
+        cb.onProgress?.({ written, total });
+      } else if (type === 'done') {
+        bulkCallbacks.delete(id);
+        import('@/utils/perfLogger').then(({ logPerfEvent }) => {
+          logPerfEvent('bulkAdd', {
+            count: written,
+            ms: Math.round(duration || 0),
+            via: 'worker',
+          });
+        }).catch(() => {});
+        cb.resolve(true);
+      } else if (type === 'error') {
+        bulkCallbacks.delete(id);
+        cb.resolve(false);
+      }
+    };
+    bulkWorker.onerror = () => {
+      console.warn('[taskStorage] bulk worker failed, falling back to main thread');
+      bulkWorkerFailed = true;
+      bulkWorker = null;
+    };
+    return bulkWorker;
+  } catch {
+    bulkWorkerFailed = true;
+    return null;
+  }
+};
+
+export const bulkPutTasksInWorker = async (
+  newTasks: TodoItem[],
+  skipSyncEvent = false,
+  onProgress?: (p: { written: number; total: number }) => void,
+): Promise<boolean> => {
+  if (newTasks.length === 0) return true;
+  markLocalStorageMigrationDone();
+  const hydrated = newTasks.map(hydrateItem);
+
+  // Update the in-memory cache synchronously so the UI sees the new rows
+  // immediately, regardless of how long the worker takes to drain.
+  if (tasksCache) {
+    const byId = new Map(tasksCache.map((t) => [t.id, t] as const));
+    hydrated.forEach((t) => byId.set(t.id, t));
+    tasksCache = Array.from(byId.values());
+  } else {
+    tasksCache = hydrated.slice();
+  }
+  cacheVersion++;
+
+  if (!skipSyncEvent) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
+      try { pushTasks(hydrated); } catch {}
+    }).catch(() => {});
+  }
+
+  const worker = getBulkWorker();
+  if (!worker) {
+    // Graceful fallback: keep the existing main-thread batched path so adding
+    // tasks always works even if the worker can't initialise.
+    const t0 = performance.now();
+    const ok = await bulkPutTasksInDB(newTasks, skipSyncEvent);
+    import('@/utils/perfLogger').then(({ logPerfEvent }) => {
+      logPerfEvent('bulkAdd', {
+        count: newTasks.length,
+        ms: Math.round(performance.now() - t0),
+        via: 'main-thread-fallback',
+      });
+    }).catch(() => {});
+    return ok;
+  }
+
+  const id = ++bulkReqCounter;
+  return new Promise<boolean>((resolve) => {
+    bulkCallbacks.set(id, {
+      resolve: (ok) => {
+        if (!skipSyncEvent) dispatchTasksUpdated(150);
+        resolve(ok);
+      },
+      onProgress,
+    });
+    // structured-clone serialises Date / nested objects safely.
+    worker.postMessage({ id, type: 'bulkPut', items: hydrated });
+  });
+};
+
+
 // Dedicated reset path for developer/performance tools. This intentionally
 // bypasses the empty-array safety guard in saveTasksToDB while clearing cache.
 export const clearAllTasksFromDB = async (): Promise<boolean> => {
