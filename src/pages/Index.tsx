@@ -17,6 +17,7 @@ import { NoteTemplateSheet } from '@/components/NoteTemplateSheet';
 
 import { MasonryNotesGrid } from '@/components/MasonryNotesGrid';
 import { VirtualizedNotesGrid, VirtualizedNotesList, shouldVirtualizeNotes } from '@/components/VirtualizedNotesGrid';
+import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { useNoteTypeVisibility } from '@/hooks/useNoteTypeVisibility';
 import { getVisibleFeatures } from '@/utils/noteTypeVisibility';
 import { useDarkMode } from '@/hooks/useDarkMode';
