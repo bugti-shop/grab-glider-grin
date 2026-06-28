@@ -36,6 +36,7 @@ const AppLockScreen = lazy(() => import("@/components/AppLockScreen").then(m => 
 import { useNotificationListener } from "@/hooks/useNotificationListener";
 import { widgetDataSync } from "@/utils/widgetDataSync";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
+import { useShareIntent } from "@/hooks/useShareIntent";
 import { PerfDiagnosticsPanel } from "@/components/PerfDiagnosticsPanel";
 import { WidgetAddTask, WidgetNewSticky, WidgetNewLined, WidgetNewRegular, WidgetNewSketch } from "@/pages/WidgetEntry";
 
