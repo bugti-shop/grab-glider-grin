@@ -595,7 +595,7 @@ const Notes = () => {
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, note.id)}
                 className={cn(
-                  "cursor-pointer transition-colors relative group rounded-2xl h-[152px] overflow-hidden",
+                  "cursor-pointer transition-colors relative group rounded-lg min-h-[150px] overflow-hidden border border-border/50 hover:shadow-md",
                   (note.isArchived || note.isDeleted) && "opacity-75"
                 )}
                 style={{
@@ -605,7 +605,7 @@ const Notes = () => {
                 }}
                 onClick={() => !note.isDeleted && handleEditNote(note)}
               >
-                <div className="p-4 rounded-2xl h-full flex flex-col">
+                <div className="p-4 h-full flex flex-col">
                   <div className="absolute top-2 right-2 flex gap-1">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -717,22 +717,29 @@ const Notes = () => {
                     )}
                   </div>
                   {note.title && (
-                    <h2 className="font-bold text-base mb-2 text-foreground pr-10 line-clamp-2">
+                    <h2 className="font-semibold text-base mb-2 text-gray-900 pr-10 line-clamp-1">
                       {sanitizeDisplayName(note.title)}
                     </h2>
                   )}
                   {previewText && (
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-3 min-h-[3.75rem]">
+                    <p className="text-sm text-gray-700 mb-3 line-clamp-2">
                       {previewText}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 flex-wrap mt-auto">
-                    <div className="inline-block px-3 py-1 rounded-full border border-foreground/20 text-xs text-foreground">
+                  <div className="flex items-center justify-between gap-2 text-xs text-gray-600 mt-auto">
+                    <span>
                       {new Date(note.updatedAt).toLocaleDateString('en-US', {
-                        month: 'numeric',
-                        day: 'numeric',
-                        year: '2-digit'
+                        month: 'short',
+                        day: 'numeric'
+                      })} • {new Date(note.updatedAt).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
                       })}
+                    </span>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/80 text-xs font-medium text-gray-800">
+                      <FileText className="h-3 w-3" />
+                      <span>Regular</span>
                     </div>
                     {note.isDeleted && note.deletedAt && (
                       <div className="inline-block px-2 py-1 rounded-full bg-destructive/20 text-xs text-destructive font-medium">
