@@ -149,6 +149,20 @@ export function FlatTaskList({
     if (disableKeyboard) return;
     const onKey = (e: KeyboardEvent) => {
       if (isTypingInForm(e.target)) return;
+      // Alt + ↑/↓ → reorder active row (fallback for virtualized lists where DnD is off).
+      if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        if (onReorder && activeIndex >= 0 && flat[activeIndex]) {
+          const delta = e.key === 'ArrowDown' ? 1 : -1;
+          const target = activeIndex + delta;
+          if (target >= 0 && target < flat.length) {
+            e.preventDefault();
+            onReorder(activeIndex, target);
+            setActiveIndex(target);
+            virtualizer.scrollToIndex(target, { align: 'auto' });
+          }
+        }
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const key = e.key;
       if (key === 'ArrowDown' || key === 'j' || key === 'J') {
@@ -171,7 +185,7 @@ export function FlatTaskList({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [disableKeyboard, move, activeIndex, flat, onActivate, onToggleComplete]);
+  }, [disableKeyboard, move, activeIndex, flat, onActivate, onToggleComplete, onReorder, virtualizer]);
 
   if (flat.length === 0 && emptyState) return <>{emptyState}</>;
 
