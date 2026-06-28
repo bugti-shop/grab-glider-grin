@@ -65,7 +65,7 @@ export const FlatView = ({
   const flatIndex = useFlatTaskIndex(useFlatVirtualized ? uncompletedItems : undefined);
   const virtualHeaderSection = useMemo<TaskSection>(() => {
     const base = sortedSections[0] ?? sections[0] ?? { id: 'default', name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 };
-    return { ...base, id: 'virtual-all-tasks', name: t('grouping.tasks'), order: base.order ?? 0 } as TaskSection;
+    return { ...base, name: base.name || t('grouping.tasks'), order: base.order ?? 0 } as TaskSection;
   }, [sections, sortedSections, t]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
