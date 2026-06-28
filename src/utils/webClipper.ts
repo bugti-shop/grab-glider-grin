@@ -124,10 +124,27 @@ export function buildClipNoteBody(opts: {
   selection?: string;
   content?: string;
   mode?: ClipMode;
+  attachment?: string;
+  attachmentType?: 'image' | 'pdf' | null;
 }): string {
-  const { url, selection, content, mode = 'article' } = opts;
+  const { url, selection, content, mode = 'article', attachment, attachmentType } = opts;
   let body = '';
   if (url) body += `**Source:** ${escapeMarkdown(url)}\n\n`;
+
+  // Attachment first — gives the note a visible preview at the top.
+  if (attachment) {
+    const safe = validateUrl(attachment);
+    if (safe) {
+      if (attachmentType === 'image' || mode === 'image') {
+        body += `![clip](${safe})\n\n`;
+      } else if (attachmentType === 'pdf' || mode === 'pdf') {
+        body += `📎 [PDF attachment](${safe})\n\n`;
+      } else {
+        body += `[attachment](${safe})\n\n`;
+      }
+    }
+  }
+
   if (mode === 'selection' && selection) {
     body += `> ${escapeMarkdown(selection)}\n\n`;
     return body.trim();
@@ -144,12 +161,25 @@ export function buildClipperUrl(payload: {
   selection?: string;
   content?: string;
   mode?: ClipMode;
+  attachment?: string;
+  attachmentType?: 'image' | 'pdf' | null;
 }): string {
   const params = new URLSearchParams();
   if (payload.title) params.set('title', payload.title.substring(0, MAX_LENGTHS.title));
   if (payload.url) params.set('url', payload.url.substring(0, MAX_LENGTHS.url));
   if (payload.selection) params.set('selection', payload.selection.substring(0, MAX_LENGTHS.selection));
   if (payload.content) params.set('content', payload.content.substring(0, MAX_LENGTHS.content));
+  if (payload.attachment) params.set('attachment', payload.attachment.substring(0, MAX_LENGTHS.attachment));
+  if (payload.attachmentType) params.set('attachmentType', payload.attachmentType);
   if (payload.mode) params.set('mode', payload.mode);
   return `/webclipper?${params.toString()}`;
+}
+
+/** Build a stable signature for a share payload (used by isDuplicateShare). */
+export function buildShareSignature(parts: {
+  url?: string;
+  text?: string;
+  attachment?: string;
+}): string {
+  return [parts.url || '', parts.attachment || '', (parts.text || '').slice(0, 200)].join('|');
 }
