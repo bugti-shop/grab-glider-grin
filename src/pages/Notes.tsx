@@ -403,9 +403,20 @@ const Notes = () => {
     if (note.type === 'sticky' && note.color) {
       return STICKY_COLORS[note.color];
     }
-    // Use random colors for other notes (excluding yellow and sky blue)
-    const index = note.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return RANDOM_COLORS[index % RANDOM_COLORS.length];
+    // Better-distributed hash so colors don't cluster on one shade (e.g. green)
+    // after the UUID migration. Mix createdAt + id with an FNV-1a style hash.
+    const createdMs =
+      note.createdAt instanceof Date
+        ? note.createdAt.getTime()
+        : new Date(note.createdAt as unknown as string).getTime() || 0;
+    const seed = `${createdMs}:${note.id}`;
+    let h = 2166136261;
+    for (let i = 0; i < seed.length; i++) {
+      h ^= seed.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    const index = Math.abs(h) % RANDOM_COLORS.length;
+    return RANDOM_COLORS[index];
   };
 
   return (
