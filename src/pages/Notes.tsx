@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useDeferredValue, useTransition, useMemo } from 'react';
+import { useState, useCallback, useEffect, useDeferredValue, useTransition, useMemo, startTransition } from 'react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Note } from '@/types/note';
 import { useSubscription } from '@/contexts/SubscriptionContext';
