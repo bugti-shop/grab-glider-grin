@@ -12,6 +12,7 @@ import { FlatTaskList } from '@/components/tasks/FlatTaskList';
 import { useFlatTaskIndex } from '@/hooks/useFlatTaskIndex';
 import { markRenderStart, trackScrollFps } from '@/utils/perfBenchmark';
 import { FLAT_ROW_WRAPPER_CLASS, checkFlatRowConsistency } from '@/utils/rowConsistency';
+import { useVirtualizationSettings } from '@/utils/virtualizationSettings';
 
 // Keep the exact original row UI, but switch away from DnD before it can choke
 // scrolling/navigation. 480 rows was already enough to make @hello-pangea/dnd
@@ -57,6 +58,7 @@ export const FlatView = ({
   setOrderVersion,
 }: FlatViewProps) => {
   const { t } = useTranslation();
+  const [virtualizationSettings] = useVirtualizationSettings();
   const useVirtualizedList = false;
 
   // Big-list path: when there are many uncompleted tasks, drop DnD + per-section
@@ -104,8 +106,9 @@ export const FlatView = ({
             <div data-flat-scroll>
               <FlatTaskList
                 index={flatIndex}
-                rowHeight={compactMode ? 44 : 58}
-                useWindow
+                rowHeight={compactMode ? virtualizationSettings.tasks.compactRowHeight : virtualizationSettings.tasks.rowHeight}
+                overscan={virtualizationSettings.tasks.overscan}
+                useWindow={virtualizationSettings.tasks.windowing}
                 onReorder={(from, to) => {
                   if (from === to) return;
                   const ids = uncompletedItems.map(i => i.id);
@@ -151,8 +154,9 @@ export const FlatView = ({
               <CollapsibleContent className={cn("mt-2", compactMode && "mt-1")}>
                 <FlatTaskList
                   items={completedItems}
-                  rowHeight={compactMode ? 56 : 72}
-                  useWindow
+                    rowHeight={compactMode ? virtualizationSettings.tasks.compactRowHeight : virtualizationSettings.tasks.rowHeight}
+                    overscan={virtualizationSettings.tasks.overscan}
+                    useWindow={virtualizationSettings.tasks.windowing}
                   disableKeyboard
                   renderRow={(row) => (
                     <div className="border-b border-border/50">
