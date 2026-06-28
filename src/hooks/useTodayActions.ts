@@ -22,6 +22,7 @@ import { updateSectionOrder } from '@/utils/taskOrderStorage';
 import { getAllSettings, setSetting } from '@/utils/settingsStorage';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
+import { getRingFillMs } from '@/utils/ringFillDuration';
 
 interface UseTodayActionsProps {
   items: TodoItem[];
@@ -431,12 +432,31 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       }
     }
 
-    setItems(prev => {
+    const commitStateUpdate = () => setItems(prev => {
       const next = prev.map(i => i.id === itemId ? { ...i, ...updatesWithTimestamp } : i);
       itemsRef.current = next;
       return next;
     });
-    persistUpdate(true);
+
+    const canDeferCompletionPaint =
+      isNewCompletion &&
+      currentItem &&
+      (!currentItem.repeatType || currentItem.repeatType === 'none') &&
+      Object.keys(updates).every(k => k === 'completed' || k === 'completedAt' || k === 'modifiedAt');
+
+    if (canDeferCompletionPaint) {
+      // Persist immediately, but keep React's large-list filter/sort work out of
+      // the critical 900ms checkbox paint window. This keeps the colored ring
+      // duration stable even when thousands of tasks exist.
+      persistUpdate(true);
+      window.setTimeout(() => {
+        markSingleTaskPersisted(true);
+        commitStateUpdate();
+      }, getRingFillMs());
+    } else {
+      commitStateUpdate();
+      persistUpdate(true);
+    }
 
     if (isNewCompletion) {
       recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
