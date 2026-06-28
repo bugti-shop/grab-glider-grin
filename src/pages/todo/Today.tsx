@@ -512,12 +512,13 @@ const Today = () => {
   );
 
   // Render section header — delegates to extracted component
-  const renderSectionHeader = (section: TaskSection, isDragging: boolean = false) => (
+  const renderSectionHeader = (section: TaskSection, isDragging: boolean = false, taskCountOverride?: number) => (
     <TaskSectionHeader
       section={section}
       sections={sections}
       isDragging={isDragging}
       uncompletedItems={uncompletedItems}
+      taskCountOverride={taskCountOverride}
       viewMode={viewMode}
       collapsedViewSections={collapsedViewSections}
       onToggleSectionCollapse={handleToggleSectionCollapse}
@@ -830,6 +831,7 @@ const Today = () => {
                   renderTaskItem={renderTaskItem}
                   renderSubtasksInline={renderSubtasksInline}
                   renderSectionHeader={renderSectionHeader}
+                  renderVirtualSectionHeader={renderSectionHeader}
                   updateItem={updateItem}
                   handleSectionDragEnd={handleSectionDragEnd}
                   setOrderVersion={setOrderVersion}
