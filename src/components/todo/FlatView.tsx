@@ -78,7 +78,21 @@ export const FlatView = ({
     const done = markRenderStart('Today.FlatTaskList');
     done({ itemCount: uncompletedItems.length });
     const el = scrollContainerRef.current?.querySelector<HTMLDivElement>('[data-flat-scroll]');
-    if (el) return trackScrollFps(el, 'Today.FlatTaskList');
+    if (el) {
+      const stop = trackScrollFps(el, 'Today.FlatTaskList');
+      // Sample row layout after paint to catch any drift between paths.
+      const raf = requestAnimationFrame(() => checkFlatRowConsistency(scrollContainerRef.current, `virtualized(${uncompletedItems.length})`));
+      return () => { stop?.(); cancelAnimationFrame(raf); };
+    }
+  }, [useFlatVirtualized, uncompletedItems.length]);
+
+  // Also sample the non-virtualized path so the baseline is captured from
+  // small lists and reused to validate the big-list path.
+  const dndRootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (useFlatVirtualized) return;
+    const raf = requestAnimationFrame(() => checkFlatRowConsistency(dndRootRef.current, `dnd(${uncompletedItems.length})`));
+    return () => cancelAnimationFrame(raf);
   }, [useFlatVirtualized, uncompletedItems.length]);
 
   if (useFlatVirtualized) {
