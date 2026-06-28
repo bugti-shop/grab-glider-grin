@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Check as CheckIcon, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/utils/haptics';
 import { TASK_CIRCLE, TASK_CHECK_ICON } from '@/utils/taskItemStyles';
 import { TaskCompletionBurst } from '@/components/TaskCompletionBurst';
 import { getCurrentCombo } from '@/utils/comboSystem';
+import { getRingFillMs, subscribeRingFillMs } from '@/utils/ringFillDuration';
 import {
   Tooltip,
   TooltipContent,
