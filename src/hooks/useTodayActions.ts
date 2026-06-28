@@ -82,9 +82,13 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   const itemsRef = useRef(items);
   itemsRef.current = items;
 
-  const markSingleTaskPersisted = () => {
-    try { (window as any).__flowistSkipNextTaskFullSave = Date.now(); } catch {}
-  };
+  const markSingleTaskPersisted = useCallback(() => {
+    try {
+      const now = Date.now();
+      (window as any).__flowistSkipNextTaskFullSave = now;
+      (window as any).__flowistSkipNextTaskProcessing = now;
+    } catch {}
+  }, []);
 
   // ── Folder Actions ──
   const handleCreateFolder = useCallback((name: string, color: string, icon?: string, parentId?: string) => {
@@ -310,7 +314,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         scheduleTaskReminder(newItem.id, newItem.text, new Date(newItem.reminderTime!), newItem.isUrgent).catch(console.warn);
       });
     }
-  }, [inputSectionId, defaultSectionId, sections, taskAddPosition, setItems, setInputSectionId, isPro, softRequireCreate, requireCapacity, selectedFolderId]);
+  }, [inputSectionId, defaultSectionId, sections, taskAddPosition, setItems, setInputSectionId, isPro, softRequireCreate, requireCapacity, selectedFolderId, markSingleTaskPersisted, t]);
 
 
   const handleBatchAddTasks = useCallback(async (taskTexts: string[], sectionId?: string, folderId?: string, priority?: Priority, dueDate?: Date) => {
@@ -439,7 +443,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         duration: 5000,
       });
     }
-  }, [setItems, t, softRequireMutate]);
+  }, [setItems, t, softRequireMutate, markSingleTaskPersisted]);
 
   const deleteItem = useCallback(async (itemId: string, _showUndo: boolean = false, skipConfirm: boolean = false) => {
     if (!softRequireMutate()) return;
@@ -468,7 +472,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [itemToRestore!, ...prev]); toast.success(t('todayPage.taskRestored')); } },
       duration: 5000,
     });
-  }, [tasksSettings.confirmBeforeDelete, setItems, setDeleteConfirmItem, t, softRequireMutate]);
+  }, [tasksSettings.confirmBeforeDelete, setItems, setDeleteConfirmItem, t, softRequireMutate, markSingleTaskPersisted]);
 
   const confirmDelete = useCallback(async () => {
     if (!deleteConfirmItem) return;
@@ -486,7 +490,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       action: { label: t('todayPage.undo'), onClick: () => { setItems(prev => [deletedItem, ...prev]); toast.success(t('todayPage.taskRestored')); } },
       duration: 5000,
     });
-  }, [deleteConfirmItem, setItems, setDeleteConfirmItem, t]);
+  }, [deleteConfirmItem, setItems, setDeleteConfirmItem, t, markSingleTaskPersisted]);
 
   const duplicateTask = useCallback(async (task: TodoItem) => {
     // Enforce per-folder + global free-plan limits on duplicates
@@ -498,7 +502,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     setItems(prev => [duplicatedTask, ...prev]);
     markSingleTaskPersisted();
     void saveTodoItem(duplicatedTask);
-  }, [setItems, requireCapacity, softRequireCreate, isPro]);
+  }, [setItems, requireCapacity, softRequireCreate, isPro, markSingleTaskPersisted]);
 
   // ── Selection / Bulk ──
   const handleSelectTask = useCallback((taskId: string) => {
