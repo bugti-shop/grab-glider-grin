@@ -48,6 +48,7 @@ import { useNotes, NoteMeta } from '@/contexts/NotesContext';
 import { NoteTypeVisibilitySheet } from '@/components/NoteTypeVisibilitySheet';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
+import { withCopySuffix } from '@/utils/duplicateName';
 
 const Index = () => {
   const { t } = useTranslation();
