@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
-import { ChevronRight, Check, ChevronDown, Crown } from 'lucide-react';
+import { ChevronRight, Check, ChevronDown, Crown, Play, RotateCcw } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTranslation } from 'react-i18next';
 import { Switch } from '@/components/ui/switch';
@@ -24,6 +24,21 @@ import { downloadBackup, downloadData, restoreFromBackup } from '@/utils/dataBac
 import { createNativeBackup, isNativePlatform } from '@/utils/nativeBackup';
 import { BackupSuccessDialog } from '@/components/BackupSuccessDialog';
 import { FeedbackDialog } from '@/components/FeedbackDialog';
+import {
+  COMPLETION_RINGTONE_OPTIONS,
+  CompletionRingtoneId,
+  getCompletionRingtone,
+  isCompletionSoundEnabled,
+  previewCompletionRingtone,
+  setCompletionRingtone,
+  setCompletionSoundEnabled,
+  setCompletionSoundVolume,
+} from '@/utils/taskSounds';
+import {
+  resetVirtualizationSettings,
+  useVirtualizationSettings,
+  VirtualizationSettings,
+} from '@/utils/virtualizationSettings';
 
 
 import { Capacitor } from '@capacitor/core';
@@ -52,6 +67,7 @@ const TodoSettings = () => {
   const { currentTheme, setTheme } = useDarkMode();
   const { requireFeature, isPro, openPaywall } = useSubscription();
   const toolbarOrder = useToolbarOrder();
+  const [virtualizationSettings, setVirtualizationSettings] = useVirtualizationSettings();
   
   // Dialog states
   const [showThemeDialog, setShowThemeDialog] = useState(false);
@@ -65,6 +81,8 @@ const TodoSettings = () => {
   const [showAppLockSetup, setShowAppLockSetup] = useState(false);
   const [showNotificationsExpanded, setShowNotificationsExpanded] = useState(false);
   const [showMoreTabsExpanded, setShowMoreTabsExpanded] = useState(false);
+  const [showPerformanceExpanded, setShowPerformanceExpanded] = useState(false);
+  const [showCompletionSoundsExpanded, setShowCompletionSoundsExpanded] = useState(false);
   const [showQuickAddDialog, setShowQuickAddDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
@@ -85,6 +103,9 @@ const TodoSettings = () => {
   const [noteRemindersEnabled, setNoteRemindersEnabled] = useState(true);
   const [dailyDigestEnabled, setDailyDigestEnabled] = useState(false);
   const [overdueAlertsEnabled, setOverdueAlertsEnabled] = useState(true);
+  const [completionSoundEnabled, setCompletionSoundEnabledState] = useState(true);
+  const [completionRingtone, setCompletionRingtoneState] = useState<CompletionRingtoneId>('flowist-bell');
+  const [completionVolume, setCompletionVolumeState] = useState(0.5);
   const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0];
 
   // Load settings
@@ -93,6 +114,9 @@ const TodoSettings = () => {
     getSetting<boolean>('noteRemindersEnabled', true).then(setNoteRemindersEnabled);
     getSetting<boolean>('dailyDigestEnabled', false).then(setDailyDigestEnabled);
     getSetting<boolean>('overdueAlertsEnabled', true).then(setOverdueAlertsEnabled);
+    isCompletionSoundEnabled().then(setCompletionSoundEnabledState);
+    getCompletionRingtone().then(setCompletionRingtoneState);
+    getSetting<number>('taskCompletionVolume', 0.5).then((v) => setCompletionVolumeState(Math.max(0, Math.min(1, Number(v) || 0.5))));
     
   }, []);
 
@@ -126,6 +150,29 @@ const TodoSettings = () => {
     setOverdueAlertsEnabled(enabled);
     await setSetting('overdueAlertsEnabled', enabled);
     toast.success(enabled ? t('settings.overdueAlertsEnabled', 'Overdue alerts enabled') : t('settings.overdueAlertsDisabled', 'Overdue alerts disabled'));
+  };
+
+  const handleCompletionSoundToggle = (enabled: boolean) => {
+    setCompletionSoundEnabledState(enabled);
+    setCompletionSoundEnabled(enabled);
+    toast.success(enabled ? 'Task completion sound enabled' : 'Task completion sound disabled');
+  };
+
+  const handleRingtoneChange = (ringtone: CompletionRingtoneId) => {
+    setCompletionRingtoneState(ringtone);
+    setCompletionRingtone(ringtone);
+    previewCompletionRingtone(ringtone);
+    toast.success('Completion ringtone updated');
+  };
+
+  const handleVolumeChange = (value: number) => {
+    const next = Math.max(0, Math.min(1, value));
+    setCompletionVolumeState(next);
+    setCompletionSoundVolume(next);
+  };
+
+  const updateVirtualization = (updater: (current: VirtualizationSettings) => VirtualizationSettings) => {
+    setVirtualizationSettings(updater(virtualizationSettings));
   };
 
 
@@ -303,6 +350,40 @@ const TodoSettings = () => {
   const SectionHeading = ({ title }: { title: string }) => (
     <div className="px-4 py-2 bg-muted/50">
       <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{title}</span>
+    </div>
+  );
+
+  const RangeSetting = ({
+    label,
+    value,
+    min,
+    max,
+    step = 1,
+    onChange,
+    suffix = '',
+  }: {
+    label: string;
+    value: number;
+    min: number;
+    max: number;
+    step?: number;
+    onChange: (value: number) => void;
+    suffix?: string;
+  }) => (
+    <div className="px-4 py-3 border-b border-border/50">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <span className="text-foreground text-sm">{label}</span>
+        <span className="text-xs text-muted-foreground tabular-nums">{value}{suffix}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-primary"
+      />
     </div>
   );
 
