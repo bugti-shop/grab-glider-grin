@@ -405,6 +405,9 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
               onCheckedChange={(checked) => updateSetting('showCompletedTasks', checked)}
             />
           </div>
+
+          <SectionHeading title={t('settings.completionAnimation', 'Completion Animation')} />
+          <RingFillDurationControl />
         </div>
       </ScrollArea>
     </>
