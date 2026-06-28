@@ -5,6 +5,7 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { NoteEditor } from '@/components/NoteEditor';
 import { Layers, Settings, Pin, Download, ListTodo, FileText, Archive, ArchiveRestore, Trash2, RotateCcw, Sun, Moon, Search, X, Crown, Tag } from 'lucide-react';
 import { DesktopSidebar } from '@/components/desktop/DesktopSidebar';
+import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 
 
 import { debouncedSaveNotes, saveNoteToDBSingle, saveNotesToDB, deleteNoteFromDB } from '@/utils/noteStorage';
