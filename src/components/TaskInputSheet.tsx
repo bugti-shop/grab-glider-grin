@@ -128,6 +128,16 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   // so the sheet at bottom:0 already sits above the keyboard — don't double-lift.
   const keyboardHeight = useKeyboardHeight();
   const isAndroidNative = typeof document !== 'undefined' && document.body.classList.contains('android-app');
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsDesktop(mql.matches);
+    mql.addEventListener?.('change', onChange);
+    return () => mql.removeEventListener?.('change', onChange);
+  }, []);
   const shouldLiftForKeyboard = keyboardHeight > 0 && !isAndroidNative;
   
   // Load custom priorities
