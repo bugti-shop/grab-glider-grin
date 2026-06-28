@@ -386,7 +386,11 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
     if (isNewCompletion) {
       updatesWithTimestamp.completedAt = now;
-      playCompletionSound();
+      // Do not create/resume AudioContext inside the checkbox click handler —
+      // that can steal tens of milliseconds on Android when large lists are in
+      // memory. The visual fill + data update happen first; sound follows on
+      // the next task without blocking the tap.
+      window.setTimeout(() => playCompletionSound(), 0);
       import('@/utils/reminderScheduler').then(({ cancelTaskReminder }) => {
         cancelTaskReminder(itemId).catch(console.warn);
       });
