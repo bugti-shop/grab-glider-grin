@@ -35,6 +35,10 @@ export const TaskCompletionCircle = ({
   const [pendingComplete, setPendingComplete] = useState(false);
   const [showBurst, setShowBurst] = useState(false);
   const [burstIntensity, setBurstIntensity] = useState<'normal' | 'combo' | 'milestone'>('normal');
+  const ringFillMsRef = useRef<number>(getRingFillMs());
+  useEffect(() => subscribeRingFillMs((ms) => { ringFillMsRef.current = ms; }), []);
+  const pendingTimerRef = useRef<number | null>(null);
+  useEffect(() => () => { if (pendingTimerRef.current) window.clearTimeout(pendingTimerRef.current); }, []);
 
   const handleBurstDone = useCallback(() => setShowBurst(false), []);
 
