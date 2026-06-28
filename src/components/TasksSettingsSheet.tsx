@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ChevronRight, ChevronLeft, ListTodo, Settings2, Bell, Trash2, Flag, Plus, Pencil, X, Check, Crown } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ListTodo, Settings2, Bell, Trash2, Flag, Plus, Pencil, X, Check, Crown, Beaker } from 'lucide-react';
+import { DevPerfSheet } from '@/components/DevPerfSheet';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';

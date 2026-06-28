@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ChevronRight, ChevronLeft, Type, Wand2, FileText, SpellCheck, Bold, Italic, Underline, Strikethrough, Highlighter, Crown } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Type, Wand2, FileText, SpellCheck, Bold, Italic, Underline, Strikethrough, Highlighter, Crown, Beaker } from 'lucide-react';
+import { DevPerfSheet } from '@/components/DevPerfSheet';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
