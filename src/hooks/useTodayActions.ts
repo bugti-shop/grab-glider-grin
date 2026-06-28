@@ -344,8 +344,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     // streams new rows in batches and keeps the UI responsive.
     setItems(prev => [...newItems, ...prev]);
     markSingleTaskPersisted(true);
-    void import('@/utils/taskStorage').then(({ bulkPutTasksInDB }) =>
-      bulkPutTasksInDB(newItems).then((persisted) => {
+    void import('@/utils/taskStorage').then(({ bulkPutTasksInWorker }) =>
+      bulkPutTasksInWorker(newItems).then((persisted) => {
         if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
       }),
     );
