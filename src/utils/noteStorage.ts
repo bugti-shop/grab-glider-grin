@@ -506,6 +506,70 @@ export const saveNoteToDBSingle = async (note: Note, skipCloudSync = false): Pro
   }
 };
 
+/**
+ * Bulk-write many notes in a single IndexedDB transaction. Optimized for
+ * mass duplicate / mass import flows where firing N independent
+ * `saveNoteToDBSingle` calls would queue N transactions and dispatch N
+ * `notesUpdated` events (UI stutter at >500 notes).
+ *
+ * - One transaction per BATCH_SIZE chunk
+ * - One coalesced `notesUpdated` event at the end
+ * - Single cloud push for the whole batch
+ */
+export const bulkPutNotesInDB = async (
+  notes: Note[],
+  skipCloudSync = false,
+): Promise<void> => {
+  if (notes.length === 0) return;
+  const hydrated = notes.map(hydrateNote);
+
+  // Update in-memory cache so the UI reflects new rows immediately.
+  if (notesCache) {
+    const byId = new Map(notesCache.map((n, i) => [n.id, i]));
+    for (const n of hydrated) {
+      const cached = notesCacheIsMetadata ? makeMetadataNote(n) : n;
+      const idx = byId.get(n.id);
+      if (idx !== undefined) notesCache[idx] = cached;
+      else notesCache.push(cached);
+    }
+    notesCacheVersion++;
+  }
+
+  // Chunked transactions — keeps each txn quick and lets the main thread breathe.
+  const CHUNK = 500;
+  for (let start = 0; start < hydrated.length; start += CHUNK) {
+    const slice = hydrated.slice(start, start + CHUNK);
+    try {
+      await withRetry((database) => new Promise<void>((resolve, reject) => {
+        const tx = database.transaction([STORE_NAME, META_STORE_NAME], 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const metaStore = tx.objectStore(META_STORE_NAME);
+        for (const note of slice) {
+          store.put(serializeNote(note));
+          metaStore.put(serializeMetadataNote(note));
+        }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      }));
+    } catch (e) {
+      console.error('bulkPutNotesInDB chunk failed:', e);
+    }
+    // Yield to the UI between chunks so scrolling/clicks stay responsive.
+    if (start + CHUNK < hydrated.length) {
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+
+  // Single coalesced event so list/contexts refresh once.
+  window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
+
+  if (!skipCloudSync) {
+    import('@/utils/cloudSync/storeBridge').then(({ pushNotes }) => {
+      try { pushNotes(hydrated); } catch {}
+    }).catch(() => {});
+  }
+};
+
 export const deleteNoteFromDB = async (noteId: string, skipCloudSync = false): Promise<void> => {
   // Update cache
   if (notesCache) {

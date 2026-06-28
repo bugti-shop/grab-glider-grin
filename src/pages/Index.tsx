@@ -42,7 +42,7 @@ import {
 import { triggerHaptic } from '@/utils/haptics';
 import { prefetchRoute } from '@/utils/routePrefetch';
 
-import { saveNoteToDBSingle, deleteNoteFromDB, loadNotesMetadataFromDB, loadNoteFromDB, isNoteContentStub, makeMetadataNote } from '@/utils/noteStorage';
+import { saveNoteToDBSingle, deleteNoteFromDB, loadNotesMetadataFromDB, loadNoteFromDB, isNoteContentStub, makeMetadataNote, bulkPutNotesInDB } from '@/utils/noteStorage';
 import { getAllSettings, getSetting, setSetting } from '@/utils/settingsStorage';
 import { logActivity } from '@/utils/activityLogger';
 import { useNotes, NoteMeta } from '@/contexts/NotesContext';
@@ -50,6 +50,7 @@ import { NoteTypeVisibilitySheet } from '@/components/NoteTypeVisibilitySheet';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
 import { withCopySuffix } from '@/utils/duplicateName';
+import { toast } from 'sonner';
 
 const Index = () => {
   const { t } = useTranslation();
@@ -818,26 +819,60 @@ const Index = () => {
       return;
     }
 
-    const duplicates: Note[] = [];
-    for (const id of allowed) {
-      const source = notes.find(n => n.id === id);
-      if (!source) continue;
-      const fullSource = isNoteContentStub(source) ? (await loadNoteFromDB(source.id)) || source : source;
-      duplicates.push({
-        ...fullSource,
-        id: genId(),
-        title: withCopySuffix(fullSource.title || 'Untitled'),
-        isPinned: false,
-        pinnedOrder: undefined,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    }
-    if (duplicates.length === 0) return;
-    setNotes(prev => [...duplicates.map(makeMetadataNote), ...prev]);
-    duplicates.forEach((n) => saveNoteToDBSingle(n));
+    // Snapshot selection immediately and exit selection mode so the UI feels
+    // instant — heavy work (content hydration + IDB writes) happens in the
+    // background via bulk transaction.
+    const ids = [...allowed];
     setSelectedNoteIds([]);
     setIsSelectionMode(false);
+
+    try {
+      toast.loading(`Duplicating ${ids.length} note${ids.length > 1 ? 's' : ''}…`, { id: 'bulk-dup' });
+    } catch {}
+
+    // Parallel content loads with a concurrency cap so we don't fire 1000+
+    // IDB reads at once.
+    const CONCURRENCY = 8;
+    const duplicates: Note[] = [];
+    const sources: Note[] = ids
+      .map(id => notes.find(n => n.id === id))
+      .filter((n): n is Note => !!n);
+
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < sources.length) {
+        const i = cursor++;
+        const source = sources[i];
+        const fullSource = isNoteContentStub(source)
+          ? (await loadNoteFromDB(source.id)) || source
+          : source;
+        duplicates.push({
+          ...fullSource,
+          id: genId(),
+          title: withCopySuffix(fullSource.title || 'Untitled'),
+          isPinned: false,
+          pinnedOrder: undefined,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, sources.length) }, worker));
+
+    if (duplicates.length === 0) {
+      try { toast.dismiss('bulk-dup'); } catch {}
+      return;
+    }
+
+    // One state update for the whole batch.
+    setNotes(prev => [...duplicates.map(makeMetadataNote), ...prev]);
+
+    // One bulk transaction instead of N independent saves.
+    await bulkPutNotesInDB(duplicates);
+
+    try {
+      toast.success(`Duplicated ${duplicates.length} note${duplicates.length > 1 ? 's' : ''}`, { id: 'bulk-dup' });
+    } catch {}
   };
 
   const handleBulkMoveToFolder = (folderId: string | null) => {
