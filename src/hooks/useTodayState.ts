@@ -460,42 +460,11 @@ export const useTodayState = () => {
     );
   }, [processedItems, deferredSearch, workerResult, worker.isAvailable]);
 
-  // Linger newly-completed tasks for ~900ms so the colored tick is visible
-  // before they drop out of the uncompleted list.
-  const [recentlyCompletedIds, setRecentlyCompletedIds] = useState<Set<string>>(() => new Set());
-  const prevCompletionRef = useRef<Map<string, boolean>>(new Map());
-  useEffect(() => {
-    const prev = prevCompletionRef.current;
-    const justCompleted: string[] = [];
-    for (const it of items) {
-      const was = prev.get(it.id);
-      if (it.completed && was === false) justCompleted.push(it.id);
-    }
-    // refresh snapshot
-    const next = new Map<string, boolean>();
-    for (const it of items) next.set(it.id, !!it.completed);
-    prevCompletionRef.current = next;
-    if (justCompleted.length === 0) return;
-    setRecentlyCompletedIds(prev => {
-      const s = new Set(prev);
-      justCompleted.forEach(id => s.add(id));
-      return s;
-    });
-    const timers = justCompleted.map(id => window.setTimeout(() => {
-      setRecentlyCompletedIds(prev => {
-        if (!prev.has(id)) return prev;
-        const s = new Set(prev);
-        s.delete(id);
-        return s;
-      });
-    }, 900));
-    return () => { timers.forEach(t => window.clearTimeout(t)); };
-  }, [items]);
-
   const uncompletedItems = useMemo(
-    () => searchFilteredItems.filter(item => !item.completed || recentlyCompletedIds.has(item.id)),
-    [searchFilteredItems, recentlyCompletedIds]
+    () => searchFilteredItems.filter(item => !item.completed),
+    [searchFilteredItems]
   );
+
   const completedItems = useMemo(() => searchFilteredItems.filter(item => item.completed), [searchFilteredItems]);
 
   const sortedSections = useMemo(() => {
