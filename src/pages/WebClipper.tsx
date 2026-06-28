@@ -107,13 +107,17 @@ const WebClipper = () => {
   const handleSaveClip = async (clipMode: ClipMode) => {
     setSaving(true);
     setError(null);
+    canceledRef.current = false;
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       // 1) Validate attachment (type + size) before doing any heavy work.
       if (attachment) {
         setStage('validating');
         setProgressLabel(t('webClipper.stageValidating', 'Checking file…'));
         setProgress(null);
-        const { bytes, mime } = await probeAttachment(attachment);
+        const { bytes, mime } = await probeAttachment(attachment, controller.signal);
+        if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
         const verdict = validateAttachment(attachmentType, mime, bytes);
         if (!verdict.ok) {
           failWith(
@@ -137,6 +141,7 @@ const WebClipper = () => {
           setProgressLabel(t('webClipper.stageDownloading', 'Downloading PDF…'));
           const { extractPdfTextFromUrl } = await import('@/utils/pdfExtract');
           const result = await extractPdfTextFromUrl(attachment, {
+            signal: controller.signal,
             onProgress: (s, ratio) => {
               if (s === 'download') {
                 setStage('downloading');
@@ -154,6 +159,7 @@ const WebClipper = () => {
           extractedPdfText = result.text;
           pdfTruncated = result.truncated;
         } catch (err) {
+          if (canceledRef.current || (err as Error)?.name === 'AbortError') throw err;
           console.warn('[webClipper] PDF text extraction failed', err);
           // Soft-fail: still save the clip with attachment link, just no extracted body.
           toast({
