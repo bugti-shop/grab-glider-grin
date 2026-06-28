@@ -36,7 +36,7 @@ const QUADRANTS: QuadrantDef[] = [
   { id: 'q1', title: 'Urgent & Important', shortTitle: 'Urgent & Important', priority: 'high', accent: 'text-rose-500', badge: 'bg-rose-500', dot: 'border-rose-500', romanLabel: 'I' },
   { id: 'q2', title: 'Not Urgent & Important', shortTitle: 'Not Urgent & Important', priority: 'medium', accent: 'text-amber-500', badge: 'bg-amber-500', dot: 'border-amber-500', romanLabel: 'II' },
   { id: 'q3', title: 'Urgent & Unimportant', shortTitle: 'Urgent & Unimportant', priority: 'low', accent: 'text-blue-500', badge: 'bg-blue-500', dot: 'border-blue-500', romanLabel: 'III' },
-  { id: 'q4', title: 'Not Urgent & Unimportant', shortTitle: 'Not Urgent & Unimpo…', priority: 'none', accent: 'text-emerald-500', badge: 'bg-emerald-500', dot: 'border-emerald-500', romanLabel: 'IV' },
+  { id: 'q4', title: 'Not Urgent & Unimportant', shortTitle: 'Not Urgent & Unimportant', priority: 'none', accent: 'text-emerald-500', badge: 'bg-emerald-500', dot: 'border-emerald-500', romanLabel: 'IV' },
 ];
 
 const getQuadrantForTask = (t: TodoItem): QuadrantId => {
