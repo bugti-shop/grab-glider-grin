@@ -157,6 +157,12 @@ export function PerfDiagnosticsPanel() {
       <div>Virt rows: {stats.virtRows}</div>
       <div>DOM mutations: {stats.renders}</div>
       <div>Long tasks: {stats.longTasks}{stats.lastLongTaskMs ? ` (${stats.lastLongTaskMs}ms)` : ''}</div>
+      <div>Scroll jank: {stats.scrollJankCount}{stats.lastScrollJankMs ? ` (${stats.lastScrollJankMs}ms)` : ''}</div>
+      <div>
+        Bulk add: {stats.lastBulkAddCount
+          ? `${stats.lastBulkAddCount} in ${stats.lastBulkAddMs}ms${stats.lastBulkAddVia ? ` (${stats.lastBulkAddVia})` : ''}`
+          : '—'}
+      </div>
       <div style={{ marginTop: 4, color: '#94a3b8' }}>⌘/Ctrl+Shift+P</div>
     </div>
   );
