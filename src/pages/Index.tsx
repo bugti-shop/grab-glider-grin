@@ -1280,28 +1280,29 @@ const Index = () => {
                       <Star className="h-5 w-5 text-warning fill-warning" />
                       {t('notes.favorites')}
                     </h2>
-                    {shouldVirtualizeNotes(favoriteNotes.length) ? (
-                      <VirtualizedNotesGrid
-                        notes={favoriteNotes}
-                        onEdit={handleEditNote}
-                        onDelete={handleDeleteNote}
-                        onArchive={handleArchiveNote}
-                        isSelectionMode={isSelectionMode}
-                        selectedNoteIds={selectedNoteIds}
-                        onToggleSelection={handleToggleNoteSelection}
-                        className="h-[300px]"
-                      />
-                    ) : (
-                      <MasonryNotesGrid
-                        notes={favoriteNotes}
-                        onEdit={handleEditNote}
-                        onDelete={handleDeleteNote}
-                        onArchive={handleArchiveNote}
-                        isSelectionMode={isSelectionMode}
-                        selectedNoteIds={selectedNoteIds}
-                        onToggleSelection={handleToggleNoteSelection}
-                      />
-                    )}
+                    <NotesVirtualGrid
+                      notes={favoriteNotes}
+                      getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
+                      renderCard={(note) => (
+                        <NoteCard
+                          note={note}
+                          onEdit={handleEditNote}
+                          onDelete={handleDeleteNote}
+                          onArchive={handleArchiveNote}
+                          onTogglePin={handleTogglePin}
+                          onToggleFavorite={handleToggleFavorite}
+                          onMoveToFolder={handleMoveNoteToFolder}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
+                          onDragEnd={handleDragEnd}
+                          isSelectionMode={isSelectionMode}
+                          isSelected={selectedNoteIds.includes(note.id)}
+                          onToggleSelection={handleToggleNoteSelection}
+                          onDuplicate={handleDuplicateNote}
+                        />
+                      )}
+                    />
+
                   </div>
                 )}
                 
