@@ -349,6 +349,7 @@ const saveLargeDataset = async (db: IDBDatabase, items: TodoItem[], skipSyncEven
 
 // Update a single task without rewriting everything
 export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>): Promise<boolean> => {
+  markLocalStorageMigrationDone();
   let updatedForSync: TodoItem | null = null;
 
   // Update cache immediately
@@ -400,6 +401,7 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
 
 // Insert or replace a single task without rewriting the whole tasks store.
 export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promise<boolean> => {
+  markLocalStorageMigrationDone();
   const hydrated = hydrateItem(task);
 
   if (tasksCache) {
@@ -438,6 +440,7 @@ export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promis
 // Dedicated reset path for developer/performance tools. This intentionally
 // bypasses the empty-array safety guard in saveTasksToDB while clearing cache.
 export const clearAllTasksFromDB = async (): Promise<boolean> => {
+  markLocalStorageMigrationDone();
   tasksCache = [];
   cacheVersion++;
 
