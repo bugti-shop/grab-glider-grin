@@ -53,6 +53,11 @@ export const resetAllLifetimeCounters = async (): Promise<void> => {
     });
     localStorage.removeItem(LAST_SYNC_KEY);
   } catch {}
+  // Signed-out users have no cloud row to touch (RLS would 401). Local wipe
+  // above is enough; the cloud row will be created/synced on next sign-in.
+  if (!(await hasAuthenticatedUser())) {
+    return;
+  }
 
   try {
     const { identifier, type } = await getIdentifier();
@@ -95,6 +100,22 @@ const getIdentifier = async (): Promise<{ identifier: string; type: 'email' | 'd
   return { identifier: getOrCreateDeviceId(), type: 'device' };
 };
 
+/**
+ * Returns true only when a real signed-in user exists. We use this to skip
+ * cloud reads/writes for signed-out sessions — RLS on user_lifetime_counters
+ * rejects anonymous device-id rows with a 401 that pollutes the console and
+ * provides no value to the user. Lifetime counters work entirely from
+ * localStorage in that case.
+ */
+const hasAuthenticatedUser = async (): Promise<boolean> => {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return !!data?.session?.user?.id;
+  } catch {
+    return false;
+  }
+};
+
 // ── Cloud sync ──
 
 /**
@@ -103,6 +124,9 @@ const getIdentifier = async (): Promise<{ identifier: string; type: 'email' | 'd
  */
 export const pullAndMergeLifetimeCounters = async (): Promise<void> => {
   try {
+    // Skip cloud reads entirely while signed-out so RLS does not log a 401 in
+    // the browser console. Local counters keep working unchanged.
+    if (!(await hasAuthenticatedUser())) return;
     const { identifier, type } = await getIdentifier();
     const { data, error } = await db
       .from('user_lifetime_counters')
@@ -153,6 +177,7 @@ export const pullAndMergeLifetimeCounters = async (): Promise<void> => {
  */
 export const pushLifetimeCounter = async (kind: SoftLimitKind, value: number): Promise<void> => {
   try {
+    if (!(await hasAuthenticatedUser())) return;
     const { identifier, type } = await getIdentifier();
     const col = COLUMN_MAP[kind];
 
@@ -185,6 +210,7 @@ export const pushLifetimeCounter = async (kind: SoftLimitKind, value: number): P
  */
 export const pushAllLifetimeCounters = async (): Promise<void> => {
   try {
+    if (!(await hasAuthenticatedUser())) return;
     const { identifier, type } = await getIdentifier();
     const payload: Record<string, any> = { identifier, identifier_type: type };
     (Object.keys(COLUMN_MAP) as SoftLimitKind[]).forEach((kind) => {
