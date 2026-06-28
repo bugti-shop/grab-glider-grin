@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Check as CheckIcon, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/utils/haptics';
 import { TASK_CIRCLE, TASK_CHECK_ICON } from '@/utils/taskItemStyles';
 import { TaskCompletionBurst } from '@/components/TaskCompletionBurst';
 import { getCurrentCombo } from '@/utils/comboSystem';
+import { getRingFillMs, subscribeRingFillMs } from '@/utils/ringFillDuration';
 import {
   Tooltip,
   TooltipContent,
@@ -34,6 +35,10 @@ export const TaskCompletionCircle = ({
   const [pendingComplete, setPendingComplete] = useState(false);
   const [showBurst, setShowBurst] = useState(false);
   const [burstIntensity, setBurstIntensity] = useState<'normal' | 'combo' | 'milestone'>('normal');
+  const ringFillMsRef = useRef<number>(getRingFillMs());
+  useEffect(() => subscribeRingFillMs((ms) => { ringFillMsRef.current = ms; }), []);
+  const pendingTimerRef = useRef<number | null>(null);
+  useEffect(() => () => { if (pendingTimerRef.current) window.clearTimeout(pendingTimerRef.current); }, []);
 
   const handleBurstDone = useCallback(() => setShowBurst(false), []);
 
@@ -51,15 +56,20 @@ export const TaskCompletionCircle = ({
     // Determine burst intensity based on combo state
     const combo = getCurrentCombo();
     setBurstIntensity(combo.multiplier >= 4 ? 'milestone' : combo.isActive ? 'combo' : 'normal');
-    setPendingComplete(true);
-    setShowBurst(true);
+    const fillMs = ringFillMsRef.current;
+    if (fillMs > 0) {
+      setPendingComplete(true);
+      setShowBurst(true);
+    }
     triggerHaptic('light');
-    // Fire the actual completion immediately so the data model updates fast,
-    // but keep the colored "filled ring" visible for ~900ms so the user gets
-    // the satisfying paint-fill animation before the row collapses to its
-    // muted completed state.
+    // Fire the actual completion immediately so the data model updates fast.
+    // The colored "filled ring" is held for the user-configured duration
+    // (default 900ms) before the row collapses to its muted completed state.
     onComplete();
-    window.setTimeout(() => setPendingComplete(false), 900);
+    if (fillMs > 0) {
+      if (pendingTimerRef.current) window.clearTimeout(pendingTimerRef.current);
+      pendingTimerRef.current = window.setTimeout(() => setPendingComplete(false), fillMs);
+    }
   };
 
   return (

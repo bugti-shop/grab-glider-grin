@@ -7,6 +7,7 @@
  * Read-only: never mutates app state, safe to leave running.
  */
 import { useEffect, useRef, useState } from 'react';
+import { getRecentPerfEvents, startScrollJankMonitor, subscribePerfLog } from '@/utils/perfLogger';
 
 interface Stats {
   fps: number;
@@ -14,6 +15,11 @@ interface Stats {
   virtRows: number;
   longTasks: number;
   lastLongTaskMs: number;
+  lastBulkAddMs: number;
+  lastBulkAddCount: number;
+  lastBulkAddVia: string;
+  scrollJankCount: number;
+  lastScrollJankMs: number;
 }
 
 const STORAGE_KEY = 'perf:panel';
@@ -22,7 +28,7 @@ export function PerfDiagnosticsPanel() {
   const [visible, setVisible] = useState<boolean>(() => {
     try { return localStorage.getItem(STORAGE_KEY) === '1'; } catch { return false; }
   });
-  const [stats, setStats] = useState<Stats>({ fps: 0, renders: 0, virtRows: 0, longTasks: 0, lastLongTaskMs: 0 });
+  const [stats, setStats] = useState<Stats>({ fps: 0, renders: 0, virtRows: 0, longTasks: 0, lastLongTaskMs: 0, lastBulkAddMs: 0, lastBulkAddCount: 0, lastBulkAddVia: '', scrollJankCount: 0, lastScrollJankMs: 0 });
   const renderCountRef = useRef(0);
 
   // Toggle hotkey
@@ -89,6 +95,39 @@ export function PerfDiagnosticsPanel() {
     return () => { try { po?.disconnect(); } catch {} };
   }, [visible]);
 
+  // Perf-logger subscription — surface bulkAdd + scrollJank events live.
+  useEffect(() => {
+    if (!visible) return;
+    startScrollJankMonitor();
+    // Seed from existing history so the panel isn't empty on open.
+    const recentBulk = getRecentPerfEvents('bulkAdd', 1)[0];
+    const recentJank = getRecentPerfEvents('scrollJank', 1)[0];
+    setStats((s) => ({
+      ...s,
+      lastBulkAddMs: recentBulk?.data?.ms ?? s.lastBulkAddMs,
+      lastBulkAddCount: recentBulk?.data?.count ?? s.lastBulkAddCount,
+      lastBulkAddVia: recentBulk?.data?.via ?? s.lastBulkAddVia,
+      lastScrollJankMs: recentJank?.data?.gapMs ?? s.lastScrollJankMs,
+    }));
+    const unsub = subscribePerfLog((ev) => {
+      if (ev.kind === 'bulkAdd') {
+        setStats((s) => ({
+          ...s,
+          lastBulkAddMs: ev.data.ms ?? 0,
+          lastBulkAddCount: ev.data.count ?? 0,
+          lastBulkAddVia: ev.data.via ?? '',
+        }));
+      } else if (ev.kind === 'scrollJank') {
+        setStats((s) => ({
+          ...s,
+          scrollJankCount: s.scrollJankCount + 1,
+          lastScrollJankMs: ev.data.gapMs ?? 0,
+        }));
+      }
+    });
+    return unsub;
+  }, [visible]);
+
   if (!visible) return null;
 
   const fpsColor = stats.fps >= 55 ? '#22c55e' : stats.fps >= 30 ? '#eab308' : '#ef4444';
@@ -118,6 +157,12 @@ export function PerfDiagnosticsPanel() {
       <div>Virt rows: {stats.virtRows}</div>
       <div>DOM mutations: {stats.renders}</div>
       <div>Long tasks: {stats.longTasks}{stats.lastLongTaskMs ? ` (${stats.lastLongTaskMs}ms)` : ''}</div>
+      <div>Scroll jank: {stats.scrollJankCount}{stats.lastScrollJankMs ? ` (${stats.lastScrollJankMs}ms)` : ''}</div>
+      <div>
+        Bulk add: {stats.lastBulkAddCount
+          ? `${stats.lastBulkAddCount} in ${stats.lastBulkAddMs}ms${stats.lastBulkAddVia ? ` (${stats.lastBulkAddVia})` : ''}`
+          : '—'}
+      </div>
       <div style={{ marginTop: 4, color: '#94a3b8' }}>⌘/Ctrl+Shift+P</div>
     </div>
   );
