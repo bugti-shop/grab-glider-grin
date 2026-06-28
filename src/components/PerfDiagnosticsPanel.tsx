@@ -27,6 +27,7 @@ interface Stats {
 }
 
 const STORAGE_KEY = 'perf:panel';
+const PANEL_EVENT = 'flowist:perf-panel';
 
 export function PerfDiagnosticsPanel() {
   const [visible, setVisible] = useState<boolean>(() => {
@@ -47,8 +48,18 @@ export function PerfDiagnosticsPanel() {
         });
       }
     };
+    const onPanelEvent = (event: Event) => {
+      const detail = (event as CustomEvent<{ visible?: boolean }>).detail;
+      const next = detail?.visible ?? true;
+      setVisible(next);
+      try { next ? localStorage.setItem(STORAGE_KEY, '1') : localStorage.removeItem(STORAGE_KEY); } catch {}
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener(PANEL_EVENT, onPanelEvent);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener(PANEL_EVENT, onPanelEvent);
+    };
   }, []);
 
   // Count every React commit anywhere in the tree by hooking MutationObserver

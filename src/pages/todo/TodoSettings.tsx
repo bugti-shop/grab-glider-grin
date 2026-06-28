@@ -655,9 +655,17 @@ const TodoSettings = () => {
             </button>
             {showPerformanceExpanded && (
               <div className="bg-muted/30">
-                <div className="px-4 py-3 border-b border-border/50 text-xs text-muted-foreground">
-                  Press Ctrl/⌘ + Shift + P to show the live FPS, long-task, virtual-row, scroll-jank, and reorder panel.
-                </div>
+                <button
+                  onClick={() => {
+                    try { localStorage.setItem('perf:panel', '1'); } catch {}
+                    window.dispatchEvent(new CustomEvent('flowist:perf-panel', { detail: { visible: true } }));
+                    toast.success('Diagnostics panel enabled');
+                  }}
+                  className="w-full flex items-center justify-between px-4 py-3 border-b border-border/50 hover:bg-muted transition-colors"
+                >
+                  <span className="text-foreground text-sm">Show live diagnostics panel</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
                 <RangeSetting
                   label="Notes overscan"
                   value={virtualizationSettings.notes.overscan}
