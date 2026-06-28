@@ -164,8 +164,6 @@ const EisenhowerMatrix = () => {
     return map;
   }, [tasks]);
 
-  const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
-
   const toggleComplete = async (task: TodoItem) => {
     triggerHaptic('light').catch(() => {});
     const becomingComplete = !task.completed;
@@ -173,23 +171,10 @@ const EisenhowerMatrix = () => {
       ? { ...t, completed: becomingComplete, completedAt: becomingComplete ? new Date() : undefined }
       : t);
     setTasks(updated);
-    if (becomingComplete) {
-      setRecentlyCompleted(prev => {
-        const next = new Set(prev);
-        next.add(task.id);
-        return next;
-      });
-      setTimeout(() => {
-        setRecentlyCompleted(prev => {
-          const next = new Set(prev);
-          next.delete(task.id);
-          return next;
-        });
-      }, 900);
-    }
     await saveTasksToDB(updated);
     window.dispatchEvent(new Event('tasksUpdated'));
   };
+
 
   const deleteTask = async (task: TodoItem) => {
     if (!confirm(`Delete "${task.text}"?`)) return;
@@ -251,7 +236,7 @@ const EisenhowerMatrix = () => {
       return null;
     }
     const allItems = grouped[activeQ];
-    const visibleByCompletion = showCompleted ? allItems : allItems.filter(t => !t.completed || recentlyCompleted.has(t.id));
+    const visibleByCompletion = showCompleted ? allItems : allItems.filter(t => !t.completed);
     const items = visibleByCompletion.filter(t => matchesFilter(t, filter));
     return (
       <div className="min-h-screen bg-muted/30 pb-20">
@@ -446,7 +431,7 @@ const EisenhowerMatrix = () => {
         <div className="grid grid-cols-2 gap-3 items-stretch auto-rows-fr">
           {QUADRANTS.map(q => {
             const all = grouped[q.id];
-            const items = (showCompleted ? all : all.filter(t => !t.completed || recentlyCompleted.has(t.id)));
+            const items = (showCompleted ? all : all.filter(t => !t.completed));
             return (
               <button
                 key={q.id}
