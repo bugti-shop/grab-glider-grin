@@ -835,12 +835,12 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/20 z-[60]"
+        className="fixed inset-0 bg-black/20 lg:bg-black/40 z-[60]"
         onClick={preventBackdropClose ? undefined : onClose}
       />
 
       <div
-        className="fixed left-0 right-0 bg-card z-[70] rounded-t-3xl shadow-2xl pointer-events-auto transition-opacity overflow-y-auto"
+        className="fixed left-0 right-0 lg:left-1/2 lg:right-auto lg:-translate-x-1/2 lg:w-[min(560px,92vw)] bg-card z-[70] rounded-t-3xl lg:rounded-2xl shadow-2xl pointer-events-auto transition-opacity overflow-y-auto lg:border lg:border-border"
         style={{ 
           bottom: shouldLiftForKeyboard ? `${keyboardHeight}px` : '0px',
           paddingBottom: keyboardHeight > 0 ? '0px' : 'max(var(--safe-bottom, 0px), 4px)',
