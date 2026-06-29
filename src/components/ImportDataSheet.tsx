@@ -49,7 +49,7 @@ const csvCell = (v: unknown): string => {
 
 const downloadPreviewCsv = (
   taskRows: { text: string; folder: string; status: string; priority: string; due: string; depth: number }[],
-  noteRows: { title: string; folder: string }[],
+  noteRows: { title: string; folder: string; status: string; priority: string; due: string }[],
   fileName: string,
 ) => {
   const header = ['kind', 'row', 'title', 'folder', 'status', 'priority', 'due', 'depth'];
@@ -61,9 +61,20 @@ const downloadPreviewCsv = (
   });
   noteRows.forEach((r, i) => {
     lines.push([
-      'note', i + 1, r.title, r.folder, '', '', '', '',
+      'note', i + 1, r.title, r.folder, r.status, r.priority, r.due, '',
     ].map(csvCell).join(','));
   });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const base = (fileName || 'import').replace(/\.[^.]+$/, '');
+  a.href = url;
+  a.download = `${base}-preview-mapping.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
