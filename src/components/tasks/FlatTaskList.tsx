@@ -346,42 +346,61 @@ export function FlatTaskList({
 
   const getInsertionPlacement = useCallback((clientY: number, target: EventTarget | Element | null) => {
     const targetEl = target instanceof Element ? target.closest('[data-index]') as HTMLElement | null : null;
-    if (targetEl) {
-      const index = Number(targetEl.dataset.index);
-      if (Number.isFinite(index)) {
-        const rect = targetEl.getBoundingClientRect();
-        const after = clientY >= rect.top + rect.height / 2;
-        const top = getRowTopRelativeToList(targetEl) + (after ? rect.height : 0);
-        return {
-          insertionIndex: Math.max(0, Math.min(flat.length, index + (after ? 1 : 0))),
-          top,
-        };
+    const rows = Array.from(parentRef.current?.querySelectorAll<HTMLElement>('[data-index]') ?? [])
+      .map((rowEl) => ({ rowEl, index: Number(rowEl.dataset.index), rect: rowEl.getBoundingClientRect() }))
+      .filter((row) => Number.isFinite(row.index))
+      .sort((a, b) => a.index - b.index);
+
+    const placeBefore = (row: (typeof rows)[number]) => ({
+      insertionIndex: Math.max(0, Math.min(flat.length, row.index)),
+      top: getRowTopRelativeToList(row.rowEl),
+      debug: {
+        source: targetEl ? 'target-row' : 'gap-before-row',
+        targetIndex: row.index,
+        targetTop: Math.round(row.rect.top),
+        targetBottom: Math.round(row.rect.bottom),
+        midpoint: Math.round(row.rect.top + row.rect.height / 2),
+      },
+    });
+
+    const placeAfter = (row: (typeof rows)[number]) => ({
+      insertionIndex: Math.max(0, Math.min(flat.length, row.index + 1)),
+      top: getRowTopRelativeToList(row.rowEl) + row.rect.height,
+      debug: {
+        source: targetEl ? 'target-row' : 'gap-after-row',
+        targetIndex: row.index,
+        targetTop: Math.round(row.rect.top),
+        targetBottom: Math.round(row.rect.bottom),
+        midpoint: Math.round(row.rect.top + row.rect.height / 2),
+      },
+    });
+
+    for (const row of rows) {
+      // Gap correction: if the pointer is in the empty space before this row,
+      // insert before it instead of falling through to the last visible row.
+      if (clientY < row.rect.top) return placeBefore(row);
+      if (clientY <= row.rect.bottom) {
+        return clientY < row.rect.top + row.rect.height / 2 ? placeBefore(row) : placeAfter(row);
       }
     }
 
-    const rows = Array.from(parentRef.current?.querySelectorAll<HTMLElement>('[data-index]') ?? []);
-    for (const rowEl of rows) {
-      const rect = rowEl.getBoundingClientRect();
-      const index = Number(rowEl.dataset.index);
-      if (!Number.isFinite(index)) continue;
-      if (clientY < rect.top + rect.height / 2) {
-        return { insertionIndex: Math.max(0, Math.min(flat.length, index)), top: getRowTopRelativeToList(rowEl) };
-      }
-    }
     const last = rows[rows.length - 1];
-    if (last) {
-      const rect = last.getBoundingClientRect();
-      const index = Number(last.dataset.index);
-      return {
-        insertionIndex: Math.max(0, Math.min(flat.length, (Number.isFinite(index) ? index : flat.length - 1) + 1)),
-        top: getRowTopRelativeToList(last) + rect.height,
-      };
-    }
-    return getVirtualInsertionFromClientY(clientY);
+    if (last) return placeAfter(last);
+    const virtualPlacement = getVirtualInsertionFromClientY(clientY);
+    return { ...virtualPlacement, debug: { source: 'virtual-fallback' } };
   }, [flat.length, getRowTopRelativeToList, getVirtualInsertionFromClientY]);
 
   const updateInsertionIndicator = useCallback((clientY: number, target: EventTarget | Element | null) => {
     const placement = getInsertionPlacement(clientY, target);
+    const instrumentation = {
+      insertionIndex: placement.insertionIndex,
+      top: Math.round(placement.top),
+      clientY: Math.round(clientY),
+      ...('debug' in placement ? placement.debug : {}),
+    };
+    try {
+      (window as any).__flowistLastTaskInsert = instrumentation;
+    } catch {}
     setInsertIndicator((current) => {
       if (current && current.insertionIndex === placement.insertionIndex && Math.abs(current.top - placement.top) < 0.5) return current;
       return placement;
@@ -389,6 +408,30 @@ export function FlatTaskList({
     setDragOverIndex(Math.min(flat.length - 1, placement.insertionIndex));
     return placement.insertionIndex;
   }, [flat.length, getInsertionPlacement]);
+
+  const finishPointerDropAt = useCallback((active: NonNullable<typeof pointerDragRef.current>, clientY: number, target: EventTarget | Element | null) => {
+    const insertionIndex = updateInsertionIndicator(clientY, target);
+    active.over = insertionIndex;
+    try {
+      (window as any).__flowistLastTaskDrop = {
+        from: active.from,
+        insertionIndex,
+        clientY: Math.round(clientY),
+        via: 'touch',
+        insert: (window as any).__flowistLastTaskInsert,
+        ts: Date.now(),
+      };
+    } catch {}
+    logPerfEvent('reorder', {
+      list: 'tasks',
+      via: 'touch-drop-computed',
+      from: active.from,
+      insertionIndex,
+      count: flat.length,
+      insert: (window as any).__flowistLastTaskInsert,
+    });
+    finishReorder(active.from, insertionIndex, 'pointer-drop');
+  }, [finishReorder, flat.length, updateInsertionIndicator]);
 
   const paintGhostAt = useCallback((clientY: number) => {
     if (ghostRafRef.current != null) return;
@@ -548,11 +591,14 @@ export function FlatTaskList({
       event.preventDefault();
       event.stopPropagation();
       suppressClickUntilRef.current = Date.now() + 350;
-      finishReorder(active.from, active.over, 'pointer-drop');
+      const touch = event.changedTouches[0];
+      const clientY = touch?.clientY ?? active.currentY;
+      const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : event.target;
+      finishPointerDropAt(active, clientY, target);
     } else {
       clearPointerDrag();
     }
-  }, [clearPointerDrag, finishReorder]);
+  }, [clearPointerDrag, finishPointerDropAt]);
 
   useEffect(() => {
     const root = parentRef.current;
@@ -640,7 +686,10 @@ export function FlatTaskList({
       if (active.dragging) {
         event.preventDefault();
         suppressClickUntilRef.current = Date.now() + 350;
-        finishReorder(active.from, active.over, 'pointer-drop');
+        const touch = event.changedTouches[0];
+        const clientY = touch?.clientY ?? active.currentY;
+        const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : event.target;
+        finishPointerDropAt(active, clientY, target);
       } else {
         clearPointerDrag();
       }
@@ -650,13 +699,19 @@ export function FlatTaskList({
     root.addEventListener('touchmove', onTouchMove, { passive: false });
     root.addEventListener('touchend', onTouchEnd, { passive: false });
     root.addEventListener('touchcancel', onTouchEnd, { passive: false });
+    document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: false, capture: true });
+    document.addEventListener('touchcancel', onTouchEnd, { passive: false, capture: true });
     return () => {
       root.removeEventListener('touchstart', onTouchStart);
       root.removeEventListener('touchmove', onTouchMove);
       root.removeEventListener('touchend', onTouchEnd);
       root.removeEventListener('touchcancel', onTouchEnd);
+      document.removeEventListener('touchmove', onTouchMove, { capture: true });
+      document.removeEventListener('touchend', onTouchEnd, { capture: true });
+      document.removeEventListener('touchcancel', onTouchEnd, { capture: true });
     };
-  }, [activatePointerDrag, clearPointerDrag, dndEnabled, finishReorder, flat, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
+  }, [activatePointerDrag, clearPointerDrag, dndEnabled, finishPointerDropAt, flat, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
 
   const movePointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
@@ -710,11 +765,11 @@ export function FlatTaskList({
       event.preventDefault();
       event.stopPropagation();
       suppressClickUntilRef.current = Date.now() + 350;
-      finishReorder(active.from, active.over, 'pointer-drop');
+      finishPointerDropAt(active, event.clientY, event.target);
     } else {
       clearPointerDrag();
     }
-  }, [clearPointerDrag, finishReorder]);
+  }, [clearPointerDrag, finishPointerDropAt]);
 
   useEffect(() => {
     const target = resolvedUseWindow ? window : parentRef.current;
