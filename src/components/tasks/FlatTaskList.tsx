@@ -545,7 +545,7 @@ export function FlatTaskList({
       const current = pointerDragRef.current;
       if (!current || current.pointerId !== pointerId) return;
       activatePointerDrag(current);
-    }, 90);
+    }, 250);
   }, [activatePointerDrag, dndEnabled]);
 
   const startTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
@@ -582,7 +582,7 @@ export function FlatTaskList({
       const current = pointerDragRef.current;
       if (!current || current.pointerId !== pointerId) return;
       activatePointerDrag(current);
-    }, 90);
+    }, 250);
   }, [activatePointerDrag, dndEnabled]);
 
   const moveTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>) => {
@@ -596,14 +596,14 @@ export function FlatTaskList({
 
     if (!active.dragging) {
       const elapsed = performance.now() - active.startTime;
-      if (elapsed < 90 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+      if (elapsed < 250 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
         if (active.timer != null) window.clearTimeout(active.timer);
         active.timer = null;
         pointerDragRef.current = null;
         setPointerPreparingIndex(null);
         return;
       }
-      if (elapsed >= 90 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+      if (elapsed >= 250 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
         event.preventDefault();
         activatePointerDrag(active);
       } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
@@ -679,7 +679,7 @@ export function FlatTaskList({
         const current = pointerDragRef.current;
         if (!current || current.pointerId !== pointerId) return;
         activatePointerDrag(current);
-      }, 90);
+      }, 250);
     };
 
     const onTouchMove = (event: TouchEvent) => {
@@ -693,13 +693,13 @@ export function FlatTaskList({
 
       if (!active.dragging) {
         const elapsed = performance.now() - active.startTime;
-        if (elapsed < 90 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+        if (elapsed < 250 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
           if (active.timer != null) window.clearTimeout(active.timer);
           pointerDragRef.current = null;
           setPointerPreparingIndex(null);
           return;
         }
-        if (elapsed >= 90 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+        if (elapsed >= 250 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
           event.preventDefault();
           activatePointerDrag(active);
         } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
@@ -769,14 +769,14 @@ export function FlatTaskList({
       const elapsed = performance.now() - active.startTime;
       // Quick movement means the user is scrolling, so cancel DnD and let the
       // browser's native pan-y scroll continue uninterrupted.
-      if (elapsed < 90 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+      if (elapsed < 250 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
         if (active.timer != null) window.clearTimeout(active.timer);
         active.timer = null;
         pointerDragRef.current = null;
         setPointerPreparingIndex(null);
         return;
       }
-      if (elapsed >= 90 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+      if (elapsed >= 250 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
         event.preventDefault();
         activatePointerDrag(active);
       } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {

@@ -200,7 +200,7 @@ test.describe("Today tasks @ 5k items", () => {
           );
         };
         fire("touchstart", x, y);
-        // Hold past long-press threshold (~90ms)
+        // Hold past long-press threshold (~250ms)
         return new Promise<void>((resolve) => {
           setTimeout(() => {
             fire("touchmove", x, ty);
@@ -208,7 +208,7 @@ test.describe("Today tasks @ 5k items", () => {
               fire("touchend", x, ty);
               resolve();
             }, 40);
-          }, 140);
+          }, 300);
         });
       },
       { x: srcX, y: srcY, ty: tgtY }
