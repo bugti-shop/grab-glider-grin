@@ -373,7 +373,7 @@ export function FlatTaskList({
       if (typeof document !== 'undefined') document.body.classList.add('flowist-task-dragging');
       paintGhostAt(current.currentY);
       if ('vibrate' in navigator) navigator.vibrate?.(8);
-    }, 180);
+    }, 90);
   }, [dndEnabled, isCoarsePointer, paintGhostAt]);
 
   const movePointerDrag = useCallback((event: PointerEvent<HTMLElement>) => {
@@ -385,7 +385,7 @@ export function FlatTaskList({
     active.currentY = event.clientY;
 
     if (!active.dragging) {
-      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+      if (Math.abs(dx) > 24 || Math.abs(dy) > 24) {
         if (active.timer != null) window.clearTimeout(active.timer);
         pointerDragRef.current = null;
       }
@@ -551,10 +551,11 @@ export function FlatTaskList({
                 width: '100%',
                 contain: 'layout paint style',
                 transform: `translateY(${vi.start - scrollOffset}px)`,
-                boxShadow: isDragOver ? 'inset 0 2px 0 0 hsl(var(--primary))' : undefined,
-                opacity: dragFromRef.current === vi.index ? 0.5 : 1,
+                boxShadow: isDragOver ? 'inset 0 0 0 3px hsl(var(--primary)), 0 0 0 1px hsl(var(--primary) / 0.35)' : undefined,
+                backgroundColor: isDragOver ? 'hsl(var(--primary) / 0.08)' : undefined,
+                opacity: dragFromRef.current === vi.index ? 0.72 : 1,
                 cursor: dndEnabled ? 'grab' : undefined,
-                touchAction: dndEnabled && isCoarsePointer ? 'pan-y' : undefined,
+                touchAction: dndEnabled && isCoarsePointer ? 'pan-y pinch-zoom' : undefined,
               }}
             >
               {renderRow(row, vi.index, isActive)}
@@ -565,7 +566,7 @@ export function FlatTaskList({
       {pointerDrag && (
         <div
           ref={ghostRef}
-          className="pointer-events-none fixed left-3 right-3 z-[70] rounded-md border border-primary bg-background px-4 py-3 text-sm font-medium shadow-xl"
+          className="pointer-events-none fixed left-3 right-3 z-[70] rounded-md border-2 border-primary bg-background px-4 py-3 text-sm font-semibold shadow-2xl ring-4 ring-primary/20"
           style={{
             top: 0,
             transform: `translate3d(0, ${pointerDrag.y}px, 0) translateY(-50%)`,

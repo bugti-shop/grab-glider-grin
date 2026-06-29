@@ -330,7 +330,7 @@ const Today = () => {
                 onClick={() => handleSwipeAction(() => {
                   if (!item.completed) {
                     showCompletionFill(item.id);
-                    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+                    window.setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {}), 0);
                     updateItem(item.id, { completed: true });
                   } else {
                     updateItem(item.id, { completed: false });
@@ -401,7 +401,7 @@ const Today = () => {
                   return;
                 }
                 showCompletionFill(item.id);
-                Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                window.setTimeout(() => Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}), 0);
                 updateItem(item.id, { completed: true });
               }}
               className={cn(

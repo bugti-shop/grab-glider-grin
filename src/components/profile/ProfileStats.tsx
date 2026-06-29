@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FileText, CheckCircle2, FolderOpen, Layers, CalendarDays } from 'lucide-react';
-import { loadNotesFromDB } from '@/utils/noteStorage';
+import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
 import { loadTodoItems } from '@/utils/todoItemsStorage';
 import { loadStreakData } from '@/utils/streakStorage';
 import { getSetting } from '@/utils/settingsStorage';
@@ -23,7 +23,7 @@ export const useProfileStats = () => {
   const load = useCallback(async () => {
     try {
       const [notes, tasks, streak, noteFolders, todoFolders] = await Promise.all([
-        loadNotesFromDB(),
+        loadNotesMetadataFromDB(),
         loadTodoItems(),
         loadStreakData('flowist_streak'),
         getSetting<Folder[]>('folders', []),
@@ -31,12 +31,17 @@ export const useProfileStats = () => {
       ]);
 
       const sectionSet = new Set<string>();
-      tasks.forEach(t => { if (t.sectionId) sectionSet.add(t.sectionId); });
+      const safeNotes = Array.isArray(notes) ? notes : [];
+      const safeTasks = Array.isArray(tasks) ? tasks : [];
+      const safeNoteFolders = Array.isArray(noteFolders) ? noteFolders : [];
+      const safeTodoFolders = Array.isArray(todoFolders) ? todoFolders : [];
+
+      safeTasks.forEach(t => { if (t.sectionId) sectionSet.add(t.sectionId); });
 
       setStats({
-        notes: notes.length,
-        tasks: tasks.length,
-        folders: noteFolders.length + todoFolders.length,
+        notes: safeNotes.length,
+        tasks: safeTasks.length,
+        folders: safeNoteFolders.length + safeTodoFolders.length,
         sections: sectionSet.size,
         days: streak.totalCompletions,
       });
