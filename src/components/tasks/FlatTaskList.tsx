@@ -14,7 +14,7 @@
  *   Space   → fire `onToggleComplete(row)` (tasks only)
  * The active row gets `data-active="true"` so callers can style it.
  */
-import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback, memo, type ReactNode, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
