@@ -250,7 +250,7 @@ const Habits = () => {
       {/* Add Habit button — exact same style as + Add Tasks on Today */}
       <Button
         onClick={() => { if (!requireCapacity('habits', habits.length)) return; navigate('/todo/habits/gallery'); }}
-        className="fixed left-4 right-4 z-30 h-12 text-base font-semibold"
+        className="fixed left-4 right-4 z-30 h-12 text-base font-semibold md:hidden"
         style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
         size="lg"
       >

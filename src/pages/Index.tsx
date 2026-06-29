@@ -1517,7 +1517,7 @@ const Index = () => {
         visibleTypes.length === 1 ? (
           // If only one type is visible, directly open that note type without dropdown
           <Button
-            className="fixed left-4 right-4 z-50 h-12 text-base font-semibold"
+            className="fixed left-4 right-4 z-50 h-12 text-base font-semibold md:hidden"
             style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
             size="lg"
             onClick={() => {
@@ -1534,7 +1534,7 @@ const Index = () => {
             <DropdownMenuTrigger asChild>
               <Button
                 data-tour="new-note-button"
-                className="fixed left-4 right-4 z-50 h-12 text-base font-semibold"
+                className="fixed left-4 right-4 z-50 h-12 text-base font-semibold md:hidden"
                 style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
                 size="lg"
                 onClick={() => triggerHaptic('heavy')}
