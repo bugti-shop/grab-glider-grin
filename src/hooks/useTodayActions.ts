@@ -82,7 +82,6 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   // Keep a ref to items for reliable access in async callbacks
   const itemsRef = useRef(items);
   itemsRef.current = items;
-  const deferredCompletionTimersRef = useRef<Map<string, number>>(new Map());
   const pendingDeferredCompletionUpdatesRef = useRef<Map<string, Partial<TodoItem>>>(new Map());
   const deferredCompletionFlushTimerRef = useRef<number | null>(null);
   const pendingCompletionStatsRef = useRef(0);
@@ -461,11 +460,6 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       updatesWithTimestamp.completedAt = undefined;
     }
     if (updates.completed === false) {
-      const pendingTimer = deferredCompletionTimersRef.current.get(itemId);
-      if (pendingTimer) {
-        clearTimeout(pendingTimer);
-        deferredCompletionTimersRef.current.delete(itemId);
-      }
       pendingDeferredCompletionUpdatesRef.current.delete(itemId);
     }
 
