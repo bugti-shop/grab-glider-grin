@@ -837,16 +837,12 @@ const Index = () => {
     });
   }, [notes, notesMeta, searchLower, isFullSearch, fullSearchResults]);
 
-  // Filter by folder. The default Inbox also catches legacy/orphan notes
-  // (no folderId, or folderId equal to a NoteType string from older versions).
+  // Filter by folder strictly. Inbox only shows Inbox/orphan/legacy note-type ids;
+  // custom folders only show their own explicit notes.
   if (selectedFolderId !== null) {
-    const LEGACY_TYPE_FOLDER_IDS = new Set(['sticky','lined','regular','code','sketch','voice','textformat']);
-    const defaultFolder = folders.find(f => f.isDefault);
-    const isInbox = defaultFolder?.id === selectedFolderId;
+    const inboxFolderId = folders.find(f => f.isDefault)?.id ?? folders[0]?.id;
     allFilteredNotes = allFilteredNotes.filter(note => {
-      if (note.folderId === selectedFolderId) return true;
-      if (isInbox && (!note.folderId || LEGACY_TYPE_FOLDER_IDS.has(note.folderId))) return true;
-      return false;
+      return getNoteFolderId(note, inboxFolderId) === selectedFolderId;
     });
   }
 
@@ -1170,14 +1166,21 @@ const Index = () => {
           onDropOnFolder={handleDropOnFolder}
           notes={notes}
           onAddNotesToFolder={(noteIds, folderId) => {
-            setNotes(prev => prev.map(note =>
-              noteIds.includes(note.id) ? { ...note, folderId } : note
-            ));
+            setNotes(prev => prev.map(note => {
+              if (!noteIds.includes(note.id)) return note;
+              const updated = { ...note, folderId, updatedAt: new Date() };
+              saveNoteToDBSingle(updated);
+              return updated;
+            }));
           }}
           onRemoveNoteFromFolder={(noteId) => {
-            setNotes(prev => prev.map(note =>
-              note.id === noteId ? { ...note, folderId: undefined } : note
-            ));
+            const inboxFolderId = folders.find(f => f.isDefault)?.id ?? folders[0]?.id;
+            setNotes(prev => prev.map(note => {
+              if (note.id !== noteId) return note;
+              const updated = { ...note, folderId: inboxFolderId, updatedAt: new Date() };
+              saveNoteToDBSingle(updated);
+              return updated;
+            }));
           }}
           showFavoritesOnly={showFavoritesOnly}
           onToggleFavoritesOnly={() => setShowFavoritesOnly(!showFavoritesOnly)}
