@@ -30,6 +30,27 @@ const TOUCH_AXIS_CANCEL_PX = 28;
 const TOUCH_CANCEL_PX = 42;
 const CLICK_SUPPRESS_MS = 350;
 
+/**
+ * Memoized row body. Skips re-rendering when the task reference, position,
+ * and active state are unchanged — so completing one task in a 5k list only
+ * re-renders the toggled row plus any newly-virtualized neighbors, not the
+ * whole window.
+ */
+interface MemoRowBodyProps {
+  row: FlatTaskRow;
+  index: number;
+  isActive: boolean;
+  render: (row: FlatTaskRow, index: number, isActive: boolean) => ReactNode;
+}
+const MemoRowBody = memo(function MemoRowBody({ row, index, isActive, render }: MemoRowBodyProps) {
+  return <>{render(row, index, isActive)}</>;
+}, (prev, next) =>
+  prev.row.task === next.row.task &&
+  prev.index === next.index &&
+  prev.isActive === next.isActive &&
+  prev.render === next.render,
+);
+
 export interface FlatTaskListProps {
   /** Either a nested task tree (will be flattened) or an already-flat array of TodoItem. */
   items?: readonly TodoItem[];
