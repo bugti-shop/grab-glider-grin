@@ -67,6 +67,25 @@ const isNotesPath = (pathname: string) =>
   pathname.startsWith('/notes') ||
   pathname.startsWith('/calendar');
 
+// Match active state for nav items including their nested sub-routes.
+const isItemActive = (itemPath: string, pathname: string): boolean => {
+  if (pathname === itemPath) return true;
+  // Exact-only matches (avoid /todo/today matching /todo/today-something)
+  // Prefer prefix match with trailing slash for true children.
+  if (pathname.startsWith(itemPath + '/')) return true;
+
+  // Special groupings
+  if (itemPath === '/todo/habits' && pathname.startsWith('/todo/habits')) return true;
+  if (itemPath === '/todo/matrix' && pathname.startsWith('/todo/matrix')) return true;
+  if (itemPath === '/todo/calendar' && pathname.startsWith('/todo/calendar')) return true;
+  if (itemPath === '/todo/countdown' && pathname.startsWith('/todo/countdown')) return true;
+  if (itemPath === '/todo/progress' && pathname.startsWith('/todo/progress')) return true;
+  if (itemPath === '/todo/today' && (pathname === '/' || pathname.startsWith('/todo/today') || pathname.startsWith('/todo/task/'))) return true;
+  if (itemPath === '/notesdashboard' && pathname.startsWith('/notesdashboard')) return true;
+  if (itemPath === '/notes' && pathname.startsWith('/notes') && !pathname.startsWith('/notesdashboard')) return true;
+  return false;
+};
+
 export const DesktopSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
