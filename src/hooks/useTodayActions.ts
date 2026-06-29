@@ -104,8 +104,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     // re-filter/sort. The state layer prepends local-only rows optimistically,
     // so duplicating 200+ tasks appears instantly without a post-click hang.
     markSingleTaskPersisted(true);
-    void import('@/utils/taskStorage').then(({ bulkPutTasksInWorker }) =>
-      bulkPutTasksInWorker(tasks).then((persisted) => {
+    void import('@/utils/taskStorage').then(({ bulkUpdateTasksInDB }) =>
+      bulkUpdateTasksInDB(tasks).then((persisted) => {
         if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
       }),
     );
