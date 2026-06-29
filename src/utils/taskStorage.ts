@@ -442,6 +442,23 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
   }
 };
 
+// Lightweight count for stats/profile screens. Avoids materializing 10k–100k
+// task objects just to show a number, preventing mobile Chrome "Aw, Snap" OOMs.
+export const countTasksInDB = async (): Promise<number> => {
+  if (tasksCache) return tasksCache.length;
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const request = transaction.objectStore(STORE_NAME).count();
+      request.onsuccess = () => resolve(Number(request.result) || 0);
+      request.onerror = () => resolve(0);
+    });
+  } catch {
+    return 0;
+  }
+};
+
 // Insert or replace a single task without rewriting the whole tasks store.
 export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promise<boolean> => {
   markLocalStorageMigrationDone();
