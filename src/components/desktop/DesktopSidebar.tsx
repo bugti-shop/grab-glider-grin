@@ -251,7 +251,15 @@ export const DesktopSidebar = () => {
                 {!collapsed && <ChevronDown className="h-4 w-4 opacity-80" />}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="bottom" className="w-52 bg-card">
+            <DropdownMenuContent
+              align={collapsed ? 'start' : 'end'}
+              side={collapsed ? 'right' : 'bottom'}
+              sideOffset={6}
+              collisionPadding={12}
+              avoidCollisions
+              className="w-56 max-w-[calc(100vw-1rem)] bg-popover border border-border shadow-lg z-[60]"
+            >
+
               <DropdownMenuItem className="gap-2" onClick={() => handleCreateNote('sticky')}>
                 <StickyNote className="h-4 w-4 text-warning" />
                 {t('notes.noteTypes.sticky', 'Sticky Note')}
