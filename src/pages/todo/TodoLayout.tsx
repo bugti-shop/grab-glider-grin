@@ -39,10 +39,10 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
           paddingTop: 'var(--safe-top, 0px)',
         }}
       >
-        <div className="w-full max-w-5xl xl:max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 pt-3 pb-1.5">
+        <div className="w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pt-3 pb-1.5">
           <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-shrink-0">
-              <div className="lg:hidden flex items-center gap-2">
+              <div className="md:hidden flex items-center gap-2">
                 <AppLogo />
               </div>
               <h1 className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{title}</h1>
@@ -103,8 +103,8 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
         </div>
         <div className="h-[1px] bg-border" />
       </header>
-      <main className="pb-14 lg:pb-4">
-        <div className="w-full max-w-5xl xl:max-w-6xl mx-auto lg:px-4">
+      <main className="pb-14 md:pb-4">
+        <div className="w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] mx-auto md:px-4 lg:px-6">
           {children}
         </div>
         <div className="text-center py-2">
@@ -113,7 +113,7 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
           <a href="https://www.flowist.me/terms-and-conditions" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Terms</a>
         </div>
       </main>
-      <div className="lg:hidden">
+      <div className="md:hidden">
         <TodoBottomNavigation />
       </div>
       </div>

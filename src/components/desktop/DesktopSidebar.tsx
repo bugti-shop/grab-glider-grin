@@ -55,7 +55,7 @@ const COLLAPSED_WIDTH = '4rem';
 
 const applySidebarWidth = (collapsed: boolean) => {
   if (typeof document === 'undefined' || typeof window === 'undefined') return;
-  const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+  const isDesktop = window.matchMedia('(min-width: 768px)').matches;
   document.documentElement.style.setProperty(
     '--desktop-sidebar-width',
     isDesktop ? (collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH) : '0px'
@@ -177,8 +177,8 @@ export const DesktopSidebar = () => {
   return (
     <aside
       className={cn(
-        'hidden lg:flex flex-col lg:fixed lg:inset-y-0 lg:left-0 z-40 border-r border-border bg-secondary/30 transition-[width] duration-200 ease-out',
-        collapsed ? 'w-16' : 'w-64 xl:w-72'
+        'hidden md:flex flex-col md:fixed md:inset-y-0 md:left-0 z-40 border-r border-border bg-secondary/30 transition-[width] duration-200 ease-out',
+        collapsed ? 'w-16' : 'w-60 xl:w-72'
       )}
     >
       <div
@@ -287,8 +287,20 @@ export const DesktopSidebar = () => {
           </button>
           {foldersOpen && (
             <div className="flex flex-col gap-0.5 mt-1">
+              {/* Always-visible "All Tasks/All Notes" pseudo-folder */}
+              <button
+                onClick={() => navigate(notesContext ? '/notes' : '/todo/today')}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground/80 hover:bg-muted transition-colors text-left"
+              >
+                <FolderIcon className="h-4 w-4 flex-shrink-0 text-primary" />
+                <span className="truncate flex-1">
+                  {notesContext
+                    ? t('notes.allNotes', 'All Notes')
+                    : t('tasks.allTasks', 'All Tasks')}
+                </span>
+              </button>
               {filteredFolders.length === 0 ? (
-                <p className="px-3 py-2 text-xs text-muted-foreground">
+                <p className="px-3 py-1.5 text-[11px] text-muted-foreground">
                   {t('folders.empty', 'No folders yet')}
                 </p>
               ) : (

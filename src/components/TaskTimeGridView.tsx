@@ -409,7 +409,7 @@ export const TaskTimeGridView = ({
             <div key={d} className="text-center py-1.5 text-[10px] uppercase text-muted-foreground">{d}</div>
           ))}
         </div>
-        <div className="grid grid-cols-7 auto-rows-fr">
+        <div className="grid grid-cols-7">
           {days.map((d) => {
             const key = `mo-${d.toDateString()}`;
             const inMonth = isSameMonth(d, selectedDate);
@@ -427,7 +427,7 @@ export const TaskTimeGridView = ({
                 onDragLeave={() => setDragOverKey(null)}
                 onDrop={handleDropOnSlot(d, null)}
                 className={cn(
-                  'group min-h-[78px] p-1 text-left border-r border-b border-border/20 last:border-r-0 transition-colors cursor-pointer relative',
+                  'group min-h-[56px] md:min-h-[72px] p-1 text-left border-r border-b border-border/20 last:border-r-0 transition-colors cursor-pointer relative',
                   !inMonth && 'bg-muted/10 text-muted-foreground/50',
                   isSel && 'bg-primary/10 ring-1 ring-primary/40 ring-inset',
                   dragOverKey === key && 'bg-primary/15'
