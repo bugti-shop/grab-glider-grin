@@ -153,11 +153,7 @@ export function NotesVirtualGrid({
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                 gap: '0.75rem',
                 paddingBottom: '0.75rem',
-                // Skip layout/paint for offscreen rows that the virtualizer
-                // still holds during scroll handoff — keeps frame budget flat
-                // even when a single note body is 30k words.
                 contain: 'layout paint style',
-                contentVisibility: 'auto',
                 containIntrinsicSize: `${resolvedRowHeight}px auto`,
               } as React.CSSProperties}
             >
