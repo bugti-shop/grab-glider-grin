@@ -491,7 +491,7 @@ export function FlatTaskList({
       event.preventDefault();
       event.stopPropagation();
       suppressClickUntilRef.current = Date.now() + 350;
-      finishReorder(active.from, active.over, 'touch-drop');
+      finishReorder(active.from, active.over, 'pointer-drop');
     } else {
       clearPointerDrag();
     }
