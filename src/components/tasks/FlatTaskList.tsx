@@ -300,23 +300,50 @@ export function FlatTaskList({
     setInsertIndicator(null);
   }, [clearPointerDrag, stopAutoscroll]);
 
+  const armPointerDrag = useCallback((pointerId: number) => {
+    const current = pointerDragRef.current;
+    if (!current || current.pointerId !== pointerId || current.dragging) return;
+    current.armed = true;
+    current.timer = null;
+    try {
+      (window as any).__flowistTaskDragArmed = {
+        from: current.from,
+        pointerId,
+        startY: Math.round(current.startY),
+        ts: Date.now(),
+      };
+    } catch {}
+  }, []);
+
   const finishReorder = useCallback((from: number | null, insertionIndex: number, via: 'drop' | 'blank-drop' | 'pointer-drop') => {
     cancelDrag();
     if (from == null || from < 0 || from >= flat.length || insertionIndex < 0 || insertionIndex > flat.length) {
+      try { (window as any).__flowistLastTaskReorder = { ok: false, reason: 'invalid-target', via, from, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
       toast.error('Could not move task', { id: 'task-reorder' });
       logPerfEvent('reorder', { list: 'tasks', via, ok: false, reason: 'invalid-target', from, to: insertionIndex, count: flat.length });
       return;
     }
-    if (from === insertionIndex || from + 1 === insertionIndex) return;
-    if (!onReorder) return;
+    if (from === insertionIndex || from + 1 === insertionIndex) {
+      try { (window as any).__flowistLastTaskReorder = { ok: true, skipped: true, reason: 'same-position', via, from, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
+      return;
+    }
+    if (!onReorder) {
+      try { (window as any).__flowistLastTaskReorder = { ok: false, reason: 'missing-handler', via, from, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
+      return;
+    }
     const to = insertionIndex > from ? insertionIndex - 1 : insertionIndex;
-    if (from === to) return;
+    if (from === to) {
+      try { (window as any).__flowistLastTaskReorder = { ok: true, skipped: true, reason: 'same-index', via, from, to, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
+      return;
+    }
     const start = performance.now();
     try {
       onReorder(from, to);
+      try { (window as any).__flowistLastTaskReorder = { ok: true, via, from, to, insertionIndex, count: flat.length, ms: Math.round(performance.now() - start), ts: Date.now() }; } catch {}
       logPerfEvent('reorder', { list: 'tasks', via, ok: true, from, to, count: flat.length, ms: Math.round(performance.now() - start) });
       toast.success('Task moved', { id: 'task-reorder', duration: 900 });
     } catch (error) {
+      try { (window as any).__flowistLastTaskReorder = { ok: false, reason: 'exception', via, from, to, insertionIndex, count: flat.length, error: String((error as Error)?.message ?? error), ts: Date.now() }; } catch {}
       logPerfEvent('reorder', { list: 'tasks', via, ok: false, from, to, count: flat.length, error: String((error as Error)?.message ?? error) });
       toast.error('Could not move task', { id: 'task-reorder' });
     }
@@ -541,6 +568,7 @@ export function FlatTaskList({
       startTime: performance.now(),
       currentY: startY,
       dragging: false,
+      armed: false,
       scrollMode: false,
       title,
       element,
@@ -549,12 +577,8 @@ export function FlatTaskList({
     pointerDragRef.current = active;
     setPointerPreparingIndex(index);
 
-    active.timer = window.setTimeout(() => {
-      const current = pointerDragRef.current;
-      if (!current || current.pointerId !== pointerId) return;
-      activatePointerDrag(current);
-    }, 250);
-  }, [activatePointerDrag, dndEnabled]);
+    active.timer = window.setTimeout(() => armPointerDrag(pointerId), TOUCH_LONG_PRESS_MS);
+  }, [armPointerDrag, dndEnabled]);
 
   const startTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
     // A real TouchEvent is already proof of a coarse input path. Do not gate on
@@ -579,6 +603,7 @@ export function FlatTaskList({
       startTime: performance.now(),
       currentY: startY,
       dragging: false,
+      armed: false,
       scrollMode: false,
       title: row.task.text || 'Task',
       element,
@@ -586,12 +611,8 @@ export function FlatTaskList({
     };
     pointerDragRef.current = active;
     setPointerPreparingIndex(index);
-    active.timer = window.setTimeout(() => {
-      const current = pointerDragRef.current;
-      if (!current || current.pointerId !== pointerId) return;
-      activatePointerDrag(current);
-    }, 250);
-  }, [activatePointerDrag, dndEnabled]);
+    active.timer = window.setTimeout(() => armPointerDrag(pointerId), TOUCH_LONG_PRESS_MS);
+  }, [armPointerDrag, dndEnabled]);
 
   const moveTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
