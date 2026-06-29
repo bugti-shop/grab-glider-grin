@@ -437,7 +437,7 @@ const Notes = () => {
       <header className="bg-background sticky top-0 z-10" style={{ paddingTop: 'var(--safe-top, 0px)' }}>
          <div className="w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] mx-auto px-2 xs:px-3 sm:px-4 md:px-6 lg:px-8 pt-3 pb-2">
           <div className="flex items-center justify-between gap-1 xs:gap-2">
-            <div className="flex items-center gap-1.5 xs:gap-2 min-w-0 flex-shrink-0">
+            <div className="flex items-center gap-1.5 xs:gap-2 min-w-0 flex-shrink-0 md:hidden">
               <AppLogo />
               <h1 className="text-base xs:text-lg sm:text-xl font-bold" aria-label="Flowist — Your Personal Notes">{t('notes.title')}</h1>
               
