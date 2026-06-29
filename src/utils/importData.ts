@@ -31,6 +31,8 @@ export interface ImportResult {
   };
   /** Human-readable failure messages (per-row / per-resource). */
   errors?: string[];
+  /** Non-fatal warnings (e.g. unsupported fields ignored during parsing). */
+  warnings?: string[];
 }
 
 /** Column-mapping for generic CSV imports. Each value is the source column name. */
@@ -125,16 +127,32 @@ export const autoDetectColumnMap = (headers: string[], kind: 'tasks' | 'notes'):
 // ─── Todoist CSV Import ────────────────────────────────────
 // Columns: TYPE, CONTENT, PRIORITY, INDENT, AUTHOR, RESPONSIBLE, DATE, DATE_LANG, TIMEZONE
 // Todoist priority: 4 = highest (p1), 1 = normal (p4)
+// INDENT controls nesting: 1 = root, >1 = child of nearest preceding task with INDENT-1.
+const KNOWN_TODOIST_CSV_FIELDS = new Set([
+  'TYPE','CONTENT','DESCRIPTION','PRIORITY','INDENT','AUTHOR','RESPONSIBLE',
+  'DATE','DATE_LANG','TIMEZONE',
+]);
 const parseTodoistCSV = (text: string): ImportResult => {
   try {
     const rows = parseCSV(text);
     if (rows.length === 0) return { success: false, tasks: [], notes: [], error: 'No data found in CSV', stats: { tasks: 0, notes: 0 } };
 
-    const tasks: TodoItem[] = [];
+    const rootTasks: TodoItem[] = [];
     const folders: Folder[] = [];
     let currentFolderId: string | undefined;
     let failed = 0;
     const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Stack of [indent, task] so children attach to the right ancestor.
+    const stack: { indent: number; task: TodoItem }[] = [];
+
+    // Warn about unknown columns once.
+    const headers = Object.keys(rows[0] || {});
+    const unknown = headers.filter(h => h && !KNOWN_TODOIST_CSV_FIELDS.has(h.toUpperCase()));
+    if (unknown.length) warnings.push(`Unsupported columns ignored: ${unknown.join(', ')}`);
+
+    const priorityMap: Record<string, Priority> = { '1': 'none', '2': 'low', '3': 'medium', '4': 'high' };
 
     for (const row of rows) {
       try {
@@ -146,15 +164,24 @@ const parseTodoistCSV = (text: string): ImportResult => {
           const folder: Folder = { id: generateId(), name: content, createdAt: new Date() } as Folder;
           folders.push(folder);
           currentFolderId = folder.id;
+          stack.length = 0; // sections reset nesting
           continue;
         }
-        if (type && type !== 'task' && type !== 'note') continue;
+        if (type === 'note') {
+          warnings.push(`Note row "${content}" attached as description of preceding task`);
+          if (stack.length > 0) {
+            const target = stack[stack.length - 1].task;
+            target.description = target.description ? `${target.description}\n${content}` : content;
+          }
+          continue;
+        }
+        if (type && type !== 'task') continue;
 
-        const priorityMap: Record<string, Priority> = { '1': 'none', '2': 'low', '3': 'medium', '4': 'high' };
         const rawPriority = row['PRIORITY'] || row['priority'] || '1';
         const dateStr = row['DATE'] || row['date'] || '';
+        const indent = Math.max(1, parseInt(row['INDENT'] || row['indent'] || '1', 10) || 1);
 
-        tasks.push({
+        const task: TodoItem = {
           id: generateId(),
           text: content,
           completed: false,
@@ -164,14 +191,37 @@ const parseTodoistCSV = (text: string): ImportResult => {
           folderId: currentFolderId,
           createdAt: new Date(),
           modifiedAt: new Date(),
-        } as TodoItem);
+        } as TodoItem;
+
+        // Pop any stack entries with indent >= this one.
+        while (stack.length && stack[stack.length - 1].indent >= indent) stack.pop();
+
+        if (stack.length === 0) {
+          rootTasks.push(task);
+        } else {
+          const parent = stack[stack.length - 1].task;
+          parent.subtasks = parent.subtasks ? [...parent.subtasks, task] : [task];
+        }
+        stack.push({ indent, task });
       } catch (e) {
         failed++;
         errors.push(`Row skipped: ${e instanceof Error ? e.message : 'unknown'}`);
       }
     }
 
-    return { success: true, tasks, notes: [], folders, stats: { tasks: tasks.length, notes: 0, folders: folders.length, failed }, errors: errors.length ? errors : undefined };
+    // Count nested tasks for stats / preview.
+    const countAll = (arr: TodoItem[]): number =>
+      arr.reduce((n, t) => n + 1 + (t.subtasks ? countAll(t.subtasks) : 0), 0);
+
+    return {
+      success: true,
+      tasks: rootTasks,
+      notes: [],
+      folders,
+      stats: { tasks: countAll(rootTasks), notes: 0, folders: folders.length, failed },
+      errors: errors.length ? errors : undefined,
+      warnings: warnings.length ? warnings : undefined,
+    };
   } catch (e) {
     return { success: false, tasks: [], notes: [], error: `Todoist parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
   }
@@ -313,13 +363,16 @@ const parseNotionCSV = (text: string): ImportResult => {
 
 // ─── Notion Markdown (single page export) ──────────────────
 // Notion's per-page .md export starts with the title as an H1, optional
-// "Key: Value" property lines, then the body. Capture the page as one note.
+// "Key: Value" property lines, then the body. We capture the page as a note
+// AND extract checklist items (- [ ] / - [x]) — especially under an
+// "Action Items" section — as standalone tasks with completion + due dates.
 const parseNotionMarkdown = (text: string, fileName?: string): ImportResult => {
   try {
     const lines = text.split('\n');
     let title = '';
     const meta: Record<string, string> = {};
     let bodyStart = 0;
+    const warnings: string[] = [];
 
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i].trim();
@@ -337,9 +390,66 @@ const parseNotionMarkdown = (text: string, fileName?: string): ImportResult => {
       break;
     }
 
-    const body = lines.slice(bodyStart).join('\n').trim();
+    const bodyLines = lines.slice(bodyStart);
+    const body = bodyLines.join('\n').trim();
     const tagsRaw = meta['tags'] || meta['labels'] || '';
     const createdRaw = meta['created'] || meta['created time'] || '';
+    const pageDueRaw = meta['due date'] || meta['due'] || meta['date'] || '';
+    const pageDue = pageDueRaw ? new Date(pageDueRaw) : undefined;
+    const pageDueValid = pageDue && !isNaN(pageDue.getTime()) ? pageDue : undefined;
+
+    // ── Checklist extraction ──
+    // Treat any markdown checkbox as a task. Prefer ones under an
+    // "Action Items"-style heading; tag other checkboxes with a warning.
+    const tasks: TodoItem[] = [];
+    const ACTION_HEADING = /^#{1,6}\s+(action items?|to[- ]?do|tasks?)\b/i;
+    const CHECK_RE = /^\s*[-*+]\s+\[( |x|X)\]\s+(.+)$/;
+    // Inline date hints like "(due 2026-07-15)" or "@2026-07-15".
+    const DATE_HINT = /(?:@|due[:\s]+|\bby\s+)\s*(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?)/i;
+
+    let inAction = false;
+    let checkboxesOutsideAction = 0;
+
+    for (const line of bodyLines) {
+      const heading = line.match(/^(#{1,6})\s+/);
+      if (heading) {
+        inAction = ACTION_HEADING.test(line);
+        continue;
+      }
+      const m = line.match(CHECK_RE);
+      if (!m) continue;
+
+      const completed = m[1].toLowerCase() === 'x';
+      let textPart = m[2].trim();
+      let due: Date | undefined = pageDueValid;
+      const dm = textPart.match(DATE_HINT);
+      if (dm) {
+        const d = new Date(dm[1].replace(' ', 'T'));
+        if (!isNaN(d.getTime())) {
+          due = d;
+          textPart = textPart.replace(dm[0], '').trim();
+        }
+      }
+
+      if (!inAction) checkboxesOutsideAction++;
+
+      tasks.push({
+        id: generateId(),
+        text: textPart,
+        completed,
+        priority: 'none',
+        dueDate: due,
+        createdAt: createdRaw ? new Date(createdRaw) : new Date(),
+        modifiedAt: new Date(),
+      } as TodoItem);
+    }
+
+    if (checkboxesOutsideAction > 0) {
+      warnings.push(`${checkboxesOutsideAction} checklist item(s) found outside an "Action Items" heading — imported as tasks`);
+    }
+    if (pageDueRaw && !pageDueValid) {
+      warnings.push(`Unrecognized page due date: "${pageDueRaw}"`);
+    }
 
     const note: Note = {
       id: generateId(),
@@ -352,15 +462,24 @@ const parseNotionMarkdown = (text: string, fileName?: string): ImportResult => {
       updatedAt: new Date(),
     } as Note;
 
-    return { success: true, tasks: [], notes: [note], stats: { tasks: 0, notes: 1 } };
+    return {
+      success: true,
+      tasks,
+      notes: [note],
+      stats: { tasks: tasks.length, notes: 1 },
+      warnings: warnings.length ? warnings : undefined,
+    };
   } catch (e) {
     return { success: false, tasks: [], notes: [], error: `Markdown parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
   }
 };
 
 // ─── Todoist JSON (REST API / backup export) ───────────────
-// Accepts { tasks: [...] } or a bare array of Todoist task objects.
+// Accepts { tasks: [...] }, { items: [...] }, or a bare array of task objects.
+// Also tolerates a top-level { projects: [...], items/tasks: [...] } backup shape.
 // Priority: 1=normal..4=urgent (Todoist API convention).
+// `due` may be: missing, a string ("2026-07-15" / ISO), or an object
+// { date, datetime, timezone, string, is_recurring }. All variants are handled.
 const parseTodoistJSON = (text: string): ImportResult => {
   try {
     const raw = JSON.parse(text);
@@ -374,18 +493,49 @@ const parseTodoistJSON = (text: string): ImportResult => {
       return { success: false, tasks: [], notes: [], error: 'No tasks found in JSON', stats: { tasks: 0, notes: 0 } };
     }
 
+    const warnings: string[] = [];
     const priorityMap: Record<number, Priority> = { 1: 'none', 2: 'low', 3: 'medium', 4: 'high' };
+
+    // Pre-seed folders from a `projects` array (gives readable names).
     const projectFolders = new Map<string, Folder>();
+    if (raw && typeof raw === 'object' && Array.isArray((raw as any).projects)) {
+      for (const p of (raw as any).projects) {
+        const pid = p?.id != null ? String(p.id) : '';
+        if (!pid) continue;
+        projectFolders.set(pid, {
+          id: generateId(),
+          name: String(p.name || `Project ${pid}`),
+          createdAt: new Date(),
+        } as Folder);
+      }
+    }
+
     const tasks: TodoItem[] = [];
     const errors: string[] = [];
     let failed = 0;
+    let droppedRecurring = 0;
+
+    // Normalize Todoist due payload → Date | undefined.
+    const resolveDue = (t: any): Date | undefined => {
+      const d = t?.due;
+      let raw: any;
+      if (d == null) raw = t?.due_date ?? t?.dueDate ?? t?.due_string;
+      else if (typeof d === 'string') raw = d;
+      else if (typeof d === 'object') {
+        if (d.is_recurring) droppedRecurring++;
+        raw = d.datetime || d.date || d.string;
+      }
+      if (!raw) return undefined;
+      const dt = new Date(String(raw).replace(' ', 'T'));
+      return isNaN(dt.getTime()) ? undefined : dt;
+    };
 
     for (const t of items) {
       try {
         const content = String(t.content ?? t.text ?? t.title ?? '').trim();
         if (!content) { failed++; continue; }
 
-        const projectId = t.project_id ? String(t.project_id) : '';
+        const projectId = t.project_id != null ? String(t.project_id) : '';
         let folderId: string | undefined;
         if (projectId) {
           let folder = projectFolders.get(projectId);
@@ -396,14 +546,16 @@ const parseTodoistJSON = (text: string): ImportResult => {
           folderId = folder.id;
         }
 
-        const dueRaw = t.due?.date || t.due?.datetime || t.due_date || t.dueDate;
+        const pNum = Number(t.priority);
+        const priority = priorityMap[Number.isFinite(pNum) && pNum >= 1 && pNum <= 4 ? pNum : 1] || 'none';
+
         tasks.push({
           id: generateId(),
           text: content,
           completed: Boolean(t.is_completed ?? t.completed ?? t.checked),
-          priority: priorityMap[Number(t.priority) || 1] || 'none',
+          priority,
           description: t.description || undefined,
-          dueDate: dueRaw ? new Date(dueRaw) : undefined,
+          dueDate: resolveDue(t),
           tags: Array.isArray(t.labels) ? t.labels.map(String) : undefined,
           folderId,
           createdAt: t.created_at ? new Date(t.created_at) : new Date(),
@@ -415,11 +567,16 @@ const parseTodoistJSON = (text: string): ImportResult => {
       }
     }
 
+    if (droppedRecurring > 0) {
+      warnings.push(`${droppedRecurring} recurring due rule(s) imported as a single due date (recurrence not supported)`);
+    }
+
     const folders = Array.from(projectFolders.values());
     return {
       success: true, tasks, notes: [], folders: folders.length ? folders : undefined,
       stats: { tasks: tasks.length, notes: 0, folders: folders.length || undefined, failed },
       errors: errors.length ? errors : undefined,
+      warnings: warnings.length ? warnings : undefined,
     };
   } catch (e) {
     return { success: false, tasks: [], notes: [], error: `Todoist JSON parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
