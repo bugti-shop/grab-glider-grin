@@ -132,6 +132,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
     await runImport(text, file.name);
   };
 
+  // Step 1: parse the file (no writes) and surface a preview the user must confirm.
   const runImport = async (text: string, fileName: string, columnMapArg?: CsvColumnMap) => {
     if (!selectedSource) return;
     setIsImporting(true);
@@ -141,6 +142,41 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       const fileType = fileName.split('.').pop()?.toLowerCase() || '';
       const importResult = await importFromFile(text, selectedSource, fileType, fileName, {
         columnMap: columnMapArg,
+        onProgress: (p) => setProgress(p),
+      });
+
+      if (!importResult.success) {
+        toast({ title: t('settings.importFailed', 'Import failed'), description: importResult.error, variant: 'destructive' });
+        setIsImporting(false);
+        setProgress(null);
+        return;
+      }
+
+      // Stash everything needed for the actual commit and show the preview screen.
+      setPendingText(text);
+      setPendingFileName(fileName);
+      setPendingColumnMap(columnMapArg);
+      setPreview(importResult);
+      setProgress(null);
+    } catch (e) {
+      sonnerToast.error(t('settings.importFailed', 'Import failed'), {
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Step 2: persist the previewed result. Re-runs the parser for fresh IDs / attachments.
+  const commitImport = async () => {
+    if (!selectedSource || !preview) return;
+    setIsImporting(true);
+    setProgress({ phase: 'saving', current: 0, total: 0 });
+
+    try {
+      const fileType = pendingFileName.split('.').pop()?.toLowerCase() || '';
+      const importResult = await importFromFile(pendingText, selectedSource, fileType, pendingFileName, {
+        columnMap: pendingColumnMap,
         onProgress: (p) => setProgress(p),
       });
 
@@ -161,7 +197,6 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       let noteFolders = [...existingNoteFolders];
       let noteImportFolderId: string | undefined;
       if (importResult.folders && importResult.folders.length > 0) {
-        // Parser already produced its own folders (e.g. Evernote notebooks) — keep them.
         noteFolders = [...noteFolders, ...importResult.folders];
       } else if (importResult.notes.length > 0) {
         const id = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-notes-${Date.now()}`;
@@ -198,8 +233,6 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       }
       if (importResult.notes.length > 0) {
         const existing = await loadNotesFromDB();
-        // If the parser supplied folders (e.g. Evernote), respect them.
-        // Otherwise force the dedicated import folder so Inbox stays clean.
         const tagged = importResult.notes.map(n => ({
           ...n,
           folderId: n.folderId || noteImportFolderId,
@@ -209,6 +242,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       }
 
       setResult(importResult);
+      setPreview(null);
       const s = importResult.stats;
       const imported = (s.tasks || 0) + (s.notes || 0);
       const skipped = s.failed || 0;
