@@ -550,6 +550,15 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
                 <Button variant="outline" onClick={() => { setPreview(null); setPendingText(''); }} className="flex-1">
                   Cancel
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => downloadPreviewCsv(taskRows, noteRows, pendingFileName)}
+                  className="gap-2"
+                  title="Download mapping as CSV"
+                >
+                  <Download className="h-4 w-4" />
+                  CSV
+                </Button>
                 <Button onClick={commitImport} className="flex-1 gap-2">
                   <Upload className="h-4 w-4" />
                   Confirm Import
