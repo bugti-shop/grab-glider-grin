@@ -268,9 +268,8 @@ const parseNotionCSV = (text: string): ImportResult => {
       if (!title) continue;
 
       if (hasStatus || hasName) {
-        const isDone = ['true', 'yes', 'done', 'completed', '1', 'x'].includes(
-          (row['status'] || row['done'] || row['completed'] || row['checkbox'] || '').toLowerCase()
-        );
+        const statusRaw = (row['status'] || row['done'] || row['completed'] || row['checkbox'] || '').toLowerCase().trim();
+        const isDone = ['true', 'yes', 'done', 'completed', 'complete', '1', 'x', 'closed', 'finished'].includes(statusRaw);
 
         const priorityVal = (row['priority'] || '').toLowerCase();
         let priority: Priority = 'none';
@@ -278,15 +277,19 @@ const parseNotionCSV = (text: string): ImportResult => {
         else if (priorityVal.includes('medium') || priorityVal.includes('mid')) priority = 'medium';
         else if (priorityVal.includes('low')) priority = 'low';
 
+        const tagsRaw = row['tags'] || row['labels'] || row['categories'] || '';
+        const dueRaw = row['due'] || row['due date'] || row['date'] || '';
+        const createdRaw = row['created'] || row['created time'] || '';
+
         tasks.push({
           id: generateId(),
           text: title,
           completed: isDone,
           priority,
           description: row['notes'] || row['description'] || row['details'] || undefined,
-          dueDate: row['due'] || row['due date'] || row['date'] ? new Date(row['due'] || row['due date'] || row['date']) : undefined,
-          tags: row['tags'] ? row['tags'].split(',').map(t => t.trim()).filter(Boolean) : undefined,
-          createdAt: row['created'] ? new Date(row['created']) : new Date(),
+          dueDate: dueRaw ? new Date(dueRaw) : undefined,
+          tags: tagsRaw ? tagsRaw.split(/[,;|]/).map(t => t.trim()).filter(Boolean) : undefined,
+          createdAt: createdRaw ? new Date(createdRaw) : new Date(),
           modifiedAt: new Date(),
         });
       } else {
@@ -296,7 +299,7 @@ const parseNotionCSV = (text: string): ImportResult => {
           title,
           content: row['content'] || row['body'] || row['notes'] || '',
           voiceRecordings: [],
-          createdAt: row['created'] ? new Date(row['created']) : new Date(),
+          createdAt: row['created'] || row['created time'] ? new Date(row['created'] || row['created time']) : new Date(),
           updatedAt: new Date(),
         });
       }
@@ -305,6 +308,121 @@ const parseNotionCSV = (text: string): ImportResult => {
     return { success: true, tasks, notes, stats: { tasks: tasks.length, notes: notes.length } };
   } catch (e) {
     return { success: false, tasks: [], notes: [], error: `Notion parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
+  }
+};
+
+// ─── Notion Markdown (single page export) ──────────────────
+// Notion's per-page .md export starts with the title as an H1, optional
+// "Key: Value" property lines, then the body. Capture the page as one note.
+const parseNotionMarkdown = (text: string, fileName?: string): ImportResult => {
+  try {
+    const lines = text.split('\n');
+    let title = '';
+    const meta: Record<string, string> = {};
+    let bodyStart = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i].trim();
+      if (!l) continue;
+      const h1 = l.match(/^#\s+(.+)/);
+      if (h1) { title = h1[1].trim(); bodyStart = i + 1; }
+      break;
+    }
+
+    for (let i = bodyStart; i < lines.length; i++) {
+      const l = lines[i];
+      if (!l.trim()) { bodyStart = i + 1; continue; }
+      const kv = l.match(/^([A-Za-z][\w\s]{0,40}):\s*(.+)$/);
+      if (kv) { meta[kv[1].trim().toLowerCase()] = kv[2].trim(); bodyStart = i + 1; continue; }
+      break;
+    }
+
+    const body = lines.slice(bodyStart).join('\n').trim();
+    const tagsRaw = meta['tags'] || meta['labels'] || '';
+    const createdRaw = meta['created'] || meta['created time'] || '';
+
+    const note: Note = {
+      id: generateId(),
+      type: 'regular',
+      title: title || (fileName?.replace(/\.md$/i, '') || 'Imported Note'),
+      content: body,
+      voiceRecordings: [],
+      tags: tagsRaw ? tagsRaw.split(/[,;|]/).map(t => t.trim()).filter(Boolean) : undefined,
+      createdAt: createdRaw ? new Date(createdRaw) : new Date(),
+      updatedAt: new Date(),
+    } as Note;
+
+    return { success: true, tasks: [], notes: [note], stats: { tasks: 0, notes: 1 } };
+  } catch (e) {
+    return { success: false, tasks: [], notes: [], error: `Markdown parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
+  }
+};
+
+// ─── Todoist JSON (REST API / backup export) ───────────────
+// Accepts { tasks: [...] } or a bare array of Todoist task objects.
+// Priority: 1=normal..4=urgent (Todoist API convention).
+const parseTodoistJSON = (text: string): ImportResult => {
+  try {
+    const raw = JSON.parse(text);
+    const items: any[] = Array.isArray(raw)
+      ? raw
+      : Array.isArray(raw?.tasks) ? raw.tasks
+      : Array.isArray(raw?.items) ? raw.items
+      : [];
+
+    if (items.length === 0) {
+      return { success: false, tasks: [], notes: [], error: 'No tasks found in JSON', stats: { tasks: 0, notes: 0 } };
+    }
+
+    const priorityMap: Record<number, Priority> = { 1: 'none', 2: 'low', 3: 'medium', 4: 'high' };
+    const projectFolders = new Map<string, Folder>();
+    const tasks: TodoItem[] = [];
+    const errors: string[] = [];
+    let failed = 0;
+
+    for (const t of items) {
+      try {
+        const content = String(t.content ?? t.text ?? t.title ?? '').trim();
+        if (!content) { failed++; continue; }
+
+        const projectId = t.project_id ? String(t.project_id) : '';
+        let folderId: string | undefined;
+        if (projectId) {
+          let folder = projectFolders.get(projectId);
+          if (!folder) {
+            folder = { id: generateId(), name: `Project ${projectId}`, createdAt: new Date() } as Folder;
+            projectFolders.set(projectId, folder);
+          }
+          folderId = folder.id;
+        }
+
+        const dueRaw = t.due?.date || t.due?.datetime || t.due_date || t.dueDate;
+        tasks.push({
+          id: generateId(),
+          text: content,
+          completed: Boolean(t.is_completed ?? t.completed ?? t.checked),
+          priority: priorityMap[Number(t.priority) || 1] || 'none',
+          description: t.description || undefined,
+          dueDate: dueRaw ? new Date(dueRaw) : undefined,
+          tags: Array.isArray(t.labels) ? t.labels.map(String) : undefined,
+          folderId,
+          createdAt: t.created_at ? new Date(t.created_at) : new Date(),
+          modifiedAt: new Date(),
+        } as TodoItem);
+      } catch (e) {
+        failed++;
+        errors.push(`Task: ${e instanceof Error ? e.message : 'parse error'}`);
+      }
+    }
+
+    const folders = Array.from(projectFolders.values());
+    return {
+      success: true, tasks, notes: [], folders: folders.length ? folders : undefined,
+      stats: { tasks: tasks.length, notes: 0, folders: folders.length || undefined, failed },
+      errors: errors.length ? errors : undefined,
+    };
+  } catch (e) {
+    return { success: false, tasks: [], notes: [], error: `Todoist JSON parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
   }
 };
 
@@ -773,11 +891,13 @@ export const importFromFile = async (
   const onProgress = options?.onProgress;
   switch (source) {
     case 'todoist':
-      return parseTodoistCSV(text);
+      return fileType === 'json' ? parseTodoistJSON(text) : parseTodoistCSV(text);
     case 'ticktick':
       return parseTickTickCSV(text);
     case 'notion':
-      return fileType === 'json' ? parseNotionJSON(text) : parseNotionCSV(text);
+      if (fileType === 'json') return parseNotionJSON(text);
+      if (fileType === 'md' || fileType === 'markdown') return parseNotionMarkdown(text, fileName);
+      return parseNotionCSV(text);
     case 'evernote':
       return await parseEvernoteExport(text, fileName, onProgress);
     case 'csv-tasks':
@@ -793,9 +913,9 @@ export const importFromFile = async (
 
 export const getAcceptedFileTypes = (source: ImportSource): string => {
   switch (source) {
-    case 'todoist': return '.csv';
+    case 'todoist': return '.csv,.json';
     case 'ticktick': return '.csv';
-    case 'notion': return '.csv,.json';
+    case 'notion': return '.csv,.json,.md';
     case 'evernote': return '.enex,.html,.htm';
     case 'csv-tasks':
     case 'csv-notes': return '.csv';
