@@ -23,6 +23,13 @@ import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/task
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
 
+const TOUCH_LONG_PRESS_MS = 180;
+const TOUCH_SCROLL_CANCEL_PX = 16;
+const TOUCH_DRAG_START_PX = 18;
+const TOUCH_AXIS_CANCEL_PX = 28;
+const TOUCH_CANCEL_PX = 42;
+const CLICK_SUPPRESS_MS = 350;
+
 export interface FlatTaskListProps {
   /** Either a nested task tree (will be flattened) or an already-flat array of TodoItem. */
   items?: readonly TodoItem[];
@@ -113,6 +120,7 @@ export function FlatTaskList({
     startTime: number;
     currentY: number;
     dragging: boolean;
+    armed: boolean;
     scrollMode: boolean;
     title: string;
     element: HTMLElement;
