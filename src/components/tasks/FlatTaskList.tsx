@@ -24,6 +24,7 @@ import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/task
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
 import { computeInsertionPlacement, type MeasuredRow } from '@/utils/dnd/insertionPlacement';
+import { VirtualSortableList } from './VirtualSortableList';
 
 const TOUCH_LONG_PRESS_MS = 320;
 const TOUCH_SCROLL_CANCEL_PX = 16;
@@ -881,11 +882,41 @@ export function FlatTaskList({
 
   if (flat.length === 0 && emptyState) return <>{emptyState}</>;
 
-  // -------- @hello-pangea/dnd path (capped, non-virtualized) ---------------
-  // When the list fits under HELLO_PANGEA_CAP, render every row directly so
-  // hello-pangea/dnd owns the drag lifecycle. This gives users library-grade
-  // drop accuracy, native keyboard reorder (Space → ↑/↓ → Space), and
-  // accessibility announcements — none of which work in the windowed path.
+  // -------- @dnd-kit + react-virtual path (canonical, scales to 5k+) -------
+  // Single code path for ALL list sizes when DnD is enabled. Virtualizes
+  // rendering (~20–30 rows in DOM) while @dnd-kit owns the drag lifecycle,
+  // collision detection, keyboard reorder, and screen-reader announcements.
+  // Drop ⇒ optimistic arrayMove ⇒ caller persists ONE fractional rank.
+  if (dndEnabled) {
+    const sortableItems = flat.map((row) => ({ id: String(row.task.id), label: row.task.text, __row: row }));
+    return (
+      <VirtualSortableList
+        className={className}
+        items={sortableItems}
+        rowHeight={resolvedRowHeight}
+        overscan={resolvedOverscan}
+        maxHeight={maxHeight ?? '100%'}
+        onReorder={(from, to) => {
+          const startedAt = performance.now();
+          try {
+            onReorder!(from, to);
+            logPerfEvent('reorder', { list: 'tasks', via: 'dnd-kit', ok: true, from, to, count: flat.length, ms: Math.round(performance.now() - startedAt) });
+            try { (window as any).__flowistLastTaskReorder = { ok: true, via: 'dnd-kit', from, to, count: flat.length, ms: Math.round(performance.now() - startedAt), ts: Date.now() }; } catch {}
+            toast.success('Task moved', { id: 'task-reorder', duration: 900 });
+          } catch (error) {
+            logPerfEvent('reorder', { list: 'tasks', via: 'dnd-kit', ok: false, from, to, count: flat.length, error: String((error as Error)?.message ?? error) });
+            toast.error('Could not move task', { id: 'task-reorder' });
+          }
+        }}
+        renderRow={(item, i, isDragging) => (
+          <MemoRowBody row={(item as typeof item & { __row: FlatTaskRow }).__row} index={i} isActive={i === activeIndex} render={renderRow} />
+        )}
+        emptyState={emptyState}
+      />
+    );
+  }
+
+  // -------- @hello-pangea/dnd path (legacy, unreachable while dndEnabled) --
   if (useHelloPangeaDnd) {
     const onDragEnd = (result: DropResult) => {
       const from = result.source.index;
