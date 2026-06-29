@@ -32,6 +32,7 @@ const sources: { id: ImportSource; name: string; description: string; formats: s
   { id: 'evernote', name: 'Evernote', description: 'Notebooks → folders. Notes with tags, dates & images/PDFs', formats: 'ENEX, HTML' },
   { id: 'todoist', name: 'Todoist', description: 'Import tasks from Todoist CSV export', formats: 'CSV' },
   { id: 'notion', name: 'Notion', description: 'Import pages & databases from Notion', formats: 'CSV, JSON' },
+  { id: 'json', name: 'JSON', description: 'Generic JSON: array of items or { tasks, notes, folders }', formats: 'JSON' },
   { id: 'csv-tasks', name: 'CSV — Tasks', description: 'Generic CSV with column mapping', formats: 'CSV' },
   { id: 'csv-notes', name: 'CSV — Notes', description: 'Generic CSV with column mapping', formats: 'CSV' },
 ];
