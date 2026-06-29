@@ -610,6 +610,70 @@ export const deleteNoteFromDB = async (noteId: string, skipCloudSync = false): P
   }
 };
 
+// Chunked bulk delete — used by "Empty Trash" / bulk selection so removing
+// 10k+ notes never blocks the main thread or the cloud-push pipeline.
+export const bulkDeleteNotesFromDB = async (
+  noteIds: string[],
+  skipCloudSync = false,
+): Promise<void> => {
+  if (noteIds.length === 0) return;
+  const idSet = new Set(noteIds);
+
+  // 1. Cache update (synchronous, instant UI).
+  if (notesCache) {
+    notesCache = notesCache.filter(n => !idSet.has(n.id));
+    notesCacheVersion++;
+  }
+
+  // 2. Track deletions in one shot for sync. Avoids 10k debounced uploads.
+  if (!skipCloudSync) {
+    try {
+      const { trackDeletion, loadDeletions } = await import('@/utils/deletionTracker');
+      noteIds.forEach(id => trackDeletion(id, 'notes'));
+      import('@/utils/googleDriveSync').then(({ uploadCategory }) => {
+        uploadCategory('flowist_deletions.json', loadDeletions()).catch(() => {});
+      }).catch(() => {});
+    } catch {}
+    // Mirror deletes to Lovable Cloud in batches via storeBridge.
+    import('@/utils/cloudSync/storeBridge').then((mod: any) => {
+      const fn = mod.pushNoteDeletes || mod.pushNoteDelete;
+      if (typeof fn === 'function') {
+        try {
+          if (mod.pushNoteDeletes) fn(noteIds);
+          else noteIds.forEach(id => fn(id));
+        } catch {}
+      }
+    }).catch(() => {});
+  }
+
+  // 3. Chunked IndexedDB deletes (yield between chunks).
+  const CHUNK = 500;
+  for (let start = 0; start < noteIds.length; start += CHUNK) {
+    const slice = noteIds.slice(start, start + CHUNK);
+    try {
+      await withRetry((database) => new Promise<void>((resolve, reject) => {
+        const tx = database.transaction([STORE_NAME, META_STORE_NAME], 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const metaStore = tx.objectStore(META_STORE_NAME);
+        for (const id of slice) {
+          try { store.delete(id); } catch {}
+          try { metaStore.delete(id); } catch {}
+        }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      }));
+    } catch (e) {
+      console.error('bulkDeleteNotesFromDB chunk failed:', e);
+    }
+    if (start + CHUNK < noteIds.length) {
+      await new Promise(r => setTimeout(r, 0));
+    }
+  }
+
+  // 4. Single coalesced refresh event.
+  window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
+};
+
 // Clear notes cache (for fresh data reload)
 export const clearNotesCache = () => {
   notesCache = null;
