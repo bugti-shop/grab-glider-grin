@@ -23,6 +23,7 @@ const markLocalStorageMigrationDone = () => {
 
 // In-memory cache with LRU eviction for large datasets
 let tasksCache: TodoItem[] | null = null;
+let tasksCacheIndex: Map<string, number> | null = null;
 let cacheVersion = 0;
 let lastSaveTime = 0;
 const MIN_SAVE_INTERVAL = 50; // Minimum 50ms between saves
@@ -33,6 +34,7 @@ let taskUpdatedDispatchTimer: ReturnType<typeof setTimeout> | null = null;
 
 const dispatchTasksUpdated = (debounceMs = 0) => {
   if (typeof window === 'undefined') return;
+  if (debounceMs < 0) return;
   if (debounceMs <= 0) {
     window.dispatchEvent(new Event('tasksUpdated'));
     return;
@@ -42,6 +44,43 @@ const dispatchTasksUpdated = (debounceMs = 0) => {
     taskUpdatedDispatchTimer = null;
     window.dispatchEvent(new Event('tasksUpdated'));
   }, debounceMs);
+};
+
+const rebuildTasksCacheIndex = () => {
+  tasksCacheIndex = tasksCache ? new Map(tasksCache.map((task, index) => [task.id, index] as const)) : null;
+};
+
+const setTasksCache = (items: TodoItem[] | null) => {
+  tasksCache = items;
+  rebuildTasksCacheIndex();
+  cacheVersion++;
+};
+
+const mergeTasksIntoCache = (tasks: TodoItem[]) => {
+  if (!tasks.length) return;
+  if (!tasksCache) {
+    setTasksCache(tasks.slice());
+    return;
+  }
+
+  // Checkbox completion batches are tiny; avoid allocating a full Map and new
+  // 100k-row array on the main thread for every 2–4 rapid taps.
+  if (tasks.length <= 50) {
+    for (const task of tasks) {
+      const index = tasksCacheIndex?.get(task.id) ?? -1;
+      if (index >= 0) tasksCache[index] = task;
+      else {
+        tasksCache.unshift(task);
+        rebuildTasksCacheIndex();
+      }
+    }
+    cacheVersion++;
+    return;
+  }
+
+  const byId = new Map(tasksCache.map((task) => [task.id, task] as const));
+  tasks.forEach((task) => byId.set(task.id, task));
+  setTasksCache(Array.from(byId.values()));
 };
 
 const pendingCloudPush = new Map<string, TodoItem>();
@@ -72,7 +111,7 @@ const scheduleTaskCloudPush = (tasks: TodoItem[]) => {
   if (!tasks.length) return;
   tasks.forEach((task) => pendingCloudPush.set(task.id, task));
   if (pendingCloudPushTimer) clearTimeout(pendingCloudPushTimer);
-  pendingCloudPushTimer = setTimeout(flushTaskCloudPush, tasks.length > 50 ? 900 : 550);
+  pendingCloudPushTimer = setTimeout(flushTaskCloudPush, tasks.length > 50 ? 900 : 6000);
 };
 
 // Connection pooling - reuse database connection (never close)
@@ -193,13 +232,13 @@ export const loadTasksFromDB = async (): Promise<TodoItem[]> => {
           import('@/utils/duplicateName').then(({ sanitizeCopySuffixes }) => {
             const { items: cleaned, changed } = sanitizeCopySuffixes(items);
             if (changed) {
-              tasksCache = cleaned;
+              setTasksCache(cleaned);
               // Skip sync push — this is a cosmetic local cleanup that the
               // next legitimate save will mirror to the cloud.
               setTimeout(() => { void bulkPutTasksInDB(cleaned, true); }, 0);
             }
           }).catch(() => {});
-          tasksCache = items;
+          setTasksCache(items);
           resolve(items);
         } catch (e) {
           console.warn('Failed to hydrate tasks:', e);
@@ -240,8 +279,7 @@ export const saveTasksToDB = async (items: TodoItem[], skipSyncEvent = false): P
   markLocalStorageMigrationDone();
 
   // ALWAYS update in-memory cache immediately so any sync reads see latest data
-  tasksCache = items;
-  cacheVersion++;
+  setTasksCache(items);
 
   // Mirror to Lovable Cloud (offline-queued). Skipped when this save was itself
   // triggered by an inbound realtime event (skipSyncEvent=true) to avoid loops.
@@ -302,8 +340,7 @@ const flushTasksToDB = async (items: TodoItem[], skipSyncEvent = false): Promise
       
       clearRequest.onsuccess = () => {
         if (items.length === 0) {
-          tasksCache = items;
-          cacheVersion++;
+          setTasksCache(items);
           if (!skipSyncEvent) dispatchTasksUpdated();
           resolve(true);
           return;
@@ -397,7 +434,7 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
 
   // Update cache immediately
   if (tasksCache) {
-    const index = tasksCache.findIndex(t => t.id === taskId);
+    const index = tasksCacheIndex?.get(taskId) ?? -1;
     if (index >= 0) {
       tasksCache[index] = { ...tasksCache[index], ...updates };
       updatedForSync = tasksCache[index];
@@ -465,9 +502,12 @@ export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promis
   const hydrated = hydrateItem(task);
 
   if (tasksCache) {
-    const index = tasksCache.findIndex(t => t.id === hydrated.id);
+    const index = tasksCacheIndex?.get(hydrated.id) ?? -1;
     if (index >= 0) tasksCache[index] = hydrated;
-    else tasksCache = [hydrated, ...tasksCache];
+    else {
+      tasksCache.unshift(hydrated);
+      rebuildTasksCacheIndex();
+    }
     cacheVersion++;
   }
 
@@ -507,8 +547,10 @@ export const bulkUpdateTasksInDB = async (
   const hydrated = updatedTasks.map(hydrateItem);
 
   if (tasksCache) {
-    const byId = new Map(hydrated.map((task) => [task.id, task] as const));
-    tasksCache = tasksCache.map((task) => byId.get(task.id) ?? task);
+    hydrated.forEach((task) => {
+      const index = tasksCacheIndex?.get(task.id) ?? -1;
+      if (index >= 0) tasksCache![index] = task;
+    });
     cacheVersion++;
   }
 
@@ -542,21 +584,14 @@ export const bulkUpdateTasksInDB = async (
 export const bulkPutTasksInDB = async (
   newTasks: TodoItem[],
   skipSyncEvent = false,
+  taskUpdatedDelayMs = 150,
 ): Promise<boolean> => {
   if (newTasks.length === 0) return true;
   markLocalStorageMigrationDone();
 
   const hydrated = newTasks.map(hydrateItem);
 
-  // Update in-memory cache immediately so the UI sees them on the next read.
-  if (tasksCache) {
-    const byId = new Map(tasksCache.map((t) => [t.id, t] as const));
-    hydrated.forEach((t) => byId.set(t.id, t));
-    tasksCache = Array.from(byId.values());
-  } else {
-    tasksCache = hydrated.slice();
-  }
-  cacheVersion++;
+  mergeTasksIntoCache(hydrated);
 
   if (!skipSyncEvent) scheduleTaskCloudPush(hydrated);
 
@@ -576,7 +611,7 @@ export const bulkPutTasksInDB = async (
         await new Promise((r) => requestAnimationFrame(r));
       }
     }
-    if (!skipSyncEvent) dispatchTasksUpdated(150);
+    if (!skipSyncEvent) dispatchTasksUpdated(taskUpdatedDelayMs);
     return true;
   } catch (e) {
     console.warn('Bulk put tasks failed, cache is still updated:', e);
@@ -643,6 +678,7 @@ export const bulkPutTasksInWorker = async (
   newTasks: TodoItem[],
   skipSyncEvent = false,
   onProgress?: (p: { written: number; total: number }) => void,
+  taskUpdatedDelayMs = 150,
 ): Promise<boolean> => {
   if (newTasks.length === 0) return true;
   markLocalStorageMigrationDone();
@@ -650,14 +686,7 @@ export const bulkPutTasksInWorker = async (
 
   // Update the in-memory cache synchronously so the UI sees the new rows
   // immediately, regardless of how long the worker takes to drain.
-  if (tasksCache) {
-    const byId = new Map(tasksCache.map((t) => [t.id, t] as const));
-    hydrated.forEach((t) => byId.set(t.id, t));
-    tasksCache = Array.from(byId.values());
-  } else {
-    tasksCache = hydrated.slice();
-  }
-  cacheVersion++;
+  mergeTasksIntoCache(hydrated);
 
   if (!skipSyncEvent) scheduleTaskCloudPush(hydrated);
 
@@ -666,7 +695,7 @@ export const bulkPutTasksInWorker = async (
     // Graceful fallback: keep the existing main-thread batched path so adding
     // tasks always works even if the worker can't initialise.
     const t0 = performance.now();
-    const ok = await bulkPutTasksInDB(newTasks, skipSyncEvent);
+    const ok = await bulkPutTasksInDB(newTasks, skipSyncEvent, taskUpdatedDelayMs);
     import('@/utils/perfLogger').then(({ logPerfEvent }) => {
       logPerfEvent('bulkAdd', {
         count: newTasks.length,
@@ -681,7 +710,7 @@ export const bulkPutTasksInWorker = async (
   return new Promise<boolean>((resolve) => {
     bulkCallbacks.set(id, {
       resolve: (ok) => {
-        if (!skipSyncEvent) dispatchTasksUpdated(150);
+        if (!skipSyncEvent) dispatchTasksUpdated(taskUpdatedDelayMs);
         resolve(ok);
       },
       onProgress,
@@ -696,8 +725,7 @@ export const bulkPutTasksInWorker = async (
 // bypasses the empty-array safety guard in saveTasksToDB while clearing cache.
 export const clearAllTasksFromDB = async (): Promise<boolean> => {
   markLocalStorageMigrationDone();
-  tasksCache = [];
-  cacheVersion++;
+  setTasksCache([]);
 
   try {
     const db = await openDB();
@@ -724,8 +752,12 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
   markLocalStorageMigrationDone();
   // Update cache immediately
   if (tasksCache) {
-    tasksCache = tasksCache.filter(t => t.id !== taskId);
-    cacheVersion++;
+    const index = tasksCacheIndex?.get(taskId) ?? -1;
+    if (index >= 0) {
+      tasksCache.splice(index, 1);
+      rebuildTasksCacheIndex();
+      cacheVersion++;
+    }
   }
   
   // Mirror delete to Lovable Cloud
@@ -822,7 +854,7 @@ export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; co
 
 // Clear cache (call when you need fresh data)
 export const clearTasksCache = () => {
-  tasksCache = null;
+  setTasksCache(null);
 };
 
 // Get cache version for React dependencies

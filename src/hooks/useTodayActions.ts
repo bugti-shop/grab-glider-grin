@@ -29,10 +29,16 @@ import { uploadCategory } from '@/utils/googleDriveSync';
 // is no longer under the pointer, and the 4th tap appears "stuck" / lost.
 // Holding the visual state for the full ring duration lets rapid taps queue
 // without yanking the DOM out from under the user.
-// Short batch window so rapid checkmark taps feel snappy. The actual
-// large-list re-render is still wrapped in startTransition below so it
-// never blocks the discrete tap event itself.
+// Persist checkmark taps quickly, but reconcile the expensive React list after
+// the user stops tapping. This keeps 5k–100k item lists responsive while the
+// ring/checkmark paint updates immediately through the existing visual state.
 const COMPLETION_BATCH_MS = 250;
+const COMPLETION_RECONCILE_DEBOUNCE_MS = 1200;
+const COMPLETION_RECONCILE_MAX_ITEMS = 500;
+// Completion persistence still syncs to cloud, but it must not broadcast the
+// global `tasksUpdated` event: several app-wide listeners respond by loading the
+// entire task database, which is what froze the tab after 2–4 rapid taps.
+const COMPLETION_GLOBAL_EVENT_DELAY_MS = -1;
 
 interface UseTodayActionsProps {
   items: TodoItem[];
@@ -89,9 +95,26 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   // Soft paywall — free users have hard lifetime create caps; edit/delete stays allowed.
   const { softRequireCreate, softRequireMutate, canCreateWithinSoftLimit, requireCapacity } = useSubscription();
 
-  // Keep a ref to items for reliable access in async callbacks
+  // Keep O(1) task lookups for checkbox taps. A linear `items.find(...)` on
+  // every tap was enough to freeze mobile Chrome when users rapidly completed
+  // tasks in very large lists.
   const itemsRef = useRef(items);
-  itemsRef.current = items;
+  const itemsByIdRef = useRef<Map<string, TodoItem>>(new Map());
+  const itemIndexByIdRef = useRef<Map<string, number>>(new Map());
+  const rebuildItemLookups = useCallback((source: TodoItem[]) => {
+    const byId = new Map<string, TodoItem>();
+    const byIndex = new Map<string, number>();
+    source.forEach((item, index) => {
+      byId.set(item.id, item);
+      byIndex.set(item.id, index);
+    });
+    itemsByIdRef.current = byId;
+    itemIndexByIdRef.current = byIndex;
+  }, []);
+  if (itemsRef.current !== items || itemsByIdRef.current.size !== items.length) {
+    itemsRef.current = items;
+    rebuildItemLookups(items);
+  }
   const pendingDeferredCompletionUpdatesRef = useRef<Map<string, Partial<TodoItem>>>(new Map());
   const pendingCompletionPersistTasksRef = useRef<Map<string, TodoItem>>(new Map());
   const deferredCompletionFlushTimerRef = useRef<number | null>(null);
@@ -134,26 +157,37 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     startTransition(() => {
       setItems(prev => {
         let changed = false;
-        const next = prev.map(item => {
-          const updates = updatesById.get(item.id);
-          if (!updates) return item;
+        const next = prev.slice();
+        updatesById.forEach((updates, id) => {
+          const index = itemIndexByIdRef.current.get(id);
+          if (index == null || index < 0 || index >= next.length) return;
+          const item = next[index];
+          if (!item || item.id !== id) return;
           changed = true;
-          return { ...item, ...updates };
+          next[index] = { ...item, ...updates };
         });
-        if (changed) itemsRef.current = next;
+        if (changed) {
+          itemsRef.current = next;
+          rebuildItemLookups(next);
+        }
         return changed ? next : prev;
       });
     });
-  }, [markSingleTaskPersisted, setItems]);
+  }, [markSingleTaskPersisted, rebuildItemLookups, setItems]);
 
   const queueDeferredCompletionState = useCallback((itemId: string, updates: Partial<TodoItem>) => {
-    pendingDeferredCompletionUpdatesRef.current.set(itemId, updates);
-    // Do not keep pushing the timer out while the user taps many tasks quickly.
-    // That debounce starvation made tasks appear "stuck" after 3–4 rapid
-    // completions. Flush in fixed small batches instead.
-    if (!deferredCompletionFlushTimerRef.current) {
-      deferredCompletionFlushTimerRef.current = window.setTimeout(flushDeferredCompletionState, COMPLETION_BATCH_MS);
+    // On big lists the expensive part is not IndexedDB; it is React/worker
+    // re-processing the full task array after every few checkbox taps. The task
+    // object is already mutated optimistically below, so skip the full-array
+    // reconciliation for large lists and let the next natural refresh/navigation
+    // pick up the persisted state.
+    if (itemsRef.current.length > COMPLETION_RECONCILE_MAX_ITEMS) {
+      pendingDeferredCompletionUpdatesRef.current.delete(itemId);
+      return;
     }
+    pendingDeferredCompletionUpdatesRef.current.set(itemId, updates);
+    if (deferredCompletionFlushTimerRef.current) window.clearTimeout(deferredCompletionFlushTimerRef.current);
+    deferredCompletionFlushTimerRef.current = window.setTimeout(flushDeferredCompletionState, COMPLETION_RECONCILE_DEBOUNCE_MS);
   }, [flushDeferredCompletionState]);
 
   const flushCompletionPersistence = useCallback(() => {
@@ -164,7 +198,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     pending.clear();
     markSingleTaskPersisted(true);
     void import('@/utils/taskStorage').then(({ bulkPutTasksInWorker }) =>
-      bulkPutTasksInWorker(tasks).then((persisted) => {
+      bulkPutTasksInWorker(tasks, false, undefined, COMPLETION_GLOBAL_EVENT_DELAY_MS).then((persisted) => {
         if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
       }),
     );
@@ -483,7 +517,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const updatesWithTimestamp: Partial<TodoItem> = { ...updates, modifiedAt: now };
 
     // Get the current item from ref (reliable in async contexts)
-    const currentItem = itemsRef.current.find(i => i.id === itemId);
+    const currentItem = itemsByIdRef.current.get(itemId) ?? itemsRef.current.find(i => i.id === itemId);
 
     const isNewCompletion = updates.completed === true && currentItem && !currentItem.completed;
 
@@ -538,17 +572,21 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       return next;
     });
 
-    const canDeferCompletionPaint =
-      isNewCompletion &&
+    const canUseLightCompletionPath =
       currentItem &&
       (!currentItem.repeatType || currentItem.repeatType === 'none') &&
       Object.keys(updates).every(k => k === 'completed' || k === 'completedAt' || k === 'modifiedAt');
 
-    if (canDeferCompletionPaint) {
-      // Persist immediately, but keep React's large-list filter/sort work out of
-      // the critical 900ms checkbox paint window. This keeps the colored ring
-      // duration stable even when thousands of tasks exist.
-      queueCompletionPersistence({ ...currentItem, ...updatesWithTimestamp });
+    if (canUseLightCompletionPath) {
+      // Mutate the existing task object synchronously so the already-rendered
+      // row can paint completed/uncompleted on the next lightweight visual
+      // state render. The expensive array/filter/sort reconciliation is delayed
+      // until tapping settles, preventing the 2–4 checkbox "whole app stuck"
+      // failure on large lists.
+      const optimisticTask = { ...currentItem, ...updatesWithTimestamp };
+      Object.assign(currentItem, updatesWithTimestamp);
+      itemsByIdRef.current.set(itemId, currentItem);
+      queueCompletionPersistence(optimisticTask);
       queueDeferredCompletionState(itemId, updatesWithTimestamp);
     } else {
       commitStateUpdate();

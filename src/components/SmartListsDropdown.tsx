@@ -60,7 +60,11 @@ export interface SmartListConfig {
 
 export const useSmartLists = (items: TodoItem[]) => {
   const { t } = useTranslation();
-  const today = startOfDay(new Date());
+  // Keep `today` stable for the whole calendar day. Creating a fresh Date on
+  // every render invalidated `smartLists`, which then recalculated counts by
+  // scanning every task whenever the checkbox ring animation updated.
+  const dayKey = new Date().toDateString();
+  const today = useMemo(() => startOfDay(new Date()), [dayKey]);
 
   const smartLists: SmartListConfig[] = useMemo(() => [
     {

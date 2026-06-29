@@ -78,6 +78,88 @@ const HistoryView = lazyRetry(historyFactory);
 const GroupedView = lazyRetry(groupedFactory);
 const FlatView = lazy(flatFactory);
 
+
+
+const FlatCompletionToggle = ({
+  item,
+  compactMode,
+  isPendingFromState,
+  priorityColor,
+  updateItem,
+}: {
+  item: TodoItem;
+  compactMode: boolean;
+  isPendingFromState: boolean;
+  priorityColor: string;
+  updateItem: (id: string, updates: Partial<TodoItem>) => void;
+}) => {
+  const [localPending, setLocalPending] = useState(false);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+  }, []);
+
+  const isPending = localPending || isPendingFromState;
+
+  const clearPending = useCallback(() => {
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setLocalPending(false);
+  }, []);
+
+  const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (item.completed || isPending) {
+      clearPending();
+      updateItem(item.id, { completed: false });
+      return;
+    }
+
+    const fillMs = getRingFillMs();
+    if (fillMs > 0) {
+      setLocalPending(true);
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => {
+        timerRef.current = null;
+        setLocalPending(false);
+      }, fillMs);
+    }
+    window.setTimeout(() => Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}), 0);
+    updateItem(item.id, { completed: true });
+  }, [clearPending, isPending, item.completed, item.id, updateItem]);
+
+  return (
+    <button
+      disabled={false}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+      onClick={handleClick}
+      className={cn(
+        TASK_CIRCLE.base, TASK_CIRCLE.marginTop,
+        compactMode ? TASK_CIRCLE.sizeCompact : TASK_CIRCLE.size,
+        item.completed && TASK_CIRCLE.completed,
+        isPending && TASK_CIRCLE.pending,
+      )}
+      style={{
+        borderColor: (item.completed || isPending) ? undefined : priorityColor,
+        backgroundColor: isPending ? priorityColor : undefined,
+      }}
+    >
+      {(item.completed || isPending) && (
+        <Check
+          className={cn(TASK_CHECK_ICON.base, compactMode ? TASK_CHECK_ICON.sizeCompact : TASK_CHECK_ICON.size, isPending && TASK_CHECK_ICON.pendingAnimation)}
+          style={{ color: isPending ? TASK_CHECK_ICON.pendingColor : TASK_CHECK_ICON.completedColor }}
+          strokeWidth={TASK_CHECK_ICON.strokeWidth}
+        />
+      )}
+    </button>
+  );
+};
+
 const Today = () => {
   const { t } = useTranslation();
   const location = useLocation();
@@ -396,51 +478,13 @@ const Today = () => {
               <Checkbox checked={selectedTaskIds.has(item.id)} onCheckedChange={() => handleSelectTask(item.id)} className={cn(compactMode ? "h-4 w-4" : "h-5 w-5", "mt-0.5")} />
             )}
             
-            <button
-              disabled={false}
-              onTouchStart={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
-              onTouchEnd={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                const isPending = isVisuallyPending;
-                if (item.completed || isPending) {
-                  const timer = pendingVisualCompleteTimers.current.get(item.id);
-                  if (timer) {
-                    clearTimeout(timer);
-                    pendingVisualCompleteTimers.current.delete(item.id);
-                  }
-                  setPendingVisualCompleteIds((prev) => {
-                    const next = new Set(prev);
-                    next.delete(item.id);
-                    return next;
-                  });
-                  if (item.completed || isPending) updateItem(item.id, { completed: false });
-                  return;
-                }
-                showCompletionFill(item.id);
-                window.setTimeout(() => Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}), 0);
-                updateItem(item.id, { completed: true });
-              }}
-              className={cn(
-                TASK_CIRCLE.base, TASK_CIRCLE.marginTop,
-                compactMode ? TASK_CIRCLE.sizeCompact : TASK_CIRCLE.size,
-                item.completed && TASK_CIRCLE.completed,
-                isVisuallyPending && TASK_CIRCLE.pending,
-              )}
-              style={{
-                borderColor: (item.completed || isVisuallyPending) ? undefined : getPriorityColor(item.priority || 'none'),
-                backgroundColor: isVisuallyPending ? getPriorityColor(item.priority || 'none') : undefined,
-              }}
-            >
-              {(item.completed || isVisuallyPending) && (
-                <Check 
-                  className={cn(TASK_CHECK_ICON.base, compactMode ? TASK_CHECK_ICON.sizeCompact : TASK_CHECK_ICON.size, isVisuallyPending && TASK_CHECK_ICON.pendingAnimation)} 
-                  style={{ color: isVisuallyPending ? TASK_CHECK_ICON.pendingColor : TASK_CHECK_ICON.completedColor }}
-                  strokeWidth={TASK_CHECK_ICON.strokeWidth}
-                />
-              )}
-            </button>
+            <FlatCompletionToggle
+              item={item}
+              compactMode={compactMode}
+              isPendingFromState={isVisuallyPending}
+              priorityColor={getPriorityColor(item.priority || 'none')}
+              updateItem={updateItem}
+            />
             <div className="flex-1 min-w-0" onClick={() => !currentSwipe?.isSwiping && setSelectedTask(item)}>
               {item.voiceRecording ? (
                 <div className="flex items-center gap-2">
