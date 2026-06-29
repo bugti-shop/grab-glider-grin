@@ -234,8 +234,8 @@ async function dispatchTouchDrag(page: Page, fromIndex: number, targetIndex: num
   await resetDragInstrumentation(page);
 
   await page.evaluate(
-    ({ x, y, targetY, holdMs }) => {
-      const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest('[data-index]') as HTMLElement | null;
+    ({ x, y, targetY, holdMs, fromIndex }) => {
+      const el = document.querySelector<HTMLElement>(`[data-flowist-virtual-list="tasks"] [data-index="${fromIndex}"]`);
       if (!el) throw new Error('No source row under drag point');
       const fire = (type: string, clientY: number) => {
         const touch = new Touch({
@@ -271,7 +271,7 @@ async function dispatchTouchDrag(page: Page, fromIndex: number, targetIndex: num
         }, holdMs);
       });
     },
-    { x: srcX, y: srcY, targetY, holdMs }
+    { x: srcX, y: srcY, targetY, holdMs, fromIndex }
   );
 
   return readDragInstrumentation(page);
