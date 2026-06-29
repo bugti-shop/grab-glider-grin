@@ -123,23 +123,36 @@ export const autoDetectColumnMap = (headers: string[], kind: 'tasks' | 'notes'):
 };
 
 // ─── Todoist CSV Import ────────────────────────────────────
+// Columns: TYPE, CONTENT, PRIORITY, INDENT, AUTHOR, RESPONSIBLE, DATE, DATE_LANG, TIMEZONE
+// Todoist priority: 4 = highest (p1), 1 = normal (p4)
 const parseTodoistCSV = (text: string): ImportResult => {
   try {
     const rows = parseCSV(text);
     if (rows.length === 0) return { success: false, tasks: [], notes: [], error: 'No data found in CSV', stats: { tasks: 0, notes: 0 } };
 
     const tasks: TodoItem[] = [];
+    const folders: Folder[] = [];
+    let currentFolderId: string | undefined;
     let failed = 0;
     const errors: string[] = [];
 
     for (const row of rows) {
       try {
-        const type = row['TYPE'] || row['type'] || '';
+        const type = (row['TYPE'] || row['type'] || '').toLowerCase();
         const content = row['CONTENT'] || row['content'] || '';
-        if (!content || type === 'section') continue;
+        if (!content) continue;
+
+        if (type === 'section') {
+          const folder: Folder = { id: generateId(), name: content, createdAt: new Date() } as Folder;
+          folders.push(folder);
+          currentFolderId = folder.id;
+          continue;
+        }
+        if (type && type !== 'task' && type !== 'note') continue;
 
         const priorityMap: Record<string, Priority> = { '1': 'none', '2': 'low', '3': 'medium', '4': 'high' };
         const rawPriority = row['PRIORITY'] || row['priority'] || '1';
+        const dateStr = row['DATE'] || row['date'] || '';
 
         tasks.push({
           id: generateId(),
@@ -147,19 +160,88 @@ const parseTodoistCSV = (text: string): ImportResult => {
           completed: false,
           priority: priorityMap[rawPriority] || 'none',
           description: row['DESCRIPTION'] || row['description'] || undefined,
-          dueDate: (row['DATE'] || row['date']) ? new Date(row['DATE'] || row['date']) : undefined,
+          dueDate: dateStr ? new Date(dateStr) : undefined,
+          folderId: currentFolderId,
           createdAt: new Date(),
           modifiedAt: new Date(),
-        });
+        } as TodoItem);
       } catch (e) {
         failed++;
         errors.push(`Row skipped: ${e instanceof Error ? e.message : 'unknown'}`);
       }
     }
 
-    return { success: true, tasks, notes: [], stats: { tasks: tasks.length, notes: 0, failed }, errors: errors.length ? errors : undefined };
+    return { success: true, tasks, notes: [], folders, stats: { tasks: tasks.length, notes: 0, folders: folders.length, failed }, errors: errors.length ? errors : undefined };
   } catch (e) {
     return { success: false, tasks: [], notes: [], error: `Todoist parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
+  }
+};
+
+// ─── TickTick CSV Import ───────────────────────────────────
+// Columns: List, Title, Content, Priority, Status, Created Time, Due Time, Completed Time
+// TickTick priority: 0 = none, 1 = low, 3 = medium, 5 = high
+// TickTick status: 0 = incomplete, 1/2 = completed (2 = won't do)
+const parseTickTickCSV = (text: string): ImportResult => {
+  try {
+    // TickTick exports sometimes prefix with metadata lines starting with "Date:" / "Version:"; skip until header.
+    const cleanedLines = text.split('\n');
+    const headerIdx = cleanedLines.findIndex(l => /["']?(List|Title)["']?\s*,/.test(l));
+    const cleaned = headerIdx > 0 ? cleanedLines.slice(headerIdx).join('\n') : text;
+
+    const rows = parseCSV(cleaned);
+    if (rows.length === 0) return { success: false, tasks: [], notes: [], error: 'No data found in CSV', stats: { tasks: 0, notes: 0 } };
+
+    const tasks: TodoItem[] = [];
+    const folderMap = new Map<string, Folder>();
+    let failed = 0;
+    const errors: string[] = [];
+
+    const priorityMap: Record<string, Priority> = { '0': 'none', '1': 'low', '3': 'medium', '5': 'high' };
+
+    for (const row of rows) {
+      try {
+        const title = row['Title'] || row['title'] || '';
+        if (!title) continue;
+
+        const listName = (row['List'] || row['list'] || '').trim();
+        let folderId: string | undefined;
+        if (listName) {
+          let folder = folderMap.get(listName);
+          if (!folder) {
+            folder = { id: generateId(), name: listName, createdAt: new Date() } as Folder;
+            folderMap.set(listName, folder);
+          }
+          folderId = folder.id;
+        }
+
+        const statusRaw = (row['Status'] || row['status'] || '0').trim();
+        const completed = statusRaw !== '0' && statusRaw !== '';
+        const priorityRaw = (row['Priority'] || row['priority'] || '0').trim();
+        const dueStr = row['Due Time'] || row['due time'] || '';
+        const createdStr = row['Created Time'] || row['created time'] || '';
+        const completedStr = row['Completed Time'] || row['completed time'] || '';
+
+        tasks.push({
+          id: generateId(),
+          text: title,
+          completed,
+          priority: priorityMap[priorityRaw] || 'none',
+          description: row['Content'] || row['content'] || undefined,
+          dueDate: dueStr ? new Date(dueStr.replace(' ', 'T')) : undefined,
+          folderId,
+          createdAt: createdStr ? new Date(createdStr.replace(' ', 'T')) : new Date(),
+          modifiedAt: completedStr ? new Date(completedStr.replace(' ', 'T')) : new Date(),
+        } as TodoItem);
+      } catch (e) {
+        failed++;
+        errors.push(`Row skipped: ${e instanceof Error ? e.message : 'unknown'}`);
+      }
+    }
+
+    const folders = Array.from(folderMap.values());
+    return { success: true, tasks, notes: [], folders, stats: { tasks: tasks.length, notes: 0, folders: folders.length, failed }, errors: errors.length ? errors : undefined };
+  } catch (e) {
+    return { success: false, tasks: [], notes: [], error: `TickTick parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
   }
 };
 
