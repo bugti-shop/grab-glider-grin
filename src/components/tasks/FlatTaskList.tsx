@@ -327,20 +327,22 @@ export function FlatTaskList({
         : (parentRect?.top ?? 0) + item.start - scrollTop;
       const center = top + item.size / 2;
       if (clientY < center) {
-        return { insertionIndex: item.index, top: item.start };
+        return { insertionIndex: item.index, top: resolvedUseWindow ? item.start - parentTop : item.start };
       }
     }
 
     const last = rows[rows.length - 1];
-    return { insertionIndex: Math.min(flat.length, (last?.index ?? flat.length - 1) + 1), top: (last?.start ?? 0) + (last?.size ?? resolvedRowHeight) };
-  }, [flat.length, resolvedUseWindow, virtualizer]);
+    return {
+      insertionIndex: Math.min(flat.length, (last?.index ?? flat.length - 1) + 1),
+      top: (resolvedUseWindow ? (last?.start ?? 0) - parentTop : (last?.start ?? 0)) + (last?.size ?? resolvedRowHeight),
+    };
+  }, [flat.length, parentTop, resolvedRowHeight, resolvedUseWindow, virtualizer]);
 
   const getRowTopRelativeToList = useCallback((rowEl: HTMLElement) => {
     const rect = rowEl.getBoundingClientRect();
-    if (resolvedUseWindow) return rect.top + window.scrollY - parentTop;
     const parentRect = parentRef.current?.getBoundingClientRect();
-    return rect.top - (parentRect?.top ?? 0) + (parentRef.current?.scrollTop ?? 0);
-  }, [parentTop, resolvedUseWindow]);
+    return rect.top - (parentRect?.top ?? 0) + (resolvedUseWindow ? 0 : (parentRef.current?.scrollTop ?? 0));
+  }, [resolvedUseWindow]);
 
   const getInsertionPlacement = useCallback((clientY: number, target: EventTarget | Element | null) => {
     const targetEl = target instanceof Element ? target.closest('[data-index]') as HTMLElement | null : null;
@@ -772,7 +774,6 @@ export function FlatTaskList({
               height: 2,
               backgroundColor: 'hsl(var(--primary))',
               boxShadow: '0 0 0 1px hsl(var(--primary) / 0.35)',
-              transform: `translateY(${resolvedUseWindow ? -scrollOffset : 0}px)`,
               pointerEvents: 'none',
               zIndex: 60,
             }}
