@@ -24,6 +24,7 @@ import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/task
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
 import { computeInsertionPlacement, type MeasuredRow } from '@/utils/dnd/insertionPlacement';
+import { VirtualSortableList } from './VirtualSortableList';
 
 const TOUCH_LONG_PRESS_MS = 320;
 const TOUCH_SCROLL_CANCEL_PX = 16;
