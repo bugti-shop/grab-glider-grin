@@ -259,21 +259,21 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       }
 
       if (importResult.tasks.length > 0) {
-        const existing = await loadTodoItems();
         const tagged = importResult.tasks.map(t => ({
           ...t,
           folderId: t.folderId || taskImportFolderId,
         }));
-        await saveTodoItems([...existing, ...tagged]);
+        // Worker-backed chunked insert — keeps the UI alive at 10k+ items.
+        await bulkPutTasksInWorker(tagged);
         window.dispatchEvent(new Event('tasksUpdated'));
       }
       if (importResult.notes.length > 0) {
-        const existing = await loadNotesFromDB();
         const tagged = importResult.notes.map(n => ({
           ...n,
           folderId: n.folderId || noteImportFolderId,
         }));
-        await saveNotesToDB([...existing, ...tagged]);
+        // Chunked bulk put — does NOT re-serialise the existing store.
+        await bulkPutNotesInDB(tagged as any);
         window.dispatchEvent(new Event('notesUpdated'));
       }
 
