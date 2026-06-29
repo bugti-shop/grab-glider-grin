@@ -175,7 +175,7 @@ export const DesktopSidebar = () => {
   return (
     <aside
       className={cn(
-        'hidden md:flex flex-col md:fixed md:inset-y-0 md:left-0 z-40 border-r border-border bg-secondary/30 transition-[width] duration-200 ease-out',
+        'hidden md:flex flex-col md:fixed md:inset-y-0 md:left-0 z-40 border-r border-border bg-secondary transition-[width] duration-200 ease-out',
         collapsed ? 'w-16' : 'w-60 xl:w-72'
       )}
     >
