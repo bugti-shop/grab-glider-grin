@@ -383,15 +383,15 @@ export function FlatTaskList({
       logPerfEvent('reorder', { list: 'tasks', via, ok: false, reason: 'invalid-target', from, to: insertionIndex, count: flat.length });
       return;
     }
-    if (from === insertionIndex || from + 1 === insertionIndex) {
-      try { (window as any).__flowistLastTaskReorder = { ok: true, skipped: true, reason: 'same-position', via, from, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
-      return;
-    }
     if (!onReorder) {
       try { (window as any).__flowistLastTaskReorder = { ok: false, reason: 'missing-handler', via, from, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
       return;
     }
-    const to = insertionIndex > from ? insertionIndex - 1 : insertionIndex;
+    // The insertion index is the exact visual slot painted by the blue line.
+    // Do not subtract one for downward drags: that made the persisted target
+    // land one row above the line the user released on. The reorder handlers
+    // already expect a post-drop target index, so clamp only the end boundary.
+    const to = Math.max(0, Math.min(flat.length - 1, insertionIndex));
     if (from === to) {
       try { (window as any).__flowistLastTaskReorder = { ok: true, skipped: true, reason: 'same-index', via, from, to, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
       return;
