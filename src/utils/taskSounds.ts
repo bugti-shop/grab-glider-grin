@@ -240,13 +240,18 @@ export const playCompletionSound = (): void => {
   if (now - lastPlayedAt < MIN_INTERVAL_MS) return;
   if (activeVoices >= MAX_CONCURRENT) return;
   lastPlayedAt = now;
-  scheduleVoiceRelease();
   // Defer to idle/next frame so the UI checkbox paint isn't blocked by audio graph setup.
-  const fire = () => createCompletionSound(selectedRingtone);
+  const fire = () => {
+    // Count the voice only when we actually build the WebAudio graph; otherwise
+    // a busy main thread can keep activeVoices artificially high.
+    if (activeVoices >= MAX_CONCURRENT) return;
+    scheduleVoiceRelease();
+    createCompletionSound(selectedRingtone);
+  };
   if (typeof (window as any).requestIdleCallback === 'function') {
-    (window as any).requestIdleCallback(fire, { timeout: 50 });
+    (window as any).requestIdleCallback(fire, { timeout: 450 });
   } else {
-    window.setTimeout(fire, 0);
+    window.setTimeout(fire, 120);
   }
 };
 
