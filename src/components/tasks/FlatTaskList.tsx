@@ -24,7 +24,7 @@ import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/task
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
 
-const TOUCH_LONG_PRESS_MS = 180;
+const TOUCH_LONG_PRESS_MS = 320;
 const TOUCH_SCROLL_CANCEL_PX = 16;
 const TOUCH_DRAG_START_PX = 18;
 const TOUCH_AXIS_CANCEL_PX = 28;
