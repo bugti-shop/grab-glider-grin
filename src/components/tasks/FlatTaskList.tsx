@@ -140,6 +140,11 @@ export function FlatTaskList({
   const dragFromRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [insertIndicator, setInsertIndicator] = useState<{ insertionIndex: number; top: number } | null>(null);
+  // Mirror of the most recently committed insertion index. The blue indicator
+  // line is driven by this value; on drop we must use the exact same value
+  // (NOT a recomputation from a possibly-shifted `touchend` clientY) so the
+  // drop lands precisely under the user-visible blue line.
+  const lastInsertionIndexRef = useRef<number | null>(null);
   const autoscrollRafRef = useRef<number | null>(null);
   const dragGenerationRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
@@ -332,6 +337,7 @@ export function FlatTaskList({
     dragFromRef.current = null;
     setDragOverIndex(null);
     setInsertIndicator(null);
+    lastInsertionIndexRef.current = null;
   }, [clearPointerDrag, stopAutoscroll]);
 
   const armPointerDrag = useCallback((pointerId: number) => {
@@ -523,11 +529,16 @@ export function FlatTaskList({
       return placement;
     });
     setDragOverIndex(Math.min(flat.length - 1, placement.insertionIndex));
+    lastInsertionIndexRef.current = placement.insertionIndex;
     return placement.insertionIndex;
   }, [commitSyntheticDragOver, flat.length, getInsertionPlacement]);
 
   const finishPointerDropAt = useCallback((active: NonNullable<typeof pointerDragRef.current>, clientY: number, target: EventTarget | Element | null) => {
-    const insertionIndex = updateInsertionIndicator(clientY, target);
+    // Prefer the LAST indicator value the user actually saw. touchend's
+    // clientY can drift across a midpoint vs. the last touchmove, which
+    // would otherwise drop one slot away from the rendered blue line.
+    const cached = lastInsertionIndexRef.current;
+    const insertionIndex = cached != null ? cached : updateInsertionIndicator(clientY, target);
     active.over = insertionIndex;
     try {
       (window as any).__flowistLastTaskDrop = {

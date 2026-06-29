@@ -795,6 +795,68 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
   }
 };
 
+// Chunked bulk delete — used by selection-mode "Delete" so removing 10k+
+// tasks never blocks the main thread or the cloud-push pipeline.
+export const bulkDeleteTasksFromDB = async (
+  taskIds: string[],
+  skipSyncEvent = false,
+): Promise<boolean> => {
+  if (taskIds.length === 0) return true;
+  markLocalStorageMigrationDone();
+  const idSet = new Set(taskIds);
+
+  // 1. Cache update — synchronous so the UI hides rows immediately.
+  if (tasksCache) {
+    tasksCache = tasksCache.filter(t => !idSet.has(t.id));
+    rebuildTasksCacheIndex();
+    cacheVersion++;
+  }
+
+  // 2. Single tracker write + cloud deletes (batched).
+  if (!skipSyncEvent) {
+    try {
+      const { trackDeletion, loadDeletions } = await import('@/utils/deletionTracker');
+      taskIds.forEach(id => trackDeletion(id, 'tasks'));
+      import('@/utils/googleDriveSync').then(({ uploadCategory }) => {
+        uploadCategory('flowist_deletions.json', loadDeletions()).catch(() => {});
+      }).catch(() => {});
+    } catch {}
+    import('@/utils/cloudSync/storeBridge').then((mod: any) => {
+      const fn = mod.pushTaskDeletes || mod.pushTaskDelete;
+      if (typeof fn === 'function') {
+        try {
+          if (mod.pushTaskDeletes) fn(taskIds);
+          else taskIds.forEach(id => fn(id));
+        } catch {}
+      }
+    }).catch(() => {});
+  }
+
+  // 3. Chunked IndexedDB deletes (yield between chunks).
+  try {
+    const db = await openDB();
+    const CHUNK = 500;
+    for (let start = 0; start < taskIds.length; start += CHUNK) {
+      const slice = taskIds.slice(start, start + CHUNK);
+      await new Promise<void>((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        for (const id of slice) { try { store.delete(id); } catch {} }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+      if (start + CHUNK < taskIds.length) {
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+    }
+    if (!skipSyncEvent) dispatchTasksUpdated(250);
+    return true;
+  } catch (e) {
+    console.warn('Bulk delete tasks failed, cache is still updated:', e);
+    return true;
+  }
+};
+
 // Migrate from localStorage to IndexedDB (silent, non-blocking)
 export const migrateFromLocalStorage = async (): Promise<{ migrated: boolean; count: number }> => {
   try {

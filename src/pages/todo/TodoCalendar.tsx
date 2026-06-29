@@ -377,14 +377,26 @@ const TodoCalendar = () => {
         setSelectedTaskIds(new Set(items.filter(t => !t.completed).map(t => t.id)));
         toast.success(t('todayPage.selectedTasks', { count: items.filter(t => !t.completed).length }));
         return;
-      case 'complete':
-        for (const task of selectedTasks) await handleUpdateTask(task.id, { completed: true });
+      case 'complete': {
+        const now = new Date();
+        const ids = new Set(selectedTasks.map(t => t.id));
+        const updated = items.map(i => ids.has(i.id) ? { ...i, completed: true, completedAt: now, modifiedAt: now } : i);
+        setItems(updated);
+        // Chunked update via worker-friendly bulk path (no 10k sequential awaits).
+        const { bulkUpdateTasksInDB } = await import('@/utils/taskStorage');
+        await bulkUpdateTasksInDB(updated.filter(i => ids.has(i.id)));
         toast.success(t('todayPage.completedTasks', { count: selectedTasks.length }));
         break;
-      case 'delete':
-        for (const task of selectedTasks) await handleDeleteTask(task.id);
+      }
+      case 'delete': {
+        const ids = selectedTasks.map(t => t.id);
+        const idSet = new Set(ids);
+        setItems(items.filter(i => !idSet.has(i.id)));
+        const { bulkDeleteTasksFromDB } = await import('@/utils/taskStorage');
+        await bulkDeleteTasksFromDB(ids);
         toast.success(t('todayPage.deletedTasks', { count: selectedTasks.length }));
         break;
+      }
       case 'move':
         setIsMoveToFolderOpen(true);
         return;

@@ -7,7 +7,7 @@ import { Layers, Settings, Pin, Download, ListTodo, FileText, Archive, ArchiveRe
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 
 
-import { saveNoteToDBSingle, deleteNoteFromDB, loadNoteFromDB, isNoteContentStub, makeMetadataNote } from '@/utils/noteStorage';
+import { saveNoteToDBSingle, deleteNoteFromDB, bulkDeleteNotesFromDB, loadNoteFromDB, isNoteContentStub, makeMetadataNote } from '@/utils/noteStorage';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -407,7 +407,8 @@ const Notes = () => {
     const trashed = notes.filter(n => n.isDeleted);
     const updatedNotes = notes.filter(n => !n.isDeleted);
     setNotes(updatedNotes);
-    trashed.forEach(n => deleteNoteFromDB(n.id));
+    // Single chunked delete (avoids 10k debounced cloud pushes + tx storms).
+    void bulkDeleteNotesFromDB(trashed.map(n => n.id));
     toast.success(t('notes.trashEmptied'));
   };
 
