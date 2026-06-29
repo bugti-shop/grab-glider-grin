@@ -144,11 +144,7 @@ export const FlatView = ({
                   });
                   try { Haptics.impact({ style: ImpactStyle.Light }); } catch {}
                 }}
-                renderRow={(row) => (
-                  <div data-flat-row className={FLAT_ROW_WRAPPER_CLASS}>
-                    {renderTaskItem(row.task)}
-                  </div>
-                )}
+                renderRow={renderVirtualRow}
                 emptyState={
                   <div className="text-center py-20">
                     <p className="text-muted-foreground">{t('emptyStates.noTasks')}</p>
@@ -178,11 +174,7 @@ export const FlatView = ({
                     overscan={virtualizationSettings.tasks.overscan}
                     useWindow={virtualizationSettings.tasks.windowing}
                   disableKeyboard
-                  renderRow={(row) => (
-                    <div className="border-b border-border/50">
-                      {renderTaskItem(row.task)}
-                    </div>
-                  )}
+                  renderRow={renderCompletedRow}
                 />
               </CollapsibleContent>
             </div>
