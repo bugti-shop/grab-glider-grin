@@ -1143,23 +1143,27 @@ export function FlatTaskList({
             </div>
           );
         })}
-        {insertIndicator && dragFromRef.current != null && (
-          <div
-            data-flowist-insert-line="true"
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: insertIndicator.top,
-              height: 2,
-              backgroundColor: 'hsl(var(--primary))',
-              boxShadow: '0 0 0 1px hsl(var(--primary) / 0.35)',
-              pointerEvents: 'none',
-              zIndex: 60,
-            }}
-          />
-        )}
+        {/* Imperatively-positioned insert line. Mounted once; hidden until
+            a drag begins. Position is driven by paintInsertLine() via a ref
+            so touchmove never triggers a React re-render of the list. */}
+        <div
+          ref={insertLineRef}
+          data-flowist-insert-line="true"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 2,
+            display: 'none',
+            backgroundColor: 'hsl(var(--primary))',
+            boxShadow: '0 0 0 1px hsl(var(--primary) / 0.35)',
+            pointerEvents: 'none',
+            zIndex: 60,
+            willChange: 'transform',
+          }}
+        />
       </div>
       {pointerDrag && typeof document !== 'undefined' && createPortal((
         <div
