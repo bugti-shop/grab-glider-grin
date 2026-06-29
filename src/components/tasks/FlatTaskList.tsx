@@ -37,11 +37,12 @@ const CLICK_SUPPRESS_MS = 350;
  * virtualizer + custom touch/native drag path because hello-pangea/dnd
  * cannot reorder rows that are not mounted in the DOM.
  *
- * 200 rows is comfortably under the smooth-scroll budget on mid-tier
- * mobile and matches the Inbox per-folder cap (38) several times over,
+ * 500 rows keeps the user's requested 400-task regression path on the
+ * library-driven DnD implementation while still avoiding full rendering for
+ * truly huge imported lists.
  * so the overwhelming majority of users get the library-driven UX.
  */
-const HELLO_PANGEA_CAP = 200;
+const HELLO_PANGEA_CAP = 500;
 
 /**
  * Memoized row body. Skips re-rendering when the task reference, position,
