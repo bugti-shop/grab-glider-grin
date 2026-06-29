@@ -140,6 +140,11 @@ export function FlatTaskList({
   const dragFromRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [insertIndicator, setInsertIndicator] = useState<{ insertionIndex: number; top: number } | null>(null);
+  // Mirror of the most recently committed insertion index. The blue indicator
+  // line is driven by this value; on drop we must use the exact same value
+  // (NOT a recomputation from a possibly-shifted `touchend` clientY) so the
+  // drop lands precisely under the user-visible blue line.
+  const lastInsertionIndexRef = useRef<number | null>(null);
   const autoscrollRafRef = useRef<number | null>(null);
   const dragGenerationRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
