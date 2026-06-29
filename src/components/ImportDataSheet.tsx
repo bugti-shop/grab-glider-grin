@@ -288,8 +288,9 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
   };
 
   const fields = selectedSource === 'csv-tasks' ? taskFields : noteFields;
-  const showMapping = csvHeaders !== null && !result && !isImporting;
+  const showMapping = csvHeaders !== null && !result && !isImporting && !preview;
   const showProgress = isImporting && progress;
+  const showPreview = preview !== null && !isImporting && !result;
 
   const progressPct = progress && progress.total > 0
     ? Math.min(100, Math.round((progress.current / progress.total) * 100))
