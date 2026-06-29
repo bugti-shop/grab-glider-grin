@@ -831,7 +831,7 @@ export function FlatTaskList({
     if (active.dragging) {
       event.preventDefault();
       event.stopPropagation();
-      suppressClickUntilRef.current = Date.now() + 350;
+      suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
       finishPointerDropAt(active, event.clientY, event.target);
     } else {
       clearPointerDrag();
