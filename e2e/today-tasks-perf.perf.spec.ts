@@ -19,6 +19,21 @@ const MAX_DOM_ROWS = Number(process.env.PERF_MAX_DOM_ROWS ?? 60);
 const MAX_REORDER_LATENCY_MS = Number(process.env.PERF_MAX_REORDER_LATENCY ?? 250);
 const MAX_HEAP_GROWTH_MB = Number(process.env.PERF_MAX_HEAP_GROWTH_MB ?? 25);
 const STRESS_CYCLES = Number(process.env.PERF_STRESS_CYCLES ?? 200);
+const ROW_SELECTOR = '[data-flowist-virtual-list="tasks"] [data-index]';
+
+type DropInstrumentation = {
+  from?: number;
+  insertionIndex?: number;
+  insert?: unknown;
+};
+
+type ReorderInstrumentation = {
+  ok?: boolean;
+  skipped?: boolean;
+  from?: number;
+  to?: number;
+  insertionIndex?: number;
+};
 
 /** Seed N tasks directly into the app's IndexedDB so we never time the UI. */
 async function seedTasks(page: Page, count: number) {
@@ -123,9 +138,156 @@ async function gotoToday(page: Page) {
 }
 
 async function waitForVirtualList(page: Page) {
-  await page.waitForSelector('[data-flowist-virtual-list="tasks"] [data-index]', {
+  await page.waitForSelector(ROW_SELECTOR, {
     timeout: 15_000,
   });
+}
+
+function extractPerfTitle(text: string) {
+  return text.match(/Perf task \d+/)?.[0] ?? text.trim();
+}
+
+async function rowText(page: Page, index: number) {
+  return page.locator(ROW_SELECTOR).nth(index).innerText();
+}
+
+async function resetDragInstrumentation(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as Record<string, unknown>;
+    delete w.__flowistLastTaskDrop;
+    delete w.__flowistLastTaskReorder;
+    delete w.__flowistLastTaskInsert;
+    delete w.__flowistTaskDragArmed;
+  });
+}
+
+async function readDragInstrumentation(page: Page) {
+  return page.evaluate(() => {
+    const w = window as unknown as {
+      __flowistLastTaskDrop?: DropInstrumentation;
+      __flowistLastTaskReorder?: ReorderInstrumentation;
+      __flowistLastTaskInsert?: unknown;
+      __flowistTaskDragArmed?: unknown;
+    };
+    return {
+      drop: w.__flowistLastTaskDrop,
+      reorder: w.__flowistLastTaskReorder,
+      insert: w.__flowistLastTaskInsert,
+      armed: w.__flowistTaskDragArmed,
+    };
+  });
+}
+
+async function dispatchStationaryTouch(page: Page, rowIndex: number, holdMs = 240) {
+  const row = page.locator(ROW_SELECTOR).nth(rowIndex);
+  const box = await row.boundingBox();
+  if (!box) throw new Error(`missing row ${rowIndex} box`);
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await resetDragInstrumentation(page);
+  await page.evaluate(
+    ({ x, y, holdMs }) => {
+      const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest('[data-index]') as HTMLElement | null;
+      if (!el) throw new Error('No row under stationary touch point');
+      const fire = (type: string) => {
+        const touch = new Touch({
+          identifier: 1,
+          target: el,
+          clientX: x,
+          clientY: y,
+          radiusX: 2,
+          radiusY: 2,
+          rotationAngle: 0,
+          force: 1,
+        });
+        el.dispatchEvent(new TouchEvent(type, {
+          cancelable: true,
+          bubbles: true,
+          touches: type === 'touchend' ? [] : [touch],
+          targetTouches: type === 'touchend' ? [] : [touch],
+          changedTouches: [touch],
+        }));
+      };
+      fire('touchstart');
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          fire('touchend');
+          resolve();
+        }, holdMs);
+      });
+    },
+    { x, y, holdMs }
+  );
+}
+
+async function dispatchTouchDrag(page: Page, fromIndex: number, targetIndex: number, holdMs = 240) {
+  const rows = page.locator(ROW_SELECTOR);
+  const source = rows.nth(fromIndex);
+  const target = rows.nth(targetIndex);
+  const srcBox = await source.boundingBox();
+  const tgtBox = await target.boundingBox();
+  if (!srcBox || !tgtBox) throw new Error('missing drag bounding boxes');
+
+  const srcX = srcBox.x + srcBox.width / 2;
+  const srcY = srcBox.y + srcBox.height / 2;
+  const targetY = tgtBox.y + tgtBox.height * 0.75;
+  await resetDragInstrumentation(page);
+
+  await page.evaluate(
+    ({ x, y, targetY, holdMs }) => {
+      const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest('[data-index]') as HTMLElement | null;
+      if (!el) throw new Error('No source row under drag point');
+      const fire = (type: string, clientY: number) => {
+        const touch = new Touch({
+          identifier: 1,
+          target: el,
+          clientX: x,
+          clientY,
+          radiusX: 2,
+          radiusY: 2,
+          rotationAngle: 0,
+          force: 1,
+        });
+        el.dispatchEvent(new TouchEvent(type, {
+          cancelable: true,
+          bubbles: true,
+          touches: type === 'touchend' ? [] : [touch],
+          targetTouches: type === 'touchend' ? [] : [touch],
+          changedTouches: [touch],
+        }));
+      };
+      fire('touchstart', y);
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          const firstMoveY = y + Math.sign(targetY - y) * 24;
+          fire('touchmove', firstMoveY);
+          setTimeout(() => {
+            fire('touchmove', targetY);
+            setTimeout(() => {
+              fire('touchend', targetY);
+              resolve();
+            }, 35);
+          }, 35);
+        }, holdMs);
+      });
+    },
+    { x: srcX, y: srcY, targetY, holdMs }
+  );
+
+  return readDragInstrumentation(page);
+}
+
+async function completeFirstVisibleTasksInstantly(page: Page, count: number) {
+  const rows = page.locator(ROW_SELECTOR);
+  const boxes = [] as { x: number; y: number; height: number }[];
+  for (let i = 0; i < count; i += 1) {
+    const box = await rows.nth(i).boundingBox();
+    if (!box) throw new Error(`missing row ${i} completion box`);
+    boxes.push({ x: box.x, y: box.y, height: box.height });
+  }
+  for (const box of boxes) {
+    await page.touchscreen.tap(box.x + 24, box.y + box.height / 2);
+  }
 }
 
 test.describe("Today tasks @ 5k items", () => {
@@ -143,7 +305,7 @@ test.describe("Today tasks @ 5k items", () => {
     await gotoToday(page);
     await waitForVirtualList(page);
     const rowCount = await page
-      .locator('[data-flowist-virtual-list="tasks"] [data-index]')
+      .locator(ROW_SELECTOR)
       .count();
     console.log(`[perf] rendered DOM rows: ${rowCount} (limit ${MAX_DOM_ROWS})`);
     expect(rowCount, "virtualized DOM rows").toBeGreaterThan(0);
@@ -157,70 +319,18 @@ test.describe("Today tasks @ 5k items", () => {
     await gotoToday(page);
     await waitForVirtualList(page);
 
-    const rows = page.locator('[data-flowist-virtual-list="tasks"] [data-index]');
+    const rows = page.locator(ROW_SELECTOR);
     await expect(rows.first()).toBeVisible();
 
-    const source = rows.first();
-    const target = rows.nth(3);
-    const srcBox = await source.boundingBox();
-    const tgtBox = await target.boundingBox();
-    if (!srcBox || !tgtBox) throw new Error("missing bounding boxes");
-
-    const srcX = srcBox.x + srcBox.width / 2;
-    const srcY = srcBox.y + srcBox.height / 2;
-    const tgtY = tgtBox.y + tgtBox.height / 2;
-
     const start = Date.now();
-    // Long-press → drag → drop using the touch input pipeline. Do not pre-tap
-    // the row: in the real UI a normal tap opens task details, which would put
-    // a sheet over the list and invalidate the drag target.
-    await page.evaluate(
-      ({ x, y, ty }) => {
-        const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest('[data-index]') as HTMLElement | null;
-        if (!el) return;
-        const fire = (type: string, clientX: number, clientY: number) => {
-          const touch = new Touch({
-            identifier: 1,
-            target: el,
-            clientX,
-            clientY,
-            radiusX: 2,
-            radiusY: 2,
-            rotationAngle: 0,
-            force: 1,
-          });
-          el.dispatchEvent(
-            new TouchEvent(type, {
-              cancelable: true,
-              bubbles: true,
-              touches: type === "touchend" ? [] : [touch],
-              targetTouches: type === "touchend" ? [] : [touch],
-              changedTouches: [touch],
-            })
-          );
-        };
-        fire("touchstart", x, y);
-        // Hold past long-press threshold (~250ms)
-        return new Promise<void>((resolve) => {
-          setTimeout(() => {
-            fire("touchmove", x, ty);
-            setTimeout(() => {
-              fire("touchend", x, ty);
-              resolve();
-            }, 40);
-          }, 300);
-        });
-      },
-      { x: srcX, y: srcY, ty: tgtY }
-    );
+    const instrumentation = await dispatchTouchDrag(page, 0, 3);
     const latency = Date.now() - start;
     console.log(`[perf] drag+drop latency: ${latency}ms (limit ${MAX_REORDER_LATENCY_MS})`);
 
-    const dropInstrumentation = await page.evaluate(() =>
-      (window as unknown as { __flowistLastTaskDrop?: { from: number; insertionIndex: number; insert?: unknown } }).__flowistLastTaskDrop
-    );
+    const dropInstrumentation = instrumentation.drop;
     expect(dropInstrumentation?.from, "drop fired from the dragged row").toBe(0);
     expect(dropInstrumentation?.insertionIndex, "drop computed an insert index from row midpoints").toBeGreaterThan(0);
+    expect(instrumentation.reorder?.ok, "reorder committed after drop").toBe(true);
 
     await expect(rows.first(), "drop operation completed and reordered the list").not.toContainText(
       "Perf task 1",
@@ -241,6 +351,45 @@ test.describe("Today tasks @ 5k items", () => {
     expect(latency, "drag+drop reorder latency").toBeLessThan(
       MAX_REORDER_LATENCY_MS + 1500
     );
+  });
+
+  test("rapid completion then repeated touch drags always reflect the new UI index", async ({
+    page,
+  }) => {
+    await seedTasks(page, TASK_COUNT);
+    await gotoToday(page);
+    await waitForVirtualList(page);
+
+    await dispatchStationaryTouch(page, 0);
+    const stationaryInstrumentation = await readDragInstrumentation(page);
+    expect(stationaryInstrumentation.drop, "holding/tapping without movement must not drop").toBeUndefined();
+    expect(stationaryInstrumentation.reorder, "holding/tapping without movement must not reorder").toBeUndefined();
+
+    await completeFirstVisibleTasksInstantly(page, 4);
+    await expect
+      .poll(() => rowText(page, 0), { timeout: 5_000, message: "first 4 rapid completions should flush" })
+      .toContain("Perf task 5");
+
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      const draggedTitle = extractPerfTitle(await rowText(page, 0));
+      const instrumentation = await dispatchTouchDrag(page, 0, 3);
+
+      expect(instrumentation.armed, `drag ${cycle + 1} armed only after long-press`).toBeTruthy();
+      expect(instrumentation.drop?.from, `drag ${cycle + 1} fired drop from visible index 0`).toBe(0);
+      expect(instrumentation.reorder?.ok, `drag ${cycle + 1} committed reorder`).toBe(true);
+      expect(instrumentation.reorder?.to, `drag ${cycle + 1} persisted target order index`).toBe(3);
+
+      await expect
+        .poll(() => rowText(page, 3), { timeout: 3_000, message: `drag ${cycle + 1} UI index updated` })
+        .toContain(draggedTitle);
+      await expect
+        .poll(() => rowText(page, 0), { timeout: 3_000, message: `drag ${cycle + 1} source index changed` })
+        .not.toContain(draggedTitle);
+
+      const tickStart = Date.now();
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+      expect(Date.now() - tickStart, `main thread responsive after drag ${cycle + 1}`).toBeLessThan(500);
+    }
   });
 
   test("repeated drag + complete cycles do not leak heap / freeze UI", async ({
@@ -272,7 +421,7 @@ test.describe("Today tasks @ 5k items", () => {
     const maxTickMs: number[] = [];
     for (let i = 0; i < STRESS_CYCLES; i++) {
       // Toggle complete on a random visible row via its checkbox/click target.
-      const rows = page.locator('[data-flowist-virtual-list="tasks"] [data-index]');
+      const rows = page.locator(ROW_SELECTOR);
       const total = await rows.count();
       if (total === 0) break;
       const idx = i % total;
