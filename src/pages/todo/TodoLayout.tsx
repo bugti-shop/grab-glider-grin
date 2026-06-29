@@ -7,7 +7,6 @@ import { FileText, Search, Sun, Moon, X, Crown } from 'lucide-react';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
-import { DesktopSidebar } from '@/components/desktop/DesktopSidebar';
 
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { AppLogo } from '@/components/AppLogo';
@@ -30,9 +29,8 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
 
 
   return (
-    <div className="min-h-screen bg-background lg:flex">
-      <DesktopSidebar />
-      <div className="flex-1 min-w-0 lg:flex lg:flex-col">
+    <div className="min-h-screen bg-background">
+      <div className="flex-1 min-w-0 flex flex-col">
       <header 
         className="sticky top-0 bg-background z-30"
         style={{

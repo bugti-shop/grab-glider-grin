@@ -158,7 +158,7 @@ export const DesktopSidebar = () => {
   return (
     <aside
       className={cn(
-        'hidden lg:flex flex-col h-screen sticky top-0 border-r border-border bg-secondary/30 transition-[width] duration-200 ease-out',
+        'hidden lg:flex flex-col lg:fixed lg:inset-y-0 lg:left-0 z-40 border-r border-border bg-secondary/30 transition-[width] duration-200 ease-out',
         collapsed ? 'w-16' : 'w-64 xl:w-72'
       )}
     >
@@ -211,20 +211,34 @@ export const DesktopSidebar = () => {
         {MAIN_NAV.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
+          const showHabitChild = item.id === 'habits' && !collapsed && (location.pathname === '/todo/habits' || location.pathname.startsWith('/todo/habits/'));
           return (
-            <NavLink
-              key={item.id}
-              to={item.path}
-              title={collapsed ? t(`nav.${item.id}`, item.label) : undefined}
-              className={cn(
-                'flex items-center rounded-lg text-sm font-medium transition-colors',
-                collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-                isActive ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted'
+            <div key={item.id}>
+              <NavLink
+                to={item.path}
+                title={collapsed ? t(`nav.${item.id}`, item.label) : undefined}
+                className={cn(
+                  'flex items-center rounded-lg text-sm font-medium transition-colors',
+                  collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+                  isActive ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted'
+                )}
+              >
+                <Icon className="h-4 w-4 flex-shrink-0" />
+                {!collapsed && <span className="truncate">{t(`nav.${item.id}`, item.label)}</span>}
+              </NavLink>
+              {showHabitChild && (
+                <button
+                  onClick={() => {
+                    triggerHaptic('light').catch(() => {});
+                    navigate('/todo/habits/gallery');
+                  }}
+                  className="ml-7 mt-0.5 flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-primary/90 hover:bg-primary/10 transition-colors w-[calc(100%-1.75rem)] text-left"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>{t('habits.addHabit', 'Add Habit')}</span>
+                </button>
               )}
-            >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              {!collapsed && <span className="truncate">{t(`nav.${item.id}`, item.label)}</span>}
-            </NavLink>
+            </div>
           );
         })}
       </nav>

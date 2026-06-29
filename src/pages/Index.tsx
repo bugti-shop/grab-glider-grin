@@ -9,7 +9,6 @@ import { NoteCard } from '@/components/NoteCard';
 import { logPerfEvent } from '@/utils/perfLogger';
 import { NoteEditor } from '@/components/NoteEditor';
 import { BottomNavigation } from '@/components/BottomNavigation';
-import { DesktopSidebar } from '@/components/desktop/DesktopSidebar';
 
 
 import { FolderManager } from '@/components/FolderManager';
@@ -971,9 +970,8 @@ const Index = () => {
   const hasAnyVisibleNotes = favoriteNotes.length > 0 || regularNotes.length > 0;
 
   return (
-    <div className="min-h-screen min-h-screen-dynamic bg-background pb-14 lg:pb-0 lg:flex">
-      <DesktopSidebar />
-      <div className="flex-1 min-w-0 lg:flex lg:flex-col">
+    <div className="min-h-screen min-h-screen-dynamic bg-background pb-14 lg:pb-0">
+      <div className="flex-1 min-w-0 flex flex-col">
       <header 
         className="sticky top-0 bg-background z-10"
         style={{
