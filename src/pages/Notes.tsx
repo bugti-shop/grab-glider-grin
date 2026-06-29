@@ -433,9 +433,8 @@ const Notes = () => {
   };
 
   return (
-    <div className="min-h-screen min-h-screen-dynamic bg-background pb-14 lg:pb-0 lg:flex">
-      <DesktopSidebar />
-      <div className="flex-1 min-w-0 lg:flex lg:flex-col">
+    <div className="min-h-screen min-h-screen-dynamic bg-background pb-14 lg:pb-0">
+      <div className="flex-1 min-w-0 flex flex-col">
       <header className="bg-background sticky top-0 z-10" style={{ paddingTop: 'var(--safe-top, 0px)' }}>
          <div className="w-full max-w-5xl xl:max-w-6xl mx-auto px-2 xs:px-3 sm:px-4 lg:px-8 pt-3 pb-2">
           <div className="flex items-center justify-between gap-1 xs:gap-2">
