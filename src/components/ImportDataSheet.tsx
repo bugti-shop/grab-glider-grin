@@ -49,7 +49,7 @@ const csvCell = (v: unknown): string => {
 
 const downloadPreviewCsv = (
   taskRows: { text: string; folder: string; status: string; priority: string; due: string; depth: number }[],
-  noteRows: { title: string; folder: string }[],
+  noteRows: { title: string; folder: string; status: string; priority: string; due: string }[],
   fileName: string,
 ) => {
   const header = ['kind', 'row', 'title', 'folder', 'status', 'priority', 'due', 'depth'];
@@ -61,7 +61,7 @@ const downloadPreviewCsv = (
   });
   noteRows.forEach((r, i) => {
     lines.push([
-      'note', i + 1, r.title, r.folder, '', '', '', '',
+      'note', i + 1, r.title, r.folder, r.status, r.priority, r.due, '',
     ].map(csvCell).join(','));
   });
   const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
@@ -491,10 +491,19 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           };
           walk(preview.tasks, 0);
 
-          const noteRows = preview.notes.map(n => ({
-            title: n.title || '(untitled)',
-            folder: (n.folderId && folderNameById.get(n.folderId)) || importFolderName,
-          }));
+          const noteRows = preview.notes.map(n => {
+            const status = n.isDeleted ? 'Deleted' : n.isArchived ? 'Archived' : n.isPinned ? 'Pinned' : 'Active';
+            const due = n.reminderEnabled && n.reminderTime
+              ? new Date(n.reminderTime as any).toLocaleDateString()
+              : '—';
+            return {
+              title: n.title || '(untitled)',
+              folder: (n.folderId && folderNameById.get(n.folderId)) || importFolderName,
+              status,
+              priority: 'none',
+              due,
+            };
+          });
 
           const MAX = 50;
 
@@ -569,7 +578,12 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
                     {noteRows.slice(0, MAX).map((r, i) => (
                       <div key={i} className="px-3 py-2 text-xs">
                         <p className="font-medium text-foreground truncate">{r.title}</p>
-                        <p className="text-muted-foreground mt-0.5">📁 {r.folder}</p>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
+                          <span>📁 {r.folder}</span>
+                          <span>● {r.status}</span>
+                          <span>⚑ {r.priority}</span>
+                          <span>📅 {r.due}</span>
+                        </div>
                       </div>
                     ))}
                     {noteRows.length > MAX && (
