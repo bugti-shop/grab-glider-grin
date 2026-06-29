@@ -53,6 +53,13 @@ import { uploadCategory } from '@/utils/googleDriveSync';
 import { withCopySuffix } from '@/utils/duplicateName';
 import { toast } from 'sonner';
 
+const NOTE_TYPE_FOLDER_IDS = new Set(['sticky','lined','regular','code','sketch','voice','textformat','linkedin']);
+
+const getNoteFolderId = (note: Pick<Note, 'folderId'>, inboxFolderId?: string): string | undefined => {
+  if (note.folderId && !NOTE_TYPE_FOLDER_IDS.has(note.folderId)) return note.folderId;
+  return inboxFolderId;
+};
+
 const Index = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
