@@ -656,14 +656,9 @@ export function FlatTaskList({
         const to = updateInsertionIndicator(e.clientY, e.target);
         finishReorder(dragFromRef.current, to, 'blank-drop');
       } : undefined}
-      onDragLeave={nativeDndEnabled ? (e) => {
-        const next = e.relatedTarget as Node | null;
-        if (!next || !e.currentTarget.contains(next)) {
-          const gen = dragGenerationRef.current;
-          window.setTimeout(() => {
-            if (dragGenerationRef.current === gen && dragFromRef.current != null) cancelDrag();
-          }, 80);
-        }
+      onDragLeave={nativeDndEnabled ? () => {
+        // Keep the active drag alive while the cursor passes over virtual gaps;
+        // `dragend`/`drop` owns cleanup so valid drops are never cancelled early.
       } : undefined}
       style={
         resolvedUseWindow
