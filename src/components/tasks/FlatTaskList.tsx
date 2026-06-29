@@ -344,6 +344,16 @@ export function FlatTaskList({
     return rect.top - (parentRect?.top ?? 0) + (resolvedUseWindow ? 0 : (parentRef.current?.scrollTop ?? 0));
   }, [resolvedUseWindow]);
 
+  const commitSyntheticDragOver = useCallback((target: EventTarget | Element | null, insertionIndex: number) => {
+    try {
+      (window as any).__flowistLastTaskDragOverPrevented = {
+        target: target instanceof Element ? (target.closest('[data-index]') ? 'row' : 'list-gap') : 'document',
+        insertionIndex,
+        ts: Date.now(),
+      };
+    } catch {}
+  }, []);
+
   const getInsertionPlacement = useCallback((clientY: number, target: EventTarget | Element | null) => {
     const targetEl = target instanceof Element ? target.closest('[data-index]') as HTMLElement | null : null;
     const rows = Array.from(parentRef.current?.querySelectorAll<HTMLElement>('[data-index]') ?? [])
@@ -351,43 +361,84 @@ export function FlatTaskList({
       .filter((row) => Number.isFinite(row.index))
       .sort((a, b) => a.index - b.index);
 
-    const placeBefore = (row: (typeof rows)[number]) => ({
-      insertionIndex: Math.max(0, Math.min(flat.length, row.index)),
-      top: getRowTopRelativeToList(row.rowEl),
-      debug: {
-        source: targetEl ? 'target-row' : 'gap-before-row',
-        targetIndex: row.index,
-        targetTop: Math.round(row.rect.top),
-        targetBottom: Math.round(row.rect.bottom),
-        midpoint: Math.round(row.rect.top + row.rect.height / 2),
-      },
+    const buildDebug = (
+      source: string,
+      row: (typeof rows)[number],
+      insertionIndex: number,
+      extra: Record<string, unknown> = {},
+    ) => ({
+      source,
+      targetIndex: row.index,
+      insertionIndex,
+      pointerY: Math.round(clientY),
+      targetTop: Math.round(row.rect.top),
+      targetBottom: Math.round(row.rect.bottom),
+      midpoint: Math.round(row.rect.top + row.rect.height / 2),
+      ...extra,
     });
 
-    const placeAfter = (row: (typeof rows)[number]) => ({
-      insertionIndex: Math.max(0, Math.min(flat.length, row.index + 1)),
-      top: getRowTopRelativeToList(row.rowEl) + row.rect.height,
-      debug: {
-        source: targetEl ? 'target-row' : 'gap-after-row',
-        targetIndex: row.index,
-        targetTop: Math.round(row.rect.top),
-        targetBottom: Math.round(row.rect.bottom),
-        midpoint: Math.round(row.rect.top + row.rect.height / 2),
-      },
-    });
+    const placeBefore = (row: (typeof rows)[number], source = targetEl ? 'target-row' : 'gap-before-row', extra?: Record<string, unknown>) => {
+      const insertionIndex = Math.max(0, Math.min(flat.length, row.index));
+      return {
+        insertionIndex,
+        top: getRowTopRelativeToList(row.rowEl),
+        debug: buildDebug(source, row, insertionIndex, extra),
+      };
+    };
 
-    for (const row of rows) {
-      // Gap correction: if the pointer is in the empty space before this row,
-      // insert before it instead of falling through to the last visible row.
+    const placeAfter = (row: (typeof rows)[number], source = targetEl ? 'target-row' : 'gap-after-row', extra?: Record<string, unknown>) => {
+      const insertionIndex = Math.max(0, Math.min(flat.length, row.index + 1));
+      return {
+        insertionIndex,
+        top: getRowTopRelativeToList(row.rowEl) + row.rect.height,
+        debug: buildDebug(source, row, insertionIndex, extra),
+      };
+    };
+
+    if (targetEl) {
+      const targetIndex = Number(targetEl.dataset.index);
+      const targetRow = rows.find((row) => row.rowEl === targetEl || row.index === targetIndex);
+      if (targetRow) {
+        return clientY < targetRow.rect.top + targetRow.rect.height / 2 ? placeBefore(targetRow) : placeAfter(targetRow);
+      }
+    }
+
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i];
+      const next = rows[i + 1];
       if (clientY < row.rect.top) return placeBefore(row);
       if (clientY <= row.rect.bottom) {
         return clientY < row.rect.top + row.rect.height / 2 ? placeBefore(row) : placeAfter(row);
       }
+      if (next && clientY > row.rect.bottom && clientY < next.rect.top) {
+        // Correct drops in the blank virtualized gap between two rendered rows
+        // using getBoundingClientRect midpoints, Todoist-style.
+        const prevMid = row.rect.top + row.rect.height / 2;
+        const nextMid = next.rect.top + next.rect.height / 2;
+        const split = (prevMid + nextMid) / 2;
+        return clientY < split
+          ? placeAfter(row, 'gap-midpoint-prev', { nextIndex: next.index, split: Math.round(split) })
+          : placeBefore(next, 'gap-midpoint-next', { previousIndex: row.index, split: Math.round(split) });
+      }
     }
 
-    const last = rows[rows.length - 1];
-    if (last) return placeAfter(last);
+    if (rows.length > 0) {
+      let nearest = rows[0];
+      let nearestDistance = Math.abs(clientY - (nearest.rect.top + nearest.rect.height / 2));
+      for (const row of rows.slice(1)) {
+        const distance = Math.abs(clientY - (row.rect.top + row.rect.height / 2));
+        if (distance < nearestDistance) {
+          nearest = row;
+          nearestDistance = distance;
+        }
+      }
+      return clientY < nearest.rect.top + nearest.rect.height / 2
+        ? placeBefore(nearest, 'nearest-midpoint-gap', { distance: Math.round(nearestDistance) })
+        : placeAfter(nearest, 'nearest-midpoint-gap', { distance: Math.round(nearestDistance) });
+    }
+
     const virtualPlacement = getVirtualInsertionFromClientY(clientY);
-    return { ...virtualPlacement, debug: { source: 'virtual-fallback' } };
+    return { ...virtualPlacement, debug: { source: 'virtual-fallback', pointerY: Math.round(clientY) } };
   }, [flat.length, getRowTopRelativeToList, getVirtualInsertionFromClientY]);
 
   const updateInsertionIndicator = useCallback((clientY: number, target: EventTarget | Element | null) => {
@@ -401,13 +452,14 @@ export function FlatTaskList({
     try {
       (window as any).__flowistLastTaskInsert = instrumentation;
     } catch {}
+    commitSyntheticDragOver(target, placement.insertionIndex);
     setInsertIndicator((current) => {
       if (current && current.insertionIndex === placement.insertionIndex && Math.abs(current.top - placement.top) < 0.5) return current;
       return placement;
     });
     setDragOverIndex(Math.min(flat.length - 1, placement.insertionIndex));
     return placement.insertionIndex;
-  }, [flat.length, getInsertionPlacement]);
+  }, [commitSyntheticDragOver, flat.length, getInsertionPlacement]);
 
   const finishPointerDropAt = useCallback((active: NonNullable<typeof pointerDragRef.current>, clientY: number, target: EventTarget | Element | null) => {
     const insertionIndex = updateInsertionIndicator(clientY, target);
