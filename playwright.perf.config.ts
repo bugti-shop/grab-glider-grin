@@ -24,16 +24,28 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   use: {
     baseURL: process.env.PERF_BASE_URL ?? "http://localhost:8080",
-    viewport: { width: 414, height: 896 },
-    hasTouch: true,
-    isMobile: true,
     trace: "retain-on-failure",
     video: "retain-on-failure",
   },
   projects: [
     {
-      name: "mobile-chromium",
+      name: "android-pixel-7",
       use: { ...devices["Pixel 7"] },
+    },
+    {
+      name: "android-compact",
+      use: {
+        ...devices["Pixel 5"],
+        viewport: { width: 360, height: 780 },
+      },
+    },
+    {
+      name: "iphone-15",
+      use: { ...devices["iPhone 15"] },
+    },
+    {
+      name: "iphone-se",
+      use: { ...devices["iPhone SE"] },
     },
   ],
   webServer: process.env.PERF_SKIP_WEBSERVER
