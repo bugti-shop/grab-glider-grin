@@ -978,15 +978,22 @@ export function FlatTaskList({
                 width: '100%',
                 contain: 'layout paint style',
                 transform: `translateY(${vi.start - scrollOffset}px)`,
+                // Keep the drag-source row fully opaque with its original
+                // background so it reads as the same task being moved, not a
+                // ghost. The portal-rendered ghost follows the pointer; this
+                // row gets a subtle outline + lift to indicate it's active.
+                backgroundColor: 'hsl(var(--background))',
                 boxShadow: isDragOver
                   ? undefined
-                  : isTouchDragCandidate
-                    ? 'inset 0 0 0 2px hsl(var(--primary) / 0.7)'
-                    : undefined,
-                backgroundColor: isTouchDragCandidate ? 'hsl(var(--primary) / 0.05)' : undefined,
-                opacity: dragFromRef.current === vi.index ? 0.72 : 1,
+                  : dragFromRef.current === vi.index
+                    ? '0 8px 24px hsl(var(--foreground) / 0.18), inset 0 0 0 2px hsl(var(--primary))'
+                    : isTouchDragCandidate
+                      ? 'inset 0 0 0 2px hsl(var(--primary) / 0.7)'
+                      : undefined,
+                opacity: 1,
                 cursor: dragFromRef.current === vi.index ? 'grabbing' : dndEnabled ? 'grab' : undefined,
                 touchAction: dndEnabled ? 'pan-y' : undefined,
+                willChange: dragFromRef.current === vi.index ? 'transform, box-shadow' : undefined,
               }}
             >
               {renderRow(row, vi.index, isActive)}
