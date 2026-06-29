@@ -624,18 +624,17 @@ export function FlatTaskList({
     active.currentY = touch.clientY;
 
     if (!active.dragging) {
-      const elapsed = performance.now() - active.startTime;
-      if (elapsed < 250 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+      if (!active.armed && Math.abs(dy) > TOUCH_SCROLL_CANCEL_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
         if (active.timer != null) window.clearTimeout(active.timer);
         active.timer = null;
         pointerDragRef.current = null;
         setPointerPreparingIndex(null);
         return;
       }
-      if (elapsed >= 250 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+      if (active.armed && Math.abs(dy) >= TOUCH_DRAG_START_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
         event.preventDefault();
         activatePointerDrag(active);
-      } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
+      } else if (Math.abs(dx) > TOUCH_AXIS_CANCEL_PX || (!active.armed && Math.abs(dy) > TOUCH_CANCEL_PX)) {
         if (active.timer != null) window.clearTimeout(active.timer);
         pointerDragRef.current = null;
         setPointerPreparingIndex(null);
@@ -663,7 +662,7 @@ export function FlatTaskList({
     if (active.dragging) {
       event.preventDefault();
       event.stopPropagation();
-      suppressClickUntilRef.current = Date.now() + 350;
+      suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
       const touch = event.changedTouches[0];
       const clientY = touch?.clientY ?? active.currentY;
       const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : event.target;
@@ -697,6 +696,7 @@ export function FlatTaskList({
         startTime: performance.now(),
         currentY: touch.clientY,
         dragging: false,
+        armed: false,
         scrollMode: false,
         title: row.task.text || 'Task',
         element,
@@ -704,11 +704,7 @@ export function FlatTaskList({
       };
       pointerDragRef.current = active;
       setPointerPreparingIndex(index);
-      active.timer = window.setTimeout(() => {
-        const current = pointerDragRef.current;
-        if (!current || current.pointerId !== pointerId) return;
-        activatePointerDrag(current);
-      }, 250);
+      active.timer = window.setTimeout(() => armPointerDrag(pointerId), TOUCH_LONG_PRESS_MS);
     };
 
     const onTouchMove = (event: TouchEvent) => {
@@ -721,17 +717,16 @@ export function FlatTaskList({
       active.currentY = touch.clientY;
 
       if (!active.dragging) {
-        const elapsed = performance.now() - active.startTime;
-        if (elapsed < 250 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+        if (!active.armed && Math.abs(dy) > TOUCH_SCROLL_CANCEL_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
           if (active.timer != null) window.clearTimeout(active.timer);
           pointerDragRef.current = null;
           setPointerPreparingIndex(null);
           return;
         }
-        if (elapsed >= 250 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+        if (active.armed && Math.abs(dy) >= TOUCH_DRAG_START_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
           event.preventDefault();
           activatePointerDrag(active);
-        } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
+        } else if (Math.abs(dx) > TOUCH_AXIS_CANCEL_PX || (!active.armed && Math.abs(dy) > TOUCH_CANCEL_PX)) {
           if (active.timer != null) window.clearTimeout(active.timer);
           pointerDragRef.current = null;
           setPointerPreparingIndex(null);
@@ -758,7 +753,7 @@ export function FlatTaskList({
       if (active.timer != null) window.clearTimeout(active.timer);
       if (active.dragging) {
         event.preventDefault();
-        suppressClickUntilRef.current = Date.now() + 350;
+        suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
         const touch = event.changedTouches[0];
         const clientY = touch?.clientY ?? active.currentY;
         const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : event.target;
@@ -784,7 +779,7 @@ export function FlatTaskList({
       document.removeEventListener('touchend', onTouchEnd, { capture: true });
       document.removeEventListener('touchcancel', onTouchEnd, { capture: true });
     };
-  }, [activatePointerDrag, clearPointerDrag, dndEnabled, finishPointerDropAt, flat, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
+  }, [activatePointerDrag, armPointerDrag, clearPointerDrag, dndEnabled, finishPointerDropAt, flat, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
 
   const movePointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
@@ -795,20 +790,19 @@ export function FlatTaskList({
     active.currentY = event.clientY;
 
     if (!active.dragging) {
-      const elapsed = performance.now() - active.startTime;
       // Quick movement means the user is scrolling, so cancel DnD and let the
       // browser's native pan-y scroll continue uninterrupted.
-      if (elapsed < 250 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+      if (!active.armed && Math.abs(dy) > TOUCH_SCROLL_CANCEL_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
         if (active.timer != null) window.clearTimeout(active.timer);
         active.timer = null;
         pointerDragRef.current = null;
         setPointerPreparingIndex(null);
         return;
       }
-      if (elapsed >= 250 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+      if (active.armed && Math.abs(dy) >= TOUCH_DRAG_START_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
         event.preventDefault();
         activatePointerDrag(active);
-      } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
+      } else if (Math.abs(dx) > TOUCH_AXIS_CANCEL_PX || (!active.armed && Math.abs(dy) > TOUCH_CANCEL_PX)) {
         if (active.timer != null) window.clearTimeout(active.timer);
         pointerDragRef.current = null;
         setPointerPreparingIndex(null);
