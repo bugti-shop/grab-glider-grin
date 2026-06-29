@@ -554,6 +554,110 @@ export function FlatTaskList({
     }
   }, [clearPointerDrag, finishReorder]);
 
+  useEffect(() => {
+    const root = parentRef.current;
+    if (!root || !dndEnabled) return;
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (pointerDragRef.current || isInteractiveDragTarget(event.target)) return;
+      const touch = event.touches[0];
+      const element = event.target instanceof Element ? event.target.closest('[data-index]') as HTMLElement | null : null;
+      if (!touch || !element) return;
+      const index = Number(element.dataset.index);
+      const row = Number.isFinite(index) ? flat[index] : undefined;
+      if (!row) return;
+
+      const pointerId = touch.identifier || -1;
+      const active = {
+        pointerId,
+        from: index,
+        over: index,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        lastY: touch.clientY,
+        startTime: performance.now(),
+        currentY: touch.clientY,
+        dragging: false,
+        scrollMode: false,
+        title: row.task.text || 'Task',
+        element,
+        timer: null as number | null,
+      };
+      pointerDragRef.current = active;
+      setPointerPreparingIndex(index);
+      active.timer = window.setTimeout(() => {
+        const current = pointerDragRef.current;
+        if (!current || current.pointerId !== pointerId) return;
+        activatePointerDrag(current);
+      }, 90);
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const active = pointerDragRef.current;
+      const touch = event.touches[0];
+      if (!active || !touch || active.pointerId !== (touch.identifier || -1)) return;
+
+      const dx = touch.clientX - active.startX;
+      const dy = touch.clientY - active.startY;
+      active.currentY = touch.clientY;
+
+      if (!active.dragging) {
+        const elapsed = performance.now() - active.startTime;
+        if (elapsed < 90 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+          if (active.timer != null) window.clearTimeout(active.timer);
+          pointerDragRef.current = null;
+          setPointerPreparingIndex(null);
+          return;
+        }
+        if (elapsed >= 90 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+          event.preventDefault();
+          activatePointerDrag(active);
+        } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
+          if (active.timer != null) window.clearTimeout(active.timer);
+          pointerDragRef.current = null;
+          setPointerPreparingIndex(null);
+          return;
+        } else {
+          return;
+        }
+      }
+
+      event.preventDefault();
+      const over = updateInsertionIndicator(touch.clientY, document.elementFromPoint(touch.clientX, touch.clientY));
+      if (over !== active.over) {
+        active.over = over;
+        setPointerDrag((current) => current ? { ...current, over } : current);
+      }
+      paintGhostAt(touch.clientY);
+      stopAutoscroll();
+      autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(touch.clientY));
+    };
+
+    const onTouchEnd = (event: TouchEvent) => {
+      const active = pointerDragRef.current;
+      if (!active) return;
+      if (active.timer != null) window.clearTimeout(active.timer);
+      if (active.dragging) {
+        event.preventDefault();
+        suppressClickUntilRef.current = Date.now() + 350;
+        finishReorder(active.from, active.over, 'pointer-drop');
+      } else {
+        clearPointerDrag();
+      }
+    };
+
+    root.addEventListener('touchstart', onTouchStart, { passive: true });
+    root.addEventListener('touchmove', onTouchMove, { passive: false });
+    root.addEventListener('touchend', onTouchEnd, { passive: false });
+    root.addEventListener('touchcancel', onTouchEnd, { passive: false });
+    return () => {
+      root.removeEventListener('touchstart', onTouchStart);
+      root.removeEventListener('touchmove', onTouchMove);
+      root.removeEventListener('touchend', onTouchEnd);
+      root.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [activatePointerDrag, clearPointerDrag, dndEnabled, finishReorder, flat, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
+
   const movePointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
