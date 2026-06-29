@@ -363,13 +363,16 @@ const parseNotionCSV = (text: string): ImportResult => {
 
 // ─── Notion Markdown (single page export) ──────────────────
 // Notion's per-page .md export starts with the title as an H1, optional
-// "Key: Value" property lines, then the body. Capture the page as one note.
+// "Key: Value" property lines, then the body. We capture the page as a note
+// AND extract checklist items (- [ ] / - [x]) — especially under an
+// "Action Items" section — as standalone tasks with completion + due dates.
 const parseNotionMarkdown = (text: string, fileName?: string): ImportResult => {
   try {
     const lines = text.split('\n');
     let title = '';
     const meta: Record<string, string> = {};
     let bodyStart = 0;
+    const warnings: string[] = [];
 
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i].trim();
@@ -387,9 +390,66 @@ const parseNotionMarkdown = (text: string, fileName?: string): ImportResult => {
       break;
     }
 
-    const body = lines.slice(bodyStart).join('\n').trim();
+    const bodyLines = lines.slice(bodyStart);
+    const body = bodyLines.join('\n').trim();
     const tagsRaw = meta['tags'] || meta['labels'] || '';
     const createdRaw = meta['created'] || meta['created time'] || '';
+    const pageDueRaw = meta['due date'] || meta['due'] || meta['date'] || '';
+    const pageDue = pageDueRaw ? new Date(pageDueRaw) : undefined;
+    const pageDueValid = pageDue && !isNaN(pageDue.getTime()) ? pageDue : undefined;
+
+    // ── Checklist extraction ──
+    // Treat any markdown checkbox as a task. Prefer ones under an
+    // "Action Items"-style heading; tag other checkboxes with a warning.
+    const tasks: TodoItem[] = [];
+    const ACTION_HEADING = /^#{1,6}\s+(action items?|to[- ]?do|tasks?)\b/i;
+    const CHECK_RE = /^\s*[-*+]\s+\[( |x|X)\]\s+(.+)$/;
+    // Inline date hints like "(due 2026-07-15)" or "@2026-07-15".
+    const DATE_HINT = /(?:@|due[:\s]+|\bby\s+)\s*(\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?)/i;
+
+    let inAction = false;
+    let checkboxesOutsideAction = 0;
+
+    for (const line of bodyLines) {
+      const heading = line.match(/^(#{1,6})\s+/);
+      if (heading) {
+        inAction = ACTION_HEADING.test(line);
+        continue;
+      }
+      const m = line.match(CHECK_RE);
+      if (!m) continue;
+
+      const completed = m[1].toLowerCase() === 'x';
+      let textPart = m[2].trim();
+      let due: Date | undefined = pageDueValid;
+      const dm = textPart.match(DATE_HINT);
+      if (dm) {
+        const d = new Date(dm[1].replace(' ', 'T'));
+        if (!isNaN(d.getTime())) {
+          due = d;
+          textPart = textPart.replace(dm[0], '').trim();
+        }
+      }
+
+      if (!inAction) checkboxesOutsideAction++;
+
+      tasks.push({
+        id: generateId(),
+        text: textPart,
+        completed,
+        priority: 'none',
+        dueDate: due,
+        createdAt: createdRaw ? new Date(createdRaw) : new Date(),
+        modifiedAt: new Date(),
+      } as TodoItem);
+    }
+
+    if (checkboxesOutsideAction > 0) {
+      warnings.push(`${checkboxesOutsideAction} checklist item(s) found outside an "Action Items" heading — imported as tasks`);
+    }
+    if (pageDueRaw && !pageDueValid) {
+      warnings.push(`Unrecognized page due date: "${pageDueRaw}"`);
+    }
 
     const note: Note = {
       id: generateId(),
@@ -402,7 +462,13 @@ const parseNotionMarkdown = (text: string, fileName?: string): ImportResult => {
       updatedAt: new Date(),
     } as Note;
 
-    return { success: true, tasks: [], notes: [note], stats: { tasks: 0, notes: 1 } };
+    return {
+      success: true,
+      tasks,
+      notes: [note],
+      stats: { tasks: tasks.length, notes: 1 },
+      warnings: warnings.length ? warnings : undefined,
+    };
   } catch (e) {
     return { success: false, tasks: [], notes: [], error: `Markdown parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
   }
