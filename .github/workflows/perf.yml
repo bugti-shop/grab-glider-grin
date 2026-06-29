@@ -1,0 +1,57 @@
+name: Perf — Today tasks @ 5k
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "src/components/tasks/**"
+      - "src/utils/taskStorage.ts"
+      - "src/utils/taskOrderStorage.ts"
+      - "src/pages/todo/**"
+      - "e2e/**"
+      - "playwright.perf.config.ts"
+      - ".github/workflows/perf.yml"
+  workflow_dispatch:
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Thresholds — fail the build if perf regresses past these.
+      PERF_TASK_COUNT: "5000"
+      PERF_MAX_RENDER_MS: "2500"
+      PERF_MAX_DOM_ROWS: "60"
+      PERF_MAX_REORDER_LATENCY: "250"
+      PERF_MAX_HEAP_GROWTH_MB: "25"
+      PERF_STRESS_CYCLES: "200"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Build (sanity)
+        run: bun run build
+
+      - name: Run perf suite
+        run: bunx playwright test --config=playwright.perf.config.ts
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-perf-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14
