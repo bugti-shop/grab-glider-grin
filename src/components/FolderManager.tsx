@@ -375,6 +375,10 @@ export const FolderManager = ({
         </DropdownMenu>
       </div>
 
+      <ImportDataSheet isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
+
+
+
       {/* Add Notes Dialog */}
       <Dialog open={isAddNotesOpen} onOpenChange={setIsAddNotesOpen}>
         <DialogContent className="max-w-md">
