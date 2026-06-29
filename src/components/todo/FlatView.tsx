@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { TodoItem, TaskSection } from '@/types/note';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
@@ -101,6 +101,19 @@ export const FlatView = ({
     return () => cancelAnimationFrame(raf);
   }, [useFlatVirtualized, uncompletedItems.length]);
 
+  // Stable row renderers so FlatTaskList's memoized row bodies can skip
+  // re-renders when an unrelated task completes elsewhere in the list.
+  const renderVirtualRow = useCallback((row: { task: TodoItem }) => (
+    <div data-flat-row className={FLAT_ROW_WRAPPER_CLASS}>
+      {renderTaskItem(row.task)}
+    </div>
+  ), [renderTaskItem]);
+  const renderCompletedRow = useCallback((row: { task: TodoItem }) => (
+    <div className="border-b border-border/50">
+      {renderTaskItem(row.task)}
+    </div>
+  ), [renderTaskItem]);
+
   if (useFlatVirtualized) {
     return (
       <div ref={scrollContainerRef}>
@@ -131,11 +144,7 @@ export const FlatView = ({
                   });
                   try { Haptics.impact({ style: ImpactStyle.Light }); } catch {}
                 }}
-                renderRow={(row) => (
-                  <div data-flat-row className={FLAT_ROW_WRAPPER_CLASS}>
-                    {renderTaskItem(row.task)}
-                  </div>
-                )}
+                renderRow={renderVirtualRow}
                 emptyState={
                   <div className="text-center py-20">
                     <p className="text-muted-foreground">{t('emptyStates.noTasks')}</p>
@@ -165,11 +174,7 @@ export const FlatView = ({
                     overscan={virtualizationSettings.tasks.overscan}
                     useWindow={virtualizationSettings.tasks.windowing}
                   disableKeyboard
-                  renderRow={(row) => (
-                    <div className="border-b border-border/50">
-                      {renderTaskItem(row.task)}
-                    </div>
-                  )}
+                  renderRow={renderCompletedRow}
                 />
               </CollapsibleContent>
             </div>
