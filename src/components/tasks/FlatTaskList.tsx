@@ -788,8 +788,6 @@ export function FlatTaskList({
   const totalSize = virtualizer.getTotalSize();
   const scrollOffset = resolvedUseWindow ? parentTop : 0;
 
-  const nativeDndEnabled = dndEnabled && !isCoarsePointer;
-
   return (
     <div
       ref={parentRef}
@@ -804,22 +802,24 @@ export function FlatTaskList({
           e.stopPropagation();
         }
       } : undefined}
-      onDragOver={nativeDndEnabled ? (e) => {
+      onDragOver={dndEnabled ? (e) => {
         if (dragFromRef.current == null) return;
         e.preventDefault();
+        try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'list', ts: Date.now() }; } catch {}
         try { e.dataTransfer.dropEffect = 'move'; } catch {}
         updateInsertionIndicator(e.clientY, e.target);
         stopAutoscroll();
         autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(e.clientY));
       } : undefined}
-      onDrop={nativeDndEnabled ? (e) => {
+      onDrop={dndEnabled ? (e) => {
         if (dragFromRef.current == null) return;
         e.preventDefault();
         e.stopPropagation();
         const to = updateInsertionIndicator(e.clientY, e.target);
+        try { (window as any).__flowistLastTaskNativeDrop = { target: 'list', from: dragFromRef.current, insertionIndex: to, ts: Date.now() }; } catch {}
         finishReorder(dragFromRef.current, to, 'blank-drop');
       } : undefined}
-      onDragLeave={nativeDndEnabled ? () => {
+      onDragLeave={dndEnabled ? () => {
         // Keep the active drag alive while the cursor passes over virtual gaps;
         // `dragend`/`drop` owns cleanup so valid drops are never cancelled early.
       } : undefined}
@@ -857,7 +857,7 @@ export function FlatTaskList({
               onTouchMove={dndEnabled ? moveTouchDrag : undefined}
               onTouchEnd={dndEnabled ? endTouchDrag : undefined}
               onTouchCancel={dndEnabled ? endTouchDrag : undefined}
-              onDragStart={nativeDndEnabled ? (e) => {
+              onDragStart={dndEnabled ? (e) => {
                 dragGenerationRef.current += 1;
                 dragFromRef.current = vi.index;
                 const placement = getInsertionPlacement(e.clientY, e.currentTarget);
@@ -874,30 +874,33 @@ export function FlatTaskList({
                   window.setTimeout(() => ghost.remove(), 0);
                 } catch {}
               } : undefined}
-              onDragEnter={nativeDndEnabled ? (e) => {
+              onDragEnter={dndEnabled ? (e) => {
                 if (dragFromRef.current == null) return;
                 e.preventDefault();
+                try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'row-enter', index: vi.index, ts: Date.now() }; } catch {}
                 try { e.dataTransfer.dropEffect = 'move'; } catch {}
                 updateInsertionIndicator(e.clientY, e.currentTarget);
               } : undefined}
-              onDragOver={nativeDndEnabled ? (e) => {
+              onDragOver={dndEnabled ? (e) => {
                 if (dragFromRef.current == null) return;
                 e.preventDefault();
+                try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'row-over', index: vi.index, ts: Date.now() }; } catch {}
                 try { e.dataTransfer.dropEffect = 'move'; } catch {}
                 updateInsertionIndicator(e.clientY, e.currentTarget);
                 stopAutoscroll();
                 autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(e.clientY));
               } : undefined}
-              onDragLeave={nativeDndEnabled ? () => {} : undefined}
-              onDrop={nativeDndEnabled ? (e) => {
+              onDragLeave={dndEnabled ? () => {} : undefined}
+              onDrop={dndEnabled ? (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const payload = Number(e.dataTransfer.getData('application/x-flowist-task-index') || e.dataTransfer.getData('text/plain'));
                 const from = Number.isFinite(payload) ? payload : dragFromRef.current;
                 const to = updateInsertionIndicator(e.clientY, e.currentTarget);
+                try { (window as any).__flowistLastTaskNativeDrop = { target: 'row', from, insertionIndex: to, index: vi.index, ts: Date.now() }; } catch {}
                 finishReorder(from, to, 'drop');
               } : undefined}
-              onDragEnd={nativeDndEnabled ? cancelDrag : undefined}
+              onDragEnd={dndEnabled ? cancelDrag : undefined}
               style={{
                 position: 'absolute',
                 top: 0,
