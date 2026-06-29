@@ -528,11 +528,16 @@ export function FlatTaskList({
       return placement;
     });
     setDragOverIndex(Math.min(flat.length - 1, placement.insertionIndex));
+    lastInsertionIndexRef.current = placement.insertionIndex;
     return placement.insertionIndex;
   }, [commitSyntheticDragOver, flat.length, getInsertionPlacement]);
 
   const finishPointerDropAt = useCallback((active: NonNullable<typeof pointerDragRef.current>, clientY: number, target: EventTarget | Element | null) => {
-    const insertionIndex = updateInsertionIndicator(clientY, target);
+    // Prefer the LAST indicator value the user actually saw. touchend's
+    // clientY can drift across a midpoint vs. the last touchmove, which
+    // would otherwise drop one slot away from the rendered blue line.
+    const cached = lastInsertionIndexRef.current;
+    const insertionIndex = cached != null ? cached : updateInsertionIndicator(clientY, target);
     active.over = insertionIndex;
     try {
       (window as any).__flowistLastTaskDrop = {
