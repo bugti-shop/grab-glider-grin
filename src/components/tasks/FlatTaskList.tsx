@@ -17,6 +17,7 @@
 import { useRef, useMemo, useState, useEffect, useCallback, memo, type ReactNode, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import type { TodoItem } from '@/types/note';
 import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/tasks/flattenTasks';
@@ -29,6 +30,18 @@ const TOUCH_DRAG_START_PX = 18;
 const TOUCH_AXIS_CANCEL_PX = 28;
 const TOUCH_CANCEL_PX = 42;
 const CLICK_SUPPRESS_MS = 350;
+
+/**
+ * Maximum row count at which we render with @hello-pangea/dnd directly
+ * (no virtualization). Beyond this cap we fall back to the windowed
+ * virtualizer + custom touch/native drag path because hello-pangea/dnd
+ * cannot reorder rows that are not mounted in the DOM.
+ *
+ * 200 rows is comfortably under the smooth-scroll budget on mid-tier
+ * mobile and matches the Inbox per-folder cap (38) several times over,
+ * so the overwhelming majority of users get the library-driven UX.
+ */
+const HELLO_PANGEA_CAP = 200;
 
 /**
  * Memoized row body. Skips re-rendering when the task reference, position,
@@ -878,6 +891,77 @@ export function FlatTaskList({
   }, [flat.length, resolvedOverscan, resolvedRowHeight, resolvedUseWindow]);
 
   if (flat.length === 0 && emptyState) return <>{emptyState}</>;
+
+  // -------- @hello-pangea/dnd path (capped, non-virtualized) ---------------
+  // When the list fits under HELLO_PANGEA_CAP, render every row directly so
+  // hello-pangea/dnd owns the drag lifecycle. This gives users library-grade
+  // drop accuracy, native keyboard reorder (Space → ↑/↓ → Space), and
+  // accessibility announcements — none of which work in the windowed path.
+  if (dndEnabled && flat.length > 0 && flat.length <= HELLO_PANGEA_CAP) {
+    const onDragEnd = (result: DropResult) => {
+      const from = result.source.index;
+      const to = result.destination?.index;
+      if (to == null || to === from) return;
+      const start = performance.now();
+      try {
+        onReorder!(from, to);
+        try { (window as any).__flowistLastTaskReorder = { ok: true, via: 'hello-pangea', from, to, count: flat.length, ms: Math.round(performance.now() - start), ts: Date.now() }; } catch {}
+        logPerfEvent('reorder', { list: 'tasks', via: 'hello-pangea', ok: true, from, to, count: flat.length, ms: Math.round(performance.now() - start) });
+        toast.success('Task moved', { id: 'task-reorder', duration: 900 });
+      } catch (error) {
+        logPerfEvent('reorder', { list: 'tasks', via: 'hello-pangea', ok: false, from, to, count: flat.length, error: String((error as Error)?.message ?? error) });
+        toast.error('Could not move task', { id: 'task-reorder' });
+      }
+    };
+    return (
+      <div
+        ref={parentRef}
+        className={className}
+        data-flowist-virtual-list="tasks"
+        data-virt-windowing="hello-pangea"
+        data-virt-row-count={flat.length}
+      >
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="flat-task-list">
+            {(provided) => (
+              <div ref={provided.innerRef} {...provided.droppableProps}>
+                {flat.map((row, i) => {
+                  const key = String(row.task?.id ?? i);
+                  const isActive = i === activeIndex;
+                  return (
+                    <Draggable key={key} draggableId={key} index={i}>
+                      {(dragProvided, snapshot) => (
+                        <div
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          {...dragProvided.dragHandleProps}
+                          data-index={i}
+                          data-active={isActive ? 'true' : 'false'}
+                          style={{
+                            ...dragProvided.draggableProps.style,
+                            backgroundColor: 'hsl(var(--background))',
+                            boxShadow: snapshot.isDragging
+                              ? '0 8px 24px hsl(var(--foreground) / 0.18), inset 0 0 0 2px hsl(var(--primary))'
+                              : undefined,
+                            cursor: snapshot.isDragging ? 'grabbing' : 'grab',
+                          }}
+                        >
+                          <MemoRowBody row={row} index={i} isActive={isActive} render={renderRow} />
+                        </div>
+                      )}
+                    </Draggable>
+                  );
+                })}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+      </div>
+    );
+  }
+  // -------- end @hello-pangea/dnd path -------------------------------------
+
 
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
