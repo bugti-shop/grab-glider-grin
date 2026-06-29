@@ -39,11 +39,9 @@ const TASKS_NAV: NavItem[] = [
   { id: 'matrix', label: 'Matrix', icon: LayoutGrid, path: '/todo/matrix' },
   { id: 'countdown', label: 'Countdown', icon: Hourglass, path: '/todo/countdown' },
   { id: 'progress', label: 'Progress', icon: BarChart3, path: '/todo/progress' },
-  { id: 'notes', label: 'Notes', icon: StickyNote, path: '/notesdashboard' },
 ];
 
 const NOTES_NAV: NavItem[] = [
-  { id: 'notesHome', label: 'Notes Home', icon: Home, path: '/notesdashboard' },
   { id: 'allNotes', label: 'All Notes', icon: FileText, path: '/notes' },
   { id: 'notesCalendar', label: 'Calendar', icon: Calendar, path: '/calendar' },
   { id: 'tasks', label: 'Tasks', icon: ListChecks, path: '/todo/today' },
