@@ -544,14 +544,13 @@ export function FlatTaskList({
       (window as any).__flowistLastTaskInsert = instrumentation;
     } catch {}
     commitSyntheticDragOver(target, placement.insertionIndex);
-    setInsertIndicator((current) => {
-      if (current && current.insertionIndex === placement.insertionIndex && Math.abs(current.top - placement.top) < 0.5) return current;
-      return placement;
-    });
-    setDragOverIndex(Math.min(flat.length - 1, placement.insertionIndex));
+    // Imperative DOM update — no React re-render mid-drag. Prevents the
+    // virtualized list from reshuffling under the pointer and keeps the
+    // blue line aligned with the exact drop slot.
+    paintInsertLine(placement.top);
     lastInsertionIndexRef.current = placement.insertionIndex;
     return placement.insertionIndex;
-  }, [commitSyntheticDragOver, flat.length, getInsertionPlacement]);
+  }, [commitSyntheticDragOver, getInsertionPlacement, paintInsertLine]);
 
   const finishPointerDropAt = useCallback((active: NonNullable<typeof pointerDragRef.current>, clientY: number, target: EventTarget | Element | null) => {
     // Prefer the LAST indicator value the user actually saw. touchend's
