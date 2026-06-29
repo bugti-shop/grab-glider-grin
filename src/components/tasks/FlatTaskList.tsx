@@ -14,7 +14,7 @@
  *   Space   → fire `onToggleComplete(row)` (tasks only)
  * The active row gets `data-active="true"` so callers can style it.
  */
-import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode, type PointerEvent } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
 import type { TodoItem } from '@/types/note';
@@ -362,7 +362,7 @@ export function FlatTaskList({
     if ('vibrate' in navigator) navigator.vibrate?.(8);
   }, [paintGhostAt]);
 
-  const startPointerDrag = useCallback((event: PointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
+  const startPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
     if (!dndEnabled || !isCoarsePointer || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
     if (event.pointerType === 'pen' && event.buttons !== 1) return;
 
@@ -397,7 +397,7 @@ export function FlatTaskList({
     }, 90);
   }, [activatePointerDrag, dndEnabled, isCoarsePointer]);
 
-  const movePointerDrag = useCallback((event: PointerEvent<HTMLElement>) => {
+  const movePointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
 
@@ -451,7 +451,7 @@ export function FlatTaskList({
     autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(event.clientY));
   }, [getDropIndexFromClientY, paintGhostAt, stopAutoscroll, tickAutoscroll]);
 
-  const endPointerDrag = useCallback((event: PointerEvent<HTMLElement>) => {
+  const endPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
 
