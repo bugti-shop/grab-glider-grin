@@ -109,6 +109,8 @@ export function FlatTaskList({
     startY: number;
     currentY: number;
     dragging: boolean;
+    title: string;
+    element: HTMLElement;
     timer: number | null;
   } | null>(null);
   const [isCoarsePointer, setIsCoarsePointer] = useState(false);
@@ -340,6 +342,23 @@ export function FlatTaskList({
     return !!target.closest('button, input, textarea, select, a, [role="button"], [contenteditable="true"], [data-no-dnd="true"]');
   };
 
+  const activatePointerDrag = useCallback((active: NonNullable<typeof pointerDragRef.current>) => {
+    if (active.dragging) return;
+    active.dragging = true;
+    if (active.timer != null) {
+      window.clearTimeout(active.timer);
+      active.timer = null;
+    }
+    dragGenerationRef.current += 1;
+    dragFromRef.current = active.from;
+    setDragOverIndex(active.over);
+    setPointerDrag({ from: active.from, over: active.over, title: active.title, y: active.currentY });
+    try { active.element.setPointerCapture(active.pointerId); } catch {}
+    if (typeof document !== 'undefined') document.body.classList.add('flowist-task-dragging');
+    paintGhostAt(active.currentY);
+    if ('vibrate' in navigator) navigator.vibrate?.(8);
+  }, [paintGhostAt]);
+
   const startPointerDrag = useCallback((event: PointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
     if (!dndEnabled || !isCoarsePointer || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
     if (event.pointerType === 'pen' && event.buttons !== 1) return;
@@ -358,6 +377,8 @@ export function FlatTaskList({
       startY,
       currentY: startY,
       dragging: false,
+      title,
+      element,
       timer: null as number | null,
     };
     pointerDragRef.current = active;
@@ -366,18 +387,9 @@ export function FlatTaskList({
     active.timer = window.setTimeout(() => {
       const current = pointerDragRef.current;
       if (!current || current.pointerId !== pointerId) return;
-      current.dragging = true;
-      current.timer = null;
-      dragGenerationRef.current += 1;
-      dragFromRef.current = index;
-      setDragOverIndex(index);
-      setPointerDrag({ from: index, over: index, title, y: current.currentY });
-      try { element.setPointerCapture(pointerId); } catch {}
-      if (typeof document !== 'undefined') document.body.classList.add('flowist-task-dragging');
-      paintGhostAt(current.currentY);
-      if ('vibrate' in navigator) navigator.vibrate?.(8);
+      activatePointerDrag(current);
     }, 90);
-  }, [dndEnabled, isCoarsePointer, paintGhostAt]);
+  }, [activatePointerDrag, dndEnabled, isCoarsePointer]);
 
   const movePointerDrag = useCallback((event: PointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
@@ -388,12 +400,20 @@ export function FlatTaskList({
     active.currentY = event.clientY;
 
     if (!active.dragging) {
-      if (Math.abs(dx) > 24 || Math.abs(dy) > 24) {
+      // If the user is clearly trying to move the row, capture the drag instead
+      // of letting Chrome turn it into page scrolling. Only diagonal/horizontal
+      // movement before activation cancels the long-press candidate.
+      if (Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+        event.preventDefault();
+        activatePointerDrag(active);
+      } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
         if (active.timer != null) window.clearTimeout(active.timer);
         pointerDragRef.current = null;
         setPointerPreparingIndex(null);
+        return;
+      } else {
+        return;
       }
-      return;
     }
 
     event.preventDefault();
