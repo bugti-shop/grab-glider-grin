@@ -136,6 +136,7 @@ export function useTaskWorker() {
     smartList: string;
     selectedFolderId: string | null;
     allowedFolderIds?: string[];
+    includeUnfiledInSelectedFolder?: boolean;
     priorityFilter: string;
     statusFilter: string;
     dateFilter: string;
