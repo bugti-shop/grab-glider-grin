@@ -83,6 +83,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   const itemsRef = useRef(items);
   itemsRef.current = items;
   const deferredCompletionTimersRef = useRef<Map<string, number>>(new Map());
+  const pendingDeferredCompletionUpdatesRef = useRef<Map<string, Partial<TodoItem>>>(new Map());
+  const deferredCompletionFlushTimerRef = useRef<number | null>(null);
   const pendingCompletionStatsRef = useRef(0);
   const completionStatsTimerRef = useRef<number | null>(null);
 
@@ -106,6 +108,33 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       }),
     );
   }, [markSingleTaskPersisted, t]);
+
+  const flushDeferredCompletionState = useCallback(() => {
+    const pending = pendingDeferredCompletionUpdatesRef.current;
+    deferredCompletionFlushTimerRef.current = null;
+    if (pending.size === 0) return;
+
+    const updatesById = new Map(pending);
+    pending.clear();
+    markSingleTaskPersisted(true);
+    setItems(prev => {
+      let changed = false;
+      const next = prev.map(item => {
+        const updates = updatesById.get(item.id);
+        if (!updates) return item;
+        changed = true;
+        return { ...item, ...updates };
+      });
+      if (changed) itemsRef.current = next;
+      return changed ? next : prev;
+    });
+  }, [markSingleTaskPersisted, setItems]);
+
+  const queueDeferredCompletionState = useCallback((itemId: string, updates: Partial<TodoItem>) => {
+    pendingDeferredCompletionUpdatesRef.current.set(itemId, updates);
+    if (deferredCompletionFlushTimerRef.current) window.clearTimeout(deferredCompletionFlushTimerRef.current);
+    deferredCompletionFlushTimerRef.current = window.setTimeout(flushDeferredCompletionState, getRingFillMs());
+  }, [flushDeferredCompletionState]);
 
   const flushCompletionStats = useCallback(() => {
     const count = pendingCompletionStatsRef.current;
@@ -437,6 +466,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         clearTimeout(pendingTimer);
         deferredCompletionTimersRef.current.delete(itemId);
       }
+      pendingDeferredCompletionUpdatesRef.current.delete(itemId);
     }
 
     const persistUpdate = (skipProcessing = true) => {
@@ -483,12 +513,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       // the critical 900ms checkbox paint window. This keeps the colored ring
       // duration stable even when thousands of tasks exist.
       persistUpdate(true);
-      const timer = window.setTimeout(() => {
-        deferredCompletionTimersRef.current.delete(itemId);
-        markSingleTaskPersisted(true);
-        commitStateUpdate();
-      }, getRingFillMs());
-      deferredCompletionTimersRef.current.set(itemId, timer);
+      queueDeferredCompletionState(itemId, updatesWithTimestamp);
     } else {
       commitStateUpdate();
       persistUpdate(true);
@@ -508,7 +533,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         duration: 5000,
       });
     }
-  }, [setItems, t, softRequireMutate, markSingleTaskPersisted, queueCompletionStats]);
+  }, [setItems, t, softRequireMutate, markSingleTaskPersisted, queueCompletionStats, queueDeferredCompletionState]);
 
   const deleteItem = useCallback(async (itemId: string, _showUndo: boolean = false, skipConfirm: boolean = false) => {
     if (!softRequireMutate()) return;
