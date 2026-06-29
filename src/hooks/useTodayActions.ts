@@ -238,8 +238,13 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   }, [folders.length, requireCapacity, setFolders]);
 
   const handleEditFolder = useCallback((folderId: string, name: string, color: string, icon?: string, parentId?: string) => {
+    const target = folders.find(f => f.id === folderId);
+    if (target?.isDefault) {
+      toast.error('Inbox is a system folder and cannot be renamed.');
+      return;
+    }
     setFolders(prev => prev.map(f => f.id === folderId ? { ...f, name, color, icon, parentId, updatedAt: new Date() } as Folder : f));
-  }, [setFolders]);
+  }, [folders, setFolders]);
 
   const handleDeleteFolder = useCallback(async (folderId: string) => {
     const { getDescendantFolderIds } = await import('@/utils/folderHelpers');
@@ -247,10 +252,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const toRemove = new Set<string>([folderId, ...descendants]);
     const updatedFolders = folders.filter(f => !toRemove.has(f.id));
 
-    // Inbox / last-folder guard: never leave the user with zero folders.
+    // Inbox is protected: cannot be deleted while any other folder exists.
     const target = folders.find(f => f.id === folderId);
-    if (updatedFolders.length === 0 || (target?.isDefault && updatedFolders.length === 0)) {
-      toast.error('Cannot delete Inbox — it is your only folder.');
+    if (target?.isDefault && updatedFolders.length > 0) {
+      toast.error('Inbox cannot be deleted while other folders exist.');
+      return;
+    }
+    if (updatedFolders.length === 0) {
+      toast.error('Cannot delete your last folder.');
       return;
     }
 
