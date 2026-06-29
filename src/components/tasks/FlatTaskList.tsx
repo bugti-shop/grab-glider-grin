@@ -241,6 +241,7 @@ export function FlatTaskList({
   const virtualizer = resolvedUseWindow ? windowVirtualizer : containerVirtualizer;
   const dndEnabled = !!onReorder;
   const canUseNativeDrag = dndEnabled && !isCoarsePointer;
+  const useHelloPangeaDnd = dndEnabled && !isCoarsePointer && flat.length > 0 && flat.length <= HELLO_PANGEA_CAP;
 
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
@@ -571,7 +572,10 @@ export function FlatTaskList({
   }, [getInsertionPlacement, paintGhostAt, paintInsertLine]);
 
   const startPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
-    if (!dndEnabled || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
+    // Touch is handled by the native touch listeners below. If pointer events
+    // also arm touch drags, browser pan-y can cancel the pointer stream before
+    // our touch lifecycle sees it, which makes both scrolling and DnD feel dead.
+    if (!dndEnabled || event.pointerType === 'mouse' || event.pointerType === 'touch' || isInteractiveDragTarget(event.target)) return;
     if (pointerDragRef.current) return;
     if (event.pointerType === 'pen' && event.buttons !== 1) return;
 
@@ -698,7 +702,7 @@ export function FlatTaskList({
 
   useEffect(() => {
     const root = parentRef.current;
-    if (!root || !dndEnabled) return;
+    if (!root || !dndEnabled || useHelloPangeaDnd) return;
 
     const onTouchStart = (event: TouchEvent) => {
       if (pointerDragRef.current || isInteractiveDragTarget(event.target)) return;
@@ -804,7 +808,7 @@ export function FlatTaskList({
       document.removeEventListener('touchend', onTouchEnd, { capture: true });
       document.removeEventListener('touchcancel', onTouchEnd, { capture: true });
     };
-  }, [activatePointerDrag, armPointerDrag, clearPointerDrag, dndEnabled, finishPointerDropAt, flat, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
+  }, [activatePointerDrag, armPointerDrag, clearPointerDrag, dndEnabled, finishPointerDropAt, flat, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator, useHelloPangeaDnd]);
 
   const movePointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
@@ -882,7 +886,7 @@ export function FlatTaskList({
   // hello-pangea/dnd owns the drag lifecycle. This gives users library-grade
   // drop accuracy, native keyboard reorder (Space → ↑/↓ → Space), and
   // accessibility announcements — none of which work in the windowed path.
-  if (dndEnabled && flat.length > 0 && flat.length <= HELLO_PANGEA_CAP) {
+  if (useHelloPangeaDnd) {
     const onDragEnd = (result: DropResult) => {
       const from = result.source.index;
       const to = result.destination?.index;
@@ -905,6 +909,7 @@ export function FlatTaskList({
         data-flowist-virtual-list="tasks"
         data-virt-windowing="hello-pangea"
         data-virt-row-count={flat.length}
+        style={{ touchAction: 'pan-y' }}
       >
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="flat-task-list">
@@ -989,7 +994,7 @@ export function FlatTaskList({
       } : undefined}
       style={
         resolvedUseWindow
-          ? { position: 'relative', width: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }
+          ? { position: 'relative', width: '100%', touchAction: pointerDrag ? 'none' : 'pan-y' }
           : {
               height: maxHeight ?? '100%',
               overflowX: 'hidden',
