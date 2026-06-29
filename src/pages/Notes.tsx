@@ -803,7 +803,7 @@ const Notes = () => {
         onOpenChange={setShowTagManager}
       />
 
-      <div className="lg:hidden">
+      <div className="md:hidden">
         <BottomNavigation />
       </div>
       </div>
