@@ -14,7 +14,7 @@
  *   Space   → fire `onToggleComplete(row)` (tasks only)
  * The active row gets `data-active="true"` so callers can style it.
  */
-import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
 import type { TodoItem } from '@/types/note';
@@ -364,6 +364,7 @@ export function FlatTaskList({
 
   const startPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
     if (!dndEnabled || !isCoarsePointer || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
+    if (pointerDragRef.current) return;
     if (event.pointerType === 'pen' && event.buttons !== 1) return;
 
     const element = event.currentTarget;
@@ -396,6 +397,105 @@ export function FlatTaskList({
       activatePointerDrag(current);
     }, 90);
   }, [activatePointerDrag, dndEnabled, isCoarsePointer]);
+
+  const startTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
+    if (!dndEnabled || !isCoarsePointer || pointerDragRef.current || isInteractiveDragTarget(event.target)) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    const element = event.currentTarget;
+    const pointerId = touch.identifier || -1;
+    const startX = touch.clientX;
+    const startY = touch.clientY;
+    const active = {
+      pointerId,
+      from: index,
+      over: index,
+      startX,
+      startY,
+      lastY: startY,
+      startTime: performance.now(),
+      currentY: startY,
+      dragging: false,
+      scrollMode: false,
+      title: row.task.text || 'Task',
+      element,
+      timer: null as number | null,
+    };
+    pointerDragRef.current = active;
+    setPointerPreparingIndex(index);
+    active.timer = window.setTimeout(() => {
+      const current = pointerDragRef.current;
+      if (!current || current.pointerId !== pointerId) return;
+      activatePointerDrag(current);
+    }, 90);
+  }, [activatePointerDrag, dndEnabled, isCoarsePointer]);
+
+  const moveTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>) => {
+    const active = pointerDragRef.current;
+    const touch = event.touches[0];
+    if (!active || !touch || active.pointerId !== (touch.identifier || -1)) return;
+
+    const dx = touch.clientX - active.startX;
+    const dy = touch.clientY - active.startY;
+    active.currentY = touch.clientY;
+
+    if (!active.dragging) {
+      if (active.scrollMode) {
+        event.preventDefault();
+        window.scrollBy(0, active.lastY - touch.clientY);
+        active.lastY = touch.clientY;
+        return;
+      }
+      const elapsed = performance.now() - active.startTime;
+      if (elapsed < 90 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+        if (active.timer != null) window.clearTimeout(active.timer);
+        active.timer = null;
+        active.scrollMode = true;
+        setPointerPreparingIndex(null);
+        event.preventDefault();
+        window.scrollBy(0, active.lastY - touch.clientY);
+        active.lastY = touch.clientY;
+        return;
+      }
+      if (elapsed >= 90 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+        event.preventDefault();
+        activatePointerDrag(active);
+      } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
+        if (active.timer != null) window.clearTimeout(active.timer);
+        pointerDragRef.current = null;
+        setPointerPreparingIndex(null);
+        return;
+      } else {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    const over = getDropIndexFromClientY(touch.clientY);
+    if (over !== active.over) {
+      active.over = over;
+      setDragOverIndex(over);
+      setPointerDrag((current) => current ? { ...current, over } : current);
+    }
+    paintGhostAt(touch.clientY);
+    stopAutoscroll();
+    autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(touch.clientY));
+  }, [activatePointerDrag, getDropIndexFromClientY, paintGhostAt, stopAutoscroll, tickAutoscroll]);
+
+  const endTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>) => {
+    const active = pointerDragRef.current;
+    if (!active) return;
+    if (active.timer != null) window.clearTimeout(active.timer);
+    if (active.dragging) {
+      event.preventDefault();
+      event.stopPropagation();
+      suppressClickUntilRef.current = Date.now() + 350;
+      finishReorder(active.from, active.over, 'touch-drop');
+    } else {
+      clearPointerDrag();
+    }
+  }, [clearPointerDrag, finishReorder]);
 
   const movePointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
@@ -564,6 +664,10 @@ export function FlatTaskList({
               onPointerMove={dndEnabled ? movePointerDrag : undefined}
               onPointerUp={dndEnabled ? endPointerDrag : undefined}
               onPointerCancel={dndEnabled ? endPointerDrag : undefined}
+              onTouchStart={dndEnabled ? (e) => startTouchDrag(e, vi.index, row) : undefined}
+              onTouchMove={dndEnabled ? moveTouchDrag : undefined}
+              onTouchEnd={dndEnabled ? endTouchDrag : undefined}
+              onTouchCancel={dndEnabled ? endTouchDrag : undefined}
               onDragStart={nativeDndEnabled ? (e) => {
                 dragGenerationRef.current += 1;
                 dragFromRef.current = vi.index;
