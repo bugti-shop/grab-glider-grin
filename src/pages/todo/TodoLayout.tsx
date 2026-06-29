@@ -7,7 +7,6 @@ import { FileText, Search, Sun, Moon, X, Crown } from 'lucide-react';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
-import { DesktopSidebar } from '@/components/desktop/DesktopSidebar';
 
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { AppLogo } from '@/components/AppLogo';
