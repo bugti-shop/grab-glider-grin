@@ -686,9 +686,7 @@ const Today = () => {
               </div>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2">
-              <button onClick={() => setSelectedFolderId(null)} className={cn("flex items-center gap-2 px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0", !selectedFolderId ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted")}>
-                <FolderIcon className="h-4 w-4" />{t('smartLists.allTasks')}
-              </button>
+
               <DragDropContext onDragEnd={(result: DropResult) => {
                 if (!result.destination) return;
                 const sorted = [...folders].sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0));
