@@ -623,14 +623,13 @@ const Notes = () => {
           <NotesVirtualGrid
             notes={sortedNotes}
             getRowKey={(row) => row.map((note) => `${note.id}:${note.updatedAt instanceof Date ? note.updatedAt.getTime() : new Date(note.updatedAt).getTime()}`).join('|')}
+            onReorderByInsertion={(draggedId, insertionIndex) => handleReorderByInsertion(draggedId, insertionIndex, sortedNotes)}
             renderCard={(note) => {
               const previewText = note.metaDescription || (notesMetaById.get(note.id)?.contentPreview ?? getTextPreviewFromHtml(note.content, 180));
               return (
               <div
                 draggable={!note.isArchived && !note.isDeleted}
                 onDragStart={(e) => handleDragStart(e, note.id)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, note.id)}
                 onDragLeave={(e) => {
                   const next = e.relatedTarget as Node | null;
                   if (!next || !e.currentTarget.contains(next)) (e.currentTarget as HTMLElement).blur();
