@@ -25,6 +25,7 @@ async function seedTasks(page: Page, count: number) {
   await page.addInitScript((n: number) => {
     // Runs once per page before any app script.
     try {
+      localStorage.setItem("nota_cache_cleared_v3", "true");
       localStorage.setItem("flowist_landing_acknowledged", "true");
       sessionStorage.setItem("flowist_landing_acknowledged", "true");
       localStorage.setItem("onboarding_completed_flag", "true");
