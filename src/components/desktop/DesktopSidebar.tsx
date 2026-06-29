@@ -313,34 +313,29 @@ export const DesktopSidebar = () => {
       {collapsed && <div className="flex-1 min-h-0" />}
 
       <div className={cn('border-t border-border flex flex-col gap-0.5 p-2')}>
-        <NavLink
-          to="/profile"
-          title={collapsed ? t('nav.profile', 'Profile') : undefined}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center rounded-lg text-sm font-medium transition-colors',
-              collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-              isActive ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted'
-            )
-          }
-        >
-          <User className="h-4 w-4 flex-shrink-0" />
-          {!collapsed && <span>{t('nav.profile', 'Profile')}</span>}
-        </NavLink>
-        <NavLink
-          to="/todo/settings"
-          title={collapsed ? t('nav.settings', 'Settings') : undefined}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center rounded-lg text-sm font-medium transition-colors',
-              collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-              isActive ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted'
-            )
-          }
-        >
-          <Settings className="h-4 w-4 flex-shrink-0" />
-          {!collapsed && <span>{t('nav.settings', 'Settings')}</span>}
-        </NavLink>
+        {[
+          { to: '/profile', icon: User, key: 'profile', label: 'Profile' },
+          { to: '/todo/settings', icon: Settings, key: 'settings', label: 'Settings' },
+        ].map(({ to, icon: Icon, key, label }) => {
+          const active = isItemActive(to, location.pathname);
+          return (
+            <NavLink
+              key={key}
+              to={to}
+              title={collapsed ? t(`nav.${key}`, label) : undefined}
+              className={cn(
+                'flex items-center rounded-lg text-sm font-medium transition-colors relative',
+                collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+                active
+                  ? 'bg-primary/10 text-primary before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:rounded-r before:bg-primary'
+                  : 'text-foreground/80 hover:bg-muted'
+              )}
+            >
+              <Icon className="h-4 w-4 flex-shrink-0" />
+              {!collapsed && <span>{t(`nav.${key}`, label)}</span>}
+            </NavLink>
+          );
+        })}
       </div>
     </aside>
   );
