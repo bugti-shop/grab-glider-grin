@@ -278,16 +278,16 @@ async function dispatchTouchDrag(page: Page, fromIndex: number, targetIndex: num
 }
 
 async function completeFirstVisibleTasksInstantly(page: Page, count: number) {
-  const rows = page.locator(ROW_SELECTOR);
-  const boxes = [] as { x: number; y: number; height: number }[];
-  for (let i = 0; i < count; i += 1) {
-    const box = await rows.nth(i).boundingBox();
-    if (!box) throw new Error(`missing row ${i} completion box`);
-    boxes.push({ x: box.x, y: box.y, height: box.height });
-  }
-  for (const box of boxes) {
-    await page.touchscreen.tap(box.x + 24, box.y + box.height / 2);
-  }
+  await page.evaluate(({ selector, count }) => {
+    const rows = Array.from(document.querySelectorAll<HTMLElement>(selector)).slice(0, count);
+    if (rows.length < count) throw new Error(`Expected ${count} visible rows, got ${rows.length}`);
+    for (const row of rows) {
+      const completionButton = Array.from(row.querySelectorAll<HTMLButtonElement>('button'))
+        .find((button) => button.textContent?.trim() === '' && !button.getAttribute('aria-label'));
+      if (!completionButton) throw new Error(`Missing completion button for row ${row.dataset.index}`);
+      completionButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+    }
+  }, { selector: ROW_SELECTOR, count });
 }
 
 test.describe("Today tasks @ 5k items", () => {
