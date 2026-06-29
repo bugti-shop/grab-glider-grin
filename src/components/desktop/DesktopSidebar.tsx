@@ -55,7 +55,7 @@ const COLLAPSED_WIDTH = '4rem';
 
 const applySidebarWidth = (collapsed: boolean) => {
   if (typeof document === 'undefined' || typeof window === 'undefined') return;
-  const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+  const isDesktop = window.matchMedia('(min-width: 768px)').matches;
   document.documentElement.style.setProperty(
     '--desktop-sidebar-width',
     isDesktop ? (collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH) : '0px'
