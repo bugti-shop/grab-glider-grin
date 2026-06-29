@@ -475,8 +475,11 @@ const parseNotionMarkdown = (text: string, fileName?: string): ImportResult => {
 };
 
 // ─── Todoist JSON (REST API / backup export) ───────────────
-// Accepts { tasks: [...] } or a bare array of Todoist task objects.
+// Accepts { tasks: [...] }, { items: [...] }, or a bare array of task objects.
+// Also tolerates a top-level { projects: [...], items/tasks: [...] } backup shape.
 // Priority: 1=normal..4=urgent (Todoist API convention).
+// `due` may be: missing, a string ("2026-07-15" / ISO), or an object
+// { date, datetime, timezone, string, is_recurring }. All variants are handled.
 const parseTodoistJSON = (text: string): ImportResult => {
   try {
     const raw = JSON.parse(text);
@@ -490,18 +493,49 @@ const parseTodoistJSON = (text: string): ImportResult => {
       return { success: false, tasks: [], notes: [], error: 'No tasks found in JSON', stats: { tasks: 0, notes: 0 } };
     }
 
+    const warnings: string[] = [];
     const priorityMap: Record<number, Priority> = { 1: 'none', 2: 'low', 3: 'medium', 4: 'high' };
+
+    // Pre-seed folders from a `projects` array (gives readable names).
     const projectFolders = new Map<string, Folder>();
+    if (raw && typeof raw === 'object' && Array.isArray((raw as any).projects)) {
+      for (const p of (raw as any).projects) {
+        const pid = p?.id != null ? String(p.id) : '';
+        if (!pid) continue;
+        projectFolders.set(pid, {
+          id: generateId(),
+          name: String(p.name || `Project ${pid}`),
+          createdAt: new Date(),
+        } as Folder);
+      }
+    }
+
     const tasks: TodoItem[] = [];
     const errors: string[] = [];
     let failed = 0;
+    let droppedRecurring = 0;
+
+    // Normalize Todoist due payload → Date | undefined.
+    const resolveDue = (t: any): Date | undefined => {
+      const d = t?.due;
+      let raw: any;
+      if (d == null) raw = t?.due_date ?? t?.dueDate ?? t?.due_string;
+      else if (typeof d === 'string') raw = d;
+      else if (typeof d === 'object') {
+        if (d.is_recurring) droppedRecurring++;
+        raw = d.datetime || d.date || d.string;
+      }
+      if (!raw) return undefined;
+      const dt = new Date(String(raw).replace(' ', 'T'));
+      return isNaN(dt.getTime()) ? undefined : dt;
+    };
 
     for (const t of items) {
       try {
         const content = String(t.content ?? t.text ?? t.title ?? '').trim();
         if (!content) { failed++; continue; }
 
-        const projectId = t.project_id ? String(t.project_id) : '';
+        const projectId = t.project_id != null ? String(t.project_id) : '';
         let folderId: string | undefined;
         if (projectId) {
           let folder = projectFolders.get(projectId);
@@ -512,14 +546,16 @@ const parseTodoistJSON = (text: string): ImportResult => {
           folderId = folder.id;
         }
 
-        const dueRaw = t.due?.date || t.due?.datetime || t.due_date || t.dueDate;
+        const pNum = Number(t.priority);
+        const priority = priorityMap[Number.isFinite(pNum) && pNum >= 1 && pNum <= 4 ? pNum : 1] || 'none';
+
         tasks.push({
           id: generateId(),
           text: content,
           completed: Boolean(t.is_completed ?? t.completed ?? t.checked),
-          priority: priorityMap[Number(t.priority) || 1] || 'none',
+          priority,
           description: t.description || undefined,
-          dueDate: dueRaw ? new Date(dueRaw) : undefined,
+          dueDate: resolveDue(t),
           tags: Array.isArray(t.labels) ? t.labels.map(String) : undefined,
           folderId,
           createdAt: t.created_at ? new Date(t.created_at) : new Date(),
@@ -531,11 +567,16 @@ const parseTodoistJSON = (text: string): ImportResult => {
       }
     }
 
+    if (droppedRecurring > 0) {
+      warnings.push(`${droppedRecurring} recurring due rule(s) imported as a single due date (recurrence not supported)`);
+    }
+
     const folders = Array.from(projectFolders.values());
     return {
       success: true, tasks, notes: [], folders: folders.length ? folders : undefined,
       stats: { tasks: tasks.length, notes: 0, folders: folders.length || undefined, failed },
       errors: errors.length ? errors : undefined,
+      warnings: warnings.length ? warnings : undefined,
     };
   } catch (e) {
     return { success: false, tasks: [], notes: [], error: `Todoist JSON parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
