@@ -431,8 +431,136 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           </div>
         )}
 
+        {/* ── Pre-import Preview view ── */}
+        {showPreview && preview && (() => {
+          const sourceLabel = sources.find(s => s.id === selectedSource)?.name || 'Import';
+          const importFolderName = `Imported from ${sourceLabel}`;
+          const folderNameById = new Map<string, string>();
+          (preview.folders || []).forEach(f => folderNameById.set(f.id, f.name));
+
+          // Flatten nested subtasks so the preview shows the full tree.
+          type Row = { text: string; folder: string; status: string; priority: string; due: string; depth: number };
+          const taskRows: Row[] = [];
+          const walk = (tasks: any[], depth: number) => {
+            for (const t of tasks) {
+              taskRows.push({
+                text: t.text || '(untitled)',
+                folder: (t.folderId && folderNameById.get(t.folderId)) || importFolderName,
+                status: t.completed ? 'Completed' : 'Open',
+                priority: t.priority || 'none',
+                due: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '—',
+                depth,
+              });
+              if (t.subtasks?.length) walk(t.subtasks, depth + 1);
+            }
+          };
+          walk(preview.tasks, 0);
+
+          const noteRows = preview.notes.map(n => ({
+            title: n.title || '(untitled)',
+            folder: (n.folderId && folderNameById.get(n.folderId)) || importFolderName,
+          }));
+
+          const MAX = 50;
+
+          return (
+            <div className="space-y-4 pb-6">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" onClick={() => { setPreview(null); setPendingText(''); }}>
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground truncate">Preview: {pendingFileName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Review how items will be mapped before importing.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                {preview.stats.tasks > 0 && <span className="flex items-center gap-1"><ListTodo className="h-3.5 w-3.5" />{preview.stats.tasks} tasks</span>}
+                {preview.stats.notes > 0 && <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5" />{preview.stats.notes} notes</span>}
+                {(preview.folders?.length || 0) > 0 && <span className="flex items-center gap-1"><FolderOpen className="h-3.5 w-3.5" />{preview.folders!.length} folders</span>}
+                {(preview.stats.failed || 0) > 0 && <span className="flex items-center gap-1 text-destructive"><AlertTriangle className="h-3.5 w-3.5" />{preview.stats.failed} skipped</span>}
+              </div>
+
+              {preview.warnings && preview.warnings.length > 0 && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    {preview.warnings.length} warning{preview.warnings.length === 1 ? '' : 's'}
+                  </p>
+                  <ul className="text-xs text-amber-800 dark:text-amber-200/90 space-y-0.5 ml-5 list-disc">
+                    {preview.warnings.slice(0, 8).map((w, i) => <li key={i}>{w}</li>)}
+                    {preview.warnings.length > 8 && <li className="italic">…and {preview.warnings.length - 8} more</li>}
+                  </ul>
+                </div>
+              )}
+
+              {taskRows.length > 0 && (
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <div className="px-3 py-2 bg-muted/40 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <ListTodo className="h-3.5 w-3.5" /> Tasks ({taskRows.length})
+                  </div>
+                  <div className="max-h-64 overflow-y-auto divide-y divide-border">
+                    {taskRows.slice(0, MAX).map((r, i) => (
+                      <div key={i} className="px-3 py-2 text-xs">
+                        <p className="font-medium text-foreground truncate" style={{ paddingLeft: r.depth * 12 }}>
+                          {r.depth > 0 && <span className="text-muted-foreground mr-1">↳</span>}{r.text}
+                        </p>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
+                          <span>📁 {r.folder}</span>
+                          <span>● {r.status}</span>
+                          <span>⚑ {r.priority}</span>
+                          <span>📅 {r.due}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {taskRows.length > MAX && (
+                      <div className="px-3 py-2 text-xs italic text-muted-foreground">
+                        …and {taskRows.length - MAX} more tasks
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {noteRows.length > 0 && (
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <div className="px-3 py-2 bg-muted/40 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5" /> Notes ({noteRows.length})
+                  </div>
+                  <div className="max-h-48 overflow-y-auto divide-y divide-border">
+                    {noteRows.slice(0, MAX).map((r, i) => (
+                      <div key={i} className="px-3 py-2 text-xs">
+                        <p className="font-medium text-foreground truncate">{r.title}</p>
+                        <p className="text-muted-foreground mt-0.5">📁 {r.folder}</p>
+                      </div>
+                    ))}
+                    {noteRows.length > MAX && (
+                      <div className="px-3 py-2 text-xs italic text-muted-foreground">
+                        …and {noteRows.length - MAX} more notes
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => { setPreview(null); setPendingText(''); }} className="flex-1">
+                  Cancel
+                </Button>
+                <Button onClick={commitImport} className="flex-1 gap-2">
+                  <Upload className="h-4 w-4" />
+                  Confirm Import
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── Source picker ── */}
-        {!result && !isImporting && !showMapping && (
+        {!result && !isImporting && !showMapping && !showPreview && (
           <div className="space-y-3 pb-6">
             <p className="text-sm text-muted-foreground mb-4">
               {t('settings.importDescription', 'Select a source to import your tasks and notes from another app.')}
