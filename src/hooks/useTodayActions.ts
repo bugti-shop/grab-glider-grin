@@ -23,22 +23,13 @@ import { getAllSettings, setSetting } from '@/utils/settingsStorage';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
 
-// Align the completion-flush window with the ring-fill animation (~900ms).
-// Flushing earlier removes the row from the uncompleted list while the user is
-// still tapping nearby rows — the virtualizer shifts, the visually-targeted row
-// is no longer under the pointer, and the 4th tap appears "stuck" / lost.
-// Holding the visual state for the full ring duration lets rapid taps queue
-// without yanking the DOM out from under the user.
-// Persist checkmark taps quickly, but reconcile the expensive React list after
-// the user stops tapping. This keeps 5k–100k item lists responsive while the
-// ring/checkmark paint updates immediately through the existing visual state.
-const COMPLETION_BATCH_MS = 250;
-const COMPLETION_RECONCILE_DEBOUNCE_MS = 1200;
-const COMPLETION_RECONCILE_MAX_ITEMS = 500;
-// Completion persistence still syncs to cloud, but it must not broadcast the
-// global `tasksUpdated` event: several app-wide listeners respond by loading the
-// entire task database, which is what froze the tab after 2–4 rapid taps.
+// Persist checkmark taps quickly, and reconcile the React partition
+// (uncompleted vs completed) on the next frame so completed rows never linger
+// inside the incomplete section, regardless of list size.
+const COMPLETION_BATCH_MS = 120;
+const COMPLETION_RECONCILE_DEBOUNCE_MS = 80;
 const COMPLETION_GLOBAL_EVENT_DELAY_MS = -1;
+
 
 interface UseTodayActionsProps {
   items: TodoItem[];
@@ -176,19 +167,15 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   }, [markSingleTaskPersisted, rebuildItemLookups, setItems]);
 
   const queueDeferredCompletionState = useCallback((itemId: string, updates: Partial<TodoItem>) => {
-    // On big lists the expensive part is not IndexedDB; it is React/worker
-    // re-processing the full task array after every few checkbox taps. The task
-    // object is already mutated optimistically below, so skip the full-array
-    // reconciliation for large lists and let the next natural refresh/navigation
-    // pick up the persisted state.
-    if (itemsRef.current.length > COMPLETION_RECONCILE_MAX_ITEMS) {
-      pendingDeferredCompletionUpdatesRef.current.delete(itemId);
-      return;
-    }
+    // ALWAYS queue the React partition update — even on huge lists. Skipping
+    // this leaves the row in the uncompleted section because the partition
+    // memo never re-runs. Reconciliation is wrapped in startTransition so the
+    // next tap stays responsive.
     pendingDeferredCompletionUpdatesRef.current.set(itemId, updates);
     if (deferredCompletionFlushTimerRef.current) window.clearTimeout(deferredCompletionFlushTimerRef.current);
     deferredCompletionFlushTimerRef.current = window.setTimeout(flushDeferredCompletionState, COMPLETION_RECONCILE_DEBOUNCE_MS);
   }, [flushDeferredCompletionState]);
+
 
   const flushCompletionPersistence = useCallback(() => {
     completionPersistFlushTimerRef.current = null;
@@ -255,14 +242,29 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   }, [setFolders]);
 
   const handleDeleteFolder = useCallback(async (folderId: string) => {
-    // Cascade: also delete every descendant folder, unassign their tasks
     const { getDescendantFolderIds } = await import('@/utils/folderHelpers');
     const descendants = getDescendantFolderIds(folders, folderId);
     const toRemove = new Set<string>([folderId, ...descendants]);
     const updatedFolders = folders.filter(f => !toRemove.has(f.id));
-    setItems(prev => prev.map(item => (item.folderId && toRemove.has(item.folderId)) ? { ...item, folderId: undefined } : item));
+
+    // Inbox / last-folder guard: never leave the user with zero folders.
+    const target = folders.find(f => f.id === folderId);
+    if (updatedFolders.length === 0 || (target?.isDefault && updatedFolders.length === 0)) {
+      toast.error('Cannot delete Inbox — it is your only folder.');
+      return;
+    }
+
+    // Move orphaned items into the oldest remaining folder so nothing disappears.
+    const fallback = updatedFolders.slice().sort((a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )[0];
+    const fallbackId = fallback?.id;
+
+    setItems(prev => prev.map(item =>
+      (item.folderId && toRemove.has(item.folderId)) ? { ...item, folderId: fallbackId } : item
+    ));
     setFolders(updatedFolders);
-    if (selectedFolderId && toRemove.has(selectedFolderId)) setSelectedFolderId(null);
+    if (selectedFolderId && toRemove.has(selectedFolderId)) setSelectedFolderId(fallbackId ?? null);
 
     toRemove.forEach((id) => trackDeletion(id, 'todoFolders'));
     import('@/utils/cloudSync/storeBridge').then(({ pushFolderDelete }) => {
@@ -272,9 +274,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     try {
       await setSetting('todoFolders', updatedFolders);
       if (selectedFolderId && toRemove.has(selectedFolderId)) {
-        await setSetting('todoSelectedFolder', 'null');
+        await setSetting('todoSelectedFolder', fallbackId ?? 'null');
       }
-
       const settings = await getAllSettings();
       await Promise.allSettled([
         uploadCategory('flowist_settings.json', settings),
@@ -443,9 +444,13 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
   // ── Task CRUD ──
   const handleAddTask = useCallback(async (task: Omit<TodoItem, 'id' | 'completed'>) => {
-    // Per-folder tasks cap (Free: 99 per folder)
+    // Hard cap: max 38 tasks per folder (Inbox included).
     const targetFolderId = task.folderId ?? selectedFolderId ?? null;
     const folderTasksCount = itemsRef.current.filter(t => (t.folderId || null) === targetFolderId).length;
+    if (targetFolderId && folderTasksCount >= 38) {
+      toast.error('Folder is full (38 max). Move or delete items, or create a new folder.', { id: 'folder-full' });
+      return;
+    }
     if (!requireCapacity('tasksPerFolder', folderTasksCount)) return;
     if (!isPro && !softRequireCreate('tasks', itemsRef.current.length)) return;
     const now = new Date();

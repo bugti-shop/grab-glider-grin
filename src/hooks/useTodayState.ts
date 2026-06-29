@@ -178,8 +178,18 @@ export const useTodayState = () => {
       // Batch all setState calls inside startTransition to prevent blocking the main thread
       startTransition(() => {
         const savedFolders = g<Folder[] | null>('todoFolders', null);
-        if (savedFolders) {
+        if (savedFolders && savedFolders.length > 0) {
           setFolders(savedFolders.map((f: Folder) => ({ ...f, createdAt: new Date(f.createdAt) })));
+        } else {
+          // Bootstrap Inbox: every user has at least one default tasks folder.
+          const now = new Date();
+          const inbox: Folder = {
+            id: (crypto as any).randomUUID ? crypto.randomUUID() : `inbox-${Date.now()}`,
+            name: 'Inbox', color: '#3b82f6', icon: 'Folder',
+            isDefault: true, createdAt: now, updatedAt: now,
+          } as Folder;
+          setFolders([inbox]);
+          void setSetting('todoFolders', [inbox]);
         }
         const savedSections = g<TaskSection[]>('todoSections', []);
         setSections(savedSections.length > 0 ? savedSections : getDefaultSections(t));

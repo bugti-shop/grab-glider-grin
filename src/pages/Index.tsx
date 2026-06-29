@@ -155,6 +155,16 @@ const Index = () => {
           createdAt: new Date(f.createdAt),
         })));
         foldersLoadedRef.current = true;
+      } else {
+        const now = new Date();
+        const inbox: Folder = {
+          id: (crypto as any).randomUUID ? crypto.randomUUID() : `inbox-notes-${Date.now()}`,
+          name: 'Inbox', color: '#3b82f6', icon: 'Folder',
+          isDefault: true, createdAt: now, updatedAt: now,
+        } as Folder;
+        setFolders([inbox]);
+        foldersLoadedRef.current = true;
+        void setSetting('folders', [inbox]);
       }
     };
     
