@@ -1049,7 +1049,7 @@ export function FlatTaskList({
           const row = flat[vi.index];
           if (!row) return null;
           const isActive = vi.index === activeIndex;
-          const isDragOver = dragOverIndex === vi.index;
+          const isDragOver = false;
           const isTouchDragCandidate = isCoarsePointer && (pointerPreparingIndex === vi.index || dragFromRef.current === vi.index);
           return (
             <div
