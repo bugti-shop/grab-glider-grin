@@ -496,7 +496,7 @@ const Notes = () => {
         <div className="h-[1px] bg-border" />
       </header>
 
-      <main className="w-full max-w-5xl xl:max-w-6xl mx-auto px-2 xs:px-3 sm:px-4 lg:px-8 py-3 xs:py-4 sm:py-6">
+      <main className="w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] mx-auto px-2 xs:px-3 sm:px-4 md:px-6 lg:px-8 py-3 xs:py-4 sm:py-6">
         {/* Archive & Trash Tabs - Simplified to only Archive and Trash */}
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'active' | 'archived' | 'trash')} className="mb-4">
           <TabsList className="grid w-full grid-cols-2 max-w-md">
