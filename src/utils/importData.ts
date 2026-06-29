@@ -31,6 +31,8 @@ export interface ImportResult {
   };
   /** Human-readable failure messages (per-row / per-resource). */
   errors?: string[];
+  /** Non-fatal warnings (e.g. unsupported fields ignored during parsing). */
+  warnings?: string[];
 }
 
 /** Column-mapping for generic CSV imports. Each value is the source column name. */
