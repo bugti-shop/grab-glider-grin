@@ -17,12 +17,25 @@ import {
   PanelLeftOpen,
   FileText,
   BookOpen,
+  StickyNote,
+  FileEdit,
+  FileCode,
+  PenTool,
+  Type,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { AppLogo } from '@/components/AppLogo';
 import { loadFolders, Folder } from '@/utils/folderStorage';
 import { triggerHaptic } from '@/utils/haptics';
 import { useTranslation } from 'react-i18next';
+import type { NoteType } from '@/types/note';
 
 interface NavItem {
   id: string;
