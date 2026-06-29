@@ -803,6 +803,7 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
 export const bulkDeleteTasksFromDB = async (
   taskIds: string[],
   skipSyncEvent = false,
+  onProgress?: (p: { processed: number; total: number }) => void,
 ): Promise<boolean> => {
   if (taskIds.length === 0) return true;
   markLocalStorageMigrationDone();
@@ -839,6 +840,7 @@ export const bulkDeleteTasksFromDB = async (
   try {
     const db = await openDB();
     const CHUNK = 500;
+    const total = taskIds.length;
     for (let start = 0; start < taskIds.length; start += CHUNK) {
       const slice = taskIds.slice(start, start + CHUNK);
       await new Promise<void>((resolve) => {
@@ -848,6 +850,7 @@ export const bulkDeleteTasksFromDB = async (
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
       });
+      try { onProgress?.({ processed: Math.min(start + CHUNK, total), total }); } catch {}
       if (start + CHUNK < taskIds.length) {
         await new Promise((r) => requestAnimationFrame(r));
       }
