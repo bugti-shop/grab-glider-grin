@@ -107,8 +107,11 @@ export function FlatTaskList({
     over: number;
     startX: number;
     startY: number;
+    lastY: number;
+    startTime: number;
     currentY: number;
     dragging: boolean;
+    scrollMode: boolean;
     title: string;
     element: HTMLElement;
     timer: number | null;
@@ -375,8 +378,11 @@ export function FlatTaskList({
       over: index,
       startX,
       startY,
+      lastY: startY,
+      startTime: performance.now(),
       currentY: startY,
       dragging: false,
+      scrollMode: false,
       title,
       element,
       timer: null as number | null,
@@ -400,10 +406,27 @@ export function FlatTaskList({
     active.currentY = event.clientY;
 
     if (!active.dragging) {
-      // If the user is clearly trying to move the row, capture the drag instead
-      // of letting Chrome turn it into page scrolling. Only diagonal/horizontal
-      // movement before activation cancels the long-press candidate.
-      if (Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+      if (active.scrollMode) {
+        event.preventDefault();
+        window.scrollBy(0, active.lastY - event.clientY);
+        active.lastY = event.clientY;
+        return;
+      }
+      const elapsed = performance.now() - active.startTime;
+      // Quick movement means the user is scrolling, so cancel DnD and manually
+      // scroll because rows use touch-action:none to reliably support long-press
+      // drag on Android Chrome. A short hold (90ms) still activates drag.
+      if (elapsed < 90 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+        if (active.timer != null) window.clearTimeout(active.timer);
+        active.timer = null;
+        active.scrollMode = true;
+        setPointerPreparingIndex(null);
+        event.preventDefault();
+        window.scrollBy(0, active.lastY - event.clientY);
+        active.lastY = event.clientY;
+        return;
+      }
+      if (elapsed >= 90 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
         event.preventDefault();
         activatePointerDrag(active);
       } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
@@ -580,7 +603,7 @@ export function FlatTaskList({
                 backgroundColor: isDragOver ? 'hsl(var(--primary) / 0.08)' : undefined,
                 opacity: dragFromRef.current === vi.index ? 0.72 : 1,
                 cursor: dndEnabled ? 'grab' : undefined,
-                touchAction: dndEnabled && isCoarsePointer ? (isTouchDragCandidate ? 'none' : 'pan-y pinch-zoom') : undefined,
+                touchAction: dndEnabled && isCoarsePointer ? 'none' : undefined,
               }}
             >
               {renderRow(row, vi.index, isActive)}
