@@ -1070,7 +1070,8 @@ export function FlatTaskList({
                 dragGenerationRef.current += 1;
                 dragFromRef.current = vi.index;
                 const placement = getInsertionPlacement(e.clientY, e.currentTarget);
-                setInsertIndicator(placement);
+                paintInsertLine(placement.top);
+                lastInsertionIndexRef.current = placement.insertionIndex;
                 try {
                   e.dataTransfer.effectAllowed = 'move';
                   e.dataTransfer.setData('text/plain', String(vi.index));
