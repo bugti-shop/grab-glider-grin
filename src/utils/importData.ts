@@ -891,11 +891,13 @@ export const importFromFile = async (
   const onProgress = options?.onProgress;
   switch (source) {
     case 'todoist':
-      return parseTodoistCSV(text);
+      return fileType === 'json' ? parseTodoistJSON(text) : parseTodoistCSV(text);
     case 'ticktick':
       return parseTickTickCSV(text);
     case 'notion':
-      return fileType === 'json' ? parseNotionJSON(text) : parseNotionCSV(text);
+      if (fileType === 'json') return parseNotionJSON(text);
+      if (fileType === 'md' || fileType === 'markdown') return parseNotionMarkdown(text, fileName);
+      return parseNotionCSV(text);
     case 'evernote':
       return await parseEvernoteExport(text, fileName, onProgress);
     case 'csv-tasks':
@@ -911,9 +913,9 @@ export const importFromFile = async (
 
 export const getAcceptedFileTypes = (source: ImportSource): string => {
   switch (source) {
-    case 'todoist': return '.csv';
+    case 'todoist': return '.csv,.json';
     case 'ticktick': return '.csv';
-    case 'notion': return '.csv,.json';
+    case 'notion': return '.csv,.json,.md';
     case 'evernote': return '.enex,.html,.htm';
     case 'csv-tasks':
     case 'csv-notes': return '.csv';
