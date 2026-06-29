@@ -138,13 +138,34 @@ export function FlatTaskList({
   const ghostRef = useRef<HTMLDivElement>(null);
   const [parentTop, setParentTop] = useState(0);
   const dragFromRef = useRef<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [insertIndicator, setInsertIndicator] = useState<{ insertionIndex: number; top: number } | null>(null);
+  // Insert-line is driven by a DOM ref + cached top to avoid re-rendering the
+  // entire virtualized list on every touchmove. React re-renders mid-drag were
+  // shifting virtualizer geometry under the pointer, so the drop landed one
+  // slot away from the rendered blue line. We mutate the line's style directly
+  // and only commit React state at drop time.
+  const insertLineRef = useRef<HTMLDivElement>(null);
+  const insertLineTopRef = useRef<number | null>(null);
   // Mirror of the most recently committed insertion index. The blue indicator
   // line is driven by this value; on drop we must use the exact same value
   // (NOT a recomputation from a possibly-shifted `touchend` clientY) so the
   // drop lands precisely under the user-visible blue line.
   const lastInsertionIndexRef = useRef<number | null>(null);
+
+  const paintInsertLine = useCallback((top: number) => {
+    const el = insertLineRef.current;
+    if (!el) return;
+    if (insertLineTopRef.current !== top) {
+      insertLineTopRef.current = top;
+      el.style.transform = `translate3d(0, ${top}px, 0)`;
+    }
+    if (el.style.display !== 'block') el.style.display = 'block';
+  }, []);
+
+  const hideInsertLine = useCallback(() => {
+    const el = insertLineRef.current;
+    if (el) el.style.display = 'none';
+    insertLineTopRef.current = null;
+  }, []);
   const autoscrollRafRef = useRef<number | null>(null);
   const dragGenerationRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
@@ -335,10 +356,9 @@ export function FlatTaskList({
     stopAutoscroll();
     clearPointerDrag();
     dragFromRef.current = null;
-    setDragOverIndex(null);
-    setInsertIndicator(null);
+    hideInsertLine();
     lastInsertionIndexRef.current = null;
-  }, [clearPointerDrag, stopAutoscroll]);
+  }, [clearPointerDrag, hideInsertLine, stopAutoscroll]);
 
   const armPointerDrag = useCallback((pointerId: number) => {
     const current = pointerDragRef.current;
@@ -524,14 +544,13 @@ export function FlatTaskList({
       (window as any).__flowistLastTaskInsert = instrumentation;
     } catch {}
     commitSyntheticDragOver(target, placement.insertionIndex);
-    setInsertIndicator((current) => {
-      if (current && current.insertionIndex === placement.insertionIndex && Math.abs(current.top - placement.top) < 0.5) return current;
-      return placement;
-    });
-    setDragOverIndex(Math.min(flat.length - 1, placement.insertionIndex));
+    // Imperative DOM update — no React re-render mid-drag. Prevents the
+    // virtualized list from reshuffling under the pointer and keeps the
+    // blue line aligned with the exact drop slot.
+    paintInsertLine(placement.top);
     lastInsertionIndexRef.current = placement.insertionIndex;
     return placement.insertionIndex;
-  }, [commitSyntheticDragOver, flat.length, getInsertionPlacement]);
+  }, [commitSyntheticDragOver, getInsertionPlacement, paintInsertLine]);
 
   const finishPointerDropAt = useCallback((active: NonNullable<typeof pointerDragRef.current>, clientY: number, target: EventTarget | Element | null) => {
     // Prefer the LAST indicator value the user actually saw. touchend's
@@ -585,16 +604,16 @@ export function FlatTaskList({
     }
     dragGenerationRef.current += 1;
     dragFromRef.current = active.from;
-    setDragOverIndex(active.from);
     const placement = getInsertionPlacement(active.currentY, active.element);
     active.over = placement.insertionIndex;
-    setInsertIndicator(placement);
+    paintInsertLine(placement.top);
+    lastInsertionIndexRef.current = placement.insertionIndex;
     setPointerDrag({ from: active.from, over: active.over, title: active.title, y: active.currentY });
     try { active.element.setPointerCapture(active.pointerId); } catch {}
     if (typeof document !== 'undefined') document.body.classList.add('flowist-task-dragging');
     paintGhostAt(active.currentY);
     if ('vibrate' in navigator) navigator.vibrate?.(8);
-  }, [getInsertionPlacement, paintGhostAt]);
+  }, [getInsertionPlacement, paintGhostAt, paintInsertLine]);
 
   const startPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
     if (!dndEnabled || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
@@ -697,7 +716,7 @@ export function FlatTaskList({
     const over = updateInsertionIndicator(touch.clientY, document.elementFromPoint(touch.clientX, touch.clientY));
     if (over !== active.over) {
       active.over = over;
-      setPointerDrag((current) => current ? { ...current, over } : current);
+      // Skip mid-drag setState — keeps virtualizer geometry stable so the drop lands on the blue line.
     }
     paintGhostAt(touch.clientY);
     stopAutoscroll();
@@ -790,7 +809,7 @@ export function FlatTaskList({
       const over = updateInsertionIndicator(touch.clientY, document.elementFromPoint(touch.clientX, touch.clientY));
       if (over !== active.over) {
         active.over = over;
-        setPointerDrag((current) => current ? { ...current, over } : current);
+        // Skip mid-drag setState — keeps virtualizer geometry stable so the drop lands on the blue line.
       }
       paintGhostAt(touch.clientY);
       stopAutoscroll();
@@ -867,7 +886,7 @@ export function FlatTaskList({
     const over = updateInsertionIndicator(event.clientY, event.target);
     if (over !== active.over) {
       active.over = over;
-      setPointerDrag((current) => current ? { ...current, over } : current);
+      // Skip mid-drag setState — keeps virtualizer geometry stable so the drop lands on the blue line.
     }
     paintGhostAt(event.clientY);
     stopAutoscroll();
@@ -1030,7 +1049,7 @@ export function FlatTaskList({
           const row = flat[vi.index];
           if (!row) return null;
           const isActive = vi.index === activeIndex;
-          const isDragOver = dragOverIndex === vi.index;
+          const isDragOver = false;
           const isTouchDragCandidate = isCoarsePointer && (pointerPreparingIndex === vi.index || dragFromRef.current === vi.index);
           return (
             <div
@@ -1051,7 +1070,8 @@ export function FlatTaskList({
                 dragGenerationRef.current += 1;
                 dragFromRef.current = vi.index;
                 const placement = getInsertionPlacement(e.clientY, e.currentTarget);
-                setInsertIndicator(placement);
+                paintInsertLine(placement.top);
+                lastInsertionIndexRef.current = placement.insertionIndex;
                 try {
                   e.dataTransfer.effectAllowed = 'move';
                   e.dataTransfer.setData('text/plain', String(vi.index));
@@ -1123,23 +1143,27 @@ export function FlatTaskList({
             </div>
           );
         })}
-        {insertIndicator && dragFromRef.current != null && (
-          <div
-            data-flowist-insert-line="true"
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: insertIndicator.top,
-              height: 2,
-              backgroundColor: 'hsl(var(--primary))',
-              boxShadow: '0 0 0 1px hsl(var(--primary) / 0.35)',
-              pointerEvents: 'none',
-              zIndex: 60,
-            }}
-          />
-        )}
+        {/* Imperatively-positioned insert line. Mounted once; hidden until
+            a drag begins. Position is driven by paintInsertLine() via a ref
+            so touchmove never triggers a React re-render of the list. */}
+        <div
+          ref={insertLineRef}
+          data-flowist-insert-line="true"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 2,
+            display: 'none',
+            backgroundColor: 'hsl(var(--primary))',
+            boxShadow: '0 0 0 1px hsl(var(--primary) / 0.35)',
+            pointerEvents: 'none',
+            zIndex: 60,
+            willChange: 'transform',
+          }}
+        />
       </div>
       {pointerDrag && typeof document !== 'undefined' && createPortal((
         <div

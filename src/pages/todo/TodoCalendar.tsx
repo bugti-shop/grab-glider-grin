@@ -382,19 +382,40 @@ const TodoCalendar = () => {
         const ids = new Set(selectedTasks.map(t => t.id));
         const updated = items.map(i => ids.has(i.id) ? { ...i, completed: true, completedAt: now, modifiedAt: now } : i);
         setItems(updated);
-        // Chunked update via worker-friendly bulk path (no 10k sequential awaits).
+        const total = selectedTasks.length;
+        const showProgress = total >= 500;
+        const toastId = showProgress ? `bulk-complete-${Date.now()}` : undefined;
+        if (showProgress) toast.loading(`Completing 0 / ${total.toLocaleString()}…`, { id: toastId });
         const { bulkUpdateTasksInDB } = await import('@/utils/taskStorage');
-        await bulkUpdateTasksInDB(updated.filter(i => ids.has(i.id)));
-        toast.success(t('todayPage.completedTasks', { count: selectedTasks.length }));
+        await bulkUpdateTasksInDB(
+          updated.filter(i => ids.has(i.id)),
+          false,
+          showProgress ? ({ processed }) => {
+            toast.loading(`Completing ${processed.toLocaleString()} / ${total.toLocaleString()}…`, { id: toastId });
+          } : undefined,
+        );
+        if (showProgress && toastId) toast.dismiss(toastId);
+        toast.success(t('todayPage.completedTasks', { count: total }));
         break;
       }
       case 'delete': {
         const ids = selectedTasks.map(t => t.id);
         const idSet = new Set(ids);
         setItems(items.filter(i => !idSet.has(i.id)));
+        const total = ids.length;
+        const showProgress = total >= 500;
+        const toastId = showProgress ? `bulk-delete-${Date.now()}` : undefined;
+        if (showProgress) toast.loading(`Deleting 0 / ${total.toLocaleString()}…`, { id: toastId });
         const { bulkDeleteTasksFromDB } = await import('@/utils/taskStorage');
-        await bulkDeleteTasksFromDB(ids);
-        toast.success(t('todayPage.deletedTasks', { count: selectedTasks.length }));
+        await bulkDeleteTasksFromDB(
+          ids,
+          false,
+          showProgress ? ({ processed }) => {
+            toast.loading(`Deleting ${processed.toLocaleString()} / ${total.toLocaleString()}…`, { id: toastId });
+          } : undefined,
+        );
+        if (showProgress && toastId) toast.dismiss(toastId);
+        toast.success(t('todayPage.deletedTasks', { count: total }));
         break;
       }
       case 'move':

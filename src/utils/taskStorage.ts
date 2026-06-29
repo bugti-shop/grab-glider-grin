@@ -540,6 +540,7 @@ export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promis
 export const bulkUpdateTasksInDB = async (
   updatedTasks: TodoItem[],
   skipSyncEvent = false,
+  onProgress?: (p: { processed: number; total: number }) => void,
 ): Promise<boolean> => {
   if (updatedTasks.length === 0) return true;
   markLocalStorageMigrationDone();
@@ -558,6 +559,7 @@ export const bulkUpdateTasksInDB = async (
 
   try {
     const db = await openDB();
+    const total = hydrated.length;
     for (let i = 0; i < hydrated.length; i += 250) {
       const batch = hydrated.slice(i, i + 250);
       await new Promise<void>((resolve) => {
@@ -567,6 +569,7 @@ export const bulkUpdateTasksInDB = async (
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
       });
+      try { onProgress?.({ processed: Math.min(i + 250, total), total }); } catch {}
       if (i + 250 < hydrated.length) await new Promise((r) => requestAnimationFrame(r));
     }
     if (!skipSyncEvent) dispatchTasksUpdated(150);
@@ -800,6 +803,7 @@ export const deleteTaskFromDB = async (taskId: string): Promise<boolean> => {
 export const bulkDeleteTasksFromDB = async (
   taskIds: string[],
   skipSyncEvent = false,
+  onProgress?: (p: { processed: number; total: number }) => void,
 ): Promise<boolean> => {
   if (taskIds.length === 0) return true;
   markLocalStorageMigrationDone();
@@ -836,6 +840,7 @@ export const bulkDeleteTasksFromDB = async (
   try {
     const db = await openDB();
     const CHUNK = 500;
+    const total = taskIds.length;
     for (let start = 0; start < taskIds.length; start += CHUNK) {
       const slice = taskIds.slice(start, start + CHUNK);
       await new Promise<void>((resolve) => {
@@ -845,6 +850,7 @@ export const bulkDeleteTasksFromDB = async (
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
       });
+      try { onProgress?.({ processed: Math.min(start + CHUNK, total), total }); } catch {}
       if (start + CHUNK < taskIds.length) {
         await new Promise((r) => requestAnimationFrame(r));
       }

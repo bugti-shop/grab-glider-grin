@@ -403,12 +403,23 @@ const Notes = () => {
     return Math.max(0, 30 - daysPassed);
   };
 
-  const handleEmptyTrash = () => {
+  const handleEmptyTrash = async () => {
     const trashed = notes.filter(n => n.isDeleted);
     const updatedNotes = notes.filter(n => !n.isDeleted);
     setNotes(updatedNotes);
-    // Single chunked delete (avoids 10k debounced cloud pushes + tx storms).
-    void bulkDeleteNotesFromDB(trashed.map(n => n.id));
+    const ids = trashed.map(n => n.id);
+    const total = ids.length;
+    const showProgress = total >= 500;
+    const toastId = showProgress ? `empty-trash-${Date.now()}` : undefined;
+    if (showProgress) toast.loading(`Deleting 0 / ${total.toLocaleString()}…`, { id: toastId });
+    await bulkDeleteNotesFromDB(
+      ids,
+      false,
+      showProgress ? ({ processed }) => {
+        toast.loading(`Deleting ${processed.toLocaleString()} / ${total.toLocaleString()}…`, { id: toastId });
+      } : undefined,
+    );
+    if (showProgress && toastId) toast.dismiss(toastId);
     toast.success(t('notes.trashEmptied'));
   };
 

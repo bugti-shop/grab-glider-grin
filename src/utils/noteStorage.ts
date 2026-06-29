@@ -615,6 +615,7 @@ export const deleteNoteFromDB = async (noteId: string, skipCloudSync = false): P
 export const bulkDeleteNotesFromDB = async (
   noteIds: string[],
   skipCloudSync = false,
+  onProgress?: (p: { processed: number; total: number }) => void,
 ): Promise<void> => {
   if (noteIds.length === 0) return;
   const idSet = new Set(noteIds);
@@ -648,6 +649,7 @@ export const bulkDeleteNotesFromDB = async (
 
   // 3. Chunked IndexedDB deletes (yield between chunks).
   const CHUNK = 500;
+  const total = noteIds.length;
   for (let start = 0; start < noteIds.length; start += CHUNK) {
     const slice = noteIds.slice(start, start + CHUNK);
     try {
@@ -665,6 +667,7 @@ export const bulkDeleteNotesFromDB = async (
     } catch (e) {
       console.error('bulkDeleteNotesFromDB chunk failed:', e);
     }
+    try { onProgress?.({ processed: Math.min(start + CHUNK, total), total }); } catch {}
     if (start + CHUNK < noteIds.length) {
       await new Promise(r => setTimeout(r, 0));
     }

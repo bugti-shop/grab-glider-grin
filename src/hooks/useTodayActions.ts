@@ -123,12 +123,13 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
   const persistBulkTasks = useCallback((tasks: TodoItem[]) => {
     if (tasks.length === 0) return;
-    // Skip both the expensive full-array save AND the immediate worker
-    // re-filter/sort. The state layer prepends local-only rows optimistically,
-    // so duplicating 200+ tasks appears instantly without a post-click hang.
+    // Use bulkPut (not bulkUpdate) — duplicated/new tasks must INSERT into both
+    // the in-memory cache AND IndexedDB. bulkUpdate only patches rows that are
+    // already in the cache, which made duplicates vanish on next navigation
+    // because the cache was the authoritative read source.
     markSingleTaskPersisted(true);
-    void import('@/utils/taskStorage').then(({ bulkUpdateTasksInDB }) =>
-      bulkUpdateTasksInDB(tasks).then((persisted) => {
+    void import('@/utils/taskStorage').then(({ bulkPutTasksInDB }) =>
+      bulkPutTasksInDB(tasks).then((persisted) => {
         if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
       }),
     );
