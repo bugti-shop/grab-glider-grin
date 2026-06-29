@@ -199,14 +199,13 @@ export const SmartListsDropdown = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56 max-h-[60vh] overflow-y-auto">
-        {smartLists.map((list, index) => (
+        {smartLists.filter(l => l.id !== 'all').map((list, index) => (
           <div key={list.id}>
-            {index === 1 && <DropdownMenuSeparator />}
-            {index === 5 && <DropdownMenuSeparator />}
-            {index === 7 && <DropdownMenuSeparator />}
+            {index === 4 && <DropdownMenuSeparator />}
+            {index === 6 && <DropdownMenuSeparator />}
             <DropdownMenuItem
               onClick={() => {
-                const locked = list.id !== 'all' && !isPro;
+                const locked = !isPro;
                 if (locked) {
                   requireFeature?.('smart_lists');
                   return;
@@ -226,7 +225,7 @@ export const SmartListsDropdown = ({
                 {list.icon}
                 <span className={list.color}>{list.label}</span>
               </div>
-              {list.id !== 'all' && !isPro ? (
+              {!isPro ? (
                 <PremiumCrown size={13} className="ml-2 flex-shrink-0" />
               ) : getCounts[list.id] > 0 && (
                 <Badge 
@@ -239,6 +238,7 @@ export const SmartListsDropdown = ({
             </DropdownMenuItem>
           </div>
         ))}
+
 
         {/* Custom Smart Views */}
         {customViews.length > 0 && (
