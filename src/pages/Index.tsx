@@ -676,15 +676,37 @@ const Index = () => {
     });
   };
 
+  // Hard cap: 38 notes per folder (Inbox included). "All Notes" view removed.
+  const NOTES_FOLDER_CAP = 38;
+  const countNotesInFolder = (folderId: string | null | undefined) => {
+    if (!folderId) return 0;
+    let n = 0;
+    for (const note of notes) {
+      if (note.isDeleted || note.isArchived) continue;
+      if (note.folderId === folderId) n++;
+    }
+    return n;
+  };
+  const canMoveNotesToFolder = (targetFolderId: string | null | undefined, incoming: number) => {
+    if (!targetFolderId) return true;
+    if (countNotesInFolder(targetFolderId) + incoming > NOTES_FOLDER_CAP) {
+      toast.error(`Folder is full (${NOTES_FOLDER_CAP} notes max). Move or delete notes, or create a new folder.`, { id: 'note-folder-full' });
+      return false;
+    }
+    return true;
+  };
+
   const handleDropOnFolder = (e: React.DragEvent, targetFolderId: string | null) => {
     e.preventDefault();
     if (!draggedNoteId) return;
+    if (!canMoveNotesToFolder(targetFolderId, 1)) { setDraggedNoteId(null); return; }
 
     setNotes(prev => prev.map(n =>
       n.id === draggedNoteId ? { ...n, folderId: targetFolderId || undefined } : n
     ));
     setDraggedNoteId(null);
   };
+
 
   const handleHideNote = (noteId: string) => {
     setNotes(prev => prev.map(n => n.id === noteId ? { ...n, isHidden: true } : n));
