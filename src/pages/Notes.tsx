@@ -353,7 +353,7 @@ const Notes = () => {
     updatedNotes.filter((n) => n.isPinned).forEach((n) => saveNoteToDBSingle(n));
     logPerfEvent('reorder', { list: 'notes', ok: true, count: notes.length, ms: Math.round(performance.now() - started), via: 'shared-insertion' });
     toast.success('Note moved', { id: 'note-reorder', duration: 900 });
-  });
+  }, [notes]);
 
   // Filter notes using lightweight metadata for instant performance
   const notesMetaById = useMemo(() => new Map(notesMeta.map(meta => [meta.id, meta])), [notesMeta]);
