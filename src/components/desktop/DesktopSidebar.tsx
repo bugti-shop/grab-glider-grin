@@ -287,8 +287,20 @@ export const DesktopSidebar = () => {
           </button>
           {foldersOpen && (
             <div className="flex flex-col gap-0.5 mt-1">
+              {/* Always-visible "All Tasks/All Notes" pseudo-folder */}
+              <button
+                onClick={() => navigate(notesContext ? '/notes' : '/todo/today')}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground/80 hover:bg-muted transition-colors text-left"
+              >
+                <FolderIcon className="h-4 w-4 flex-shrink-0 text-primary" />
+                <span className="truncate flex-1">
+                  {notesContext
+                    ? t('notes.allNotes', 'All Notes')
+                    : t('tasks.allTasks', 'All Tasks')}
+                </span>
+              </button>
               {filteredFolders.length === 0 ? (
-                <p className="px-3 py-2 text-xs text-muted-foreground">
+                <p className="px-3 py-1.5 text-[11px] text-muted-foreground">
                   {t('folders.empty', 'No folders yet')}
                 </p>
               ) : (
