@@ -138,13 +138,34 @@ export function FlatTaskList({
   const ghostRef = useRef<HTMLDivElement>(null);
   const [parentTop, setParentTop] = useState(0);
   const dragFromRef = useRef<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [insertIndicator, setInsertIndicator] = useState<{ insertionIndex: number; top: number } | null>(null);
+  // Insert-line is driven by a DOM ref + cached top to avoid re-rendering the
+  // entire virtualized list on every touchmove. React re-renders mid-drag were
+  // shifting virtualizer geometry under the pointer, so the drop landed one
+  // slot away from the rendered blue line. We mutate the line's style directly
+  // and only commit React state at drop time.
+  const insertLineRef = useRef<HTMLDivElement>(null);
+  const insertLineTopRef = useRef<number | null>(null);
   // Mirror of the most recently committed insertion index. The blue indicator
   // line is driven by this value; on drop we must use the exact same value
   // (NOT a recomputation from a possibly-shifted `touchend` clientY) so the
   // drop lands precisely under the user-visible blue line.
   const lastInsertionIndexRef = useRef<number | null>(null);
+
+  const paintInsertLine = useCallback((top: number) => {
+    const el = insertLineRef.current;
+    if (!el) return;
+    if (insertLineTopRef.current !== top) {
+      insertLineTopRef.current = top;
+      el.style.transform = `translate3d(0, ${top}px, 0)`;
+    }
+    if (el.style.display !== 'block') el.style.display = 'block';
+  }, []);
+
+  const hideInsertLine = useCallback(() => {
+    const el = insertLineRef.current;
+    if (el) el.style.display = 'none';
+    insertLineTopRef.current = null;
+  }, []);
   const autoscrollRafRef = useRef<number | null>(null);
   const dragGenerationRef = useRef(0);
   const suppressClickUntilRef = useRef(0);
