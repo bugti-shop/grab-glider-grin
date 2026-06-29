@@ -17,6 +17,7 @@
 import { useRef, useMemo, useState, useEffect, useCallback, memo, type ReactNode, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import type { TodoItem } from '@/types/note';
 import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/tasks/flattenTasks';
