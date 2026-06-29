@@ -454,11 +454,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
   // ── Task CRUD ──
   const handleAddTask = useCallback(async (task: Omit<TodoItem, 'id' | 'completed'>) => {
-    // Hard cap: max 38 tasks per folder (Inbox included).
+    // Hard cap: max 38 ACTIVE tasks per folder. Completed tasks should never
+    // block re-adds after the user deletes a batch from the Inbox.
     const targetFolderId = task.folderId ?? selectedFolderId ?? null;
-    const folderTasksCount = itemsRef.current.filter(t => (t.folderId || null) === targetFolderId).length;
+    const folderTasksCount = itemsRef.current.filter(
+      t => !t.completed && (t.folderId || null) === targetFolderId,
+    ).length;
     if (targetFolderId && folderTasksCount >= 38) {
-      toast.error('Folder is full (38 max). Move or delete items, or create a new folder.', { id: 'folder-full' });
+      toast.error('Folder is full (38 active max). Move or delete items, or create a new folder.', { id: 'folder-full' });
       return;
     }
     if (!requireCapacity('tasksPerFolder', folderTasksCount)) return;
