@@ -344,51 +344,138 @@ export function FlatTaskList({
     return rect.top - (parentRect?.top ?? 0) + (resolvedUseWindow ? 0 : (parentRef.current?.scrollTop ?? 0));
   }, [resolvedUseWindow]);
 
+  const commitSyntheticDragOver = useCallback((target: EventTarget | Element | null, insertionIndex: number) => {
+    try {
+      (window as any).__flowistLastTaskDragOverPrevented = {
+        target: target instanceof Element ? (target.closest('[data-index]') ? 'row' : 'list-gap') : 'document',
+        insertionIndex,
+        ts: Date.now(),
+      };
+    } catch {}
+  }, []);
+
   const getInsertionPlacement = useCallback((clientY: number, target: EventTarget | Element | null) => {
     const targetEl = target instanceof Element ? target.closest('[data-index]') as HTMLElement | null : null;
-    if (targetEl) {
-      const index = Number(targetEl.dataset.index);
-      if (Number.isFinite(index)) {
-        const rect = targetEl.getBoundingClientRect();
-        const after = clientY >= rect.top + rect.height / 2;
-        const top = getRowTopRelativeToList(targetEl) + (after ? rect.height : 0);
-        return {
-          insertionIndex: Math.max(0, Math.min(flat.length, index + (after ? 1 : 0))),
-          top,
-        };
+    const rows = Array.from(parentRef.current?.querySelectorAll<HTMLElement>('[data-index]') ?? [])
+      .map((rowEl) => ({ rowEl, index: Number(rowEl.dataset.index), rect: rowEl.getBoundingClientRect() }))
+      .filter((row) => Number.isFinite(row.index))
+      .sort((a, b) => a.index - b.index);
+
+    const buildDebug = (
+      source: string,
+      row: (typeof rows)[number],
+      insertionIndex: number,
+      extra: Record<string, unknown> = {},
+    ) => ({
+      source,
+      targetIndex: row.index,
+      insertionIndex,
+      pointerY: Math.round(clientY),
+      targetTop: Math.round(row.rect.top),
+      targetBottom: Math.round(row.rect.bottom),
+      midpoint: Math.round(row.rect.top + row.rect.height / 2),
+      ...extra,
+    });
+
+    const placeBefore = (row: (typeof rows)[number], source = targetEl ? 'target-row' : 'gap-before-row', extra?: Record<string, unknown>) => {
+      const insertionIndex = Math.max(0, Math.min(flat.length, row.index));
+      return {
+        insertionIndex,
+        top: getRowTopRelativeToList(row.rowEl),
+        debug: buildDebug(source, row, insertionIndex, extra),
+      };
+    };
+
+    const placeAfter = (row: (typeof rows)[number], source = targetEl ? 'target-row' : 'gap-after-row', extra?: Record<string, unknown>) => {
+      const insertionIndex = Math.max(0, Math.min(flat.length, row.index + 1));
+      return {
+        insertionIndex,
+        top: getRowTopRelativeToList(row.rowEl) + row.rect.height,
+        debug: buildDebug(source, row, insertionIndex, extra),
+      };
+    };
+
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i];
+      const next = rows[i + 1];
+      if (clientY < row.rect.top) return placeBefore(row);
+      if (clientY <= row.rect.bottom) {
+        return clientY < row.rect.top + row.rect.height / 2 ? placeBefore(row) : placeAfter(row);
+      }
+      if (next && clientY > row.rect.bottom && clientY < next.rect.top) {
+        // Correct drops in the blank virtualized gap between two rendered rows
+        // using getBoundingClientRect midpoints, Todoist-style.
+        const prevMid = row.rect.top + row.rect.height / 2;
+        const nextMid = next.rect.top + next.rect.height / 2;
+        const split = (prevMid + nextMid) / 2;
+        return clientY < split
+          ? placeAfter(row, 'gap-midpoint-prev', { nextIndex: next.index, split: Math.round(split) })
+          : placeBefore(next, 'gap-midpoint-next', { previousIndex: row.index, split: Math.round(split) });
       }
     }
 
-    const rows = Array.from(parentRef.current?.querySelectorAll<HTMLElement>('[data-index]') ?? []);
-    for (const rowEl of rows) {
-      const rect = rowEl.getBoundingClientRect();
-      const index = Number(rowEl.dataset.index);
-      if (!Number.isFinite(index)) continue;
-      if (clientY < rect.top + rect.height / 2) {
-        return { insertionIndex: Math.max(0, Math.min(flat.length, index)), top: getRowTopRelativeToList(rowEl) };
+    if (rows.length > 0) {
+      let nearest = rows[0];
+      let nearestDistance = Math.abs(clientY - (nearest.rect.top + nearest.rect.height / 2));
+      for (const row of rows.slice(1)) {
+        const distance = Math.abs(clientY - (row.rect.top + row.rect.height / 2));
+        if (distance < nearestDistance) {
+          nearest = row;
+          nearestDistance = distance;
+        }
       }
+      return clientY < nearest.rect.top + nearest.rect.height / 2
+        ? placeBefore(nearest, 'nearest-midpoint-gap', { distance: Math.round(nearestDistance) })
+        : placeAfter(nearest, 'nearest-midpoint-gap', { distance: Math.round(nearestDistance) });
     }
-    const last = rows[rows.length - 1];
-    if (last) {
-      const rect = last.getBoundingClientRect();
-      const index = Number(last.dataset.index);
-      return {
-        insertionIndex: Math.max(0, Math.min(flat.length, (Number.isFinite(index) ? index : flat.length - 1) + 1)),
-        top: getRowTopRelativeToList(last) + rect.height,
-      };
-    }
-    return getVirtualInsertionFromClientY(clientY);
+
+    const virtualPlacement = getVirtualInsertionFromClientY(clientY);
+    return { ...virtualPlacement, debug: { source: 'virtual-fallback', pointerY: Math.round(clientY) } };
   }, [flat.length, getRowTopRelativeToList, getVirtualInsertionFromClientY]);
 
   const updateInsertionIndicator = useCallback((clientY: number, target: EventTarget | Element | null) => {
     const placement = getInsertionPlacement(clientY, target);
+    const instrumentation = {
+      insertionIndex: placement.insertionIndex,
+      top: Math.round(placement.top),
+      clientY: Math.round(clientY),
+      ...('debug' in placement ? placement.debug : {}),
+    };
+    try {
+      (window as any).__flowistLastTaskInsert = instrumentation;
+    } catch {}
+    commitSyntheticDragOver(target, placement.insertionIndex);
     setInsertIndicator((current) => {
       if (current && current.insertionIndex === placement.insertionIndex && Math.abs(current.top - placement.top) < 0.5) return current;
       return placement;
     });
     setDragOverIndex(Math.min(flat.length - 1, placement.insertionIndex));
     return placement.insertionIndex;
-  }, [flat.length, getInsertionPlacement]);
+  }, [commitSyntheticDragOver, flat.length, getInsertionPlacement]);
+
+  const finishPointerDropAt = useCallback((active: NonNullable<typeof pointerDragRef.current>, clientY: number, target: EventTarget | Element | null) => {
+    const insertionIndex = updateInsertionIndicator(clientY, target);
+    active.over = insertionIndex;
+    try {
+      (window as any).__flowistLastTaskDrop = {
+        from: active.from,
+        insertionIndex,
+        clientY: Math.round(clientY),
+        via: 'touch',
+        insert: (window as any).__flowistLastTaskInsert,
+        ts: Date.now(),
+      };
+    } catch {}
+    logPerfEvent('reorder', {
+      list: 'tasks',
+      via: 'touch-drop-computed',
+      from: active.from,
+      insertionIndex,
+      count: flat.length,
+      insert: (window as any).__flowistLastTaskInsert,
+    });
+    finishReorder(active.from, insertionIndex, 'pointer-drop');
+  }, [finishReorder, flat.length, updateInsertionIndicator]);
 
   const paintGhostAt = useCallback((clientY: number) => {
     if (ghostRafRef.current != null) return;
@@ -548,11 +635,14 @@ export function FlatTaskList({
       event.preventDefault();
       event.stopPropagation();
       suppressClickUntilRef.current = Date.now() + 350;
-      finishReorder(active.from, active.over, 'pointer-drop');
+      const touch = event.changedTouches[0];
+      const clientY = touch?.clientY ?? active.currentY;
+      const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : event.target;
+      finishPointerDropAt(active, clientY, target);
     } else {
       clearPointerDrag();
     }
-  }, [clearPointerDrag, finishReorder]);
+  }, [clearPointerDrag, finishPointerDropAt]);
 
   useEffect(() => {
     const root = parentRef.current;
@@ -640,7 +730,10 @@ export function FlatTaskList({
       if (active.dragging) {
         event.preventDefault();
         suppressClickUntilRef.current = Date.now() + 350;
-        finishReorder(active.from, active.over, 'pointer-drop');
+        const touch = event.changedTouches[0];
+        const clientY = touch?.clientY ?? active.currentY;
+        const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : event.target;
+        finishPointerDropAt(active, clientY, target);
       } else {
         clearPointerDrag();
       }
@@ -650,13 +743,19 @@ export function FlatTaskList({
     root.addEventListener('touchmove', onTouchMove, { passive: false });
     root.addEventListener('touchend', onTouchEnd, { passive: false });
     root.addEventListener('touchcancel', onTouchEnd, { passive: false });
+    document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: false, capture: true });
+    document.addEventListener('touchcancel', onTouchEnd, { passive: false, capture: true });
     return () => {
       root.removeEventListener('touchstart', onTouchStart);
       root.removeEventListener('touchmove', onTouchMove);
       root.removeEventListener('touchend', onTouchEnd);
       root.removeEventListener('touchcancel', onTouchEnd);
+      document.removeEventListener('touchmove', onTouchMove, { capture: true });
+      document.removeEventListener('touchend', onTouchEnd, { capture: true });
+      document.removeEventListener('touchcancel', onTouchEnd, { capture: true });
     };
-  }, [activatePointerDrag, clearPointerDrag, dndEnabled, finishReorder, flat, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
+  }, [activatePointerDrag, clearPointerDrag, dndEnabled, finishPointerDropAt, flat, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
 
   const movePointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
@@ -710,11 +809,11 @@ export function FlatTaskList({
       event.preventDefault();
       event.stopPropagation();
       suppressClickUntilRef.current = Date.now() + 350;
-      finishReorder(active.from, active.over, 'pointer-drop');
+      finishPointerDropAt(active, event.clientY, event.target);
     } else {
       clearPointerDrag();
     }
-  }, [clearPointerDrag, finishReorder]);
+  }, [clearPointerDrag, finishPointerDropAt]);
 
   useEffect(() => {
     const target = resolvedUseWindow ? window : parentRef.current;
@@ -733,8 +832,6 @@ export function FlatTaskList({
   const totalSize = virtualizer.getTotalSize();
   const scrollOffset = resolvedUseWindow ? parentTop : 0;
 
-  const nativeDndEnabled = dndEnabled && !isCoarsePointer;
-
   return (
     <div
       ref={parentRef}
@@ -749,22 +846,24 @@ export function FlatTaskList({
           e.stopPropagation();
         }
       } : undefined}
-      onDragOver={nativeDndEnabled ? (e) => {
+      onDragOver={dndEnabled ? (e) => {
         if (dragFromRef.current == null) return;
         e.preventDefault();
+        try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'list', ts: Date.now() }; } catch {}
         try { e.dataTransfer.dropEffect = 'move'; } catch {}
         updateInsertionIndicator(e.clientY, e.target);
         stopAutoscroll();
         autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(e.clientY));
       } : undefined}
-      onDrop={nativeDndEnabled ? (e) => {
+      onDrop={dndEnabled ? (e) => {
         if (dragFromRef.current == null) return;
         e.preventDefault();
         e.stopPropagation();
         const to = updateInsertionIndicator(e.clientY, e.target);
+        try { (window as any).__flowistLastTaskNativeDrop = { target: 'list', from: dragFromRef.current, insertionIndex: to, ts: Date.now() }; } catch {}
         finishReorder(dragFromRef.current, to, 'blank-drop');
       } : undefined}
-      onDragLeave={nativeDndEnabled ? () => {
+      onDragLeave={dndEnabled ? () => {
         // Keep the active drag alive while the cursor passes over virtual gaps;
         // `dragend`/`drop` owns cleanup so valid drops are never cancelled early.
       } : undefined}
@@ -802,7 +901,7 @@ export function FlatTaskList({
               onTouchMove={dndEnabled ? moveTouchDrag : undefined}
               onTouchEnd={dndEnabled ? endTouchDrag : undefined}
               onTouchCancel={dndEnabled ? endTouchDrag : undefined}
-              onDragStart={nativeDndEnabled ? (e) => {
+              onDragStart={dndEnabled ? (e) => {
                 dragGenerationRef.current += 1;
                 dragFromRef.current = vi.index;
                 const placement = getInsertionPlacement(e.clientY, e.currentTarget);
@@ -819,30 +918,33 @@ export function FlatTaskList({
                   window.setTimeout(() => ghost.remove(), 0);
                 } catch {}
               } : undefined}
-              onDragEnter={nativeDndEnabled ? (e) => {
+              onDragEnter={dndEnabled ? (e) => {
                 if (dragFromRef.current == null) return;
                 e.preventDefault();
+                try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'row-enter', index: vi.index, ts: Date.now() }; } catch {}
                 try { e.dataTransfer.dropEffect = 'move'; } catch {}
                 updateInsertionIndicator(e.clientY, e.currentTarget);
               } : undefined}
-              onDragOver={nativeDndEnabled ? (e) => {
+              onDragOver={dndEnabled ? (e) => {
                 if (dragFromRef.current == null) return;
                 e.preventDefault();
+                try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'row-over', index: vi.index, ts: Date.now() }; } catch {}
                 try { e.dataTransfer.dropEffect = 'move'; } catch {}
                 updateInsertionIndicator(e.clientY, e.currentTarget);
                 stopAutoscroll();
                 autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(e.clientY));
               } : undefined}
-              onDragLeave={nativeDndEnabled ? () => {} : undefined}
-              onDrop={nativeDndEnabled ? (e) => {
+              onDragLeave={dndEnabled ? () => {} : undefined}
+              onDrop={dndEnabled ? (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const payload = Number(e.dataTransfer.getData('application/x-flowist-task-index') || e.dataTransfer.getData('text/plain'));
                 const from = Number.isFinite(payload) ? payload : dragFromRef.current;
                 const to = updateInsertionIndicator(e.clientY, e.currentTarget);
+                try { (window as any).__flowistLastTaskNativeDrop = { target: 'row', from, insertionIndex: to, index: vi.index, ts: Date.now() }; } catch {}
                 finishReorder(from, to, 'drop');
               } : undefined}
-              onDragEnd={nativeDndEnabled ? cancelDrag : undefined}
+              onDragEnd={dndEnabled ? cancelDrag : undefined}
               style={{
                 position: 'absolute',
                 top: 0,

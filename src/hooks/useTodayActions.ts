@@ -134,8 +134,12 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
   const queueDeferredCompletionState = useCallback((itemId: string, updates: Partial<TodoItem>) => {
     pendingDeferredCompletionUpdatesRef.current.set(itemId, updates);
-    if (deferredCompletionFlushTimerRef.current) window.clearTimeout(deferredCompletionFlushTimerRef.current);
-    deferredCompletionFlushTimerRef.current = window.setTimeout(flushDeferredCompletionState, COMPLETION_BATCH_MS);
+    // Do not keep pushing the timer out while the user taps many tasks quickly.
+    // That debounce starvation made tasks appear "stuck" after 3–4 rapid
+    // completions. Flush in fixed small batches instead.
+    if (!deferredCompletionFlushTimerRef.current) {
+      deferredCompletionFlushTimerRef.current = window.setTimeout(flushDeferredCompletionState, COMPLETION_BATCH_MS);
+    }
   }, [flushDeferredCompletionState]);
 
   const flushCompletionPersistence = useCallback(() => {
@@ -154,8 +158,9 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
   const queueCompletionPersistence = useCallback((task: TodoItem) => {
     pendingCompletionPersistTasksRef.current.set(task.id, task);
-    if (completionPersistFlushTimerRef.current) window.clearTimeout(completionPersistFlushTimerRef.current);
-    completionPersistFlushTimerRef.current = window.setTimeout(flushCompletionPersistence, COMPLETION_BATCH_MS);
+    if (!completionPersistFlushTimerRef.current) {
+      completionPersistFlushTimerRef.current = window.setTimeout(flushCompletionPersistence, COMPLETION_BATCH_MS);
+    }
   }, [flushCompletionPersistence]);
 
   const flushCompletionStats = useCallback(() => {
