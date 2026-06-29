@@ -31,6 +31,7 @@ async function seedTasks(page: Page, count: number) {
       localStorage.setItem("flowist_user_engaged", "true");
     } catch {}
     const DB_NAME = "nota-tasks-db";
+    const SETTINGS_DB_NAME = "nota-settings-db";
     const STORE = "tasks";
     const META = "meta";
     const open = () =>
@@ -51,9 +52,37 @@ async function seedTasks(page: Page, count: number) {
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
+    const seedSettings = () =>
+      new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open(SETTINGS_DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains("settings")) {
+            db.createObjectStore("settings", { keyPath: "key" });
+          }
+        };
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction("settings", "readwrite");
+          const s = tx.objectStore("settings");
+          s.put({ key: "onboarding_completed", value: true });
+          s.put({ key: "todoViewMode", value: "flat" });
+          s.put({ key: "todoShowCompleted", value: true });
+          s.put({ key: "todoDateFilter", value: "all" });
+          s.put({ key: "todoSortBy", value: "created" });
+          s.put({ key: "todoGroupByOption", value: "none" });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      });
 
     (window as unknown as { __seedPerfTasks: () => Promise<void> }).__seedPerfTasks =
       async () => {
+        await seedSettings();
         const db = await open();
         await new Promise<void>((resolve, reject) => {
           const tx = db.transaction(STORE, "readwrite");
@@ -79,10 +108,10 @@ async function seedTasks(page: Page, count: number) {
 }
 
 async function gotoToday(page: Page) {
-  // Establish the app origin first, seed IndexedDB while the app is idle, then
-  // navigate to Today. Seeding while /todo/today is still resolving can race
-  // client-side redirects and destroy the evaluation context.
-  await page.goto("/", { waitUntil: "networkidle" });
+  // Establish the origin without booting React, seed IndexedDB while the app is
+  // idle, then navigate to Today. Loading `/` first can trigger onboarding and
+  // leave React state stuck there even after the DB has been seeded.
+  await page.goto("/robots.txt", { waitUntil: "domcontentloaded" });
   await page.evaluate(() =>
     (window as unknown as { __seedPerfTasks: () => Promise<void> }).__seedPerfTasks()
   );
