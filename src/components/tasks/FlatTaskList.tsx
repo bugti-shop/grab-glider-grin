@@ -1017,7 +1017,7 @@ export function FlatTaskList({
                 willChange: dragFromRef.current === vi.index ? 'transform, box-shadow' : undefined,
               }}
             >
-              {renderRow(row, vi.index, isActive)}
+              <MemoRowBody row={row} index={vi.index} isActive={isActive} render={renderRow} />
             </div>
           );
         })}
