@@ -125,7 +125,7 @@ export function NotesVirtualGrid({
       data-virt-windowing={resolvedWindowing ? 'window' : 'container'}
       style={resolvedWindowing
         ? { position: 'relative' }
-        : { position: 'relative', height: 'min(72vh, 900px)', overflow: 'auto', WebkitOverflowScrolling: 'touch', contain: 'strict' }
+        : { position: 'relative', height: 'min(72vh, 900px)', overflow: 'auto', WebkitOverflowScrolling: 'touch', contain: 'layout paint', overscrollBehavior: 'contain' }
       }
     >
       <div
