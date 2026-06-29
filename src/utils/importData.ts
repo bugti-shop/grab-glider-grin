@@ -593,6 +593,93 @@ const parseGenericNotesCSV = (
   }
 };
 
+// ─── Generic JSON Import ───────────────────────────────────
+// Accepts:
+//   • An array of objects → auto-classified into tasks/notes by field presence
+//   • { tasks: [], notes: [], folders: [] } shape (our own backup export shape)
+const parseGenericJSON = (
+  text: string,
+  onProgress?: (p: ImportProgress) => void,
+): ImportResult => {
+  let raw: unknown;
+  try { raw = JSON.parse(text); } catch (e) {
+    return { success: false, tasks: [], notes: [], error: `Invalid JSON: ${e instanceof Error ? e.message : 'parse error'}`, stats: { tasks: 0, notes: 0 } };
+  }
+
+  const tasks: TodoItem[] = [];
+  const notes: Note[] = [];
+  const folders: Folder[] = [];
+  const errors: string[] = [];
+  let failed = 0;
+
+  const pushItem = (item: Record<string, unknown>, idx: number) => {
+    try {
+      const title = String(item.title ?? item.name ?? item.text ?? '').trim();
+      if (!title && !item.content && !item.body) {
+        failed++; errors.push(`Item ${idx + 1}: missing title/content`); return;
+      }
+      // Treat as note if it has a content/body field or explicit type === 'note'
+      const isNote = item.type === 'note' || 'content' in item || 'body' in item || 'markdown' in item;
+      if (isNote) {
+        const now = Date.now();
+        notes.push({
+          id: String(item.id ?? generateId()),
+          title: title || 'Untitled',
+          content: String(item.content ?? item.body ?? item.markdown ?? ''),
+          type: 'regular',
+          createdAt: Number(item.createdAt ?? item.created ?? now) || now,
+          updatedAt: Number(item.updatedAt ?? item.updated ?? now) || now,
+          tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
+          folderId: typeof item.folderId === 'string' ? item.folderId : undefined,
+        } as Note);
+      } else {
+        tasks.push({
+          id: String(item.id ?? generateId()),
+          text: title,
+          completed: Boolean(item.completed ?? item.done ?? false),
+          priority: (item.priority as Priority) || 'none',
+          dueDate: item.dueDate ? String(item.dueDate) : undefined,
+          tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
+          createdAt: Number(item.createdAt ?? Date.now()),
+        } as TodoItem);
+      }
+    } catch (e) {
+      failed++;
+      errors.push(`Item ${idx + 1}: ${e instanceof Error ? e.message : 'parse error'}`);
+    }
+  };
+
+  let items: Record<string, unknown>[] = [];
+  if (Array.isArray(raw)) {
+    items = raw as Record<string, unknown>[];
+  } else if (raw && typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.tasks)) (obj.tasks as Record<string, unknown>[]).forEach((t, i) => pushItem({ ...t, type: 'task' }, i));
+    if (Array.isArray(obj.notes)) (obj.notes as Record<string, unknown>[]).forEach((n, i) => pushItem({ ...n, type: 'note' }, i));
+    if (Array.isArray(obj.folders)) (obj.folders as Folder[]).forEach(f => { if (f && f.id && f.name) folders.push(f); });
+    if (Array.isArray(obj.items)) items = obj.items as Record<string, unknown>[];
+  } else {
+    return { success: false, tasks: [], notes: [], error: 'JSON must be an array or an object with tasks/notes/items', stats: { tasks: 0, notes: 0 } };
+  }
+
+  const total = items.length;
+  items.forEach((item, idx) => {
+    pushItem(item, idx);
+    if (total > 0 && (idx % 25 === 0 || idx === total - 1)) {
+      onProgress?.({ phase: 'parsing', current: idx + 1, total });
+    }
+  });
+
+  return {
+    success: true,
+    tasks,
+    notes,
+    folders: folders.length ? folders : undefined,
+    stats: { tasks: tasks.length, notes: notes.length, folders: folders.length || undefined, failed },
+    errors: errors.length ? errors : undefined,
+  };
+};
+
 // ─── Main Import Function ──────────────────────────────────
 export const importFromFile = async (
   text: string,
@@ -613,6 +700,8 @@ export const importFromFile = async (
       return parseGenericTasksCSV(text, options?.columnMap, onProgress);
     case 'csv-notes':
       return parseGenericNotesCSV(text, options?.columnMap, onProgress);
+    case 'json':
+      return parseGenericJSON(text, onProgress);
     default:
       return { success: false, tasks: [], notes: [], error: 'Unknown source', stats: { tasks: 0, notes: 0 } };
   }
@@ -625,5 +714,7 @@ export const getAcceptedFileTypes = (source: ImportSource): string => {
     case 'evernote': return '.enex,.html,.htm';
     case 'csv-tasks':
     case 'csv-notes': return '.csv';
+    case 'json': return '.json';
   }
 };
+
