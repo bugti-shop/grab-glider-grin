@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
-import { Upload, CheckCircle2, FileText, ListTodo, FolderOpen, Paperclip, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Upload, CheckCircle2, FileText, ListTodo, FolderOpen, Paperclip, AlertTriangle, ArrowLeft, Download } from 'lucide-react';
 import {
   ImportSource,
   importFromFile,
