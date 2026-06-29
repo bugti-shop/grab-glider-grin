@@ -462,7 +462,11 @@ export function FlatTaskList({
   }, [activatePointerDrag, dndEnabled, isCoarsePointer]);
 
   const startTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
-    if (!dndEnabled || !isCoarsePointer || pointerDragRef.current || isInteractiveDragTarget(event.target)) return;
+    // A real TouchEvent is already proof of a coarse input path. Do not gate on
+    // matchMedia('(pointer: coarse)') here: Chromium/Playwright and a few
+    // Android WebViews can report it late/false, which allowed drag initiation
+    // visuals to work but prevented the actual drop lifecycle from starting.
+    if (!dndEnabled || pointerDragRef.current || isInteractiveDragTarget(event.target)) return;
     const touch = event.touches[0];
     if (!touch) return;
 
@@ -492,7 +496,7 @@ export function FlatTaskList({
       if (!current || current.pointerId !== pointerId) return;
       activatePointerDrag(current);
     }, 90);
-  }, [activatePointerDrag, dndEnabled, isCoarsePointer]);
+  }, [activatePointerDrag, dndEnabled]);
 
   const moveTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
@@ -750,7 +754,7 @@ export function FlatTaskList({
                 backgroundColor: isTouchDragCandidate ? 'hsl(var(--primary) / 0.05)' : undefined,
                 opacity: dragFromRef.current === vi.index ? 0.72 : 1,
                 cursor: dragFromRef.current === vi.index ? 'grabbing' : dndEnabled ? 'grab' : undefined,
-                touchAction: dndEnabled && isCoarsePointer ? 'pan-y' : undefined,
+                touchAction: dndEnabled ? 'pan-y' : undefined,
               }}
             >
               {renderRow(row, vi.index, isActive)}
