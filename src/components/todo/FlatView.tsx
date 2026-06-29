@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { TodoItem, TaskSection } from '@/types/note';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { ChevronRight, ChevronDown } from 'lucide-react';
@@ -60,6 +60,7 @@ export const FlatView = ({
   const { t } = useTranslation();
   const [virtualizationSettings] = useVirtualizationSettings();
   const useVirtualizedList = false;
+  const [localOrderVersion, setLocalOrderVersion] = useState(0);
 
   // Big-list path: when there are many uncompleted tasks, drop DnD + per-section
   // nesting and render through the shared virtualized FlatTaskList. This scales
@@ -68,7 +69,7 @@ export const FlatView = ({
   const useFlatVirtualized = visibleTaskCount >= VIRTUALIZE_THRESHOLD;
   const virtualOrderedItems = useMemo(
     () => useFlatVirtualized ? applyTaskOrder(uncompletedItems, 'flat-virtual') : uncompletedItems,
-    [useFlatVirtualized, uncompletedItems],
+    [useFlatVirtualized, uncompletedItems, localOrderVersion],
   );
   const flatIndex = useFlatTaskIndex(useFlatVirtualized ? virtualOrderedItems : undefined);
   const virtualHeaderSection = useMemo<TaskSection>(() => {
@@ -120,6 +121,7 @@ export const FlatView = ({
                   // Persist new order for every section bucket touched so the
                   // flat view stays consistent at scale (sections are merged
                   // into one virtual list when virtualized).
+                  setLocalOrderVersion(v => v + 1);
                   setOrderVersion(v => v + 1);
                   try { Haptics.impact({ style: ImpactStyle.Light }); } catch {}
                 }}

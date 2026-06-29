@@ -22,7 +22,8 @@ import { updateSectionOrder } from '@/utils/taskOrderStorage';
 import { getAllSettings, setSetting } from '@/utils/settingsStorage';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
-import { getRingFillMs } from '@/utils/ringFillDuration';
+
+const COMPLETION_BATCH_MS = 150;
 
 interface UseTodayActionsProps {
   items: TodoItem[];
@@ -83,7 +84,9 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   const itemsRef = useRef(items);
   itemsRef.current = items;
   const pendingDeferredCompletionUpdatesRef = useRef<Map<string, Partial<TodoItem>>>(new Map());
+  const pendingCompletionPersistTasksRef = useRef<Map<string, TodoItem>>(new Map());
   const deferredCompletionFlushTimerRef = useRef<number | null>(null);
+  const completionPersistFlushTimerRef = useRef<number | null>(null);
   const pendingCompletionStatsRef = useRef(0);
   const completionStatsTimerRef = useRef<number | null>(null);
 
@@ -101,8 +104,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     // re-filter/sort. The state layer prepends local-only rows optimistically,
     // so duplicating 200+ tasks appears instantly without a post-click hang.
     markSingleTaskPersisted(true);
-    void import('@/utils/taskStorage').then(({ bulkPutTasksInWorker }) =>
-      bulkPutTasksInWorker(tasks).then((persisted) => {
+    void import('@/utils/taskStorage').then(({ bulkUpdateTasksInDB }) =>
+      bulkUpdateTasksInDB(tasks).then((persisted) => {
         if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
       }),
     );
@@ -132,8 +135,28 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   const queueDeferredCompletionState = useCallback((itemId: string, updates: Partial<TodoItem>) => {
     pendingDeferredCompletionUpdatesRef.current.set(itemId, updates);
     if (deferredCompletionFlushTimerRef.current) window.clearTimeout(deferredCompletionFlushTimerRef.current);
-    deferredCompletionFlushTimerRef.current = window.setTimeout(flushDeferredCompletionState, getRingFillMs());
+    deferredCompletionFlushTimerRef.current = window.setTimeout(flushDeferredCompletionState, COMPLETION_BATCH_MS);
   }, [flushDeferredCompletionState]);
+
+  const flushCompletionPersistence = useCallback(() => {
+    completionPersistFlushTimerRef.current = null;
+    const pending = pendingCompletionPersistTasksRef.current;
+    if (pending.size === 0) return;
+    const tasks = Array.from(pending.values());
+    pending.clear();
+    markSingleTaskPersisted(true);
+    void import('@/utils/taskStorage').then(({ bulkPutTasksInWorker }) =>
+      bulkPutTasksInWorker(tasks).then((persisted) => {
+        if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
+      }),
+    );
+  }, [markSingleTaskPersisted, t]);
+
+  const queueCompletionPersistence = useCallback((task: TodoItem) => {
+    pendingCompletionPersistTasksRef.current.set(task.id, task);
+    if (completionPersistFlushTimerRef.current) window.clearTimeout(completionPersistFlushTimerRef.current);
+    completionPersistFlushTimerRef.current = window.setTimeout(flushCompletionPersistence, COMPLETION_BATCH_MS);
+  }, [flushCompletionPersistence]);
 
   const flushCompletionStats = useCallback(() => {
     const count = pendingCompletionStatsRef.current;
@@ -506,7 +529,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       // Persist immediately, but keep React's large-list filter/sort work out of
       // the critical 900ms checkbox paint window. This keeps the colored ring
       // duration stable even when thousands of tasks exist.
-      persistUpdate(true);
+      queueCompletionPersistence({ ...currentItem, ...updatesWithTimestamp });
       queueDeferredCompletionState(itemId, updatesWithTimestamp);
     } else {
       commitStateUpdate();
@@ -527,7 +550,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         duration: 5000,
       });
     }
-  }, [setItems, t, softRequireMutate, markSingleTaskPersisted, queueCompletionStats, queueDeferredCompletionState]);
+  }, [setItems, t, softRequireMutate, markSingleTaskPersisted, queueCompletionStats, queueDeferredCompletionState, queueCompletionPersistence]);
 
   const deleteItem = useCallback(async (itemId: string, _showUndo: boolean = false, skipConfirm: boolean = false) => {
     if (!softRequireMutate()) return;

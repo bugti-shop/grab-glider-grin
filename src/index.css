@@ -27,13 +27,15 @@ All colors MUST be HSL.
 
 body.flowist-task-dragging {
   user-select: none;
-  overflow: hidden;
-  touch-action: none;
+  overflow-y: auto;
+  touch-action: pan-y;
   overscroll-behavior: contain;
 }
 
 body.flowist-task-dragging [data-flowist-virtual-list="tasks"] {
-  touch-action: none;
+  overflow-y: auto !important;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 @layer base {
