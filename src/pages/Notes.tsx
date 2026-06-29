@@ -311,7 +311,7 @@ const Notes = () => {
    * us a `draggedId` and the `insertionIndex` in the CURRENT sortedNotes
    * order; we translate that back to the underlying `notes` array.
    */
-  const handleReorderByInsertion = useCallbackRef((draggedNoteId: string, insertionIndex: number, sorted: Note[]) => {
+  const handleReorderByInsertion = useCallback((draggedNoteId: string, insertionIndex: number, sorted: Note[]) => {
     const started = performance.now();
     const draggedNote = notes.find(n => n.id === draggedNoteId);
     if (!draggedNote) {
