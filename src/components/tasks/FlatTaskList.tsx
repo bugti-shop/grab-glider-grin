@@ -395,14 +395,6 @@ export function FlatTaskList({
       };
     };
 
-    if (targetEl) {
-      const targetIndex = Number(targetEl.dataset.index);
-      const targetRow = rows.find((row) => row.rowEl === targetEl || row.index === targetIndex);
-      if (targetRow) {
-        return clientY < targetRow.rect.top + targetRow.rect.height / 2 ? placeBefore(targetRow) : placeAfter(targetRow);
-      }
-    }
-
     for (let i = 0; i < rows.length; i += 1) {
       const row = rows[i];
       const next = rows[i + 1];
