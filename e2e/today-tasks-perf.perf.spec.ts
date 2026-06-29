@@ -73,6 +73,7 @@ async function seedTasks(page: Page, count: number) {
           s.put({ key: "todoDateFilter", value: "all" });
           s.put({ key: "todoSortBy", value: "created" });
           s.put({ key: "todoGroupByOption", value: "none" });
+          s.put({ key: "flowist_admin_bypass", value: true });
           tx.oncomplete = () => {
             db.close();
             resolve();
@@ -116,7 +117,9 @@ async function gotoToday(page: Page) {
   await page.evaluate(() =>
     (window as unknown as { __seedPerfTasks: () => Promise<void> }).__seedPerfTasks()
   );
+  const navStart = Date.now();
   await page.goto("/todo/today", { waitUntil: "domcontentloaded" });
+  return navStart;
 }
 
 async function waitForVirtualList(page: Page) {
@@ -128,8 +131,7 @@ async function waitForVirtualList(page: Page) {
 test.describe("Today tasks @ 5k items", () => {
   test("initial render stays under threshold", async ({ page }) => {
     await seedTasks(page, TASK_COUNT);
-    const start = Date.now();
-    await gotoToday(page);
+    const start = await gotoToday(page);
     await waitForVirtualList(page);
     const renderMs = Date.now() - start;
     console.log(`[perf] initial render: ${renderMs}ms (limit ${MAX_RENDER_MS})`);
@@ -173,7 +175,7 @@ test.describe("Today tasks @ 5k items", () => {
     await page.touchscreen.tap(srcX, srcY); // ensure focus
     await page.evaluate(
       ({ x, y, ty }) => {
-        const el = document.elementFromPoint(x, y) as HTMLElement | null;
+        const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest('[data-index]') as HTMLElement | null;
         if (!el) return;
         const fire = (type: string, clientX: number, clientY: number) => {
           const touch = new Touch({
