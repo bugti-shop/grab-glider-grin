@@ -157,11 +157,27 @@ export const DesktopSidebar = () => {
   const handlePrimaryAction = useCallback(() => {
     triggerHaptic('light').catch(() => {});
     if (notesContext) {
-      navigate('/notesdashboard?new=1');
+      // Default action without dropdown: open a regular note
+      handleCreateNote('regular');
     } else {
       navigate('/todo/today?add=1');
     }
   }, [navigate, notesContext]);
+
+  const handleCreateNote = useCallback((type: NoteType) => {
+    triggerHaptic('medium').catch(() => {});
+    const dispatch = () => {
+      window.dispatchEvent(
+        new CustomEvent('openSpecificNoteType', { detail: { noteType: type } })
+      );
+    };
+    if (location.pathname.startsWith('/notesdashboard')) {
+      dispatch();
+    } else {
+      navigate('/notesdashboard');
+      setTimeout(dispatch, 250);
+    }
+  }, [navigate, location.pathname]);
 
   const toggleCollapsed = () => {
     triggerHaptic('light').catch(() => {});
@@ -219,21 +235,67 @@ export const DesktopSidebar = () => {
       </div>
 
       <div className={cn('pt-3 pb-2', collapsed ? 'px-2' : 'px-3')}>
-        <button
-          onClick={handlePrimaryAction}
-          className={cn(
-            'w-full flex items-center rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 active:scale-[0.98] transition-all',
-            collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'
-          )}
-          title={collapsed ? primaryLabel : undefined}
-        >
-          {notesContext ? (
-            <BookOpen className="h-5 w-5 flex-shrink-0" />
-          ) : (
+        {notesContext ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  'w-full flex items-center rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 active:scale-[0.98] transition-all',
+                  collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'
+                )}
+                title={collapsed ? primaryLabel : undefined}
+                onClick={() => triggerHaptic('light').catch(() => {})}
+              >
+                <BookOpen className="h-5 w-5 flex-shrink-0" />
+                {!collapsed && <span className="flex-1 text-left">{primaryLabel}</span>}
+                {!collapsed && <ChevronDown className="h-4 w-4 opacity-80" />}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="bottom" className="w-52 bg-card">
+              <DropdownMenuItem className="gap-2" onClick={() => handleCreateNote('sticky')}>
+                <StickyNote className="h-4 w-4 text-warning" />
+                {t('notes.noteTypes.sticky', 'Sticky Note')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2" onClick={() => handleCreateNote('lined')}>
+                <FileText className="h-4 w-4 text-info" />
+                {t('notes.noteTypes.lined', 'Lined Note')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2" onClick={() => handleCreateNote('regular')}>
+                <FileEdit className="h-4 w-4 text-success" />
+                {t('notes.noteTypes.regular', 'Regular Note')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2" onClick={() => handleCreateNote('code')}>
+                <FileCode className="h-4 w-4 text-streak" />
+                {t('notes.noteTypes.code', 'Code Note')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2" onClick={() => handleCreateNote('sketch')}>
+                <PenTool className="h-4 w-4 text-teal-500" />
+                {t('notes.noteTypes.sketch', 'Sketch')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2" onClick={() => handleCreateNote('linkedin')}>
+                <Type className="h-4 w-4 text-info" />
+                {t('notes.noteTypes.linkedin', 'LinkedIn Formatter')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <button
+            onClick={handlePrimaryAction}
+            className={cn(
+              'w-full flex items-center rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 active:scale-[0.98] transition-all',
+              collapsed ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'
+            )}
+            title={collapsed ? primaryLabel : undefined}
+          >
             <Plus className="h-5 w-5 flex-shrink-0" />
-          )}
-          {!collapsed && <span>{primaryLabel}</span>}
-        </button>
+            {!collapsed && <span>{primaryLabel}</span>}
+          </button>
+        )}
       </div>
 
       <nav className={cn('py-1 flex flex-col gap-0.5 px-2')}>
