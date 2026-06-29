@@ -664,7 +664,9 @@ const Today = () => {
               </DragDropContext>
             </div>
           </div>
+        </div>
 
+        <div className="max-w-2xl mx-auto">
           {isSelectionMode && selectedTaskIds.size > 0 && (
             <div className="fixed left-4 right-4 z-40 bg-card border rounded-lg shadow-lg p-4" style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}>
               <p className="text-sm mb-3 font-medium">{t('bulk.tasksSelected', { count: selectedTaskIds.size })}</p>
