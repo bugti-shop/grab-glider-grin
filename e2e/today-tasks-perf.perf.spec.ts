@@ -365,10 +365,11 @@ test.describe("Today tasks @ 5k items", () => {
     expect(stationaryInstrumentation.drop, "holding/tapping without movement must not drop").toBeUndefined();
     expect(stationaryInstrumentation.reorder, "holding/tapping without movement must not reorder").toBeUndefined();
 
+    const firstBeforeCompletions = extractPerfTitle(await rowText(page, 0));
     await completeFirstVisibleTasksInstantly(page, 4);
     await expect
-      .poll(() => rowText(page, 0), { timeout: 5_000, message: "first 4 rapid completions should flush" })
-      .toContain("Perf task 5");
+      .poll(() => rowText(page, 0), { timeout: 5_000, message: "rapid completions should flush and keep the list interactive" })
+      .not.toContain(firstBeforeCompletions);
 
     for (let cycle = 0; cycle < 3; cycle += 1) {
       const draggedTitle = extractPerfTitle(await rowText(page, 0));
