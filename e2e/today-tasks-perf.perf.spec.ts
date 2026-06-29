@@ -364,6 +364,7 @@ test.describe("Today tasks @ 5k items", () => {
     const stationaryInstrumentation = await readDragInstrumentation(page);
     expect(stationaryInstrumentation.drop, "holding/tapping without movement must not drop").toBeUndefined();
     expect(stationaryInstrumentation.reorder, "holding/tapping without movement must not reorder").toBeUndefined();
+    await page.waitForTimeout(400);
 
     const firstBeforeCompletions = extractPerfTitle(await rowText(page, 0));
     await completeFirstVisibleTasksInstantly(page, 4);
