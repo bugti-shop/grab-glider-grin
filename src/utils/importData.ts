@@ -6,7 +6,7 @@
 import { TodoItem, Note, Priority, Folder, TaskAttachment } from '@/types/note';
 import { saveTaskMedia } from '@/utils/taskMediaStorage';
 
-export type ImportSource = 'todoist' | 'notion' | 'evernote' | 'csv-tasks' | 'csv-notes';
+export type ImportSource = 'todoist' | 'notion' | 'evernote' | 'csv-tasks' | 'csv-notes' | 'json';
 
 export interface ImportProgress {
   phase: 'parsing' | 'attachments' | 'saving' | 'done';
