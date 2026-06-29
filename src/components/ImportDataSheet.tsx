@@ -491,10 +491,19 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           };
           walk(preview.tasks, 0);
 
-          const noteRows = preview.notes.map(n => ({
-            title: n.title || '(untitled)',
-            folder: (n.folderId && folderNameById.get(n.folderId)) || importFolderName,
-          }));
+          const noteRows = preview.notes.map(n => {
+            const status = n.isDeleted ? 'Deleted' : n.isArchived ? 'Archived' : n.isPinned ? 'Pinned' : 'Active';
+            const due = n.reminderEnabled && n.reminderTime
+              ? new Date(n.reminderTime as any).toLocaleDateString()
+              : '—';
+            return {
+              title: n.title || '(untitled)',
+              folder: (n.folderId && folderNameById.get(n.folderId)) || importFolderName,
+              status,
+              priority: 'none',
+              due,
+            };
+          });
 
           const MAX = 50;
 
