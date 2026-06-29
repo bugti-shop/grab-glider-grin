@@ -578,7 +578,12 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
                     {noteRows.slice(0, MAX).map((r, i) => (
                       <div key={i} className="px-3 py-2 text-xs">
                         <p className="font-medium text-foreground truncate">{r.title}</p>
-                        <p className="text-muted-foreground mt-0.5">📁 {r.folder}</p>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
+                          <span>📁 {r.folder}</span>
+                          <span>● {r.status}</span>
+                          <span>⚑ {r.priority}</span>
+                          <span>📅 {r.due}</span>
+                        </div>
                       </div>
                     ))}
                     {noteRows.length > MAX && (
