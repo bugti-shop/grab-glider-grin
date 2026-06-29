@@ -494,14 +494,40 @@ export const useTodayState = () => {
       const byId = new Map(items.map(i => [i.id, i]));
       const workerOrdered = [...workerResult.uncompleted, ...workerResult.completed];
       const workerIds = new Set(workerOrdered.map((t: any) => t.id));
-      const optimisticExtras = items.filter(i => !workerIds.has(i.id));
+      const allowedFolderIds = selectedFolderId ? new Set(getStrictAllowedFolderIds(folders, selectedFolderId) ?? []) : null;
+      const includeUnfiled = shouldIncludeUnfiledInFolder(folders, selectedFolderId);
+      const today = startOfDay(new Date());
+      const matchesCurrentFilters = (item: TodoItem) => {
+        if (smartList !== 'all' && !getSmartListFilter(smartList)(item)) return false;
+        if (allowedFolderIds && !(item.folderId ? allowedFolderIds.has(item.folderId) : includeUnfiled)) return false;
+        if (priorityFilter !== 'all' && item.priority !== priorityFilter) return false;
+        if (statusFilter === 'completed' && !item.completed) return false;
+        if (statusFilter === 'uncompleted' && item.completed) return false;
+        if (statusFilter === 'not_started' && !(item.status === 'not_started' || !item.status)) return false;
+        if (statusFilter === 'in_progress' && item.status !== 'in_progress') return false;
+        if (statusFilter === 'almost_done' && item.status !== 'almost_done') return false;
+        const itemDate = item.dueDate ? new Date(item.dueDate) : null;
+        if (dateFilter === 'today' && !(itemDate && isToday(itemDate))) return false;
+        if (dateFilter === 'tomorrow' && !(itemDate && isTomorrow(itemDate))) return false;
+        if (dateFilter === 'this-week' && !(itemDate && isThisWeek(itemDate))) return false;
+        if (dateFilter === 'overdue' && !(itemDate && isBefore(itemDate, today) && !item.completed)) return false;
+        if (dateFilter === 'has-date' && !itemDate) return false;
+        if (dateFilter === 'no-date' && itemDate) return false;
+        if (tagFilter.length > 0 && !tagFilter.some(tag => (item.tagIds || []).includes(tag))) return false;
+        if (deferredSearch.trim()) {
+          const q = deferredSearch.toLowerCase();
+          if (!item.text.toLowerCase().includes(q) && !item.description?.toLowerCase().includes(q)) return false;
+        }
+        return true;
+      };
+      const optimisticExtras = items.filter(i => !workerIds.has(i.id) && matchesCurrentFilters(i));
       const ordered = workerOrdered
         .map((t: any) => byId.get(t.id))
         .filter(Boolean) as TodoItem[];
       return [...optimisticExtras, ...ordered];
     }
     return processedItemsFallback || [];
-  }, [workerResult, worker.isAvailable, items, processedItemsFallback]);
+  }, [workerResult, worker.isAvailable, items, processedItemsFallback, folders, selectedFolderId, smartList, priorityFilter, statusFilter, dateFilter, tagFilter, deferredSearch]);
 
   const searchFilteredItems = useMemo(() => {
     // If worker already handled search, skip client-side search
