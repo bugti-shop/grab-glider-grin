@@ -72,6 +72,12 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
   const [csvHeaders, setCsvHeaders] = useState<string[] | null>(null);
   const [columnMap, setColumnMap] = useState<CsvColumnMap>({});
 
+  // Preview state — populated after parsing, before committing to storage.
+  const [preview, setPreview] = useState<ImportResult | null>(null);
+  const [pendingText, setPendingText] = useState<string>('');
+  const [pendingFileName, setPendingFileName] = useState<string>('');
+  const [pendingColumnMap, setPendingColumnMap] = useState<CsvColumnMap | undefined>(undefined);
+
   const reset = () => {
     setSelectedSource(null);
     setResult(null);
@@ -80,6 +86,10 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
     setCsvFileName('');
     setCsvHeaders(null);
     setColumnMap({});
+    setPreview(null);
+    setPendingText('');
+    setPendingFileName('');
+    setPendingColumnMap(undefined);
   };
 
   const handleSourceSelect = (source: ImportSource) => {
@@ -89,6 +99,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
     setCsvHeaders(null);
     setCsvText('');
     setColumnMap({});
+    setPreview(null);
   };
 
   const handleFileSelect = () => {
