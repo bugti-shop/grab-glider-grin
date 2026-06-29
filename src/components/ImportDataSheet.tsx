@@ -157,15 +157,31 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       }
 
       setResult(importResult);
+      const s = importResult.stats;
+      const imported = (s.tasks || 0) + (s.notes || 0);
+      const skipped = s.failed || 0;
+      const errored = importResult.errors?.length || 0;
       const parts = [
-        importResult.stats.tasks ? `${importResult.stats.tasks} tasks` : null,
-        importResult.stats.notes ? `${importResult.stats.notes} notes` : null,
-        importResult.stats.attachments ? `${importResult.stats.attachments} attachments` : null,
-        importResult.stats.failed ? `${importResult.stats.failed} skipped` : null,
-      ].filter(Boolean).join(', ');
-      toast({ title: t('settings.importSuccess', 'Import successful!'), description: parts || 'Done' });
-    } catch {
-      toast({ title: t('settings.importFailed', 'Import failed'), variant: 'destructive' });
+        s.tasks ? `${s.tasks} tasks` : null,
+        s.notes ? `${s.notes} notes` : null,
+        s.folders ? `${s.folders} folders` : null,
+        s.attachments ? `${s.attachments} attachments` : null,
+      ].filter(Boolean).join(' · ');
+      sonnerToast.success(
+        `Imported ${imported} item${imported === 1 ? '' : 's'}`,
+        {
+          description: [
+            parts || 'No items found',
+            skipped ? `${skipped} skipped` : null,
+            errored && errored !== skipped ? `${errored} error${errored === 1 ? '' : 's'}` : null,
+          ].filter(Boolean).join(' • '),
+          duration: 6000,
+        }
+      );
+    } catch (e) {
+      sonnerToast.error(t('settings.importFailed', 'Import failed'), {
+        description: e instanceof Error ? e.message : undefined,
+      });
     } finally {
       setIsImporting(false);
     }
