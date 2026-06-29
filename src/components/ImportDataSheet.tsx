@@ -41,6 +41,41 @@ const sources: { id: ImportSource; name: string; description: string; formats: s
 
 const NONE = '__none__';
 
+// Escape a single CSV cell per RFC 4180.
+const csvCell = (v: unknown): string => {
+  const s = v == null ? '' : String(v);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+const downloadPreviewCsv = (
+  taskRows: { text: string; folder: string; status: string; priority: string; due: string; depth: number }[],
+  noteRows: { title: string; folder: string }[],
+  fileName: string,
+) => {
+  const header = ['kind', 'row', 'title', 'folder', 'status', 'priority', 'due', 'depth'];
+  const lines: string[] = [header.join(',')];
+  taskRows.forEach((r, i) => {
+    lines.push([
+      'task', i + 1, r.text, r.folder, r.status, r.priority, r.due, r.depth,
+    ].map(csvCell).join(','));
+  });
+  noteRows.forEach((r, i) => {
+    lines.push([
+      'note', i + 1, r.title, r.folder, '', '', '', '',
+    ].map(csvCell).join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const base = (fileName || 'import').replace(/\.[^.]+$/, '');
+  a.href = url;
+  a.download = `${base}-preview-mapping.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 // Field labels for the column mapping UI per CSV kind.
 const taskFields: { key: keyof CsvColumnMap; label: string; required?: boolean }[] = [
   { key: 'title', label: 'Title', required: true },
