@@ -774,6 +774,8 @@ export const importFromFile = async (
   switch (source) {
     case 'todoist':
       return parseTodoistCSV(text);
+    case 'ticktick':
+      return parseTickTickCSV(text);
     case 'notion':
       return fileType === 'json' ? parseNotionJSON(text) : parseNotionCSV(text);
     case 'evernote':
