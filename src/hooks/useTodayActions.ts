@@ -29,7 +29,10 @@ import { uploadCategory } from '@/utils/googleDriveSync';
 // is no longer under the pointer, and the 4th tap appears "stuck" / lost.
 // Holding the visual state for the full ring duration lets rapid taps queue
 // without yanking the DOM out from under the user.
-const COMPLETION_BATCH_MS = 900;
+// Short batch window so rapid checkmark taps feel snappy. The actual
+// large-list re-render is still wrapped in startTransition below so it
+// never blocks the discrete tap event itself.
+const COMPLETION_BATCH_MS = 250;
 
 interface UseTodayActionsProps {
   items: TodoItem[];
