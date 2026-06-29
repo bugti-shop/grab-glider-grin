@@ -44,6 +44,32 @@ const dispatchTasksUpdated = (debounceMs = 0) => {
   }, debounceMs);
 };
 
+const mergeTasksIntoCache = (tasks: TodoItem[]) => {
+  if (!tasks.length) return;
+  if (!tasksCache) {
+    tasksCache = tasks.slice();
+    cacheVersion++;
+    return;
+  }
+
+  // Checkbox completion batches are tiny; avoid allocating a full Map and new
+  // 100k-row array on the main thread for every 2–4 rapid taps.
+  if (tasks.length <= 50) {
+    for (const task of tasks) {
+      const index = tasksCache.findIndex((existing) => existing.id === task.id);
+      if (index >= 0) tasksCache[index] = task;
+      else tasksCache.unshift(task);
+    }
+    cacheVersion++;
+    return;
+  }
+
+  const byId = new Map(tasksCache.map((task) => [task.id, task] as const));
+  tasks.forEach((task) => byId.set(task.id, task));
+  tasksCache = Array.from(byId.values());
+  cacheVersion++;
+};
+
 const pendingCloudPush = new Map<string, TodoItem>();
 let pendingCloudPushTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -542,21 +568,14 @@ export const bulkUpdateTasksInDB = async (
 export const bulkPutTasksInDB = async (
   newTasks: TodoItem[],
   skipSyncEvent = false,
+  taskUpdatedDelayMs = 150,
 ): Promise<boolean> => {
   if (newTasks.length === 0) return true;
   markLocalStorageMigrationDone();
 
   const hydrated = newTasks.map(hydrateItem);
 
-  // Update in-memory cache immediately so the UI sees them on the next read.
-  if (tasksCache) {
-    const byId = new Map(tasksCache.map((t) => [t.id, t] as const));
-    hydrated.forEach((t) => byId.set(t.id, t));
-    tasksCache = Array.from(byId.values());
-  } else {
-    tasksCache = hydrated.slice();
-  }
-  cacheVersion++;
+  mergeTasksIntoCache(hydrated);
 
   if (!skipSyncEvent) scheduleTaskCloudPush(hydrated);
 
@@ -576,7 +595,7 @@ export const bulkPutTasksInDB = async (
         await new Promise((r) => requestAnimationFrame(r));
       }
     }
-    if (!skipSyncEvent) dispatchTasksUpdated(150);
+    if (!skipSyncEvent) dispatchTasksUpdated(taskUpdatedDelayMs);
     return true;
   } catch (e) {
     console.warn('Bulk put tasks failed, cache is still updated:', e);
@@ -643,6 +662,7 @@ export const bulkPutTasksInWorker = async (
   newTasks: TodoItem[],
   skipSyncEvent = false,
   onProgress?: (p: { written: number; total: number }) => void,
+  taskUpdatedDelayMs = 150,
 ): Promise<boolean> => {
   if (newTasks.length === 0) return true;
   markLocalStorageMigrationDone();
@@ -650,14 +670,7 @@ export const bulkPutTasksInWorker = async (
 
   // Update the in-memory cache synchronously so the UI sees the new rows
   // immediately, regardless of how long the worker takes to drain.
-  if (tasksCache) {
-    const byId = new Map(tasksCache.map((t) => [t.id, t] as const));
-    hydrated.forEach((t) => byId.set(t.id, t));
-    tasksCache = Array.from(byId.values());
-  } else {
-    tasksCache = hydrated.slice();
-  }
-  cacheVersion++;
+  mergeTasksIntoCache(hydrated);
 
   if (!skipSyncEvent) scheduleTaskCloudPush(hydrated);
 
@@ -666,7 +679,7 @@ export const bulkPutTasksInWorker = async (
     // Graceful fallback: keep the existing main-thread batched path so adding
     // tasks always works even if the worker can't initialise.
     const t0 = performance.now();
-    const ok = await bulkPutTasksInDB(newTasks, skipSyncEvent);
+    const ok = await bulkPutTasksInDB(newTasks, skipSyncEvent, taskUpdatedDelayMs);
     import('@/utils/perfLogger').then(({ logPerfEvent }) => {
       logPerfEvent('bulkAdd', {
         count: newTasks.length,
@@ -681,7 +694,7 @@ export const bulkPutTasksInWorker = async (
   return new Promise<boolean>((resolve) => {
     bulkCallbacks.set(id, {
       resolve: (ok) => {
-        if (!skipSyncEvent) dispatchTasksUpdated(150);
+        if (!skipSyncEvent) dispatchTasksUpdated(taskUpdatedDelayMs);
         resolve(ok);
       },
       onProgress,
