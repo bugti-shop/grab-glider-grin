@@ -690,7 +690,7 @@ export function FlatTaskList({
               data-index={vi.index}
               data-active={isActive ? 'true' : 'false'}
               ref={virtualizer.measureElement}
-              draggable={nativeDndEnabled}
+              draggable={dndEnabled}
               onPointerDown={dndEnabled ? (e) => startPointerDrag(e, vi.index, row) : undefined}
               onPointerMove={dndEnabled ? movePointerDrag : undefined}
               onPointerUp={dndEnabled ? endPointerDrag : undefined}
