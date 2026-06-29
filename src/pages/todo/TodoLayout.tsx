@@ -104,7 +104,7 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
         <div className="h-[1px] bg-border" />
       </header>
       <main className="pb-14 md:pb-4">
-        <div className="w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] mx-auto md:px-4 lg:px-6">
+        <div className="w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
           {children}
         </div>
         <div className="text-center py-2">

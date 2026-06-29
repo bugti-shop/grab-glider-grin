@@ -7,7 +7,6 @@ import {
   ListChecks,
   LayoutGrid,
   Hourglass,
-  StickyNote,
   BarChart3,
   User,
   Settings,
@@ -39,11 +38,9 @@ const TASKS_NAV: NavItem[] = [
   { id: 'matrix', label: 'Matrix', icon: LayoutGrid, path: '/todo/matrix' },
   { id: 'countdown', label: 'Countdown', icon: Hourglass, path: '/todo/countdown' },
   { id: 'progress', label: 'Progress', icon: BarChart3, path: '/todo/progress' },
-  { id: 'notes', label: 'Notes', icon: StickyNote, path: '/notesdashboard' },
 ];
 
 const NOTES_NAV: NavItem[] = [
-  { id: 'notesHome', label: 'Notes Home', icon: Home, path: '/notesdashboard' },
   { id: 'allNotes', label: 'All Notes', icon: FileText, path: '/notes' },
   { id: 'notesCalendar', label: 'Calendar', icon: Calendar, path: '/calendar' },
   { id: 'tasks', label: 'Tasks', icon: ListChecks, path: '/todo/today' },
@@ -177,7 +174,7 @@ export const DesktopSidebar = () => {
   return (
     <aside
       className={cn(
-        'hidden md:flex flex-col md:fixed md:inset-y-0 md:left-0 z-40 border-r border-border bg-secondary/30 transition-[width] duration-200 ease-out',
+        'hidden md:flex flex-col md:fixed md:inset-y-0 md:left-0 z-40 border-r border-border bg-secondary transition-[width] duration-200 ease-out',
         collapsed ? 'w-16' : 'w-60 xl:w-72'
       )}
     >
