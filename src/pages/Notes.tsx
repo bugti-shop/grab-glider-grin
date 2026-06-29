@@ -305,55 +305,52 @@ const Notes = () => {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  /**
-   * Unified insertion-index reorder — driven by the SHARED helper
-   * `computeInsertionPlacement` (also used by FlatTaskList). The grid hands
-   * us a `draggedId` and the `insertionIndex` in the CURRENT sortedNotes
-   * order; we translate that back to the underlying `notes` array.
-   */
-  const handleReorderByInsertion = useCallback((draggedNoteId: string, insertionIndex: number, sorted: Note[]) => {
+  const handleDrop = (e: React.DragEvent, targetNoteId: string) => {
+    e.preventDefault();
     const started = performance.now();
+    const draggedNoteId = e.dataTransfer.getData('text/html') || e.dataTransfer.getData('text/plain');
+
+    if (draggedNoteId === targetNoteId) return;
+
     const draggedNote = notes.find(n => n.id === draggedNoteId);
-    if (!draggedNote) {
+    const targetNote = notes.find(n => n.id === targetNoteId);
+
+    if (!draggedNote || !targetNote) {
       logPerfEvent('reorder', { list: 'notes', ok: false, reason: 'missing-note' });
+      toast.error('Could not move note', { id: 'note-reorder' });
       return;
     }
 
-    // Resolve the neighbor that the insertion slot points at (in sorted view)
-    // so we can keep the move within the same pinned/unpinned section.
-    const sortedFromIndex = sorted.findIndex(n => n.id === draggedNoteId);
-    const sortedWithout = sorted.filter(n => n.id !== draggedNoteId);
-    const targetSortedIdx = Math.max(0, Math.min(sortedWithout.length, insertionIndex - (sortedFromIndex >= 0 && sortedFromIndex < insertionIndex ? 1 : 0)));
-    const neighbor = sortedWithout[targetSortedIdx] ?? sortedWithout[sortedWithout.length - 1];
-    if (neighbor && neighbor.isPinned !== draggedNote.isPinned) {
+    // Only allow reordering within pinned or unpinned sections
+    if (draggedNote.isPinned !== targetNote.isPinned) {
       logPerfEvent('reorder', { list: 'notes', ok: false, reason: 'pinned-boundary' });
       toast.error('Move notes inside the same section', { id: 'note-reorder' });
       return;
     }
 
-    // Apply the same insertion against the underlying notes array.
     const updatedNotes = [...notes];
-    const fromIdx = updatedNotes.findIndex(n => n.id === draggedNoteId);
-    if (fromIdx === -1) return;
-    const [removed] = updatedNotes.splice(fromIdx, 1);
-    let toIdx = updatedNotes.length;
-    if (neighbor) {
-      const neighborIdx = updatedNotes.findIndex(n => n.id === neighbor.id);
-      toIdx = neighborIdx === -1 ? updatedNotes.length : neighborIdx;
-    }
-    updatedNotes.splice(toIdx, 0, removed);
+    const draggedIndex = updatedNotes.findIndex(n => n.id === draggedNoteId);
+    const targetIndex = updatedNotes.findIndex(n => n.id === targetNoteId);
 
+    const [removed] = updatedNotes.splice(draggedIndex, 1);
+    updatedNotes.splice(targetIndex, 0, removed);
+
+    // Update pinned order for all pinned notes
     if (draggedNote.isPinned) {
       updatedNotes.forEach((note, idx) => {
-        if (note.isPinned) note.pinnedOrder = idx;
+        if (note.isPinned) {
+          note.pinnedOrder = idx;
+        }
       });
     }
 
     setNotes(updatedNotes);
-    updatedNotes.filter((n) => n.isPinned).forEach((n) => saveNoteToDBSingle(n));
-    logPerfEvent('reorder', { list: 'notes', ok: true, count: notes.length, ms: Math.round(performance.now() - started), via: 'shared-insertion' });
+    updatedNotes
+      .filter((n) => n.isPinned)
+      .forEach((n) => saveNoteToDBSingle(n));
+    logPerfEvent('reorder', { list: 'notes', ok: true, count: notes.length, ms: Math.round(performance.now() - started) });
     toast.success('Note moved', { id: 'note-reorder', duration: 900 });
-  }, [notes]);
+  };
 
   // Filter notes using lightweight metadata for instant performance
   const notesMetaById = useMemo(() => new Map(notesMeta.map(meta => [meta.id, meta])), [notesMeta]);
@@ -623,13 +620,14 @@ const Notes = () => {
           <NotesVirtualGrid
             notes={sortedNotes}
             getRowKey={(row) => row.map((note) => `${note.id}:${note.updatedAt instanceof Date ? note.updatedAt.getTime() : new Date(note.updatedAt).getTime()}`).join('|')}
-            onReorderByInsertion={(draggedId, insertionIndex) => handleReorderByInsertion(draggedId, insertionIndex, sortedNotes)}
             renderCard={(note) => {
               const previewText = note.metaDescription || (notesMetaById.get(note.id)?.contentPreview ?? getTextPreviewFromHtml(note.content, 180));
               return (
               <div
                 draggable={!note.isArchived && !note.isDeleted}
                 onDragStart={(e) => handleDragStart(e, note.id)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, note.id)}
                 onDragLeave={(e) => {
                   const next = e.relatedTarget as Node | null;
                   if (!next || !e.currentTarget.contains(next)) (e.currentTarget as HTMLElement).blur();

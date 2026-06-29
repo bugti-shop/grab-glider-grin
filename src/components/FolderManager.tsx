@@ -100,18 +100,8 @@ export const FolderManager = ({
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
-  // Strict folder isolation for the "Add Notes" / "Remove Notes" dialogs:
-  // a note's effective folder is its explicit folderId only when that id
-  // matches a real folder; legacy note-type ids ('sticky', 'regular', ...)
-  // and missing ids both resolve to Inbox.
-  const inboxFolderIdForDialog = folders.find(f => f.isDefault)?.id ?? folders[0]?.id;
-  const folderIdSet = new Set(folders.map(f => f.id));
-  const resolveNoteFolder = (note: { folderId?: string }): string | undefined => {
-    if (note.folderId && folderIdSet.has(note.folderId)) return note.folderId;
-    return inboxFolderIdForDialog;
-  };
-  const availableNotes = notes.filter(note => resolveNoteFolder(note) !== selectedFolderId);
-  const folderNotes = notes.filter(note => resolveNoteFolder(note) === selectedFolderId);
+  const availableNotes = notes.filter(note => note.folderId !== selectedFolderId);
+  const folderNotes = notes.filter(note => note.folderId === selectedFolderId);
 
   const handleCreate = () => {
     if (newFolderName.trim()) {

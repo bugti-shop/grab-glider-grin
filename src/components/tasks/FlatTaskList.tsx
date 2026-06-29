@@ -23,7 +23,6 @@ import type { TodoItem } from '@/types/note';
 import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/tasks/flattenTasks';
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
-import { computeInsertionPlacement, type MeasuredRow } from '@/utils/dnd/insertionPlacement';
 
 const TOUCH_LONG_PRESS_MS = 320;
 const TOUCH_SCROLL_CANCEL_PX = 16;
@@ -453,39 +452,88 @@ export function FlatTaskList({
     } catch {}
   }, []);
 
-  const getInsertionPlacement = useCallback((clientY: number, _target: EventTarget | Element | null) => {
+  const getInsertionPlacement = useCallback((clientY: number, target: EventTarget | Element | null) => {
+    const targetEl = target instanceof Element ? target.closest('[data-index]') as HTMLElement | null : null;
+    // Exclude the row currently being dragged from geometry. With visibility:hidden
+    // the source still occupies space, which shifts every midpoint by one row
+    // and makes drops land one slot earlier than the user expects.
     const sourceIndex = dragFromRef.current;
-    const parentRect = parentRef.current?.getBoundingClientRect();
-    const scrollTop = resolvedUseWindow ? 0 : (parentRef.current?.scrollTop ?? 0);
-    const measured: MeasuredRow[] = Array.from(parentRef.current?.querySelectorAll<HTMLElement>('[data-index]') ?? [])
-      .map((rowEl) => {
-        const rect = rowEl.getBoundingClientRect();
-        const index = Number(rowEl.dataset.index);
-        return {
-          index,
-          rect: { top: rect.top, bottom: rect.bottom, height: rect.height },
-          topRelativeToList: rect.top - (parentRect?.top ?? 0) + scrollTop,
-        } as MeasuredRow;
-      })
+    const rows = Array.from(parentRef.current?.querySelectorAll<HTMLElement>('[data-index]') ?? [])
+      .map((rowEl) => ({ rowEl, index: Number(rowEl.dataset.index), rect: rowEl.getBoundingClientRect() }))
       .filter((row) => Number.isFinite(row.index) && row.index !== sourceIndex)
       .sort((a, b) => a.index - b.index);
 
-    if (measured.length === 0) {
-      const fallback = getVirtualInsertionFromClientY(clientY);
-      return { ...fallback, debug: { source: 'virtual-fallback', pointerY: Math.round(clientY) } };
+    const buildDebug = (
+      source: string,
+      row: (typeof rows)[number],
+      insertionIndex: number,
+      extra: Record<string, unknown> = {},
+    ) => ({
+      source,
+      targetIndex: row.index,
+      insertionIndex,
+      pointerY: Math.round(clientY),
+      targetTop: Math.round(row.rect.top),
+      targetBottom: Math.round(row.rect.bottom),
+      midpoint: Math.round(row.rect.top + row.rect.height / 2),
+      ...extra,
+    });
+
+    const placeBefore = (row: (typeof rows)[number], source = targetEl ? 'target-row' : 'gap-before-row', extra?: Record<string, unknown>) => {
+      const insertionIndex = Math.max(0, Math.min(flat.length, row.index));
+      return {
+        insertionIndex,
+        top: getRowTopRelativeToList(row.rowEl),
+        debug: buildDebug(source, row, insertionIndex, extra),
+      };
+    };
+
+    const placeAfter = (row: (typeof rows)[number], source = targetEl ? 'target-row' : 'gap-after-row', extra?: Record<string, unknown>) => {
+      const insertionIndex = Math.max(0, Math.min(flat.length, row.index + 1));
+      return {
+        insertionIndex,
+        top: getRowTopRelativeToList(row.rowEl) + row.rect.height,
+        debug: buildDebug(source, row, insertionIndex, extra),
+      };
+    };
+
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i];
+      const next = rows[i + 1];
+      if (clientY < row.rect.top) return placeBefore(row);
+      if (clientY <= row.rect.bottom) {
+        return clientY < row.rect.top + row.rect.height / 2 ? placeBefore(row) : placeAfter(row);
+      }
+      if (next && clientY > row.rect.bottom && clientY < next.rect.top) {
+        // Correct drops in the blank virtualized gap between two rendered rows
+        // using getBoundingClientRect midpoints, Todoist-style.
+        const prevMid = row.rect.top + row.rect.height / 2;
+        const nextMid = next.rect.top + next.rect.height / 2;
+        const split = (prevMid + nextMid) / 2;
+        return clientY < split
+          ? placeAfter(row, 'gap-midpoint-prev', { nextIndex: next.index, split: Math.round(split) })
+          : placeBefore(next, 'gap-midpoint-next', { previousIndex: row.index, split: Math.round(split) });
+      }
     }
 
-    const placement = computeInsertionPlacement(clientY, measured, flat.length);
-    return {
-      insertionIndex: placement.insertionIndex,
-      top: placement.top,
-      debug: {
-        source: placement.source,
-        insertionIndex: placement.insertionIndex,
-        pointerY: Math.round(clientY),
-      },
-    };
-  }, [flat.length, getVirtualInsertionFromClientY, resolvedUseWindow]);
+    if (rows.length > 0) {
+      let nearest = rows[0];
+      let nearestDistance = Math.abs(clientY - (nearest.rect.top + nearest.rect.height / 2));
+      for (const row of rows.slice(1)) {
+        const distance = Math.abs(clientY - (row.rect.top + row.rect.height / 2));
+        if (distance < nearestDistance) {
+          nearest = row;
+          nearestDistance = distance;
+        }
+      }
+      return clientY < nearest.rect.top + nearest.rect.height / 2
+        ? placeBefore(nearest, 'nearest-midpoint-gap', { distance: Math.round(nearestDistance) })
+        : placeAfter(nearest, 'nearest-midpoint-gap', { distance: Math.round(nearestDistance) });
+    }
+
+    const virtualPlacement = getVirtualInsertionFromClientY(clientY);
+    return { ...virtualPlacement, debug: { source: 'virtual-fallback', pointerY: Math.round(clientY) } };
+  }, [flat.length, getRowTopRelativeToList, getVirtualInsertionFromClientY]);
 
   const updateInsertionIndicator = useCallback((clientY: number, target: EventTarget | Element | null) => {
     const placement = getInsertionPlacement(clientY, target);
@@ -989,19 +1037,13 @@ export function FlatTaskList({
       } : undefined}
       style={
         resolvedUseWindow
-          ? { position: 'relative', width: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }
+          ? { position: 'relative', width: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }
           : {
               height: maxHeight ?? '100%',
               overflowX: 'hidden',
               overflowY: 'auto',
-              // contain: 'strict' here caused upward scroll to lock up on fast
-              // flicks because the virtualizer remeasures rows during scroll
-              // and a strict-contained box doesn't repaint its scrollable
-              // overflow region promptly. 'layout paint' keeps the perf win
-              // (no parent reflow) without the stuck-scroll regression.
-              contain: 'layout paint',
+              contain: 'strict',
               WebkitOverflowScrolling: 'touch',
-              overscrollBehavior: 'contain',
             }
       }
     >
