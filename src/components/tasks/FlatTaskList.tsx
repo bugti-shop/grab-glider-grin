@@ -426,7 +426,7 @@ export function FlatTaskList({
   }, [getInsertionPlacement, paintGhostAt]);
 
   const startPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
-    if (!dndEnabled || !isCoarsePointer || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
+    if (!dndEnabled || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
     if (pointerDragRef.current) return;
     if (event.pointerType === 'pen' && event.buttons !== 1) return;
 
@@ -459,7 +459,7 @@ export function FlatTaskList({
       if (!current || current.pointerId !== pointerId) return;
       activatePointerDrag(current);
     }, 90);
-  }, [activatePointerDrag, dndEnabled, isCoarsePointer]);
+  }, [activatePointerDrag, dndEnabled]);
 
   const startTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
     // A real TouchEvent is already proof of a coarse input path. Do not gate on
