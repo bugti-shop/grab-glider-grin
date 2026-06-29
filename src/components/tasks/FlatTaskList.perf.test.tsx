@@ -17,6 +17,10 @@ import type { TodoItem } from '@/types/note';
 
 // jsdom has no real layout — stub element box so the virtualizer renders a window.
 beforeAll(() => {
+  // @ts-ignore — jsdom doesn't implement scrollTo; tanstack virtual calls it.
+  window.scrollTo = () => {};
+  // @ts-ignore
+  Element.prototype.scrollTo = () => {};
   Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, get: () => 800 });
   Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => 800 });
   Object.defineProperty(HTMLElement.prototype, 'getBoundingClientRect', {
