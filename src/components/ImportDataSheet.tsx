@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { Upload, CheckCircle2, FileText, ListTodo, FolderOpen, Paperclip, AlertTriangle, ArrowLeft } from 'lucide-react';
 import {
   ImportSource,
@@ -31,6 +32,7 @@ const sources: { id: ImportSource; name: string; description: string; formats: s
   { id: 'evernote', name: 'Evernote', description: 'Notebooks → folders. Notes with tags, dates & images/PDFs', formats: 'ENEX, HTML' },
   { id: 'todoist', name: 'Todoist', description: 'Import tasks from Todoist CSV export', formats: 'CSV' },
   { id: 'notion', name: 'Notion', description: 'Import pages & databases from Notion', formats: 'CSV, JSON' },
+  { id: 'json', name: 'JSON', description: 'Generic JSON: array of items or { tasks, notes, folders }', formats: 'JSON' },
   { id: 'csv-tasks', name: 'CSV — Tasks', description: 'Generic CSV with column mapping', formats: 'CSV' },
   { id: 'csv-notes', name: 'CSV — Notes', description: 'Generic CSV with column mapping', formats: 'CSV' },
 ];
@@ -155,15 +157,31 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       }
 
       setResult(importResult);
+      const s = importResult.stats;
+      const imported = (s.tasks || 0) + (s.notes || 0);
+      const skipped = s.failed || 0;
+      const errored = importResult.errors?.length || 0;
       const parts = [
-        importResult.stats.tasks ? `${importResult.stats.tasks} tasks` : null,
-        importResult.stats.notes ? `${importResult.stats.notes} notes` : null,
-        importResult.stats.attachments ? `${importResult.stats.attachments} attachments` : null,
-        importResult.stats.failed ? `${importResult.stats.failed} skipped` : null,
-      ].filter(Boolean).join(', ');
-      toast({ title: t('settings.importSuccess', 'Import successful!'), description: parts || 'Done' });
-    } catch {
-      toast({ title: t('settings.importFailed', 'Import failed'), variant: 'destructive' });
+        s.tasks ? `${s.tasks} tasks` : null,
+        s.notes ? `${s.notes} notes` : null,
+        s.folders ? `${s.folders} folders` : null,
+        s.attachments ? `${s.attachments} attachments` : null,
+      ].filter(Boolean).join(' · ');
+      sonnerToast.success(
+        `Imported ${imported} item${imported === 1 ? '' : 's'}`,
+        {
+          description: [
+            parts || 'No items found',
+            skipped ? `${skipped} skipped` : null,
+            errored && errored !== skipped ? `${errored} error${errored === 1 ? '' : 's'}` : null,
+          ].filter(Boolean).join(' • '),
+          duration: 6000,
+        }
+      );
+    } catch (e) {
+      sonnerToast.error(t('settings.importFailed', 'Import failed'), {
+        description: e instanceof Error ? e.message : undefined,
+      });
     } finally {
       setIsImporting(false);
     }
