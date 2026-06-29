@@ -24,6 +24,12 @@ const STRESS_CYCLES = Number(process.env.PERF_STRESS_CYCLES ?? 200);
 async function seedTasks(page: Page, count: number) {
   await page.addInitScript((n: number) => {
     // Runs once per page before any app script.
+    try {
+      localStorage.setItem("flowist_landing_acknowledged", "true");
+      sessionStorage.setItem("flowist_landing_acknowledged", "true");
+      localStorage.setItem("onboarding_completed_flag", "true");
+      localStorage.setItem("flowist_user_engaged", "true");
+    } catch {}
     const DB_NAME = "nota-tasks-db";
     const STORE = "tasks";
     const META = "meta";
