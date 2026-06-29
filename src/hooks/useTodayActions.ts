@@ -23,7 +23,13 @@ import { getAllSettings, setSetting } from '@/utils/settingsStorage';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
 
-const COMPLETION_BATCH_MS = 150;
+// Align the completion-flush window with the ring-fill animation (~900ms).
+// Flushing earlier removes the row from the uncompleted list while the user is
+// still tapping nearby rows — the virtualizer shifts, the visually-targeted row
+// is no longer under the pointer, and the 4th tap appears "stuck" / lost.
+// Holding the visual state for the full ring duration lets rapid taps queue
+// without yanking the DOM out from under the user.
+const COMPLETION_BATCH_MS = 900;
 
 interface UseTodayActionsProps {
   items: TodoItem[];
