@@ -242,14 +242,29 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   }, [setFolders]);
 
   const handleDeleteFolder = useCallback(async (folderId: string) => {
-    // Cascade: also delete every descendant folder, unassign their tasks
     const { getDescendantFolderIds } = await import('@/utils/folderHelpers');
     const descendants = getDescendantFolderIds(folders, folderId);
     const toRemove = new Set<string>([folderId, ...descendants]);
     const updatedFolders = folders.filter(f => !toRemove.has(f.id));
-    setItems(prev => prev.map(item => (item.folderId && toRemove.has(item.folderId)) ? { ...item, folderId: undefined } : item));
+
+    // Inbox / last-folder guard: never leave the user with zero folders.
+    const target = folders.find(f => f.id === folderId);
+    if (updatedFolders.length === 0 || (target?.isDefault && updatedFolders.length === 0)) {
+      toast.error('Cannot delete Inbox — it is your only folder.');
+      return;
+    }
+
+    // Move orphaned items into the oldest remaining folder so nothing disappears.
+    const fallback = updatedFolders.slice().sort((a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )[0];
+    const fallbackId = fallback?.id;
+
+    setItems(prev => prev.map(item =>
+      (item.folderId && toRemove.has(item.folderId)) ? { ...item, folderId: fallbackId } : item
+    ));
     setFolders(updatedFolders);
-    if (selectedFolderId && toRemove.has(selectedFolderId)) setSelectedFolderId(null);
+    if (selectedFolderId && toRemove.has(selectedFolderId)) setSelectedFolderId(fallbackId ?? null);
 
     toRemove.forEach((id) => trackDeletion(id, 'todoFolders'));
     import('@/utils/cloudSync/storeBridge').then(({ pushFolderDelete }) => {
@@ -259,9 +274,8 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     try {
       await setSetting('todoFolders', updatedFolders);
       if (selectedFolderId && toRemove.has(selectedFolderId)) {
-        await setSetting('todoSelectedFolder', 'null');
+        await setSetting('todoSelectedFolder', fallbackId ?? 'null');
       }
-
       const settings = await getAllSettings();
       await Promise.allSettled([
         uploadCategory('flowist_settings.json', settings),
@@ -430,9 +444,13 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
   // ── Task CRUD ──
   const handleAddTask = useCallback(async (task: Omit<TodoItem, 'id' | 'completed'>) => {
-    // Per-folder tasks cap (Free: 99 per folder)
+    // Hard cap: max 38 tasks per folder (Inbox included).
     const targetFolderId = task.folderId ?? selectedFolderId ?? null;
     const folderTasksCount = itemsRef.current.filter(t => (t.folderId || null) === targetFolderId).length;
+    if (targetFolderId && folderTasksCount >= 38) {
+      toast.error('Folder is full (38 max). Move or delete items, or create a new folder.', { id: 'folder-full' });
+      return;
+    }
     if (!requireCapacity('tasksPerFolder', folderTasksCount)) return;
     if (!isPro && !softRequireCreate('tasks', itemsRef.current.length)) return;
     const now = new Date();
