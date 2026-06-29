@@ -1200,11 +1200,7 @@ const Index = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuItem onClick={() => handleBulkMoveToFolder(null)}>
-                    <FolderIcon className="h-4 w-4 mr-2" />
-                    All Notes (No Folder)
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+
                   {folders.map((folder) => (
                     <DropdownMenuItem 
                       key={folder.id} 
