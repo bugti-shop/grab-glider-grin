@@ -75,17 +75,6 @@ const downloadPreviewCsv = (
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const base = (fileName || 'import').replace(/\.[^.]+$/, '');
-  a.href = url;
-  a.download = `${base}-preview-mapping.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-};
 
 // Field labels for the column mapping UI per CSV kind.
 const taskFields: { key: keyof CsvColumnMap; label: string; required?: boolean }[] = [
