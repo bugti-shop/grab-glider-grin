@@ -488,19 +488,7 @@ export const FolderManager = ({
       </Dialog>
 
       <div className="flex gap-1.5 xs:gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        <button
-          onClick={handleSelectAllNotes}
-          onDragOver={handleDragOver}
-          onDrop={(e) => handleDrop(e, null)}
-          className="flex items-center gap-1.5 xs:gap-2 px-3 xs:px-4 py-1.5 xs:py-2 rounded-full whitespace-nowrap transition-all text-xs xs:text-sm touch-target flex-shrink-0"
-          style={{
-            backgroundColor: selectedFolderId === null ? 'hsl(var(--primary))' : 'hsl(var(--muted))',
-            color: selectedFolderId === null ? 'hsl(var(--primary-foreground))' : 'hsl(var(--foreground))',
-          }}
-        >
-          <FolderOpen className="w-3.5 h-3.5 xs:w-4 xs:h-4 flex-shrink-0" />
-          <span className="flex-shrink-0">{t('folderManager.allNotes')}</span>
-        </button>
+
 
         {folders.map((folder) => (
           <div key={folder.id} className="relative">
