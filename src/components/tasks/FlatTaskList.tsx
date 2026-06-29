@@ -999,14 +999,17 @@ export function FlatTaskList({
                 width: '100%',
                 contain: 'layout paint style',
                 transform: `translateY(${vi.start - scrollOffset}px)`,
-                // Keep the drag-source row fully opaque with its original
-                // background so it reads as the same task being moved, not a
-                // ghost. The portal-rendered ghost follows the pointer; this
-                // row gets a subtle outline + lift to indicate it's active.
+                // While a pointer/touch drag is active, hide the source row's
+                // contents so the floating ghost is the ONLY visible copy of
+                // the task. This kills the "ghost looks transparent / two
+                // tasks showing" effect the user reported. Keep the row's
+                // layout (visibility:hidden, not display:none) so the
+                // virtualizer's measured height stays stable.
+                visibility: pointerDrag && dragFromRef.current === vi.index ? 'hidden' : 'visible',
                 backgroundColor: 'hsl(var(--background))',
                 boxShadow: isDragOver
                   ? undefined
-                  : dragFromRef.current === vi.index
+                  : dragFromRef.current === vi.index && !pointerDrag
                     ? '0 8px 24px hsl(var(--foreground) / 0.18), inset 0 0 0 2px hsl(var(--primary))'
                     : isTouchDragCandidate
                       ? 'inset 0 0 0 2px hsl(var(--primary) / 0.7)'
@@ -1042,13 +1045,17 @@ export function FlatTaskList({
       {pointerDrag && typeof document !== 'undefined' && createPortal((
         <div
           ref={ghostRef}
-          className="pointer-events-none fixed left-3 right-3 z-[70] rounded-md border-2 border-primary bg-background px-4 py-3 text-sm font-semibold shadow-2xl ring-4 ring-primary/20"
+          className="pointer-events-none fixed left-3 right-3 z-[70] rounded-md border-2 border-primary px-4 py-3 text-sm font-semibold shadow-2xl"
           style={{
             top: 0,
-            transform: `translate3d(0, ${pointerDrag.y}px, 0) translateY(-50%) scale(1.02)`,
+            // Fully opaque solid background — no transparency, no scale, no
+            // transition. The ghost must read as the real task being moved.
+            backgroundColor: 'hsl(var(--background))',
+            color: 'hsl(var(--foreground))',
+            transform: `translate3d(0, ${pointerDrag.y}px, 0) translateY(-50%)`,
             willChange: 'transform',
             backfaceVisibility: 'hidden',
-            transition: 'box-shadow 120ms ease-out',
+            transition: 'none',
           }}
         >
           <div className="truncate">{pointerDrag.title}</div>
