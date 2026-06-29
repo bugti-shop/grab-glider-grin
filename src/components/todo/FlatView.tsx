@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { TodoItem, TaskSection } from '@/types/note';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { ChevronRight, ChevronDown } from 'lucide-react';
@@ -121,8 +122,13 @@ export const FlatView = ({
                   // Persist new order for every section bucket touched so the
                   // flat view stays consistent at scale (sections are merged
                   // into one virtual list when virtualized).
-                  setLocalOrderVersion(v => v + 1);
-                  setOrderVersion(v => v + 1);
+                  // Touch drops are verified immediately after `touchend`; flush
+                  // this tiny nonce update so the reordered index is reflected
+                  // in the virtualized UI before the event handler returns.
+                  flushSync(() => {
+                    setLocalOrderVersion(v => v + 1);
+                    setOrderVersion(v => v + 1);
+                  });
                   try { Haptics.impact({ style: ImpactStyle.Light }); } catch {}
                 }}
                 renderRow={(row) => (
