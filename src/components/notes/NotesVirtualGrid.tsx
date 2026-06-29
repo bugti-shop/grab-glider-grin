@@ -3,16 +3,16 @@
  * user already designed, but only paints rows currently in the viewport so
  * the UI stays identical and fast from 1 → 100,000 notes.
  *
- * Layout: 1 column on mobile, 2 on lg, 3 on xl — chunked into rows so we
- * can virtualize with stable row heights via @tanstack/react-virtual's
- * useWindowVirtualizer (no nested scroll container = bottom nav stays put,
- * page scroll behaves natively).
+ * Drag-and-drop reorder uses the SHARED insertion-index helper
+ * (`computeInsertionPlacement`) — same blue-line math as FlatTaskList —
+ * so the drop slot is always exactly where the indicator paints.
  */
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import type { Note } from '@/types/note';
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
+import { computeInsertionPlacement, excludeIndex, type MeasuredRow } from '@/utils/dnd/insertionPlacement';
 
 interface NotesVirtualGridProps {
   notes: Note[];
@@ -21,6 +21,11 @@ interface NotesVirtualGridProps {
   /** Approximate row height in px. Cards are roughly equal because the
    *  text is line-clamped to 4 lines + fixed header/footer chrome. */
   estimatedRowHeight?: number;
+  /** Optional reorder callback. When supplied, NotesVirtualGrid attaches
+   *  drag-over/drop listeners on each card and computes the insertion
+   *  index via the SHARED helper so the blue line matches the drop slot
+   *  1:1 with FlatTaskList. */
+  onReorderByInsertion?: (draggedNoteId: string, insertionIndex: number) => void;
 }
 
 function getColumnsForWidth(w: number): number {
@@ -34,9 +39,13 @@ export function NotesVirtualGrid({
   renderCard,
   getRowKey,
   estimatedRowHeight,
+  onReorderByInsertion,
 }: NotesVirtualGridProps) {
   const [virtualizationSettings] = useVirtualizationSettings();
   const parentRef = useRef<HTMLDivElement>(null);
+  const insertLineRef = useRef<HTMLDivElement>(null);
+  const dragSourceIndexRef = useRef<number | null>(null);
+  const lastInsertionIndexRef = useRef<number | null>(null);
   const [columns, setColumns] = useState<number>(() =>
     typeof window === 'undefined' ? 2 : getColumnsForWidth(window.innerWidth),
   );
@@ -83,9 +92,6 @@ export function NotesVirtualGrid({
   const windowVirtualizer = useWindowVirtualizer({
     count: rows.length,
     estimateSize: () => resolvedRowHeight,
-    // 6 rows of overscan (≈18 cards at 3-col) keeps fast flick-scrolling
-    // smooth without paying paint cost for ~50 offscreen heavy cards when
-    // the user has 5k+ notes with large bodies.
     overscan: resolvedOverscan,
     scrollMargin,
     getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
@@ -109,12 +115,95 @@ export function NotesVirtualGrid({
     const target = resolvedWindowing ? window : parentRef.current;
     if (!target) return;
     return startScopedScrollFpsMonitor(target, 'NotesVirtualGrid', {
-    itemCount: notes.length,
-    overscan: resolvedOverscan,
-    rowHeight: resolvedRowHeight,
+      itemCount: notes.length,
+      overscan: resolvedOverscan,
+      rowHeight: resolvedRowHeight,
       windowing: resolvedWindowing ? 'window' : 'container',
     });
   }, [notes.length, resolvedOverscan, resolvedRowHeight, resolvedWindowing]);
+
+  /** Snapshot every rendered card's rect so the shared helper can resolve
+   *  the insertion slot with the SAME math FlatTaskList uses. */
+  const measureCards = useCallback((): MeasuredRow[] => {
+    const parent = parentRef.current;
+    if (!parent) return [];
+    const parentRect = parent.getBoundingClientRect();
+    const scrollTop = resolvedWindowing ? 0 : parent.scrollTop;
+    const baseTop = resolvedWindowing ? scrollMargin : parentRect.top;
+    return Array.from(parent.querySelectorAll<HTMLElement>('[data-note-index]'))
+      .map((el) => {
+        const rect = el.getBoundingClientRect();
+        const index = Number(el.dataset.noteIndex);
+        return {
+          index,
+          rect: { top: rect.top, bottom: rect.bottom, height: rect.height },
+          topRelativeToList: rect.top - baseTop + scrollTop,
+        } as MeasuredRow;
+      })
+      .filter((row) => Number.isFinite(row.index))
+      .sort((a, b) => a.index - b.index);
+  }, [resolvedWindowing, scrollMargin]);
+
+  const paintInsertLine = useCallback((top: number) => {
+    const el = insertLineRef.current;
+    if (!el) return;
+    el.style.transform = `translateY(${top}px)`;
+    el.style.opacity = '1';
+  }, []);
+
+  const hideInsertLine = useCallback(() => {
+    const el = insertLineRef.current;
+    if (!el) return;
+    el.style.opacity = '0';
+  }, []);
+
+  const handleCardDragStart = useCallback((noteId: string, flatIndex: number) => {
+    dragSourceIndexRef.current = flatIndex;
+    lastInsertionIndexRef.current = null;
+    try {
+      (window as any).__flowistLastNoteDrag = { noteId, fromIndex: flatIndex, ts: Date.now() };
+    } catch {}
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (!onReorderByInsertion) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const measured = excludeIndex(measureCards(), dragSourceIndexRef.current);
+    if (measured.length === 0) {
+      hideInsertLine();
+      return;
+    }
+    const placement = computeInsertionPlacement(e.clientY, measured, notes.length);
+    lastInsertionIndexRef.current = placement.insertionIndex;
+    paintInsertLine(placement.top);
+    try {
+      (window as any).__flowistLastNoteInsert = {
+        insertionIndex: placement.insertionIndex,
+        top: Math.round(placement.top),
+        source: placement.source,
+        pointerY: Math.round(e.clientY),
+      };
+    } catch {}
+  }, [hideInsertLine, measureCards, notes.length, onReorderByInsertion, paintInsertLine]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    if (!onReorderByInsertion) return;
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData('text/html') || e.dataTransfer.getData('text/plain');
+    hideInsertLine();
+    const insertionIndex = lastInsertionIndexRef.current;
+    dragSourceIndexRef.current = null;
+    lastInsertionIndexRef.current = null;
+    if (!draggedId || insertionIndex == null) return;
+    onReorderByInsertion(draggedId, insertionIndex);
+  }, [hideInsertLine, onReorderByInsertion]);
+
+  const handleDragEnd = useCallback(() => {
+    dragSourceIndexRef.current = null;
+    lastInsertionIndexRef.current = null;
+    hideInsertLine();
+  }, [hideInsertLine]);
 
   return (
     <div
@@ -123,6 +212,9 @@ export function NotesVirtualGrid({
       data-virt-overscan={resolvedOverscan}
       data-virt-row-height={resolvedRowHeight}
       data-virt-windowing={resolvedWindowing ? 'window' : 'container'}
+      onDragOver={onReorderByInsertion ? handleDragOver : undefined}
+      onDrop={onReorderByInsertion ? handleDrop : undefined}
+      onDragEnd={onReorderByInsertion ? handleDragEnd : undefined}
       style={resolvedWindowing
         ? { position: 'relative' }
         : { position: 'relative', height: 'min(72vh, 900px)', overflow: 'auto', WebkitOverflowScrolling: 'touch', contain: 'layout paint', overscrollBehavior: 'contain' }
@@ -135,6 +227,27 @@ export function NotesVirtualGrid({
           position: 'relative',
         }}
       >
+        {onReorderByInsertion && (
+          <div
+            ref={insertLineRef}
+            data-flowist-insert-line="notes"
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 3,
+              borderRadius: 2,
+              background: 'hsl(var(--primary))',
+              transform: 'translateY(-9999px)',
+              opacity: 0,
+              transition: 'opacity 120ms ease-out',
+              pointerEvents: 'none',
+              zIndex: 30,
+            }}
+          />
+        )}
         {virtualizer.getVirtualItems().map((vrow) => {
           const row = rows[vrow.index];
           if (!row) return null;
@@ -157,11 +270,20 @@ export function NotesVirtualGrid({
                 containIntrinsicSize: `${resolvedRowHeight}px auto`,
               } as React.CSSProperties}
             >
-              {row.map((note) => (
-                <div key={note.id} style={{ minWidth: 0 }}>
-                  {renderCard(note)}
-                </div>
-              ))}
+              {row.map((note, colIdx) => {
+                const flatIndex = vrow.index * columns + colIdx;
+                return (
+                  <div
+                    key={note.id}
+                    data-note-index={flatIndex}
+                    data-note-id={note.id}
+                    onDragStart={onReorderByInsertion ? () => handleCardDragStart(note.id, flatIndex) : undefined}
+                    style={{ minWidth: 0 }}
+                  >
+                    {renderCard(note)}
+                  </div>
+                );
+              })}
             </div>
           );
         })}
