@@ -113,6 +113,7 @@ export function FlatTaskList({
   } | null>(null);
   const [isCoarsePointer, setIsCoarsePointer] = useState(false);
   const [pointerDrag, setPointerDrag] = useState<{ from: number; over: number; title: string; y: number } | null>(null);
+  const [pointerPreparingIndex, setPointerPreparingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -254,6 +255,7 @@ export function FlatTaskList({
     pointerDragRef.current = null;
     stopGhostRaf();
     setPointerDrag(null);
+    setPointerPreparingIndex(null);
     if (typeof document !== 'undefined') document.body.classList.remove('flowist-task-dragging');
   }, [stopGhostRaf]);
 
@@ -359,6 +361,7 @@ export function FlatTaskList({
       timer: null as number | null,
     };
     pointerDragRef.current = active;
+    setPointerPreparingIndex(index);
 
     active.timer = window.setTimeout(() => {
       const current = pointerDragRef.current;
@@ -388,6 +391,7 @@ export function FlatTaskList({
       if (Math.abs(dx) > 24 || Math.abs(dy) > 24) {
         if (active.timer != null) window.clearTimeout(active.timer);
         pointerDragRef.current = null;
+        setPointerPreparingIndex(null);
       }
       return;
     }
@@ -505,6 +509,7 @@ export function FlatTaskList({
           if (!row) return null;
           const isActive = vi.index === activeIndex;
           const isDragOver = dragOverIndex === vi.index;
+          const isTouchDragCandidate = isCoarsePointer && (pointerPreparingIndex === vi.index || dragFromRef.current === vi.index);
           return (
             <div
               key={vi.key}
@@ -555,7 +560,7 @@ export function FlatTaskList({
                 backgroundColor: isDragOver ? 'hsl(var(--primary) / 0.08)' : undefined,
                 opacity: dragFromRef.current === vi.index ? 0.72 : 1,
                 cursor: dndEnabled ? 'grab' : undefined,
-                touchAction: dndEnabled && isCoarsePointer ? 'pan-y pinch-zoom' : undefined,
+                touchAction: dndEnabled && isCoarsePointer ? (isTouchDragCandidate ? 'none' : 'pan-y pinch-zoom') : undefined,
               }}
             >
               {renderRow(row, vi.index, isActive)}
