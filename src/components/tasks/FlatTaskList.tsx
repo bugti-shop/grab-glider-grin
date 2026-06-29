@@ -32,6 +32,18 @@ const TOUCH_CANCEL_PX = 42;
 const CLICK_SUPPRESS_MS = 350;
 
 /**
+ * Maximum row count at which we render with @hello-pangea/dnd directly
+ * (no virtualization). Beyond this cap we fall back to the windowed
+ * virtualizer + custom touch/native drag path because hello-pangea/dnd
+ * cannot reorder rows that are not mounted in the DOM.
+ *
+ * 200 rows is comfortably under the smooth-scroll budget on mid-tier
+ * mobile and matches the Inbox per-folder cap (38) several times over,
+ * so the overwhelming majority of users get the library-driven UX.
+ */
+const HELLO_PANGEA_CAP = 200;
+
+/**
  * Memoized row body. Skips re-rendering when the task reference, position,
  * and active state are unchanged — so completing one task in a 5k list only
  * re-renders the toggled row plus any newly-virtualized neighbors, not the
