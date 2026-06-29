@@ -20,6 +20,7 @@ import {
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { loadTodoItems, saveTodoItems } from '@/utils/todoItemsStorage';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
+import { loadFolders as loadTaskFolders, saveFolders as saveTaskFolders, type Folder as TaskFolder } from '@/utils/folderStorage';
 import type { Folder as NotesFolder } from '@/types/note';
 import { cn } from '@/lib/utils';
 
@@ -138,21 +139,60 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
         return;
       }
 
+      // Resolve a dedicated destination folder so imported items never land in Inbox.
+      const sourceLabel = sources.find(s => s.id === selectedSource)?.name || 'Import';
+      const importFolderName = `Imported from ${sourceLabel}`;
+      const nowIso = new Date();
+
+      // ── Notes folders (Index.tsx reads from setting 'folders') ──
+      const existingNoteFolders = (await getSetting<NotesFolder[]>('folders', [])) || [];
+      let noteFolders = [...existingNoteFolders];
+      let noteImportFolderId: string | undefined;
       if (importResult.folders && importResult.folders.length > 0) {
-        const existingFolders = await getSetting<NotesFolder[]>('folders', []);
-        const merged = [...(existingFolders || []), ...importResult.folders];
-        await setSetting('folders', merged);
+        // Parser already produced its own folders (e.g. Evernote notebooks) — keep them.
+        noteFolders = [...noteFolders, ...importResult.folders];
+      } else if (importResult.notes.length > 0) {
+        const id = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-notes-${Date.now()}`;
+        noteImportFolderId = id;
+        noteFolders.push({
+          id, name: importFolderName, color: '#3b82f6', icon: 'Folder',
+        } as NotesFolder);
+      }
+      if (noteFolders.length !== existingNoteFolders.length) {
+        await setSetting('folders', noteFolders);
         window.dispatchEvent(new Event('foldersUpdated'));
+      }
+
+      // ── Task folders (folderStorage 'nota_folders') ──
+      let taskImportFolderId: string | undefined;
+      if (importResult.tasks.length > 0) {
+        const existingTaskFolders = await loadTaskFolders();
+        const id = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-tasks-${Date.now()}`;
+        taskImportFolderId = id;
+        await saveTaskFolders([
+          ...existingTaskFolders,
+          { id, name: importFolderName, color: '#3b82f6', icon: 'Folder', type: 'tasks', createdAt: nowIso, updatedAt: nowIso } as TaskFolder,
+        ]);
       }
 
       if (importResult.tasks.length > 0) {
         const existing = await loadTodoItems();
-        await saveTodoItems([...existing, ...importResult.tasks]);
+        const tagged = importResult.tasks.map(t => ({
+          ...t,
+          folderId: t.folderId || taskImportFolderId,
+        }));
+        await saveTodoItems([...existing, ...tagged]);
         window.dispatchEvent(new Event('tasksUpdated'));
       }
       if (importResult.notes.length > 0) {
         const existing = await loadNotesFromDB();
-        await saveNotesToDB([...existing, ...importResult.notes]);
+        // If the parser supplied folders (e.g. Evernote), respect them.
+        // Otherwise force the dedicated import folder so Inbox stays clean.
+        const tagged = importResult.notes.map(n => ({
+          ...n,
+          folderId: n.folderId || noteImportFolderId,
+        }));
+        await saveNotesToDB([...existing, ...tagged]);
         window.dispatchEvent(new Event('notesUpdated'));
       }
 
