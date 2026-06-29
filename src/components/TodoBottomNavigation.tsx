@@ -126,7 +126,7 @@ export const TodoBottomNavigation = () => {
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 bg-background z-40 lg:hidden"
+      className="fixed bottom-0 left-0 right-0 bg-background z-40 md:hidden"
       style={{
         paddingBottom: 'var(--safe-bottom, 0px)',
         WebkitTransform: 'translateZ(0)',
