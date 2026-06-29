@@ -613,7 +613,7 @@ export function FlatTaskList({
     if (typeof document !== 'undefined') document.body.classList.add('flowist-task-dragging');
     paintGhostAt(active.currentY);
     if ('vibrate' in navigator) navigator.vibrate?.(8);
-  }, [getInsertionPlacement, paintGhostAt]);
+  }, [getInsertionPlacement, paintGhostAt, paintInsertLine]);
 
   const startPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
     if (!dndEnabled || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
