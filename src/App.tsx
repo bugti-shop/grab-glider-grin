@@ -38,6 +38,7 @@ import { widgetDataSync } from "@/utils/widgetDataSync";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useShareIntent } from "@/hooks/useShareIntent";
 import { PerfDiagnosticsPanel } from "@/components/PerfDiagnosticsPanel";
+import { DesktopSidebar } from "@/components/desktop/DesktopSidebar";
 import { WidgetAddTask, WidgetNewSticky, WidgetNewLined, WidgetNewRegular, WidgetNewSketch } from "@/pages/WidgetEntry";
 
 const StreakMilestoneCelebration = lazy(() => import("@/components/StreakMilestoneCelebration").then(m => ({ default: m.StreakMilestoneCelebration })));
