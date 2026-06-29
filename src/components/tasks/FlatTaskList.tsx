@@ -668,6 +668,7 @@ export function FlatTaskList({
       const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : event.target;
       finishPointerDropAt(active, clientY, target);
     } else {
+      if (active.armed) suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
       clearPointerDrag();
     }
   }, [clearPointerDrag, finishPointerDropAt]);
@@ -759,6 +760,7 @@ export function FlatTaskList({
         const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : event.target;
         finishPointerDropAt(active, clientY, target);
       } else {
+        if (active.armed) suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
         clearPointerDrag();
       }
     };
@@ -834,6 +836,7 @@ export function FlatTaskList({
       suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
       finishPointerDropAt(active, event.clientY, event.target);
     } else {
+      if (active.armed) suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
       clearPointerDrag();
     }
   }, [clearPointerDrag, finishPointerDropAt]);
