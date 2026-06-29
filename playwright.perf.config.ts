@@ -41,11 +41,11 @@ export default defineConfig({
     },
     {
       name: "iphone-15",
-      use: { ...devices["iPhone 15"] },
+      use: { ...devices["iPhone 15"], browserName: "chromium" },
     },
     {
       name: "iphone-se",
-      use: { ...devices["iPhone SE"] },
+      use: { ...devices["iPhone SE"], browserName: "chromium" },
     },
   ],
   webServer: process.env.PERF_SKIP_WEBSERVER
