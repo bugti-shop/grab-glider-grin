@@ -7,7 +7,7 @@ import {
   ListChecks,
   LayoutGrid,
   Hourglass,
-  StickyNote,
+  Hourglass,
   BarChart3,
   User,
   Settings,
