@@ -631,17 +631,17 @@ const parseGenericJSON = (
           updatedAt: Number(item.updatedAt ?? item.updated ?? now) || now,
           tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
           folderId: typeof item.folderId === 'string' ? item.folderId : undefined,
-        } as Note);
+        } as unknown as Note);
       } else {
         tasks.push({
           id: String(item.id ?? generateId()),
           text: title,
           completed: Boolean(item.completed ?? item.done ?? false),
           priority: (item.priority as Priority) || 'none',
-          dueDate: item.dueDate ? String(item.dueDate) : undefined,
+          dueDate: item.dueDate ? new Date(String(item.dueDate)) : undefined,
           tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
           createdAt: Number(item.createdAt ?? Date.now()),
-        } as TodoItem);
+        } as unknown as TodoItem);
       }
     } catch (e) {
       failed++;
