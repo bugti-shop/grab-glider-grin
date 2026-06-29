@@ -20,6 +20,7 @@ import {
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { loadTodoItems, saveTodoItems } from '@/utils/todoItemsStorage';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
+import { loadFolders as loadTaskFolders, saveFolders as saveTaskFolders, type Folder as TaskFolder } from '@/utils/folderStorage';
 import type { Folder as NotesFolder } from '@/types/note';
 import { cn } from '@/lib/utils';
 
