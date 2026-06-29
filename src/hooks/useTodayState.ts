@@ -18,7 +18,7 @@ import { archiveCompletedTasks } from '@/utils/taskCleanup';
 import { logActivity } from '@/utils/activityLogger';
 import { toast } from 'sonner';
 import { DateFilter, PriorityFilter, StatusFilter } from '@/components/TaskFilterSheet';
-import { getFolderAndDescendantIds } from '@/utils/folderHelpers';
+import { getDescendantFolderIds } from '@/utils/folderHelpers';
 import { HideDetailsOptions } from '@/components/TaskOptionsSheet';
 import { CustomSmartView, loadCustomSmartViews } from '@/utils/customSmartViews';
 import { getSmartListFilter } from '@/components/SmartListsDropdown';
@@ -28,6 +28,18 @@ import { useStreak } from '@/hooks/useStreak';
 
 export type ViewMode = 'flat' | 'kanban' | 'kanban-status' | 'timeline' | 'progress' | 'priority' | 'history';
 export type SortBy = 'date' | 'priority' | 'name' | 'created';
+
+const getStrictAllowedFolderIds = (folders: Folder[], selectedFolderId: string | null): string[] | undefined => {
+  if (!selectedFolderId) return undefined;
+  const selectedFolder = folders.find((folder) => folder.id === selectedFolderId);
+  if (selectedFolder?.isDefault) return [selectedFolderId];
+  return [selectedFolderId, ...getDescendantFolderIds(folders, selectedFolderId)];
+};
+
+const shouldIncludeUnfiledInFolder = (folders: Folder[], selectedFolderId: string | null): boolean => {
+  if (!selectedFolderId) return false;
+  return folders.find((folder) => folder.id === selectedFolderId)?.isDefault === true;
+};
 
 const getDefaultSections = (t: (key: string) => string): TaskSection[] => [
   { id: 'default', name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 }
@@ -377,17 +389,15 @@ export const useTodayState = () => {
       return;
     }
 
-    // Expand the selected folder into itself + all descendants so tasks added
-    // directly inside subfolders still show when a parent folder is selected.
-    const allowedFolderIds = selectedFolderId
-      ? getFolderAndDescendantIds(folders, selectedFolderId)
-      : undefined;
+    const allowedFolderIds = getStrictAllowedFolderIds(folders, selectedFolderId);
+    const includeUnfiledInSelectedFolder = shouldIncludeUnfiledInFolder(folders, selectedFolderId);
 
     const payload = {
       items,
       smartList,
       selectedFolderId,
       allowedFolderIds,
+      includeUnfiledInSelectedFolder,
       priorityFilter,
       statusFilter,
       dateFilter,
@@ -404,7 +414,7 @@ export const useTodayState = () => {
       workerItemsVersionRef.current += 1;
     }
     const allowedKey = allowedFolderIds ? allowedFolderIds.join('.') : '';
-    const key = `${smartList}|${selectedFolderId}|${allowedKey}|${priorityFilter}|${statusFilter}|${dateFilter}|${tagFilter.join(',')}|${sortBy}|${deferredSearch}|${items.length}|${workerItemsVersionRef.current}|${cacheVer}`;
+    const key = `${smartList}|${selectedFolderId}|${allowedKey}|${includeUnfiledInSelectedFolder ? 1 : 0}|${priorityFilter}|${statusFilter}|${dateFilter}|${tagFilter.join(',')}|${sortBy}|${deferredSearch}|${items.length}|${workerItemsVersionRef.current}|${cacheVer}`;
     if (key === workerPayloadRef.current && workerResult) return;
     workerPayloadRef.current = key;
 
@@ -425,8 +435,9 @@ export const useTodayState = () => {
         const smartListFilter = getSmartListFilter(smartList);
         if (!smartListFilter(item)) return false;
       }
-      const allowedFolderIds = selectedFolderId ? new Set(getFolderAndDescendantIds(folders, selectedFolderId)) : null;
-      const folderMatch = allowedFolderIds ? (item.folderId ? allowedFolderIds.has(item.folderId) : false) : true;
+      const allowedFolderIds = selectedFolderId ? new Set(getStrictAllowedFolderIds(folders, selectedFolderId) ?? []) : null;
+      const includeUnfiled = shouldIncludeUnfiledInFolder(folders, selectedFolderId);
+      const folderMatch = allowedFolderIds ? (item.folderId ? allowedFolderIds.has(item.folderId) : includeUnfiled) : true;
       const priorityMatch = priorityFilter === 'all' ? true : item.priority === priorityFilter;
       let statusMatch = true;
       if (statusFilter === 'completed') statusMatch = item.completed;
@@ -515,7 +526,7 @@ export const useTodayState = () => {
   const sortedSections = useMemo(() => {
     const visibleTaskSectionIds = new Set(searchFilteredItems.map(item => item.sectionId).filter(Boolean) as string[]);
     const defaultSectionId = sections[0]?.id;
-    const allowedFolderIds = selectedFolderId ? new Set(getFolderAndDescendantIds(folders, selectedFolderId)) : null;
+    const allowedFolderIds = selectedFolderId ? new Set(getStrictAllowedFolderIds(folders, selectedFolderId) ?? []) : null;
     const filtered = sections.filter(s => {
       if (!selectedFolderId) return !s.folderId;
       return s.id === defaultSectionId || visibleTaskSectionIds.has(s.id) || (s.folderId ? allowedFolderIds?.has(s.folderId) : false);
