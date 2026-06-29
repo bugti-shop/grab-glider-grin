@@ -127,16 +127,32 @@ export const autoDetectColumnMap = (headers: string[], kind: 'tasks' | 'notes'):
 // ─── Todoist CSV Import ────────────────────────────────────
 // Columns: TYPE, CONTENT, PRIORITY, INDENT, AUTHOR, RESPONSIBLE, DATE, DATE_LANG, TIMEZONE
 // Todoist priority: 4 = highest (p1), 1 = normal (p4)
+// INDENT controls nesting: 1 = root, >1 = child of nearest preceding task with INDENT-1.
+const KNOWN_TODOIST_CSV_FIELDS = new Set([
+  'TYPE','CONTENT','DESCRIPTION','PRIORITY','INDENT','AUTHOR','RESPONSIBLE',
+  'DATE','DATE_LANG','TIMEZONE',
+]);
 const parseTodoistCSV = (text: string): ImportResult => {
   try {
     const rows = parseCSV(text);
     if (rows.length === 0) return { success: false, tasks: [], notes: [], error: 'No data found in CSV', stats: { tasks: 0, notes: 0 } };
 
-    const tasks: TodoItem[] = [];
+    const rootTasks: TodoItem[] = [];
     const folders: Folder[] = [];
     let currentFolderId: string | undefined;
     let failed = 0;
     const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Stack of [indent, task] so children attach to the right ancestor.
+    const stack: { indent: number; task: TodoItem }[] = [];
+
+    // Warn about unknown columns once.
+    const headers = Object.keys(rows[0] || {});
+    const unknown = headers.filter(h => h && !KNOWN_TODOIST_CSV_FIELDS.has(h.toUpperCase()));
+    if (unknown.length) warnings.push(`Unsupported columns ignored: ${unknown.join(', ')}`);
+
+    const priorityMap: Record<string, Priority> = { '1': 'none', '2': 'low', '3': 'medium', '4': 'high' };
 
     for (const row of rows) {
       try {
@@ -148,15 +164,24 @@ const parseTodoistCSV = (text: string): ImportResult => {
           const folder: Folder = { id: generateId(), name: content, createdAt: new Date() } as Folder;
           folders.push(folder);
           currentFolderId = folder.id;
+          stack.length = 0; // sections reset nesting
           continue;
         }
-        if (type && type !== 'task' && type !== 'note') continue;
+        if (type === 'note') {
+          warnings.push(`Note row "${content}" attached as description of preceding task`);
+          if (stack.length > 0) {
+            const target = stack[stack.length - 1].task;
+            target.description = target.description ? `${target.description}\n${content}` : content;
+          }
+          continue;
+        }
+        if (type && type !== 'task') continue;
 
-        const priorityMap: Record<string, Priority> = { '1': 'none', '2': 'low', '3': 'medium', '4': 'high' };
         const rawPriority = row['PRIORITY'] || row['priority'] || '1';
         const dateStr = row['DATE'] || row['date'] || '';
+        const indent = Math.max(1, parseInt(row['INDENT'] || row['indent'] || '1', 10) || 1);
 
-        tasks.push({
+        const task: TodoItem = {
           id: generateId(),
           text: content,
           completed: false,
@@ -166,14 +191,37 @@ const parseTodoistCSV = (text: string): ImportResult => {
           folderId: currentFolderId,
           createdAt: new Date(),
           modifiedAt: new Date(),
-        } as TodoItem);
+        } as TodoItem;
+
+        // Pop any stack entries with indent >= this one.
+        while (stack.length && stack[stack.length - 1].indent >= indent) stack.pop();
+
+        if (stack.length === 0) {
+          rootTasks.push(task);
+        } else {
+          const parent = stack[stack.length - 1].task;
+          parent.subtasks = parent.subtasks ? [...parent.subtasks, task] : [task];
+        }
+        stack.push({ indent, task });
       } catch (e) {
         failed++;
         errors.push(`Row skipped: ${e instanceof Error ? e.message : 'unknown'}`);
       }
     }
 
-    return { success: true, tasks, notes: [], folders, stats: { tasks: tasks.length, notes: 0, folders: folders.length, failed }, errors: errors.length ? errors : undefined };
+    // Count nested tasks for stats / preview.
+    const countAll = (arr: TodoItem[]): number =>
+      arr.reduce((n, t) => n + 1 + (t.subtasks ? countAll(t.subtasks) : 0), 0);
+
+    return {
+      success: true,
+      tasks: rootTasks,
+      notes: [],
+      folders,
+      stats: { tasks: countAll(rootTasks), notes: 0, folders: folders.length, failed },
+      errors: errors.length ? errors : undefined,
+      warnings: warnings.length ? warnings : undefined,
+    };
   } catch (e) {
     return { success: false, tasks: [], notes: [], error: `Todoist parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
   }
