@@ -9,7 +9,7 @@ import { TodoItem, Folder, Priority, Note, TaskSection } from '@/types/note';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { saveTodoItem, updateTodoItem, deleteTodoItem, saveTodoItems } from '@/utils/todoItemsStorage';
 import { useTranslation } from 'react-i18next';
-import { recordCompletion, recordCompletions, TASK_STREAK_KEY } from '@/utils/streakStorage';
+import { recordCompletions, TASK_STREAK_KEY } from '@/utils/streakStorage';
 import { createNextRecurringTask } from '@/utils/recurringTasks';
 import { playCompletionSound } from '@/utils/taskSounds';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -461,19 +461,6 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
           void saveTodoItem(nextTaskWithTimestamps);
           toast.success(t('todayPage.recurringTaskCompleted'), { icon: '🔄' });
           queueCompletionStats();
-          /* recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
-            if (streakResult.newMilestone) {
-              toast.success(t('todayPage.streakMilestone', { days: streakResult.newMilestone }));
-              window.dispatchEvent(new CustomEvent('streakMilestone', { detail: { milestone: streakResult.newMilestone } }));
-            }
-            if (streakResult.earnedFreeze) {
-              toast.success(t('todayPage.earnedStreakFreeze'), { description: t('todayPage.earnedStreakFreezeDesc') });
-            }
-            if (streakResult.streakIncremented) {
-              window.dispatchEvent(new CustomEvent('streakChallengeShow', { detail: { currentStreak: streakResult.data.currentStreak } }));
-            }
-            window.dispatchEvent(new CustomEvent('streakUpdated'));
-          }).catch((e) => console.warn('Failed to record streak:', e)); */
           return;
         }
       }
@@ -509,19 +496,6 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
     if (isNewCompletion) {
       queueCompletionStats();
-      /* recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
-        if (streakResult.newMilestone) {
-          toast.success(t('todayPage.streakMilestone', { days: streakResult.newMilestone }));
-          window.dispatchEvent(new CustomEvent('streakMilestone', { detail: { milestone: streakResult.newMilestone } }));
-        }
-        if (streakResult.earnedFreeze) {
-          toast.success(t('todayPage.earnedStreakFreeze'), { description: t('todayPage.earnedStreakFreezeDesc') });
-        }
-        if (streakResult.streakIncremented) {
-          window.dispatchEvent(new CustomEvent('streakChallengeShow', { detail: { currentStreak: streakResult.data.currentStreak } }));
-        }
-        window.dispatchEvent(new CustomEvent('streakUpdated'));
-      }).catch((e) => console.warn('Failed to record streak:', e)); */
       toast.success(t('todayPage.taskCompleted'), {
         id: 'task-completed',
         action: {
