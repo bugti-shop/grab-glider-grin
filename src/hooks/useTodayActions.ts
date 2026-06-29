@@ -454,11 +454,14 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
 
   // ── Task CRUD ──
   const handleAddTask = useCallback(async (task: Omit<TodoItem, 'id' | 'completed'>) => {
-    // Hard cap: max 38 tasks per folder (Inbox included).
+    // Hard cap: max 38 ACTIVE tasks per folder. Completed tasks should never
+    // block re-adds after the user deletes a batch from the Inbox.
     const targetFolderId = task.folderId ?? selectedFolderId ?? null;
-    const folderTasksCount = itemsRef.current.filter(t => (t.folderId || null) === targetFolderId).length;
+    const folderTasksCount = itemsRef.current.filter(
+      t => !t.completed && (t.folderId || null) === targetFolderId,
+    ).length;
     if (targetFolderId && folderTasksCount >= 38) {
-      toast.error('Folder is full (38 max). Move or delete items, or create a new folder.', { id: 'folder-full' });
+      toast.error('Folder is full (38 active max). Move or delete items, or create a new folder.', { id: 'folder-full' });
       return;
     }
     if (!requireCapacity('tasksPerFolder', folderTasksCount)) return;
@@ -492,7 +495,9 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   const handleBatchAddTasks = useCallback(async (taskTexts: string[], sectionId?: string, folderId?: string, priority?: Priority, dueDate?: Date) => {
     const existingCount = itemsRef.current.length;
     const targetFolderId = folderId || selectedFolderId || undefined;
-    const folderTasksCount = itemsRef.current.filter(t => (t.folderId || undefined) === targetFolderId).length;
+    const folderTasksCount = itemsRef.current.filter(
+      t => !t.completed && (t.folderId || undefined) === targetFolderId,
+    ).length;
     const remainingFolderCapacity = isPro ? taskTexts.length : Math.max(0, FREE_CAPACITY_LIMITS.tasksPerFolder - folderTasksCount);
     const remainingCreates = Math.max(0, SOFT_FREE_LIMITS.tasks - existingCount);
     const allowedCount = isPro ? taskTexts.length : Math.min(taskTexts.length, remainingCreates, remainingFolderCapacity);
