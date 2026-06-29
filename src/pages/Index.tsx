@@ -941,6 +941,11 @@ const Index = () => {
   };
 
   const handleBulkMoveToFolder = (folderId: string | null) => {
+    if (folderId) {
+      // Only count notes moving into folder that aren't already there
+      const incoming = notes.filter(n => selectedNoteIds.includes(n.id) && n.folderId !== folderId).length;
+      if (!canMoveNotesToFolder(folderId, incoming)) return;
+    }
     setNotes(prev => {
       return prev.map(n => {
         if (!selectedNoteIds.includes(n.id)) return n;
@@ -961,6 +966,10 @@ const Index = () => {
 
   const handleConfirmMoveToFolder = (folderId: string | null) => {
     if (movingNoteId) {
+      if (folderId) {
+        const current = notes.find(n => n.id === movingNoteId);
+        if (current && current.folderId !== folderId && !canMoveNotesToFolder(folderId, 1)) return;
+      }
       setNotes(prev => {
         const updatedNotes = prev.map(n =>
           n.id === movingNoteId
@@ -973,6 +982,7 @@ const Index = () => {
         }
         return updatedNotes;
       });
+
     }
     setMovingNoteId(null);
   };
