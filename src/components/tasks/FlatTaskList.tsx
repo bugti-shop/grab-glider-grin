@@ -716,7 +716,7 @@ export function FlatTaskList({
     const over = updateInsertionIndicator(touch.clientY, document.elementFromPoint(touch.clientX, touch.clientY));
     if (over !== active.over) {
       active.over = over;
-      setPointerDrag((current) => current ? { ...current, over } : current);
+      // Skip mid-drag setState — keeps virtualizer geometry stable so the drop lands on the blue line.
     }
     paintGhostAt(touch.clientY);
     stopAutoscroll();
@@ -809,7 +809,7 @@ export function FlatTaskList({
       const over = updateInsertionIndicator(touch.clientY, document.elementFromPoint(touch.clientX, touch.clientY));
       if (over !== active.over) {
         active.over = over;
-        setPointerDrag((current) => current ? { ...current, over } : current);
+        // Skip mid-drag setState — keeps virtualizer geometry stable so the drop lands on the blue line.
       }
       paintGhostAt(touch.clientY);
       stopAutoscroll();
@@ -886,7 +886,7 @@ export function FlatTaskList({
     const over = updateInsertionIndicator(event.clientY, event.target);
     if (over !== active.over) {
       active.over = over;
-      setPointerDrag((current) => current ? { ...current, over } : current);
+      // Skip mid-drag setState — keeps virtualizer geometry stable so the drop lands on the blue line.
     }
     paintGhostAt(event.clientY);
     stopAutoscroll();
