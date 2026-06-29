@@ -664,7 +664,7 @@ const Today = () => {
               </DragDropContext>
             </div>
           </div>
-        </div>
+
 
         <div className="max-w-2xl mx-auto">
 
