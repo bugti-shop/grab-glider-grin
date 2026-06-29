@@ -1,13 +1,15 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Sparkles, Flame, Clock, Calendar as CalendarIcon2 } from 'lucide-react';
+import { Sparkles, Flame, Clock, Calendar as CalendarIcon2, Upload } from 'lucide-react';
 import { MoreVertical, Eye, EyeOff, Filter, Copy, MousePointer2, Settings, LayoutList, LayoutGrid, ListPlus, ArrowUpDown, Columns3, GitBranch, Flag, ChevronRight, Trash2, ListChecks, Crown } from 'lucide-react';
 import { Plus as PlusIcon, FolderIcon, ArrowDownAZ } from 'lucide-react';
 import { toast } from 'sonner';
 import { loadCustomSmartViews, deleteCustomSmartView } from '@/utils/customSmartViews';
+import { ImportDataSheet } from '@/components/ImportDataSheet';
 
 interface TodoOptionsDropdownProps {
   dropdownView: string;
@@ -87,8 +89,10 @@ export const TodoOptionsDropdown = ({
   setViewMode,
 }: TodoOptionsDropdownProps) => {
   const { t } = useTranslation();
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   return (
+    <>
     <DropdownMenu onOpenChange={(open) => { if (!open) setDropdownView('main'); }}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="h-9 w-9" data-tour="todo-options-menu"><MoreVertical className="h-5 w-5" /></Button>
@@ -138,6 +142,7 @@ export const TodoOptionsDropdown = ({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleAddSection('below')} className="cursor-pointer"><PlusIcon className="h-4 w-4 mr-2" />{t('menu.sections')}</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsFolderManageOpen(true)} className="cursor-pointer"><FolderIcon className="h-4 w-4 mr-2" />{t('menu.folders')}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsImportOpen(true)} className="cursor-pointer"><Upload className="h-4 w-4 mr-2" />Import Tasks</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => { setIsSelectionMode(true); setIsSelectActionsOpen(true); }} className="cursor-pointer"><MousePointer2 className="h-4 w-4 mr-2" />{t('menu.select')}</DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -237,5 +242,7 @@ export const TodoOptionsDropdown = ({
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
+    <ImportDataSheet isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
+    </>
   );
 };
