@@ -171,8 +171,9 @@ test.describe("Today tasks @ 5k items", () => {
     const tgtY = tgtBox.y + tgtBox.height / 2;
 
     const start = Date.now();
-    // Long-press → drag → drop using the touch input pipeline.
-    await page.touchscreen.tap(srcX, srcY); // ensure focus
+    // Long-press → drag → drop using the touch input pipeline. Do not pre-tap
+    // the row: in the real UI a normal tap opens task details, which would put
+    // a sheet over the list and invalidate the drag target.
     await page.evaluate(
       ({ x, y, ty }) => {
         const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest('[data-index]') as HTMLElement | null;
@@ -215,10 +216,19 @@ test.describe("Today tasks @ 5k items", () => {
     const latency = Date.now() - start;
     console.log(`[perf] drag+drop latency: ${latency}ms (limit ${MAX_REORDER_LATENCY_MS})`);
 
-    const firstRowText = await rows.first().innerText();
-    expect(firstRowText, "drop operation completed and reordered the list").not.toContain(
-      "Perf task 1"
+    const dropInstrumentation = await page.evaluate(() =>
+      (window as unknown as { __flowistLastTaskDrop?: { from: number; insertionIndex: number; insert?: unknown } }).__flowistLastTaskDrop
     );
+    expect(dropInstrumentation?.from, "drop fired from the dragged row").toBe(0);
+    expect(dropInstrumentation?.insertionIndex, "drop computed an insert index from row midpoints").toBeGreaterThan(0);
+
+    await expect(rows.first(), "drop operation completed and reordered the list").not.toContainText(
+      "Perf task 1",
+      { timeout: 2_000 }
+    );
+
+    const firstRowText = await rows.first().innerText();
+    expect(firstRowText, "drop operation completed and reordered the list").not.toContain("Perf task 1");
 
     // Verify the page is still responsive: a synchronous eval should return fast.
     const tickStart = Date.now();
