@@ -615,6 +615,7 @@ export const deleteNoteFromDB = async (noteId: string, skipCloudSync = false): P
 export const bulkDeleteNotesFromDB = async (
   noteIds: string[],
   skipCloudSync = false,
+  onProgress?: (p: { processed: number; total: number }) => void,
 ): Promise<void> => {
   if (noteIds.length === 0) return;
   const idSet = new Set(noteIds);
