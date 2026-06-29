@@ -34,7 +34,11 @@ import { uploadCategory } from '@/utils/googleDriveSync';
 // ring/checkmark paint updates immediately through the existing visual state.
 const COMPLETION_BATCH_MS = 250;
 const COMPLETION_RECONCILE_DEBOUNCE_MS = 1200;
-const COMPLETION_GLOBAL_EVENT_DELAY_MS = 3200;
+const COMPLETION_RECONCILE_MAX_ITEMS = 500;
+// Completion persistence still syncs to cloud, but it must not broadcast the
+// global `tasksUpdated` event: several app-wide listeners respond by loading the
+// entire task database, which is what froze the tab after 2–4 rapid taps.
+const COMPLETION_GLOBAL_EVENT_DELAY_MS = -1;
 
 interface UseTodayActionsProps {
   items: TodoItem[];
@@ -172,6 +176,15 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   }, [markSingleTaskPersisted, rebuildItemLookups, setItems]);
 
   const queueDeferredCompletionState = useCallback((itemId: string, updates: Partial<TodoItem>) => {
+    // On big lists the expensive part is not IndexedDB; it is React/worker
+    // re-processing the full task array after every few checkbox taps. The task
+    // object is already mutated optimistically below, so skip the full-array
+    // reconciliation for large lists and let the next natural refresh/navigation
+    // pick up the persisted state.
+    if (itemsRef.current.length > COMPLETION_RECONCILE_MAX_ITEMS) {
+      pendingDeferredCompletionUpdatesRef.current.delete(itemId);
+      return;
+    }
     pendingDeferredCompletionUpdatesRef.current.set(itemId, updates);
     if (deferredCompletionFlushTimerRef.current) window.clearTimeout(deferredCompletionFlushTimerRef.current);
     deferredCompletionFlushTimerRef.current = window.setTimeout(flushDeferredCompletionState, COMPLETION_RECONCILE_DEBOUNCE_MS);
