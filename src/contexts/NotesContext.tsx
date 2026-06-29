@@ -256,6 +256,26 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (!softRequireMutateRef.current()) return;
       }
     }
+    // Hard cap: 38 notes per folder (Inbox included) — applies on create and folder change.
+    if (note.folderId) {
+      const prevFolderId = isExisting ? notesMap.get(note.id)?.folderId : undefined;
+      const folderChanged = prevFolderId !== note.folderId;
+      if (!isExisting || folderChanged) {
+        let count = 0;
+        // Use ref'd notes array via notesMap for O(N) once — small folders
+        for (const n of notesMap.values()) {
+          if (n.id === note.id) continue;
+          if (n.isDeleted || n.isArchived) continue;
+          if (n.folderId === note.folderId) count++;
+        }
+        if (count >= 38) {
+          const { toast } = await import('sonner');
+          toast.error('Folder is full (38 notes max). Move or delete notes, or create a new folder.', { id: 'note-folder-full' });
+          return;
+        }
+      }
+    }
+
     const noteMeta = makeMetadataNote(note);
     setNotes(prev => {
       const existingIdx = prev.findIndex(n => n.id === note.id);

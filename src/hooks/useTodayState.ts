@@ -329,6 +329,15 @@ export const useTodayState = () => {
   useEffect(() => { if (settingsLoaded) { setSetting('todoSortBy', sortBy); logActivity('sort_change', `Sort by: ${sortBy}`); } }, [sortBy, settingsLoaded]);
   useEffect(() => { if (settingsLoaded) { setSetting('todoSmartList', smartList); logActivity('smart_list_change', `Smart list: ${smartList}`); } }, [smartList, settingsLoaded]);
   useEffect(() => { if (settingsLoaded) setSetting('todoSelectedFolder', selectedFolderId || 'null'); }, [selectedFolderId, settingsLoaded]);
+  // Default selectedFolderId to first folder (Inbox) when none is selected — "All Tasks" view removed.
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    if (selectedFolderId == null && folders.length > 0) {
+      const sorted = [...folders].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      setSelectedFolderId(sorted[0].id);
+    }
+  }, [settingsLoaded, folders, selectedFolderId]);
+
   useEffect(() => { if (settingsLoaded) setSetting('todoDefaultSectionId', defaultSectionId || ''); }, [defaultSectionId, settingsLoaded]);
   useEffect(() => { if (settingsLoaded) setSetting('todoTaskAddPosition', taskAddPosition); }, [taskAddPosition, settingsLoaded]);
   useEffect(() => { if (settingsLoaded) setSetting('todoShowStatusBadge', showStatusBadge); }, [showStatusBadge, settingsLoaded]);

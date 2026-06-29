@@ -179,6 +179,15 @@ const Index = () => {
     };
   }, []);
 
+  // Default selectedFolderId to first folder (Inbox) — "All Notes" view removed.
+  useEffect(() => {
+    if (selectedFolderId == null && folders.length > 0) {
+      const sorted = [...folders].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      setSelectedFolderId(sorted[0].id);
+    }
+  }, [folders, selectedFolderId]);
+
+
   // Notes are now loaded from NotesContext - no local loading needed!
 
   const foldersLoadedRef = useRef(false);
@@ -667,15 +676,37 @@ const Index = () => {
     });
   };
 
+  // Hard cap: 38 notes per folder (Inbox included). "All Notes" view removed.
+  const NOTES_FOLDER_CAP = 38;
+  const countNotesInFolder = (folderId: string | null | undefined) => {
+    if (!folderId) return 0;
+    let n = 0;
+    for (const note of notes) {
+      if (note.isDeleted || note.isArchived) continue;
+      if (note.folderId === folderId) n++;
+    }
+    return n;
+  };
+  const canMoveNotesToFolder = (targetFolderId: string | null | undefined, incoming: number) => {
+    if (!targetFolderId) return true;
+    if (countNotesInFolder(targetFolderId) + incoming > NOTES_FOLDER_CAP) {
+      toast.error(`Folder is full (${NOTES_FOLDER_CAP} notes max). Move or delete notes, or create a new folder.`, { id: 'note-folder-full' });
+      return false;
+    }
+    return true;
+  };
+
   const handleDropOnFolder = (e: React.DragEvent, targetFolderId: string | null) => {
     e.preventDefault();
     if (!draggedNoteId) return;
+    if (!canMoveNotesToFolder(targetFolderId, 1)) { setDraggedNoteId(null); return; }
 
     setNotes(prev => prev.map(n =>
       n.id === draggedNoteId ? { ...n, folderId: targetFolderId || undefined } : n
     ));
     setDraggedNoteId(null);
   };
+
 
   const handleHideNote = (noteId: string) => {
     setNotes(prev => prev.map(n => n.id === noteId ? { ...n, isHidden: true } : n));
@@ -910,6 +941,11 @@ const Index = () => {
   };
 
   const handleBulkMoveToFolder = (folderId: string | null) => {
+    if (folderId) {
+      // Only count notes moving into folder that aren't already there
+      const incoming = notes.filter(n => selectedNoteIds.includes(n.id) && n.folderId !== folderId).length;
+      if (!canMoveNotesToFolder(folderId, incoming)) return;
+    }
     setNotes(prev => {
       return prev.map(n => {
         if (!selectedNoteIds.includes(n.id)) return n;
@@ -930,6 +966,10 @@ const Index = () => {
 
   const handleConfirmMoveToFolder = (folderId: string | null) => {
     if (movingNoteId) {
+      if (folderId) {
+        const current = notes.find(n => n.id === movingNoteId);
+        if (current && current.folderId !== folderId && !canMoveNotesToFolder(folderId, 1)) return;
+      }
       setNotes(prev => {
         const updatedNotes = prev.map(n =>
           n.id === movingNoteId
@@ -942,6 +982,7 @@ const Index = () => {
         }
         return updatedNotes;
       });
+
     }
     setMovingNoteId(null);
   };
@@ -1159,11 +1200,7 @@ const Index = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuItem onClick={() => handleBulkMoveToFolder(null)}>
-                    <FolderIcon className="h-4 w-4 mr-2" />
-                    All Notes (No Folder)
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+
                   {folders.map((folder) => (
                     <DropdownMenuItem 
                       key={folder.id} 
