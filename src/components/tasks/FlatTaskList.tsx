@@ -604,10 +604,10 @@ export function FlatTaskList({
     }
     dragGenerationRef.current += 1;
     dragFromRef.current = active.from;
-    setDragOverIndex(active.from);
     const placement = getInsertionPlacement(active.currentY, active.element);
     active.over = placement.insertionIndex;
-    setInsertIndicator(placement);
+    paintInsertLine(placement.top);
+    lastInsertionIndexRef.current = placement.insertionIndex;
     setPointerDrag({ from: active.from, over: active.over, title: active.title, y: active.currentY });
     try { active.element.setPointerCapture(active.pointerId); } catch {}
     if (typeof document !== 'undefined') document.body.classList.add('flowist-task-dragging');
