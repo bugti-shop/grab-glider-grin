@@ -794,6 +794,7 @@ export const importFromFile = async (
 export const getAcceptedFileTypes = (source: ImportSource): string => {
   switch (source) {
     case 'todoist': return '.csv';
+    case 'ticktick': return '.csv';
     case 'notion': return '.csv,.json';
     case 'evernote': return '.enex,.html,.htm';
     case 'csv-tasks':
