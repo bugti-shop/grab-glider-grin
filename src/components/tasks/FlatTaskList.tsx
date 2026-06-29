@@ -412,9 +412,13 @@ export function FlatTaskList({
 
   const getInsertionPlacement = useCallback((clientY: number, target: EventTarget | Element | null) => {
     const targetEl = target instanceof Element ? target.closest('[data-index]') as HTMLElement | null : null;
+    // Exclude the row currently being dragged from geometry. With visibility:hidden
+    // the source still occupies space, which shifts every midpoint by one row
+    // and makes drops land one slot earlier than the user expects.
+    const sourceIndex = dragFromRef.current;
     const rows = Array.from(parentRef.current?.querySelectorAll<HTMLElement>('[data-index]') ?? [])
       .map((rowEl) => ({ rowEl, index: Number(rowEl.dataset.index), rect: rowEl.getBoundingClientRect() }))
-      .filter((row) => Number.isFinite(row.index))
+      .filter((row) => Number.isFinite(row.index) && row.index !== sourceIndex)
       .sort((a, b) => a.index - b.index);
 
     const buildDebug = (

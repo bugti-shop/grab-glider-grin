@@ -80,6 +80,24 @@ const FlatView = lazy(flatFactory);
 
 
 
+// ── Singleton ring controller ────────────────────────────────────────────────
+// Only one completion ring may be in the "filling" state at a time. When the
+// user taps a second task before the first ring finishes its 700ms animation,
+// the previous ring instantly snaps to its committed state (completed) and the
+// new ring takes over the fill animation. This prevents stacked ring fills
+// and matches the visual the user requested.
+type RingCancel = () => void;
+let activeRingCancel: RingCancel | null = null;
+const claimRing = (cancel: RingCancel) => {
+  if (activeRingCancel && activeRingCancel !== cancel) {
+    try { activeRingCancel(); } catch {}
+  }
+  activeRingCancel = cancel;
+};
+const releaseRing = (cancel: RingCancel) => {
+  if (activeRingCancel === cancel) activeRingCancel = null;
+};
+
 const FlatCompletionToggle = ({
   item,
   compactMode,
@@ -96,12 +114,6 @@ const FlatCompletionToggle = ({
   const [localPending, setLocalPending] = useState(false);
   const timerRef = useRef<number | null>(null);
 
-  useEffect(() => () => {
-    if (timerRef.current) window.clearTimeout(timerRef.current);
-  }, []);
-
-  const isPending = localPending || isPendingFromState;
-
   const clearPending = useCallback(() => {
     if (timerRef.current) {
       window.clearTimeout(timerRef.current);
@@ -110,9 +122,22 @@ const FlatCompletionToggle = ({
     setLocalPending(false);
   }, []);
 
+  // Stable cancel handle for the singleton — same identity for the component's
+  // lifetime so claim/release compare correctly.
+  const cancelRef = useRef<RingCancel>(() => {});
+  cancelRef.current = clearPending;
+
+  useEffect(() => () => {
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    releaseRing(cancelRef.current);
+  }, []);
+
+  const isPending = localPending || isPendingFromState;
+
   const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     if (item.completed || isPending) {
+      releaseRing(cancelRef.current);
       clearPending();
       updateItem(item.id, { completed: false });
       return;
@@ -120,11 +145,13 @@ const FlatCompletionToggle = ({
 
     const fillMs = getRingFillMs();
     if (fillMs > 0) {
+      claimRing(cancelRef.current);
       setLocalPending(true);
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(() => {
         timerRef.current = null;
         setLocalPending(false);
+        releaseRing(cancelRef.current);
       }, fillMs);
     }
     window.setTimeout(() => Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}), 0);

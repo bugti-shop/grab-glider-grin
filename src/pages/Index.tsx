@@ -648,7 +648,17 @@ const Index = () => {
   };
 
   const handleDeleteFolder = async (folderId: string) => {
-    const updatedFolders = folders.filter(f => f.id !== folderId);
+    const target = folders.find(f => f.id === folderId);
+    const remaining = folders.filter(f => f.id !== folderId);
+    if (target?.isDefault && remaining.length > 0) {
+      toast.error('Inbox cannot be deleted while other folders exist.');
+      return;
+    }
+    if (remaining.length === 0) {
+      toast.error('Cannot delete your last folder.');
+      return;
+    }
+    const updatedFolders = remaining;
     setFolders(updatedFolders);
     setNotes(prev => prev.map(n => n.folderId === folderId ? { ...n, folderId: undefined } : n));
 
@@ -669,6 +679,11 @@ const Index = () => {
   };
 
   const handleEditFolder = (folderId: string, name: string) => {
+    const target = folders.find(f => f.id === folderId);
+    if (target?.isDefault) {
+      toast.error('Inbox is a system folder and cannot be renamed.');
+      return;
+    }
     setFolders(prev => {
       const updated = prev.map(f => f.id === folderId ? { ...f, name, updatedAt: new Date() } as Folder : f);
       persistFolders(updated);
