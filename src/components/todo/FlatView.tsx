@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { TodoItem, TaskSection } from '@/types/note';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
@@ -100,6 +100,19 @@ export const FlatView = ({
     const raf = requestAnimationFrame(() => checkFlatRowConsistency(dndRootRef.current, `dnd(${uncompletedItems.length})`));
     return () => cancelAnimationFrame(raf);
   }, [useFlatVirtualized, uncompletedItems.length]);
+
+  // Stable row renderers so FlatTaskList's memoized row bodies can skip
+  // re-renders when an unrelated task completes elsewhere in the list.
+  const renderVirtualRow = useCallback((row: { task: TodoItem }) => (
+    <div data-flat-row className={FLAT_ROW_WRAPPER_CLASS}>
+      {renderTaskItem(row.task)}
+    </div>
+  ), [renderTaskItem]);
+  const renderCompletedRow = useCallback((row: { task: TodoItem }) => (
+    <div className="border-b border-border/50">
+      {renderTaskItem(row.task)}
+    </div>
+  ), [renderTaskItem]);
 
   if (useFlatVirtualized) {
     return (
