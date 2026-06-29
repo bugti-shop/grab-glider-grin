@@ -229,17 +229,22 @@ export const DesktopSidebar = () => {
       <nav className={cn('py-1 flex flex-col gap-0.5 px-2')}>
         {MAIN_NAV.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          const showHabitChild = item.id === 'habits' && !collapsed && (location.pathname === '/todo/habits' || location.pathname.startsWith('/todo/habits/'));
+          const isActive = isItemActive(item.path, location.pathname);
+          const isHabitsItem = item.id === 'habits';
+          const showHabitChild = isHabitsItem && !collapsed && location.pathname.startsWith('/todo/habits');
+          const addHabitActive = location.pathname.startsWith('/todo/habits/gallery') || location.pathname.startsWith('/todo/habits/new');
           return (
             <div key={item.id}>
               <NavLink
                 to={item.path}
+                end={false}
                 title={collapsed ? t(`nav.${item.id}`, item.label) : undefined}
                 className={cn(
-                  'flex items-center rounded-lg text-sm font-medium transition-colors',
+                  'flex items-center rounded-lg text-sm font-medium transition-colors relative',
                   collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-                  isActive ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted'
+                  isActive
+                    ? 'bg-primary/10 text-primary before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:rounded-r before:bg-primary'
+                    : 'text-foreground/80 hover:bg-muted'
                 )}
               >
                 <Icon className="h-4 w-4 flex-shrink-0" />
@@ -251,7 +256,12 @@ export const DesktopSidebar = () => {
                     triggerHaptic('light').catch(() => {});
                     navigate('/todo/habits/gallery');
                   }}
-                  className="ml-7 mt-0.5 flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-primary/90 hover:bg-primary/10 transition-colors w-[calc(100%-1.75rem)] text-left"
+                  className={cn(
+                    'ml-7 mt-0.5 flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors w-[calc(100%-1.75rem)] text-left',
+                    addHabitActive
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-primary/90 hover:bg-primary/10'
+                  )}
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>{t('habits.addHabit', 'Add Habit')}</span>
