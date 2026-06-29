@@ -7,7 +7,7 @@ import { Layers, Settings, Pin, Download, ListTodo, FileText, Archive, ArchiveRe
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 
 
-import { saveNoteToDBSingle, deleteNoteFromDB, loadNoteFromDB, isNoteContentStub, makeMetadataNote } from '@/utils/noteStorage';
+import { saveNoteToDBSingle, deleteNoteFromDB, bulkDeleteNotesFromDB, loadNoteFromDB, isNoteContentStub, makeMetadataNote } from '@/utils/noteStorage';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
