@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Folder as FolderIcon, Plus, Edit2, Trash2, FolderOpen, FolderPlus, FolderMinus, MoreVertical, Star, ArrowUpDown, Clock, FileText, StickyNote, CheckSquare, Filter, Code, Palette, Receipt, Archive, LayoutGrid, List, PenTool } from 'lucide-react';
+import { Folder as FolderIcon, Plus, Edit2, Trash2, FolderOpen, FolderPlus, FolderMinus, MoreVertical, Star, ArrowUpDown, Clock, FileText, StickyNote, CheckSquare, Filter, Code, Palette, Receipt, Archive, LayoutGrid, List, PenTool, Upload } from 'lucide-react';
+import { ImportDataSheet } from '@/components/ImportDataSheet';
 import { cn } from '@/lib/utils';
 import { Folder, Note, NoteType } from '@/types/note';
 import { Button } from '@/components/ui/button';
@@ -97,6 +98,7 @@ export const FolderManager = ({
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
   const [selectedRemoveNoteIds, setSelectedRemoveNoteIds] = useState<string[]>([]);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const availableNotes = notes.filter(note => note.folderId !== selectedFolderId);
   const folderNotes = notes.filter(note => note.folderId === selectedFolderId);
@@ -326,6 +328,12 @@ export const FolderManager = ({
               <Plus className="h-4 w-4 mr-2" />
               {t('notesMenu.createFolder')}
             </DropdownMenuItem>
+
+            {/* Import Notes */}
+            <DropdownMenuItem onClick={() => setIsImportOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import Notes
+            </DropdownMenuItem>
             
             {/* Add Notes to Folder */}
             {isCustomFolder && onAddNotesToFolder && availableNotes.length > 0 && (
@@ -366,6 +374,10 @@ export const FolderManager = ({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <ImportDataSheet isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} />
+
+
 
       {/* Add Notes Dialog */}
       <Dialog open={isAddNotesOpen} onOpenChange={setIsAddNotesOpen}>

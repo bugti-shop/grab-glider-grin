@@ -240,9 +240,16 @@ const Index = () => {
     // memory, and its debounced bulk-save skips stub-only arrays — without
     // this single-note write, edits made from the Home dashboard would be
     // lost on reload.
+    const NOTE_TYPE_IDS = new Set(['sticky','lined','regular','code','sketch','voice','textformat']);
+    const inboxFolderId = folders.find(f => f.isDefault)?.id ?? folders[0]?.id;
+    // Normalize: legacy notes used note.type as folderId — remap to current Inbox.
+    const normalizedFolderId =
+      note.folderId && !NOTE_TYPE_IDS.has(note.folderId)
+        ? note.folderId
+        : (selectedFolderId || inboxFolderId);
     const fullNote: Note = {
       ...note,
-      folderId: note.folderId || note.type,
+      folderId: normalizedFolderId,
       updatedAt: new Date(),
     };
     saveNoteToDBSingle(fullNote);
@@ -824,9 +831,17 @@ const Index = () => {
     });
   }, [notes, notesMeta, searchLower, isFullSearch, fullSearchResults]);
 
-  // Filter by folder
+  // Filter by folder. The default Inbox also catches legacy/orphan notes
+  // (no folderId, or folderId equal to a NoteType string from older versions).
   if (selectedFolderId !== null) {
-    allFilteredNotes = allFilteredNotes.filter(note => note.folderId === selectedFolderId);
+    const LEGACY_TYPE_FOLDER_IDS = new Set(['sticky','lined','regular','code','sketch','voice','textformat']);
+    const defaultFolder = folders.find(f => f.isDefault);
+    const isInbox = defaultFolder?.id === selectedFolderId;
+    allFilteredNotes = allFilteredNotes.filter(note => {
+      if (note.folderId === selectedFolderId) return true;
+      if (isInbox && (!note.folderId || LEGACY_TYPE_FOLDER_IDS.has(note.folderId))) return true;
+      return false;
+    });
   }
 
   // Filter favorites only

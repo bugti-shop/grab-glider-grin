@@ -518,7 +518,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       floatingImages: (noteType === 'regular' || noteType === 'sticky' || noteType === 'textformat') && floatingImages.length > 0 ? floatingImages : undefined,
       voiceRecordings,
       attachments: noteAttachments.length > 0 ? noteAttachments : undefined,
-      folderId: selectedFolderId || noteType,
+      folderId: selectedFolderId || defaultFolderId || undefined,
       fontFamily: (noteType === 'sticky' || noteType === 'lined' || noteType === 'regular' || noteType === 'textformat') ? fontFamily : undefined,
       fontSize: (noteType === 'sticky' || noteType === 'lined' || noteType === 'regular' || noteType === 'textformat') ? fontSize : undefined,
       fontWeight: (noteType === 'sticky' || noteType === 'lined' || noteType === 'regular' || noteType === 'textformat') ? fontWeight : undefined,
