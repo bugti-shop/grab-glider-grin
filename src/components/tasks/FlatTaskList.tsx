@@ -337,6 +337,7 @@ export function FlatTaskList({
     dragFromRef.current = null;
     setDragOverIndex(null);
     setInsertIndicator(null);
+    lastInsertionIndexRef.current = null;
   }, [clearPointerDrag, stopAutoscroll]);
 
   const armPointerDrag = useCallback((pointerId: number) => {
