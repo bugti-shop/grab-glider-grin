@@ -989,13 +989,19 @@ export function FlatTaskList({
       } : undefined}
       style={
         resolvedUseWindow
-          ? { position: 'relative', width: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }
+          ? { position: 'relative', width: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }
           : {
               height: maxHeight ?? '100%',
               overflowX: 'hidden',
               overflowY: 'auto',
-              contain: 'strict',
+              // contain: 'strict' here caused upward scroll to lock up on fast
+              // flicks because the virtualizer remeasures rows during scroll
+              // and a strict-contained box doesn't repaint its scrollable
+              // overflow region promptly. 'layout paint' keeps the perf win
+              // (no parent reflow) without the stuck-scroll regression.
+              contain: 'layout paint',
               WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
             }
       }
     >
