@@ -599,8 +599,12 @@ export function FlatTaskList({
                 width: '100%',
                 contain: 'layout paint style',
                 transform: `translateY(${vi.start - scrollOffset}px)`,
-                boxShadow: isDragOver ? 'inset 0 0 0 3px hsl(var(--primary)), 0 0 0 1px hsl(var(--primary) / 0.35)' : undefined,
-                backgroundColor: isDragOver ? 'hsl(var(--primary) / 0.08)' : undefined,
+                boxShadow: isDragOver
+                  ? 'inset 0 0 0 3px hsl(var(--primary)), 0 0 0 2px hsl(var(--primary) / 0.45), 0 10px 24px hsl(var(--primary) / 0.16)'
+                  : isTouchDragCandidate
+                    ? 'inset 0 0 0 2px hsl(var(--primary) / 0.7)'
+                    : undefined,
+                backgroundColor: isDragOver ? 'hsl(var(--primary) / 0.10)' : isTouchDragCandidate ? 'hsl(var(--primary) / 0.05)' : undefined,
                 opacity: dragFromRef.current === vi.index ? 0.72 : 1,
                 cursor: dndEnabled ? 'grab' : undefined,
                 touchAction: dndEnabled && isCoarsePointer ? 'none' : undefined,
