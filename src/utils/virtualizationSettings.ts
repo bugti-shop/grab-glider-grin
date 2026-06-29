@@ -105,10 +105,12 @@ export function useVirtualizationSettings(): [VirtualizationSettings, (next: Vir
 }
 
 export function getAdaptiveOverscan(baseOverscan: number, itemCount: number): number {
+  // Bias toward larger overscan on small/medium lists (smoother fast-scroll,
+  // no blank bands), trim it on very large lists to cap DOM cost.
   if (itemCount >= 100_000) return Math.min(baseOverscan, 6);
-  if (itemCount >= 25_000) return Math.min(baseOverscan, 8);
-  if (itemCount >= 5_000) return Math.min(baseOverscan, 12);
-  return baseOverscan;
+  if (itemCount >= 25_000) return Math.min(baseOverscan, 10);
+  if (itemCount >= 5_000) return Math.min(baseOverscan, 16);
+  return Math.max(baseOverscan, 20);
 }
 
 if (typeof window !== 'undefined') {
