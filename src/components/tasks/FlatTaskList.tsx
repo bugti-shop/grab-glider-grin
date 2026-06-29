@@ -1045,13 +1045,17 @@ export function FlatTaskList({
       {pointerDrag && typeof document !== 'undefined' && createPortal((
         <div
           ref={ghostRef}
-          className="pointer-events-none fixed left-3 right-3 z-[70] rounded-md border-2 border-primary bg-background px-4 py-3 text-sm font-semibold shadow-2xl ring-4 ring-primary/20"
+          className="pointer-events-none fixed left-3 right-3 z-[70] rounded-md border-2 border-primary px-4 py-3 text-sm font-semibold shadow-2xl"
           style={{
             top: 0,
-            transform: `translate3d(0, ${pointerDrag.y}px, 0) translateY(-50%) scale(1.02)`,
+            // Fully opaque solid background — no transparency, no scale, no
+            // transition. The ghost must read as the real task being moved.
+            backgroundColor: 'hsl(var(--background))',
+            color: 'hsl(var(--foreground))',
+            transform: `translate3d(0, ${pointerDrag.y}px, 0) translateY(-50%)`,
             willChange: 'transform',
             backfaceVisibility: 'hidden',
-            transition: 'box-shadow 120ms ease-out',
+            transition: 'none',
           }}
         >
           <div className="truncate">{pointerDrag.title}</div>
