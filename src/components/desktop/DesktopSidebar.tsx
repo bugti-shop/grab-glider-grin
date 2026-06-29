@@ -67,6 +67,25 @@ const isNotesPath = (pathname: string) =>
   pathname.startsWith('/notes') ||
   pathname.startsWith('/calendar');
 
+// Match active state for nav items including their nested sub-routes.
+const isItemActive = (itemPath: string, pathname: string): boolean => {
+  if (pathname === itemPath) return true;
+  // Exact-only matches (avoid /todo/today matching /todo/today-something)
+  // Prefer prefix match with trailing slash for true children.
+  if (pathname.startsWith(itemPath + '/')) return true;
+
+  // Special groupings
+  if (itemPath === '/todo/habits' && pathname.startsWith('/todo/habits')) return true;
+  if (itemPath === '/todo/matrix' && pathname.startsWith('/todo/matrix')) return true;
+  if (itemPath === '/todo/calendar' && pathname.startsWith('/todo/calendar')) return true;
+  if (itemPath === '/todo/countdown' && pathname.startsWith('/todo/countdown')) return true;
+  if (itemPath === '/todo/progress' && pathname.startsWith('/todo/progress')) return true;
+  if (itemPath === '/todo/today' && (pathname === '/' || pathname.startsWith('/todo/today') || pathname.startsWith('/todo/task/'))) return true;
+  if (itemPath === '/notesdashboard' && pathname.startsWith('/notesdashboard')) return true;
+  if (itemPath === '/notes' && pathname.startsWith('/notes') && !pathname.startsWith('/notesdashboard')) return true;
+  return false;
+};
+
 export const DesktopSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -210,17 +229,22 @@ export const DesktopSidebar = () => {
       <nav className={cn('py-1 flex flex-col gap-0.5 px-2')}>
         {MAIN_NAV.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          const showHabitChild = item.id === 'habits' && !collapsed && (location.pathname === '/todo/habits' || location.pathname.startsWith('/todo/habits/'));
+          const isActive = isItemActive(item.path, location.pathname);
+          const isHabitsItem = item.id === 'habits';
+          const showHabitChild = isHabitsItem && !collapsed && location.pathname.startsWith('/todo/habits');
+          const addHabitActive = location.pathname.startsWith('/todo/habits/gallery') || location.pathname.startsWith('/todo/habits/new');
           return (
             <div key={item.id}>
               <NavLink
                 to={item.path}
+                end={false}
                 title={collapsed ? t(`nav.${item.id}`, item.label) : undefined}
                 className={cn(
-                  'flex items-center rounded-lg text-sm font-medium transition-colors',
+                  'flex items-center rounded-lg text-sm font-medium transition-colors relative',
                   collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-                  isActive ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted'
+                  isActive
+                    ? 'bg-primary/10 text-primary before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:rounded-r before:bg-primary'
+                    : 'text-foreground/80 hover:bg-muted'
                 )}
               >
                 <Icon className="h-4 w-4 flex-shrink-0" />
@@ -232,7 +256,12 @@ export const DesktopSidebar = () => {
                     triggerHaptic('light').catch(() => {});
                     navigate('/todo/habits/gallery');
                   }}
-                  className="ml-7 mt-0.5 flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-primary/90 hover:bg-primary/10 transition-colors w-[calc(100%-1.75rem)] text-left"
+                  className={cn(
+                    'ml-7 mt-0.5 flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors w-[calc(100%-1.75rem)] text-left',
+                    addHabitActive
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-primary/90 hover:bg-primary/10'
+                  )}
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>{t('habits.addHabit', 'Add Habit')}</span>
@@ -284,34 +313,29 @@ export const DesktopSidebar = () => {
       {collapsed && <div className="flex-1 min-h-0" />}
 
       <div className={cn('border-t border-border flex flex-col gap-0.5 p-2')}>
-        <NavLink
-          to="/profile"
-          title={collapsed ? t('nav.profile', 'Profile') : undefined}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center rounded-lg text-sm font-medium transition-colors',
-              collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-              isActive ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted'
-            )
-          }
-        >
-          <User className="h-4 w-4 flex-shrink-0" />
-          {!collapsed && <span>{t('nav.profile', 'Profile')}</span>}
-        </NavLink>
-        <NavLink
-          to="/todo/settings"
-          title={collapsed ? t('nav.settings', 'Settings') : undefined}
-          className={({ isActive }) =>
-            cn(
-              'flex items-center rounded-lg text-sm font-medium transition-colors',
-              collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-              isActive ? 'bg-primary/10 text-primary' : 'text-foreground/80 hover:bg-muted'
-            )
-          }
-        >
-          <Settings className="h-4 w-4 flex-shrink-0" />
-          {!collapsed && <span>{t('nav.settings', 'Settings')}</span>}
-        </NavLink>
+        {[
+          { to: '/profile', icon: User, key: 'profile', label: 'Profile' },
+          { to: '/todo/settings', icon: Settings, key: 'settings', label: 'Settings' },
+        ].map(({ to, icon: Icon, key, label }) => {
+          const active = isItemActive(to, location.pathname);
+          return (
+            <NavLink
+              key={key}
+              to={to}
+              title={collapsed ? t(`nav.${key}`, label) : undefined}
+              className={cn(
+                'flex items-center rounded-lg text-sm font-medium transition-colors relative',
+                collapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+                active
+                  ? 'bg-primary/10 text-primary before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.5 before:rounded-r before:bg-primary'
+                  : 'text-foreground/80 hover:bg-muted'
+              )}
+            >
+              <Icon className="h-4 w-4 flex-shrink-0" />
+              {!collapsed && <span>{t(`nav.${key}`, label)}</span>}
+            </NavLink>
+          );
+        })}
       </div>
     </aside>
   );
