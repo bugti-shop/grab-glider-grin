@@ -44,22 +44,35 @@ const dispatchTasksUpdated = (debounceMs = 0) => {
   }, debounceMs);
 };
 
-const scheduleTaskCloudPush = (tasks: TodoItem[]) => {
-  if (!tasks.length) return;
+const pendingCloudPush = new Map<string, TodoItem>();
+let pendingCloudPushTimer: ReturnType<typeof setTimeout> | null = null;
+
+const flushTaskCloudPush = () => {
+  pendingCloudPushTimer = null;
+  const batch = Array.from(pendingCloudPush.values());
+  pendingCloudPush.clear();
+  if (!batch.length) return;
   const run = () => {
     import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
-      try { pushTasks(tasks); } catch {}
+      try { pushTasks(batch); } catch {}
     }).catch(() => {});
   };
-  if (typeof window === 'undefined' || tasks.length < 250) {
+  if (typeof window === 'undefined') {
     run();
     return;
   }
   const idleWindow = window as Window & {
     requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
   };
-  if (idleWindow.requestIdleCallback) idleWindow.requestIdleCallback(run, { timeout: 3000 });
+  if (idleWindow.requestIdleCallback) idleWindow.requestIdleCallback(run, { timeout: 2000 });
   else window.setTimeout(run, 0);
+};
+
+const scheduleTaskCloudPush = (tasks: TodoItem[]) => {
+  if (!tasks.length) return;
+  tasks.forEach((task) => pendingCloudPush.set(task.id, task));
+  if (pendingCloudPushTimer) clearTimeout(pendingCloudPushTimer);
+  pendingCloudPushTimer = setTimeout(flushTaskCloudPush, tasks.length > 50 ? 900 : 550);
 };
 
 // Connection pooling - reuse database connection (never close)
@@ -411,21 +424,38 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
       
       transaction.oncomplete = () => {
         if (updatedForSync) {
-          import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
-            try { pushTasks([updatedForSync!]); } catch {}
-          }).catch(() => {});
+          scheduleTaskCloudPush([updatedForSync]);
         }
-        dispatchTasksUpdated(400);
+        const isLightCompletionUpdate = Object.keys(updates).every((k) => k === 'completed' || k === 'completedAt' || k === 'modifiedAt');
+        dispatchTasksUpdated(isLightCompletionUpdate ? 1800 : 400);
         resolve(true);
       };
       transaction.onerror = () => {
-        dispatchTasksUpdated(400);
+        const isLightCompletionUpdate = Object.keys(updates).every((k) => k === 'completed' || k === 'completedAt' || k === 'modifiedAt');
+        dispatchTasksUpdated(isLightCompletionUpdate ? 1800 : 400);
         resolve(true);
       };
     });
   } catch (e) {
     console.warn('Update task failed, cache is still updated:', e);
     return true; // Graceful degradation
+  }
+};
+
+// Lightweight count for stats/profile screens. Avoids materializing 10k–100k
+// task objects just to show a number, preventing mobile Chrome "Aw, Snap" OOMs.
+export const countTasksInDB = async (): Promise<number> => {
+  if (tasksCache) return tasksCache.length;
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const request = transaction.objectStore(STORE_NAME).count();
+      request.onsuccess = () => resolve(Number(request.result) || 0);
+      request.onerror = () => resolve(0);
+    });
+  } catch {
+    return 0;
   }
 };
 
@@ -441,11 +471,7 @@ export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promis
     cacheVersion++;
   }
 
-  if (!skipSyncEvent) {
-    import('@/utils/cloudSync/storeBridge').then(({ pushTasks }) => {
-      try { pushTasks([hydrated]); } catch {}
-    }).catch(() => {});
-  }
+  if (!skipSyncEvent) scheduleTaskCloudPush([hydrated]);
 
   try {
     const db = await openDB();

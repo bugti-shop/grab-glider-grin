@@ -68,6 +68,18 @@ export const saveStreakData = async (storageKey: string, data: StreakData): Prom
   await setSetting(storageKey, data);
 };
 
+let streakDriveSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+const scheduleStreakDriveSync = () => {
+  if (streakDriveSyncTimer) clearTimeout(streakDriveSyncTimer);
+  streakDriveSyncTimer = setTimeout(() => {
+    streakDriveSyncTimer = null;
+    import('@/utils/googleDriveSync').then(({ syncStreaksToDrive }) => {
+      syncStreaksToDrive().catch(() => {});
+    }).catch(() => {});
+  }, 2500);
+};
+
 // Check if streak was completed today
 export const isCompletedToday = (data: StreakData): boolean => {
   if (!data.lastCompletionDate) return false;
@@ -255,10 +267,97 @@ export const recordCompletion = async (
   // Save updated data
   await saveStreakData(storageKey, data);
   
-  // Auto-sync streaks to Drive after recording completion
-  import('@/utils/googleDriveSync').then(({ syncStreaksToDrive }) => {
-    syncStreaksToDrive().catch(() => {});
-  }).catch(() => {});
+  // Auto-sync streaks to Drive after recording completion, debounced so rapid
+  // checkbox taps don't flood storage/network work on low-memory mobile browsers.
+  scheduleStreakDriveSync();
+
+  return { data, streakIncremented, newMilestone, usedFreeze, earnedFreeze, usedGracePeriod };
+};
+
+export const recordCompletions = async (
+  storageKey: string,
+  count: number,
+  milestones: number[] = DEFAULT_MILESTONES,
+  isPro: boolean = false,
+): Promise<{
+  data: StreakData;
+  streakIncremented: boolean;
+  newMilestone: number | null;
+  usedFreeze: boolean;
+  earnedFreeze: boolean;
+  usedGracePeriod: boolean;
+}> => {
+  const safeCount = Math.max(1, Math.floor(count));
+  const data = await loadStreakData(storageKey);
+  const today = getTodayDateString();
+  const yesterday = getDateString(subDays(new Date(), 1));
+
+  let streakIncremented = false;
+  let newMilestone: number | null = null;
+  let usedFreeze = false;
+  let earnedFreeze = false;
+  let usedGracePeriod = false;
+
+  if (data.lastTaskCountDate !== today) {
+    data.dailyTaskCount = 0;
+    data.lastTaskCountDate = today;
+    data.freezesEarnedToday = false;
+  }
+
+  data.dailyTaskCount += safeCount;
+  data.totalCompletions += safeCount;
+
+  if (isPro && data.dailyTaskCount >= TASKS_FOR_FREEZE && !data.freezesEarnedToday) {
+    data.streakFreezes += 1;
+    data.freezesEarnedToday = true;
+    earnedFreeze = true;
+  }
+
+  if (data.lastCompletionDate !== today) {
+    if (data.lastCompletionDate === yesterday) {
+      data.currentStreak += 1;
+      streakIncremented = true;
+      data.gracePeriodUsed = false;
+    } else if (data.lastCompletionDate === null) {
+      data.currentStreak = 1;
+      streakIncremented = true;
+    } else {
+      const withinGrace = isWithinGracePeriod(data);
+      const daysMissed = differenceInDays(startOfDay(new Date()), startOfDay(new Date(data.lastCompletionDate)));
+      if (withinGrace && !data.gracePeriodUsed && data.currentStreak > 0) {
+        data.currentStreak += 1;
+        data.gracePeriodUsed = true;
+        usedGracePeriod = true;
+        streakIncremented = true;
+      } else if (daysMissed === 2 && data.streakFreezes > 0 && isPro) {
+        data.streakFreezes -= 1;
+        data.currentStreak += 1;
+        usedFreeze = true;
+        streakIncremented = true;
+      } else {
+        data.currentStreak = 1;
+        data.gracePeriodUsed = false;
+        streakIncremented = true;
+      }
+    }
+
+    if (data.currentStreak > data.longestStreak) data.longestStreak = data.currentStreak;
+    for (const milestone of milestones) {
+      if (data.currentStreak === milestone && !data.milestones.includes(milestone)) {
+        data.milestones.push(milestone);
+        newMilestone = milestone;
+        break;
+      }
+    }
+    data.lastCompletionDate = today;
+    data.lastCompletionTime = new Date().toISOString();
+    data.weekHistory[today] = true;
+  }
+
+  const twoWeeksAgo = getDateString(subDays(new Date(), 14));
+  data.weekHistory = Object.fromEntries(Object.entries(data.weekHistory).filter(([date]) => date >= twoWeeksAgo));
+  await saveStreakData(storageKey, data);
+  scheduleStreakDriveSync();
 
   return { data, streakIncremented, newMilestone, usedFreeze, earnedFreeze, usedGracePeriod };
 };

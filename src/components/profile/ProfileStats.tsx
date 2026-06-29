@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FileText, CheckCircle2, FolderOpen, Layers, CalendarDays } from 'lucide-react';
-import { loadNotesFromDB } from '@/utils/noteStorage';
-import { loadTodoItems } from '@/utils/todoItemsStorage';
+import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
+import { countTasksInDB } from '@/utils/taskStorage';
 import { loadStreakData } from '@/utils/streakStorage';
 import { getSetting } from '@/utils/settingsStorage';
-import { Folder } from '@/types/note';
+import { Folder, TaskSection } from '@/types/note';
 
 interface StatsData {
   notes: number;
@@ -22,22 +22,25 @@ export const useProfileStats = () => {
 
   const load = useCallback(async () => {
     try {
-      const [notes, tasks, streak, noteFolders, todoFolders] = await Promise.all([
-        loadNotesFromDB(),
-        loadTodoItems(),
+      const [notes, taskCount, streak, noteFolders, todoFolders, taskSections] = await Promise.all([
+        loadNotesMetadataFromDB(),
+        countTasksInDB(),
         loadStreakData('flowist_streak'),
         getSetting<Folder[]>('folders', []),
         getSetting<Folder[]>('todoFolders', []),
+        getSetting<TaskSection[]>('todoSections', []),
       ]);
 
-      const sectionSet = new Set<string>();
-      tasks.forEach(t => { if (t.sectionId) sectionSet.add(t.sectionId); });
+      const safeNotes = Array.isArray(notes) ? notes : [];
+      const safeNoteFolders = Array.isArray(noteFolders) ? noteFolders : [];
+      const safeTodoFolders = Array.isArray(todoFolders) ? todoFolders : [];
+      const safeTaskSections = Array.isArray(taskSections) ? taskSections : [];
 
       setStats({
-        notes: notes.length,
-        tasks: tasks.length,
-        folders: noteFolders.length + todoFolders.length,
-        sections: sectionSet.size,
+        notes: safeNotes.length,
+        tasks: Number(taskCount) || 0,
+        folders: safeNoteFolders.length + safeTodoFolders.length,
+        sections: safeTaskSections.length,
         days: streak.totalCompletions,
       });
     } catch (e) {

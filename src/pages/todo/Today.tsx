@@ -298,17 +298,29 @@ const Today = () => {
   const swipe = useTaskSwipe(tasksSettings.swipeToComplete, updateSubtask, deleteSubtask);
   const { swipeState, SWIPE_ACTION_WIDTH, handleFlatTouchStart, handleFlatTouchMove, handleFlatTouchEnd, handleSwipeAction } = swipe;
   const { subtaskSwipeState, handleSubtaskSwipeStart, handleSubtaskSwipeMove, handleSubtaskSwipeEnd } = swipe;
+  const pendingVisualCompleteTimers = useRef<Map<string, number>>(new Map());
+  const [pendingVisualCompleteIds, setPendingVisualCompleteIds] = useState<Set<string>>(new Set());
 
   const showCompletionFill = useCallback((taskId: string) => {
     const fillMs = getRingFillMs();
     if (fillMs <= 0) return;
-    setPendingCompleteId(taskId);
-    if (pendingCompleteTimer.current) clearTimeout(pendingCompleteTimer.current);
-    pendingCompleteTimer.current = setTimeout(() => {
-      setPendingCompleteId(null);
-      pendingCompleteTimer.current = null;
+    setPendingVisualCompleteIds((prev) => {
+      const next = new Set(prev);
+      next.add(taskId);
+      return next;
+    });
+    const existingTimer = pendingVisualCompleteTimers.current.get(taskId);
+    if (existingTimer) clearTimeout(existingTimer);
+    const timer = window.setTimeout(() => {
+      pendingVisualCompleteTimers.current.delete(taskId);
+      setPendingVisualCompleteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
     }, fillMs);
-  }, [setPendingCompleteId, pendingCompleteTimer]);
+    pendingVisualCompleteTimers.current.set(taskId, timer);
+  }, []);
 
   // ── Render helpers ──
 
@@ -319,6 +331,7 @@ const Today = () => {
     const isExpanded = expandedTasks.has(item.id);
     const completedSubtasks = item.subtasks?.filter(st => st.completed).length || 0;
     const totalSubtasks = item.subtasks?.length || 0;
+    const isVisuallyPending = pendingVisualCompleteIds.has(item.id) || pendingCompleteId === item.id;
     
     return (
       <div key={item.id} className="relative">
@@ -330,7 +343,7 @@ const Today = () => {
                 onClick={() => handleSwipeAction(() => {
                   if (!item.completed) {
                     showCompletionFill(item.id);
-                    Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {});
+                    window.setTimeout(() => Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {}), 0);
                     updateItem(item.id, { completed: true });
                   } else {
                     updateItem(item.id, { completed: false });
@@ -390,35 +403,40 @@ const Today = () => {
               onTouchEnd={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
-                const isPending = pendingCompleteId === item.id;
+                const isPending = isVisuallyPending;
                 if (item.completed || isPending) {
-                  if (pendingCompleteTimer.current) {
-                    clearTimeout(pendingCompleteTimer.current);
-                    pendingCompleteTimer.current = null;
+                  const timer = pendingVisualCompleteTimers.current.get(item.id);
+                  if (timer) {
+                    clearTimeout(timer);
+                    pendingVisualCompleteTimers.current.delete(item.id);
                   }
-                  setPendingCompleteId(null);
+                  setPendingVisualCompleteIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(item.id);
+                    return next;
+                  });
                   if (item.completed || isPending) updateItem(item.id, { completed: false });
                   return;
                 }
                 showCompletionFill(item.id);
-                Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                window.setTimeout(() => Haptics.impact({ style: ImpactStyle.Light }).catch(() => {}), 0);
                 updateItem(item.id, { completed: true });
               }}
               className={cn(
                 TASK_CIRCLE.base, TASK_CIRCLE.marginTop,
                 compactMode ? TASK_CIRCLE.sizeCompact : TASK_CIRCLE.size,
                 item.completed && TASK_CIRCLE.completed,
-                pendingCompleteId === item.id && TASK_CIRCLE.pending,
+                isVisuallyPending && TASK_CIRCLE.pending,
               )}
               style={{
-                borderColor: (item.completed || pendingCompleteId === item.id) ? undefined : getPriorityColor(item.priority || 'none'),
-                backgroundColor: pendingCompleteId === item.id ? getPriorityColor(item.priority || 'none') : undefined,
+                borderColor: (item.completed || isVisuallyPending) ? undefined : getPriorityColor(item.priority || 'none'),
+                backgroundColor: isVisuallyPending ? getPriorityColor(item.priority || 'none') : undefined,
               }}
             >
-              {(item.completed || pendingCompleteId === item.id) && (
+              {(item.completed || isVisuallyPending) && (
                 <Check 
-                  className={cn(TASK_CHECK_ICON.base, compactMode ? TASK_CHECK_ICON.sizeCompact : TASK_CHECK_ICON.size, pendingCompleteId === item.id && TASK_CHECK_ICON.pendingAnimation)} 
-                  style={{ color: pendingCompleteId === item.id ? TASK_CHECK_ICON.pendingColor : TASK_CHECK_ICON.completedColor }}
+                  className={cn(TASK_CHECK_ICON.base, compactMode ? TASK_CHECK_ICON.sizeCompact : TASK_CHECK_ICON.size, isVisuallyPending && TASK_CHECK_ICON.pendingAnimation)} 
+                  style={{ color: isVisuallyPending ? TASK_CHECK_ICON.pendingColor : TASK_CHECK_ICON.completedColor }}
                   strokeWidth={TASK_CHECK_ICON.strokeWidth}
                 />
               )}
@@ -457,7 +475,7 @@ const Today = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   {item.isPinned && <Pin className={cn(compactMode ? "h-3 w-3" : "h-3.5 w-3.5", "text-warning fill-warning flex-shrink-0")} />}
-                  <span className={cn(compactMode ? "text-xs" : "text-sm", "transition-all duration-300", (item.completed || pendingCompleteId === item.id) && "text-muted-foreground line-through")}>{item.text}</span>
+                  <span className={cn(compactMode ? "text-xs" : "text-sm", "transition-all duration-300", (item.completed || isVisuallyPending) && "text-muted-foreground line-through")}>{item.text}</span>
                   {item.repeatType && item.repeatType !== 'none' && <Repeat className={cn(compactMode ? "h-2.5 w-2.5" : "h-3 w-3", "text-accent-purple flex-shrink-0")} />}
                 </div>
               )}

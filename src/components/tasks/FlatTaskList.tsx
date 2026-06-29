@@ -14,7 +14,7 @@
  *   Space   → fire `onToggleComplete(row)` (tasks only)
  * The active row gets `data-active="true"` so callers can style it.
  */
-import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode, type PointerEvent } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback, type ReactNode, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
 import type { TodoItem } from '@/types/note';
@@ -107,12 +107,18 @@ export function FlatTaskList({
     over: number;
     startX: number;
     startY: number;
+    lastY: number;
+    startTime: number;
     currentY: number;
     dragging: boolean;
+    scrollMode: boolean;
+    title: string;
+    element: HTMLElement;
     timer: number | null;
   } | null>(null);
   const [isCoarsePointer, setIsCoarsePointer] = useState(false);
   const [pointerDrag, setPointerDrag] = useState<{ from: number; over: number; title: string; y: number } | null>(null);
+  const [pointerPreparingIndex, setPointerPreparingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
@@ -254,6 +260,7 @@ export function FlatTaskList({
     pointerDragRef.current = null;
     stopGhostRaf();
     setPointerDrag(null);
+    setPointerPreparingIndex(null);
     if (typeof document !== 'undefined') document.body.classList.remove('flowist-task-dragging');
   }, [stopGhostRaf]);
 
@@ -338,8 +345,26 @@ export function FlatTaskList({
     return !!target.closest('button, input, textarea, select, a, [role="button"], [contenteditable="true"], [data-no-dnd="true"]');
   };
 
-  const startPointerDrag = useCallback((event: PointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
+  const activatePointerDrag = useCallback((active: NonNullable<typeof pointerDragRef.current>) => {
+    if (active.dragging) return;
+    active.dragging = true;
+    if (active.timer != null) {
+      window.clearTimeout(active.timer);
+      active.timer = null;
+    }
+    dragGenerationRef.current += 1;
+    dragFromRef.current = active.from;
+    setDragOverIndex(active.over);
+    setPointerDrag({ from: active.from, over: active.over, title: active.title, y: active.currentY });
+    try { active.element.setPointerCapture(active.pointerId); } catch {}
+    if (typeof document !== 'undefined') document.body.classList.add('flowist-task-dragging');
+    paintGhostAt(active.currentY);
+    if ('vibrate' in navigator) navigator.vibrate?.(8);
+  }, [paintGhostAt]);
+
+  const startPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
     if (!dndEnabled || !isCoarsePointer || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
+    if (pointerDragRef.current) return;
     if (event.pointerType === 'pen' && event.buttons !== 1) return;
 
     const element = event.currentTarget;
@@ -354,29 +379,125 @@ export function FlatTaskList({
       over: index,
       startX,
       startY,
+      lastY: startY,
+      startTime: performance.now(),
       currentY: startY,
       dragging: false,
+      scrollMode: false,
+      title,
+      element,
       timer: null as number | null,
     };
     pointerDragRef.current = active;
+    setPointerPreparingIndex(index);
 
     active.timer = window.setTimeout(() => {
       const current = pointerDragRef.current;
       if (!current || current.pointerId !== pointerId) return;
-      current.dragging = true;
-      current.timer = null;
-      dragGenerationRef.current += 1;
-      dragFromRef.current = index;
-      setDragOverIndex(index);
-      setPointerDrag({ from: index, over: index, title, y: current.currentY });
-      try { element.setPointerCapture(pointerId); } catch {}
-      if (typeof document !== 'undefined') document.body.classList.add('flowist-task-dragging');
-      paintGhostAt(current.currentY);
-      if ('vibrate' in navigator) navigator.vibrate?.(8);
-    }, 180);
-  }, [dndEnabled, isCoarsePointer, paintGhostAt]);
+      activatePointerDrag(current);
+    }, 90);
+  }, [activatePointerDrag, dndEnabled, isCoarsePointer]);
 
-  const movePointerDrag = useCallback((event: PointerEvent<HTMLElement>) => {
+  const startTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
+    if (!dndEnabled || !isCoarsePointer || pointerDragRef.current || isInteractiveDragTarget(event.target)) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+
+    const element = event.currentTarget;
+    const pointerId = touch.identifier || -1;
+    const startX = touch.clientX;
+    const startY = touch.clientY;
+    const active = {
+      pointerId,
+      from: index,
+      over: index,
+      startX,
+      startY,
+      lastY: startY,
+      startTime: performance.now(),
+      currentY: startY,
+      dragging: false,
+      scrollMode: false,
+      title: row.task.text || 'Task',
+      element,
+      timer: null as number | null,
+    };
+    pointerDragRef.current = active;
+    setPointerPreparingIndex(index);
+    active.timer = window.setTimeout(() => {
+      const current = pointerDragRef.current;
+      if (!current || current.pointerId !== pointerId) return;
+      activatePointerDrag(current);
+    }, 90);
+  }, [activatePointerDrag, dndEnabled, isCoarsePointer]);
+
+  const moveTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>) => {
+    const active = pointerDragRef.current;
+    const touch = event.touches[0];
+    if (!active || !touch || active.pointerId !== (touch.identifier || -1)) return;
+
+    const dx = touch.clientX - active.startX;
+    const dy = touch.clientY - active.startY;
+    active.currentY = touch.clientY;
+
+    if (!active.dragging) {
+      if (active.scrollMode) {
+        event.preventDefault();
+        window.scrollBy(0, active.lastY - touch.clientY);
+        active.lastY = touch.clientY;
+        return;
+      }
+      const elapsed = performance.now() - active.startTime;
+      if (elapsed < 90 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+        if (active.timer != null) window.clearTimeout(active.timer);
+        active.timer = null;
+        active.scrollMode = true;
+        setPointerPreparingIndex(null);
+        event.preventDefault();
+        window.scrollBy(0, active.lastY - touch.clientY);
+        active.lastY = touch.clientY;
+        return;
+      }
+      if (elapsed >= 90 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+        event.preventDefault();
+        activatePointerDrag(active);
+      } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
+        if (active.timer != null) window.clearTimeout(active.timer);
+        pointerDragRef.current = null;
+        setPointerPreparingIndex(null);
+        return;
+      } else {
+        return;
+      }
+    }
+
+    event.preventDefault();
+    const over = getDropIndexFromClientY(touch.clientY);
+    if (over !== active.over) {
+      active.over = over;
+      setDragOverIndex(over);
+      setPointerDrag((current) => current ? { ...current, over } : current);
+    }
+    paintGhostAt(touch.clientY);
+    stopAutoscroll();
+    autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(touch.clientY));
+  }, [activatePointerDrag, getDropIndexFromClientY, paintGhostAt, stopAutoscroll, tickAutoscroll]);
+
+  const endTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>) => {
+    const active = pointerDragRef.current;
+    if (!active) return;
+    if (active.timer != null) window.clearTimeout(active.timer);
+    if (active.dragging) {
+      event.preventDefault();
+      event.stopPropagation();
+      suppressClickUntilRef.current = Date.now() + 350;
+      finishReorder(active.from, active.over, 'pointer-drop');
+    } else {
+      clearPointerDrag();
+    }
+  }, [clearPointerDrag, finishReorder]);
+
+  const movePointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
 
@@ -385,11 +506,37 @@ export function FlatTaskList({
     active.currentY = event.clientY;
 
     if (!active.dragging) {
-      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+      if (active.scrollMode) {
+        event.preventDefault();
+        window.scrollBy(0, active.lastY - event.clientY);
+        active.lastY = event.clientY;
+        return;
+      }
+      const elapsed = performance.now() - active.startTime;
+      // Quick movement means the user is scrolling, so cancel DnD and manually
+      // scroll because rows use touch-action:none to reliably support long-press
+      // drag on Android Chrome. A short hold (90ms) still activates drag.
+      if (elapsed < 90 && Math.abs(dy) > 16 && Math.abs(dx) < 28) {
+        if (active.timer != null) window.clearTimeout(active.timer);
+        active.timer = null;
+        active.scrollMode = true;
+        setPointerPreparingIndex(null);
+        event.preventDefault();
+        window.scrollBy(0, active.lastY - event.clientY);
+        active.lastY = event.clientY;
+        return;
+      }
+      if (elapsed >= 90 && Math.abs(dy) > 8 && Math.abs(dx) < 28) {
+        event.preventDefault();
+        activatePointerDrag(active);
+      } else if (Math.abs(dx) > 28 || Math.abs(dy) > 34) {
         if (active.timer != null) window.clearTimeout(active.timer);
         pointerDragRef.current = null;
+        setPointerPreparingIndex(null);
+        return;
+      } else {
+        return;
       }
-      return;
     }
 
     event.preventDefault();
@@ -404,7 +551,7 @@ export function FlatTaskList({
     autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(event.clientY));
   }, [getDropIndexFromClientY, paintGhostAt, stopAutoscroll, tickAutoscroll]);
 
-  const endPointerDrag = useCallback((event: PointerEvent<HTMLElement>) => {
+  const endPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const active = pointerDragRef.current;
     if (!active || active.pointerId !== event.pointerId) return;
 
@@ -505,6 +652,7 @@ export function FlatTaskList({
           if (!row) return null;
           const isActive = vi.index === activeIndex;
           const isDragOver = dragOverIndex === vi.index;
+          const isTouchDragCandidate = isCoarsePointer && (pointerPreparingIndex === vi.index || dragFromRef.current === vi.index);
           return (
             <div
               key={vi.key}
@@ -516,6 +664,10 @@ export function FlatTaskList({
               onPointerMove={dndEnabled ? movePointerDrag : undefined}
               onPointerUp={dndEnabled ? endPointerDrag : undefined}
               onPointerCancel={dndEnabled ? endPointerDrag : undefined}
+              onTouchStart={dndEnabled ? (e) => startTouchDrag(e, vi.index, row) : undefined}
+              onTouchMove={dndEnabled ? moveTouchDrag : undefined}
+              onTouchEnd={dndEnabled ? endTouchDrag : undefined}
+              onTouchCancel={dndEnabled ? endTouchDrag : undefined}
               onDragStart={nativeDndEnabled ? (e) => {
                 dragGenerationRef.current += 1;
                 dragFromRef.current = vi.index;
@@ -551,10 +703,15 @@ export function FlatTaskList({
                 width: '100%',
                 contain: 'layout paint style',
                 transform: `translateY(${vi.start - scrollOffset}px)`,
-                boxShadow: isDragOver ? 'inset 0 2px 0 0 hsl(var(--primary))' : undefined,
-                opacity: dragFromRef.current === vi.index ? 0.5 : 1,
+                boxShadow: isDragOver
+                  ? 'inset 0 0 0 3px hsl(var(--primary)), 0 0 0 2px hsl(var(--primary) / 0.45), 0 10px 24px hsl(var(--primary) / 0.16)'
+                  : isTouchDragCandidate
+                    ? 'inset 0 0 0 2px hsl(var(--primary) / 0.7)'
+                    : undefined,
+                backgroundColor: isDragOver ? 'hsl(var(--primary) / 0.10)' : isTouchDragCandidate ? 'hsl(var(--primary) / 0.05)' : undefined,
+                opacity: dragFromRef.current === vi.index ? 0.72 : 1,
                 cursor: dndEnabled ? 'grab' : undefined,
-                touchAction: dndEnabled && isCoarsePointer ? 'pan-y' : undefined,
+                touchAction: dndEnabled && isCoarsePointer ? 'none' : undefined,
               }}
             >
               {renderRow(row, vi.index, isActive)}
@@ -565,7 +722,7 @@ export function FlatTaskList({
       {pointerDrag && (
         <div
           ref={ghostRef}
-          className="pointer-events-none fixed left-3 right-3 z-[70] rounded-md border border-primary bg-background px-4 py-3 text-sm font-medium shadow-xl"
+          className="pointer-events-none fixed left-3 right-3 z-[70] rounded-md border-2 border-primary bg-background px-4 py-3 text-sm font-semibold shadow-2xl ring-4 ring-primary/20"
           style={{
             top: 0,
             transform: `translate3d(0, ${pointerDrag.y}px, 0) translateY(-50%)`,

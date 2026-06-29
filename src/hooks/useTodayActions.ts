@@ -9,7 +9,7 @@ import { TodoItem, Folder, Priority, Note, TaskSection } from '@/types/note';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { saveTodoItem, updateTodoItem, deleteTodoItem, saveTodoItems } from '@/utils/todoItemsStorage';
 import { useTranslation } from 'react-i18next';
-import { recordCompletion, TASK_STREAK_KEY } from '@/utils/streakStorage';
+import { recordCompletions, TASK_STREAK_KEY } from '@/utils/streakStorage';
 import { createNextRecurringTask } from '@/utils/recurringTasks';
 import { playCompletionSound } from '@/utils/taskSounds';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -82,7 +82,10 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   // Keep a ref to items for reliable access in async callbacks
   const itemsRef = useRef(items);
   itemsRef.current = items;
-  const deferredCompletionTimersRef = useRef<Map<string, number>>(new Map());
+  const pendingDeferredCompletionUpdatesRef = useRef<Map<string, Partial<TodoItem>>>(new Map());
+  const deferredCompletionFlushTimerRef = useRef<number | null>(null);
+  const pendingCompletionStatsRef = useRef(0);
+  const completionStatsTimerRef = useRef<number | null>(null);
 
   const markSingleTaskPersisted = useCallback((skipProcessing = false) => {
     try {
@@ -104,6 +107,64 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       }),
     );
   }, [markSingleTaskPersisted, t]);
+
+  const flushDeferredCompletionState = useCallback(() => {
+    const pending = pendingDeferredCompletionUpdatesRef.current;
+    deferredCompletionFlushTimerRef.current = null;
+    if (pending.size === 0) return;
+
+    const updatesById = new Map(pending);
+    pending.clear();
+    markSingleTaskPersisted(true);
+    setItems(prev => {
+      let changed = false;
+      const next = prev.map(item => {
+        const updates = updatesById.get(item.id);
+        if (!updates) return item;
+        changed = true;
+        return { ...item, ...updates };
+      });
+      if (changed) itemsRef.current = next;
+      return changed ? next : prev;
+    });
+  }, [markSingleTaskPersisted, setItems]);
+
+  const queueDeferredCompletionState = useCallback((itemId: string, updates: Partial<TodoItem>) => {
+    pendingDeferredCompletionUpdatesRef.current.set(itemId, updates);
+    if (deferredCompletionFlushTimerRef.current) window.clearTimeout(deferredCompletionFlushTimerRef.current);
+    deferredCompletionFlushTimerRef.current = window.setTimeout(flushDeferredCompletionState, getRingFillMs());
+  }, [flushDeferredCompletionState]);
+
+  const flushCompletionStats = useCallback(() => {
+    const count = pendingCompletionStatsRef.current;
+    pendingCompletionStatsRef.current = 0;
+    completionStatsTimerRef.current = null;
+    if (count <= 0) return;
+    const run = () => {
+      recordCompletions(TASK_STREAK_KEY, count).then((streakResult) => {
+        if (streakResult.newMilestone) {
+          toast.success(t('todayPage.streakMilestone', { days: streakResult.newMilestone }));
+          window.dispatchEvent(new CustomEvent('streakMilestone', { detail: { milestone: streakResult.newMilestone } }));
+        }
+        if (streakResult.earnedFreeze) {
+          toast.success(t('todayPage.earnedStreakFreeze'), { description: t('todayPage.earnedStreakFreezeDesc') });
+        }
+        if (streakResult.streakIncremented) {
+          window.dispatchEvent(new CustomEvent('streakChallengeShow', { detail: { currentStreak: streakResult.data.currentStreak } }));
+        }
+        window.dispatchEvent(new CustomEvent('streakUpdated'));
+      }).catch((e) => console.warn('Failed to record streak:', e));
+    };
+    const idleWindow = window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number };
+    if (idleWindow.requestIdleCallback) idleWindow.requestIdleCallback(run, { timeout: 2000 });
+    else window.setTimeout(run, 0);
+  }, [t]);
+
+  const queueCompletionStats = useCallback(() => {
+    pendingCompletionStatsRef.current += 1;
+    if (completionStatsTimerRef.current) window.clearTimeout(completionStatsTimerRef.current);
+    completionStatsTimerRef.current = window.setTimeout(flushCompletionStats, 900);
+  }, [flushCompletionStats]);
 
   // ── Folder Actions ──
   const handleCreateFolder = useCallback((name: string, color: string, icon?: string, parentId?: string) => {
@@ -399,11 +460,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       updatesWithTimestamp.completedAt = undefined;
     }
     if (updates.completed === false) {
-      const pendingTimer = deferredCompletionTimersRef.current.get(itemId);
-      if (pendingTimer) {
-        clearTimeout(pendingTimer);
-        deferredCompletionTimersRef.current.delete(itemId);
-      }
+      pendingDeferredCompletionUpdatesRef.current.delete(itemId);
     }
 
     const persistUpdate = (skipProcessing = true) => {
@@ -427,19 +484,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
           persistUpdate(false);
           void saveTodoItem(nextTaskWithTimestamps);
           toast.success(t('todayPage.recurringTaskCompleted'), { icon: '🔄' });
-          recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
-            if (streakResult.newMilestone) {
-              toast.success(t('todayPage.streakMilestone', { days: streakResult.newMilestone }));
-              window.dispatchEvent(new CustomEvent('streakMilestone', { detail: { milestone: streakResult.newMilestone } }));
-            }
-            if (streakResult.earnedFreeze) {
-              toast.success(t('todayPage.earnedStreakFreeze'), { description: t('todayPage.earnedStreakFreezeDesc') });
-            }
-            if (streakResult.streakIncremented) {
-              window.dispatchEvent(new CustomEvent('streakChallengeShow', { detail: { currentStreak: streakResult.data.currentStreak } }));
-            }
-            window.dispatchEvent(new CustomEvent('streakUpdated'));
-          }).catch((e) => console.warn('Failed to record streak:', e));
+          queueCompletionStats();
           return;
         }
       }
@@ -462,32 +507,16 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       // the critical 900ms checkbox paint window. This keeps the colored ring
       // duration stable even when thousands of tasks exist.
       persistUpdate(true);
-      const timer = window.setTimeout(() => {
-        deferredCompletionTimersRef.current.delete(itemId);
-        markSingleTaskPersisted(true);
-        commitStateUpdate();
-      }, getRingFillMs());
-      deferredCompletionTimersRef.current.set(itemId, timer);
+      queueDeferredCompletionState(itemId, updatesWithTimestamp);
     } else {
       commitStateUpdate();
       persistUpdate(true);
     }
 
     if (isNewCompletion) {
-      recordCompletion(TASK_STREAK_KEY).then((streakResult) => {
-        if (streakResult.newMilestone) {
-          toast.success(t('todayPage.streakMilestone', { days: streakResult.newMilestone }));
-          window.dispatchEvent(new CustomEvent('streakMilestone', { detail: { milestone: streakResult.newMilestone } }));
-        }
-        if (streakResult.earnedFreeze) {
-          toast.success(t('todayPage.earnedStreakFreeze'), { description: t('todayPage.earnedStreakFreezeDesc') });
-        }
-        if (streakResult.streakIncremented) {
-          window.dispatchEvent(new CustomEvent('streakChallengeShow', { detail: { currentStreak: streakResult.data.currentStreak } }));
-        }
-        window.dispatchEvent(new CustomEvent('streakUpdated'));
-      }).catch((e) => console.warn('Failed to record streak:', e));
+      queueCompletionStats();
       toast.success(t('todayPage.taskCompleted'), {
+        id: 'task-completed',
         action: {
           label: t('todayPage.undo'),
           onClick: () => {
@@ -498,7 +527,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         duration: 5000,
       });
     }
-  }, [setItems, t, softRequireMutate, markSingleTaskPersisted]);
+  }, [setItems, t, softRequireMutate, markSingleTaskPersisted, queueCompletionStats, queueDeferredCompletionState]);
 
   const deleteItem = useCallback(async (itemId: string, _showUndo: boolean = false, skipConfirm: boolean = false) => {
     if (!softRequireMutate()) return;
