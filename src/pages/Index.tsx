@@ -247,11 +247,10 @@ const Index = () => {
     // memory, and its debounced bulk-save skips stub-only arrays — without
     // this single-note write, edits made from the Home dashboard would be
     // lost on reload.
-    const NOTE_TYPE_IDS = new Set(['sticky','lined','regular','code','sketch','voice','textformat']);
     const inboxFolderId = folders.find(f => f.isDefault)?.id ?? folders[0]?.id;
     // Normalize: legacy notes used note.type as folderId — remap to current Inbox.
     const normalizedFolderId =
-      note.folderId && !NOTE_TYPE_IDS.has(note.folderId)
+      note.folderId && !NOTE_TYPE_FOLDER_IDS.has(note.folderId)
         ? note.folderId
         : (selectedFolderId || inboxFolderId);
     const fullNote: Note = {
