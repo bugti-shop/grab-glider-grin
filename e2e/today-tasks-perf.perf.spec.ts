@@ -73,11 +73,14 @@ async function seedTasks(page: Page, count: number) {
 }
 
 async function gotoToday(page: Page) {
-  await page.goto("/todo/today", { waitUntil: "domcontentloaded" });
+  // Establish the app origin first, seed IndexedDB while the app is idle, then
+  // navigate to Today. Seeding while /todo/today is still resolving can race
+  // client-side redirects and destroy the evaluation context.
+  await page.goto("/", { waitUntil: "networkidle" });
   await page.evaluate(() =>
     (window as unknown as { __seedPerfTasks: () => Promise<void> }).__seedPerfTasks()
   );
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.goto("/todo/today", { waitUntil: "domcontentloaded" });
 }
 
 async function waitForVirtualList(page: Page) {
@@ -173,6 +176,11 @@ test.describe("Today tasks @ 5k items", () => {
     );
     const latency = Date.now() - start;
     console.log(`[perf] drag+drop latency: ${latency}ms (limit ${MAX_REORDER_LATENCY_MS})`);
+
+    const firstRowText = await rows.first().innerText();
+    expect(firstRowText, "drop operation completed and reordered the list").not.toContain(
+      "Perf task 1"
+    );
 
     // Verify the page is still responsive: a synchronous eval should return fast.
     const tickStart = Date.now();
