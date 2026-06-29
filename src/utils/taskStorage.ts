@@ -493,6 +493,48 @@ export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promis
   }
 };
 
+// Bulk update existing tasks without treating the provided array as the whole
+// cache. Used by rapid completion batching: optimistic React state updates must
+// not wait on IndexedDB/Supabase, and a partial completion batch must never
+// replace a cold full-task cache with only the changed rows.
+export const bulkUpdateTasksInDB = async (
+  updatedTasks: TodoItem[],
+  skipSyncEvent = false,
+): Promise<boolean> => {
+  if (updatedTasks.length === 0) return true;
+  markLocalStorageMigrationDone();
+
+  const hydrated = updatedTasks.map(hydrateItem);
+
+  if (tasksCache) {
+    const byId = new Map(hydrated.map((task) => [task.id, task] as const));
+    tasksCache = tasksCache.map((task) => byId.get(task.id) ?? task);
+    cacheVersion++;
+  }
+
+  if (!skipSyncEvent) scheduleTaskCloudPush(hydrated);
+
+  try {
+    const db = await openDB();
+    for (let i = 0; i < hydrated.length; i += 250) {
+      const batch = hydrated.slice(i, i + 250);
+      await new Promise<void>((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        batch.forEach((task) => { try { store.put(task); } catch {} });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      });
+      if (i + 250 < hydrated.length) await new Promise((r) => requestAnimationFrame(r));
+    }
+    if (!skipSyncEvent) dispatchTasksUpdated(150);
+    return true;
+  } catch (e) {
+    console.warn('Bulk update tasks failed, cache is still updated:', e);
+    return true;
+  }
+};
+
 // Bulk additive insert/replace for many tasks at once. Unlike saveTasksToDB
 // this does NOT clear the store — so adding 100 (or 100k) new tasks does not
 // rewrite the existing ones. Used by batch-add flows to avoid multi-second
