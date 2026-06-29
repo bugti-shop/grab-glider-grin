@@ -571,11 +571,10 @@ const Today = () => {
   return (
     <TodoLayout title="Flowist" searchValue={viewModeSearch} onSearchChange={(val) => startTransition(() => setViewModeSearch(val))}>
       
-      <main className="container mx-auto px-4 py-3 pb-32">
+      <main className="py-3 pb-32">
         <h1 className="sr-only">Flowist — Today's Tasks &amp; Daily Planner</h1>
-        <div className="max-w-2xl mx-auto">
-          {/* Folders */}
-          <div className="mb-4" data-tour="todo-folders-section">
+        {/* Folders — full width to align with search bar */}
+        <div className="mb-4" data-tour="todo-folders-section">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold flex items-center gap-2"><FolderIcon className="h-5 w-5" />{t('menu.folders')}</h2>
