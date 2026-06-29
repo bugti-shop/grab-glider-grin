@@ -2,7 +2,7 @@
  * useTodayActions — All action handlers for the Today page.
  * Extracted from Today.tsx to reduce file size.
  */
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, startTransition } from 'react';
 import { genId } from '@/utils/genId';
 import { withCopySuffix } from '@/utils/duplicateName';
 import { TodoItem, Folder, Priority, Note, TaskSection } from '@/types/note';
@@ -125,16 +125,21 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const updatesById = new Map(pending);
     pending.clear();
     markSingleTaskPersisted(true);
-    setItems(prev => {
-      let changed = false;
-      const next = prev.map(item => {
-        const updates = updatesById.get(item.id);
-        if (!updates) return item;
-        changed = true;
-        return { ...item, ...updates };
+    // Mark the large list re-filter / re-sort as a non-urgent transition so
+    // the next checkmark tap (a higher-priority discrete event) is never
+    // blocked by React reconciling thousands of virtualized rows.
+    startTransition(() => {
+      setItems(prev => {
+        let changed = false;
+        const next = prev.map(item => {
+          const updates = updatesById.get(item.id);
+          if (!updates) return item;
+          changed = true;
+          return { ...item, ...updates };
+        });
+        if (changed) itemsRef.current = next;
+        return changed ? next : prev;
       });
-      if (changed) itemsRef.current = next;
-      return changed ? next : prev;
     });
   }, [markSingleTaskPersisted, setItems]);
 
