@@ -116,6 +116,7 @@ interface FilterSortPayload {
   smartList: SmartListType;
   selectedFolderId: string | null;
   allowedFolderIds?: string[];
+  includeUnfiledInSelectedFolder?: boolean;
   priorityFilter: PriorityFilter;
   statusFilter: StatusFilter;
   dateFilter: DateFilter;
@@ -141,7 +142,10 @@ function filterAndSort(p: FilterSortPayload): {
   // Folder
   if (p.selectedFolderId) {
     const allowed = new Set(p.allowedFolderIds?.length ? p.allowedFolderIds : [p.selectedFolderId]);
-    filtered = filtered.filter(i => !!i.folderId && allowed.has(i.folderId));
+    filtered = filtered.filter(i => {
+      if (i.folderId) return allowed.has(i.folderId);
+      return !!p.includeUnfiledInSelectedFolder;
+    });
   }
 
   // Priority

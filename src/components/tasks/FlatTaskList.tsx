@@ -24,7 +24,7 @@ import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/task
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
 
-const TOUCH_LONG_PRESS_MS = 180;
+const TOUCH_LONG_PRESS_MS = 320;
 const TOUCH_SCROLL_CANCEL_PX = 16;
 const TOUCH_DRAG_START_PX = 18;
 const TOUCH_AXIS_CANCEL_PX = 28;
@@ -37,11 +37,12 @@ const CLICK_SUPPRESS_MS = 350;
  * virtualizer + custom touch/native drag path because hello-pangea/dnd
  * cannot reorder rows that are not mounted in the DOM.
  *
- * 200 rows is comfortably under the smooth-scroll budget on mid-tier
- * mobile and matches the Inbox per-folder cap (38) several times over,
+ * 500 rows keeps the user's requested 400-task regression path on the
+ * library-driven DnD implementation while still avoiding full rendering for
+ * truly huge imported lists.
  * so the overwhelming majority of users get the library-driven UX.
  */
-const HELLO_PANGEA_CAP = 200;
+const HELLO_PANGEA_CAP = 500;
 
 /**
  * Memoized row body. Skips re-rendering when the task reference, position,
@@ -238,6 +239,7 @@ export function FlatTaskList({
 
   const virtualizer = resolvedUseWindow ? windowVirtualizer : containerVirtualizer;
   const dndEnabled = !!onReorder;
+  const canUseNativeDrag = dndEnabled && !isCoarsePointer;
 
   const [activeIndex, setActiveIndex] = useState<number>(-1);
 
@@ -387,23 +389,24 @@ export function FlatTaskList({
       try { (window as any).__flowistLastTaskReorder = { ok: false, reason: 'missing-handler', via, from, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
       return;
     }
-    // The insertion index is the exact visual slot painted by the blue line.
-    // Do not subtract one for downward drags: that made the persisted target
-    // land one row above the line the user released on. The reorder handlers
-    // already expect a post-drop target index, so clamp only the end boundary.
-    const to = Math.max(0, Math.min(flat.length - 1, insertionIndex));
+    // The insertion index is the exact visual slot painted by the blue line in
+    // the original list. The order store receives the index after the dragged
+    // row is removed, so downward moves must shift by one. This keeps the final
+    // order matching the visible blue line for both upward and downward drops.
+    const normalizedInsertionIndex = insertionIndex > from ? insertionIndex - 1 : insertionIndex;
+    const to = Math.max(0, Math.min(flat.length - 1, normalizedInsertionIndex));
     if (from === to) {
-      try { (window as any).__flowistLastTaskReorder = { ok: true, skipped: true, reason: 'same-index', via, from, to, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
+      try { (window as any).__flowistLastTaskReorder = { ok: true, skipped: true, reason: 'same-index', via, from, to, insertionIndex, normalizedInsertionIndex, count: flat.length, ts: Date.now() }; } catch {}
       return;
     }
     const start = performance.now();
     try {
       onReorder(from, to);
-      try { (window as any).__flowistLastTaskReorder = { ok: true, via, from, to, insertionIndex, count: flat.length, ms: Math.round(performance.now() - start), ts: Date.now() }; } catch {}
+      try { (window as any).__flowistLastTaskReorder = { ok: true, via, from, to, insertionIndex, normalizedInsertionIndex, count: flat.length, ms: Math.round(performance.now() - start), ts: Date.now() }; } catch {}
       logPerfEvent('reorder', { list: 'tasks', via, ok: true, from, to, count: flat.length, ms: Math.round(performance.now() - start) });
       toast.success('Task moved', { id: 'task-reorder', duration: 900 });
     } catch (error) {
-      try { (window as any).__flowistLastTaskReorder = { ok: false, reason: 'exception', via, from, to, insertionIndex, count: flat.length, error: String((error as Error)?.message ?? error), ts: Date.now() }; } catch {}
+      try { (window as any).__flowistLastTaskReorder = { ok: false, reason: 'exception', via, from, to, insertionIndex, normalizedInsertionIndex, count: flat.length, error: String((error as Error)?.message ?? error), ts: Date.now() }; } catch {}
       logPerfEvent('reorder', { list: 'tasks', via, ok: false, from, to, count: flat.length, error: String((error as Error)?.message ?? error) });
       toast.error('Could not move task', { id: 'task-reorder' });
     }
@@ -1057,16 +1060,12 @@ export function FlatTaskList({
               data-index={vi.index}
               data-active={isActive ? 'true' : 'false'}
               ref={virtualizer.measureElement}
-              draggable={dndEnabled}
+              draggable={canUseNativeDrag}
               onPointerDown={dndEnabled ? (e) => startPointerDrag(e, vi.index, row) : undefined}
               onPointerMove={dndEnabled ? movePointerDrag : undefined}
               onPointerUp={dndEnabled ? endPointerDrag : undefined}
               onPointerCancel={dndEnabled ? endPointerDrag : undefined}
-              onTouchStart={dndEnabled ? (e) => startTouchDrag(e, vi.index, row) : undefined}
-              onTouchMove={dndEnabled ? moveTouchDrag : undefined}
-              onTouchEnd={dndEnabled ? endTouchDrag : undefined}
-              onTouchCancel={dndEnabled ? endTouchDrag : undefined}
-              onDragStart={dndEnabled ? (e) => {
+              onDragStart={canUseNativeDrag ? (e) => {
                 dragGenerationRef.current += 1;
                 dragFromRef.current = vi.index;
                 const placement = getInsertionPlacement(e.clientY, e.currentTarget);
@@ -1084,14 +1083,14 @@ export function FlatTaskList({
                   window.setTimeout(() => ghost.remove(), 0);
                 } catch {}
               } : undefined}
-              onDragEnter={dndEnabled ? (e) => {
+              onDragEnter={canUseNativeDrag ? (e) => {
                 if (dragFromRef.current == null) return;
                 e.preventDefault();
                 try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'row-enter', index: vi.index, ts: Date.now() }; } catch {}
                 try { e.dataTransfer.dropEffect = 'move'; } catch {}
                 updateInsertionIndicator(e.clientY, e.currentTarget);
               } : undefined}
-              onDragOver={dndEnabled ? (e) => {
+              onDragOver={canUseNativeDrag ? (e) => {
                 if (dragFromRef.current == null) return;
                 e.preventDefault();
                 try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'row-over', index: vi.index, ts: Date.now() }; } catch {}
@@ -1100,8 +1099,8 @@ export function FlatTaskList({
                 stopAutoscroll();
                 autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(e.clientY));
               } : undefined}
-              onDragLeave={dndEnabled ? () => {} : undefined}
-              onDrop={dndEnabled ? (e) => {
+              onDragLeave={canUseNativeDrag ? () => {} : undefined}
+              onDrop={canUseNativeDrag ? (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 const payload = Number(e.dataTransfer.getData('application/x-flowist-task-index') || e.dataTransfer.getData('text/plain'));
@@ -1110,7 +1109,7 @@ export function FlatTaskList({
                 try { (window as any).__flowistLastTaskNativeDrop = { target: 'row', from, insertionIndex: to, index: vi.index, ts: Date.now() }; } catch {}
                 finishReorder(from, to, 'drop');
               } : undefined}
-              onDragEnd={dndEnabled ? cancelDrag : undefined}
+              onDragEnd={canUseNativeDrag ? cancelDrag : undefined}
               style={{
                 position: 'absolute',
                 top: 0,
