@@ -337,6 +337,28 @@ export const FolderManager = ({
               <Upload className="h-4 w-4 mr-2" />
               Import Notes
             </DropdownMenuItem>
+
+            {/* Export Notes (CSV) */}
+            <DropdownMenuItem
+              onClick={async () => {
+                try {
+                  const notes = await loadNotesFromDB();
+                  if (!notes || notes.length === 0) {
+                    toast.info('No notes to export');
+                    return;
+                  }
+                  const { filename, count } = exportNotesCsv(notes);
+                  toast.success(`Exported ${count} notes → ${filename}`);
+                } catch (err) {
+                  console.error('[ExportNotes] failed', err);
+                  toast.error('Export failed');
+                }
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export Notes (CSV)
+            </DropdownMenuItem>
+            
             
             {/* Add Notes to Folder */}
             {isCustomFolder && onAddNotesToFolder && availableNotes.length > 0 && (
