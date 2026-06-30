@@ -743,6 +743,11 @@ export const TaskDetailPage = ({
                 <Flag className="h-4 w-4 mr-2 text-muted-foreground" />{t('taskDetail.noPriority')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => { if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }} className="cursor-pointer">
+                <TimerIcon className="h-4 w-4 mr-2" />Focus Mode
+                {!isPro && <PremiumCrown size={12} className="ml-1" />}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleDuplicate} className="cursor-pointer">
                 <Copy className="h-4 w-4 mr-2" />{t('taskDetail.duplicateTask')}
               </DropdownMenuItem>
