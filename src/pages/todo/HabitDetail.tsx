@@ -15,11 +15,12 @@ import {
 import {
   ArrowLeft, MoreVertical, ChevronLeft, ChevronRight,
   CheckCircle2, CalendarCheck, Percent, Activity, Trash2, Check, Share2, ChevronUp,
-  Pencil, Target, Archive,
+  Pencil, Target, Archive, NotebookPen,
 } from 'lucide-react';
 
 import { m as motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { Habit, HabitDayStatus } from '@/types/habit';
 import { loadHabits, saveHabit, deleteHabit } from '@/utils/habitStorage';
 import { triggerHaptic } from '@/utils/haptics';
@@ -32,6 +33,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { HabitAmountCounter } from '@/components/habits/HabitAmountCounter';
+import { HabitReflectionSheet } from '@/components/habits/HabitReflectionSheet';
 import {
   readFocus, writeFocus, clearFocus,
   setActiveFocus, clearActiveFocus, cleanupStaleFocusKeys,
@@ -48,6 +51,10 @@ const HabitDetail = () => {
   const [focusSecs, setFocusSecs] = useState(25 * 60);
   const [focusRunning, setFocusRunning] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reflectionOpen, setReflectionOpen] = useState(false);
+  const [reflectionDate, setReflectionDate] = useState<string>('');
+  const [reflectionReadOnly, setReflectionReadOnly] = useState(false);
+  const [parentHabit, setParentHabit] = useState<Habit | null>(null);
   // Sweep finished/stale focus entries from prior sessions once per mount.
   useEffect(() => { cleanupStaleFocusKeys(); }, []);
 
@@ -55,7 +62,13 @@ const HabitDetail = () => {
 
   const load = useCallback(async () => {
     const all = await loadHabits();
-    setHabit(all.find((h) => h.id === id) || null);
+    const found = all.find((h) => h.id === id) || null;
+    setHabit(found);
+    if (found?.chainAfterHabitId) {
+      setParentHabit(all.find((h) => h.id === found.chainAfterHabitId) || null);
+    } else {
+      setParentHabit(null);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
@@ -146,30 +159,88 @@ const HabitDetail = () => {
   const todayKey = format(new Date(), 'yyyy-MM-dd');
   const todayDone = habit.completions.some((c) => c.date === todayKey && c.completed);
 
-  const toggleToday = async () => {
-    if (saving) return;
-    triggerHaptic('medium').catch(() => {});
+  const isAmount = habit.goalType === 'amount' && (habit.goalAmount ?? 0) > 0;
+  const isAvoid = habit.kind === 'avoid';
+  const todayRecord = habit.completions.find((c) => c.date === todayKey);
+  const todayAmount = todayRecord?.amount ?? 0;
+
+  const persistHabit = async (updated: Habit, openReflection = false) => {
     const previous = habit;
-    const others = habit.completions.filter((c) => c.date !== todayKey);
-    const updated: Habit = {
-      ...habit,
-      completions: todayDone
-        ? others
-        : [...others, { date: todayKey, completed: true, status: 'done' }],
-      updatedAt: new Date().toISOString(),
-    };
-    // Optimistic — update UI immediately.
     setHabit(updated);
     setSaving(true);
     try {
       await saveHabit(updated);
-    } catch (err) {
-      // Roll back on failure.
+      if (openReflection && updated.autoPopupLog) {
+        setReflectionDate(todayKey);
+        setReflectionReadOnly(false);
+        setReflectionOpen(true);
+      }
+    } catch {
       setHabit(previous);
       toast.error('Could not save check-in. Please try again.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const toggleToday = async () => {
+    if (saving) return;
+    triggerHaptic('medium').catch(() => {});
+    const others = habit.completions.filter((c) => c.date !== todayKey);
+    const updated: Habit = {
+      ...habit,
+      completions: todayDone
+        ? others
+        : [...others, { date: todayKey, completed: true, status: 'done', note: todayRecord?.note }],
+      updatedAt: new Date().toISOString(),
+    };
+    await persistHabit(updated, !todayDone);
+  };
+
+  const setTodayAmount = async (next: number) => {
+    triggerHaptic('light').catch(() => {});
+    const others = habit.completions.filter((c) => c.date !== todayKey);
+    const completed = next >= (habit.goalAmount ?? 1);
+    const wasCompleted = todayRecord?.completed ?? false;
+    const updated: Habit = {
+      ...habit,
+      completions:
+        next <= 0
+          ? others
+          : [
+              ...others,
+              {
+                date: todayKey,
+                amount: next,
+                completed,
+                status: completed ? 'done' : undefined,
+                note: todayRecord?.note,
+              },
+            ],
+      updatedAt: new Date().toISOString(),
+    };
+    // Auto-popup only when goal newly reached.
+    await persistHabit(updated, completed && !wasCompleted);
+  };
+
+  const saveTodayNote = async (note: string) => {
+    const others = habit.completions.filter((c) => c.date !== todayKey);
+    const updated: Habit = {
+      ...habit,
+      completions: [
+        ...others,
+        {
+          date: todayKey,
+          completed: todayRecord?.completed ?? false,
+          status: todayRecord?.status,
+          amount: todayRecord?.amount,
+          note: note || undefined,
+        },
+      ],
+      updatedAt: new Date().toISOString(),
+    };
+    setHabit(updated);
+    try { await saveHabit(updated); } catch { toast.error('Could not save note.'); }
   };
 
 
@@ -311,74 +382,119 @@ const HabitDetail = () => {
           <span>{habit.emoji || '✨'}</span>
         </div>
         <h1 className="mt-8 text-white text-[34px] font-extrabold leading-tight drop-shadow-sm">{habit.name}</h1>
-        <p className="mt-2 text-white/85 text-[15px]">{habit.quote || 'Keep going, one day at a time'}</p>
+        <p className="mt-2 text-white/85 text-[15px]">
+          {isAvoid
+            ? `Days clean: ${streak} · Best clean streak: ${bestStreak}`
+            : habit.quote || 'Keep going, one day at a time'}
+        </p>
+        {parentHabit && (
+          <p className="mt-2 text-white/75 text-[12px]">
+            After: {parentHabit.emoji || '✨'} {parentHabit.name}
+          </p>
+        )}
+        {(habit.goalDays ?? 0) > 0 && (
+          <div className="mt-4 max-w-sm mx-auto">
+            <Progress value={Math.min(100, Math.round((totalCheckins / (habit.goalDays || 1)) * 100))} className="h-2 bg-white/30" />
+            <p className="text-white/80 text-[12px] mt-1.5">
+              Day {Math.min(totalCheckins, habit.goalDays || 0)} of {habit.goalDays}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Tap-to-check OR achieved stats card */}
+      {/* Tap-to-check OR amount counter OR achieved stats card */}
       <div className="relative z-10 px-6 mt-4">
-        <AnimatePresence mode="wait" initial={false}>
-          {!todayDone ? (
-            <motion.button
-              key="check"
-              type="button"
-              onClick={toggleToday}
-              disabled={saving}
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              whileTap={{ scale: 0.97 }}
-              className="relative w-full h-16 rounded-full overflow-hidden select-none flex items-center justify-center gap-3 text-white font-semibold text-[15px] tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:opacity-70 disabled:cursor-not-allowed"
-              style={{ background: 'rgba(255,255,255,0.28)' }}
-              aria-label={saving ? 'Saving check-in' : 'Check in'}
-              aria-busy={saving}
-            >
-              <motion.span
-                className="h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center"
-                style={{ color: headerColor }}
-                animate={saving ? { scale: [1, 0.9, 1] } : { scale: 1 }}
-                transition={saving ? { duration: 0.8, repeat: Infinity } : { duration: 0.2 }}
-              >
-                <Check className="h-6 w-6" strokeWidth={3} />
-              </motion.span>
-              <span>{saving ? 'Saving…' : 'Tap to check in'}</span>
-            </motion.button>
-
-
-          ) : (
-            <motion.div
-              key="stats"
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              className="rounded-2xl bg-white shadow-xl p-5"
-            >
-              <div className="grid grid-cols-3 text-center">
-                <div>
-                  <div className="text-[32px] font-bold text-foreground leading-none">{totalCheckins}</div>
-                  <div className="text-xs text-muted-foreground mt-2">Total check-ins</div>
-                </div>
-                <div>
-                  <div className="text-[32px] font-bold text-foreground leading-none">{bestStreak}</div>
-                  <div className="text-xs text-muted-foreground mt-2">Best Streak</div>
-                </div>
-                <div>
-                  <div className="text-[32px] font-bold text-foreground leading-none">{streak}</div>
-                  <div className="text-xs text-muted-foreground mt-2">Streak</div>
-                </div>
-              </div>
-              <button
-                onClick={() => { triggerHaptic('light').catch(() => {}); }}
-                className="mt-4 w-full h-12 rounded-full text-white font-semibold text-[15px]"
-                style={{ background: headerColor, opacity: 0.85 }}
-              >
-                <Share2 className="inline-block h-4 w-4 mr-2 -mt-0.5" /> Share
-              </button>
-              <button
+        {isAmount ? (
+          <HabitAmountCounter
+            current={todayAmount}
+            goalAmount={habit.goalAmount ?? 1}
+            goalUnit={habit.goalUnit}
+            color={headerColor}
+            onChange={setTodayAmount}
+          />
+        ) : (
+          <AnimatePresence mode="wait" initial={false}>
+            {!todayDone ? (
+              <motion.button
+                key="check"
+                type="button"
                 onClick={toggleToday}
-                className="mt-2 w-full text-[12px] text-muted-foreground underline"
+                disabled={saving}
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                whileTap={{ scale: 0.97 }}
+                className="relative w-full h-16 rounded-full overflow-hidden select-none flex items-center justify-center gap-3 text-white font-semibold text-[15px] tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:opacity-70 disabled:cursor-not-allowed"
+                style={{ background: 'rgba(255,255,255,0.28)' }}
+                aria-label={saving ? 'Saving check-in' : 'Check in'}
+                aria-busy={saving}
               >
-                Undo today's check-in
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                <motion.span
+                  className="h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center"
+                  style={{ color: headerColor }}
+                  animate={saving ? { scale: [1, 0.9, 1] } : { scale: 1 }}
+                  transition={saving ? { duration: 0.8, repeat: Infinity } : { duration: 0.2 }}
+                >
+                  <Check className="h-6 w-6" strokeWidth={3} />
+                </motion.span>
+                <span>
+                  {saving
+                    ? 'Saving…'
+                    : isAvoid
+                    ? 'I avoided it today'
+                    : 'Tap to check in'}
+                </span>
+              </motion.button>
+            ) : (
+              <motion.div
+                key="stats"
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                className="rounded-2xl bg-white shadow-xl p-5"
+              >
+                <div className="grid grid-cols-3 text-center">
+                  <div>
+                    <div className="text-[32px] font-bold text-foreground leading-none">{totalCheckins}</div>
+                    <div className="text-xs text-muted-foreground mt-2">Total check-ins</div>
+                  </div>
+                  <div>
+                    <div className="text-[32px] font-bold text-foreground leading-none">{bestStreak}</div>
+                    <div className="text-xs text-muted-foreground mt-2">Best Streak</div>
+                  </div>
+                  <div>
+                    <div className="text-[32px] font-bold text-foreground leading-none">{streak}</div>
+                    <div className="text-xs text-muted-foreground mt-2">{isAvoid ? 'Clean Streak' : 'Streak'}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleShare}
+                  className="mt-4 w-full h-12 rounded-full text-white font-semibold text-[15px]"
+                  style={{ background: headerColor, opacity: 0.85 }}
+                >
+                  <Share2 className="inline-block h-4 w-4 mr-2 -mt-0.5" /> Share
+                </button>
+                <button
+                  onClick={toggleToday}
+                  className="mt-2 w-full text-[12px] text-muted-foreground underline"
+                >
+                  Undo today's check-in
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+
+        {/* Reflection / daily note button */}
+        <button
+          onClick={() => {
+            setReflectionDate(todayKey);
+            setReflectionReadOnly(false);
+            setReflectionOpen(true);
+          }}
+          className="mt-3 w-full flex items-center justify-center gap-2 text-white/90 text-[13px] font-medium py-2"
+        >
+          <NotebookPen className="h-4 w-4" />
+          {todayRecord?.note ? 'Edit reflection' : 'Add reflection'}
+        </button>
       </div>
+
 
       {/* Expand chevron */}
       <div className="relative z-10 flex justify-center pt-4">
@@ -421,8 +537,21 @@ const HabitDetail = () => {
                     const status = statusFor(d);
                     const inMonth = isSameMonth(d, month);
                     const isToday = isSameDay(d, new Date());
+                    const dateKey = format(d, 'yyyy-MM-dd');
+                    const rec = habit.completions.find((c) => c.date === dateKey);
+                    const hasNote = !!rec?.note;
                     return (
-                      <div key={d.toISOString()} className="flex items-center justify-center py-1">
+                      <button
+                        key={d.toISOString()}
+                        type="button"
+                        onClick={() => {
+                          if (!inMonth) return;
+                          setReflectionDate(dateKey);
+                          setReflectionReadOnly(dateKey !== todayKey);
+                          setReflectionOpen(true);
+                        }}
+                        className="flex items-center justify-center py-1 relative"
+                      >
                         <div className={cn(
                           'h-9 w-9 rounded-full flex items-center justify-center text-base',
                           !inMonth && 'text-muted-foreground/40',
@@ -434,7 +563,10 @@ const HabitDetail = () => {
                         )}>
                           {format(d, 'd')}
                         </div>
-                      </div>
+                        {hasNote && (
+                          <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-amber-500" aria-hidden />
+                        )}
+                      </button>
                     );
                   })}
                 </div>
@@ -491,9 +623,43 @@ const HabitDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <HabitReflectionSheet
+        open={reflectionOpen}
+        onOpenChange={setReflectionOpen}
+        date={reflectionDate}
+        initialNote={habit.completions.find((c) => c.date === reflectionDate)?.note}
+        readOnly={reflectionReadOnly}
+        onSave={(note) => {
+          if (reflectionDate === todayKey) {
+            saveTodayNote(note);
+          } else {
+            // Save note on past day — preserve existing fields.
+            const others = habit.completions.filter((c) => c.date !== reflectionDate);
+            const rec = habit.completions.find((c) => c.date === reflectionDate);
+            const updated: Habit = {
+              ...habit,
+              completions: [
+                ...others,
+                {
+                  date: reflectionDate,
+                  completed: rec?.completed ?? false,
+                  status: rec?.status,
+                  amount: rec?.amount,
+                  note: note || undefined,
+                },
+              ],
+              updatedAt: new Date().toISOString(),
+            };
+            setHabit(updated);
+            saveHabit(updated).catch(() => toast.error('Could not save note.'));
+          }
+        }}
+      />
     </div>
   );
 };
+
 
 
 const StatCard = ({ icon, label, value, unit }: { icon: React.ReactNode; label: string; value: string; unit: string }) => (

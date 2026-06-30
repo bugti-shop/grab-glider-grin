@@ -15,14 +15,15 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
-import { Habit, HabitFrequencyType, HabitGoalType } from '@/types/habit';
+import { Habit, HabitFrequencyType, HabitGoalType, HabitKind, HabitReminder } from '@/types/habit';
 import { saveHabit, loadHabits } from '@/utils/habitStorage';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { loadHabitSections, DEFAULT_HABIT_SECTION_ID } from '@/utils/habitSectionsStorage';
+import { loadHabitSections, DEFAULT_HABIT_SECTION_ID, getHabitSectionTree } from '@/utils/habitSectionsStorage';
 import { genId } from '@/utils/genId';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/utils/haptics';
 import { scheduleHabitReminder, testHabitReminder } from '@/utils/habitReminders';
+import { RemindersList } from '@/components/habits/RemindersList';
 import { toast } from 'sonner';
 
 const ICON_GRID = [
@@ -61,6 +62,7 @@ const HabitNew = () => {
   const [name, setName] = useState(prefill?.name ?? '');
   const [emoji, setEmoji] = useState(prefill?.emoji ?? '🍌');
   const [quote, setQuote] = useState(prefill?.quote ?? QUOTES[0]);
+  const [kind, setKind] = useState<HabitKind>('build');
 
   // Details
   const [frequency, setFrequency] = useState<HabitFrequencyType>('daily');
@@ -82,8 +84,15 @@ const HabitNew = () => {
   const [sections, setSections] = useState(() => loadHabitSections());
   const [sectionId, setSectionId] = useState<string>(DEFAULT_HABIT_SECTION_ID);
 
-  const [reminderTime, setReminderTime] = useState<string | null>(null);
+  const [reminders, setReminders] = useState<HabitReminder[]>([]);
   const [autoPopup, setAutoPopup] = useState(false);
+
+  // "Stack after" — id of the parent habit whose completion triggers this one.
+  const [chainAfterHabitId, setChainAfterHabitId] = useState<string | undefined>(undefined);
+  const [allHabits, setAllHabits] = useState<Habit[]>([]);
+  useEffect(() => {
+    loadHabits().then((list) => setAllHabits(list.filter((h) => !h.isArchived)));
+  }, []);
 
   useEffect(() => {
     const onSec = () => setSections(loadHabitSections());
@@ -113,8 +122,11 @@ const HabitNew = () => {
       if (h.startDate) setStartDate(new Date(h.startDate));
       setGoalDays(h.goalDays || 0);
       if (h.sectionId) setSectionId(h.sectionId);
-      if (h.reminder?.enabled) setReminderTime(h.reminder.time);
+      if (h.reminders && h.reminders.length > 0) setReminders(h.reminders);
+      else if (h.reminder?.enabled) setReminders([h.reminder]);
       setAutoPopup(!!h.autoPopupLog);
+      setKind(h.kind ?? 'build');
+      setChainAfterHabitId(h.chainAfterHabitId);
     })();
     return () => { cancelled = true; };
   }, [editId]);
@@ -164,7 +176,10 @@ const HabitNew = () => {
       startDate: format(startDate, 'yyyy-MM-dd'),
       goalDays,
       sectionId,
-      reminder: reminderTime ? { enabled: true, time: reminderTime } : undefined,
+      kind,
+      chainAfterHabitId: chainAfterHabitId || undefined,
+      reminders: reminders.length > 0 ? reminders : undefined,
+      reminder: undefined, // legacy field cleared on save
       autoPopupLog: autoPopup,
       completions: editingExisting?.completions ?? [],
       currentStreak: editingExisting?.currentStreak ?? 0,
@@ -174,7 +189,7 @@ const HabitNew = () => {
       updatedAt: now,
     };
     await saveHabit(habit);
-    if (habit.reminder?.enabled) {
+    if (habit.reminders && habit.reminders.length > 0) {
       await scheduleHabitReminder(habit);
     }
     navigate('/todo/habits', { replace: true });
@@ -199,6 +214,23 @@ const HabitNew = () => {
       <div className="px-3 space-y-3">
         {step === STEP_BASICS ? (
           <>
+            {/* Build / Avoid toggle */}
+            <section className="bg-background rounded-2xl p-2 flex">
+              {(['build', 'avoid'] as HabitKind[]).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setKind(k)}
+                  className={cn(
+                    'flex-1 h-11 rounded-xl text-sm font-semibold capitalize transition-colors',
+                    kind === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                  )}
+                >
+                  {k === 'build' ? '🌱 Build a habit' : '🚫 Avoid / Quit'}
+                </button>
+              ))}
+            </section>
+
             {/* Name */}
             <section className="bg-background rounded-2xl p-4">
               <Label className="text-base text-foreground">Name</Label>
@@ -369,6 +401,7 @@ const HabitNew = () => {
               <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
                 {sections.map((s) => {
                   const sel = sectionId === s.id;
+                  const parent = s.parentSectionId ? sections.find((p) => p.id === s.parentSectionId) : null;
                   return (
                     <button
                       key={s.id}
@@ -378,50 +411,74 @@ const HabitNew = () => {
                         sel ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
                       )}
                     >
-                      {s.name}
+                      {parent ? `${parent.name} › ${s.name}` : s.name}
                     </button>
                   );
                 })}
               </div>
             </section>
 
-            {/* Reminder */}
+
+            {/* Reminders (multi) */}
             <section className="bg-background rounded-2xl p-4">
-              <Label className="text-base text-foreground">Reminder</Label>
-              <div className="mt-3">
-                {reminderTime ? (
-                  <div className="flex items-center justify-between gap-2">
-                    <Input
-                      type="time"
-                      value={reminderTime}
-                      onChange={(e) => setReminderTime(e.target.value)}
-                      className="h-11 w-36 bg-muted/60 border-0"
-                    />
-                    <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" onClick={handleTestReminder}>
-                        Test
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setReminderTime(null)}>
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setReminderTime('08:00')}
-                    className="flex items-center gap-2 text-primary text-base font-medium"
-                  >
-                    <Plus className="h-4 w-4" /> Add
-                  </button>
+              <div className="flex items-center justify-between">
+                <Label className="text-base text-foreground">Reminders</Label>
+                {reminders.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={handleTestReminder}>
+                    Test
+                  </Button>
                 )}
               </div>
+              <div className="mt-3">
+                <RemindersList reminders={reminders} onChange={setReminders} maxReminders={5} />
+              </div>
             </section>
+
+            {/* Stack after (habit chain) */}
+            {allHabits.filter((h) => h.id !== editingRef.current?.id).length > 0 && (
+              <section className="bg-background rounded-2xl p-4">
+                <Label className="text-base text-foreground">Stack after</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Triggered when the chosen habit is checked in for the day.
+                </p>
+                <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
+                  <button
+                    onClick={() => setChainAfterHabitId(undefined)}
+                    className={cn(
+                      'px-4 h-10 rounded-lg text-sm font-medium whitespace-nowrap',
+                      !chainAfterHabitId ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                    )}
+                  >
+                    None
+                  </button>
+                  {allHabits
+                    .filter((h) => h.id !== editingRef.current?.id)
+                    .map((h) => {
+                      const sel = chainAfterHabitId === h.id;
+                      return (
+                        <button
+                          key={h.id}
+                          onClick={() => setChainAfterHabitId(h.id)}
+                          className={cn(
+                            'px-4 h-10 rounded-lg text-sm font-medium whitespace-nowrap flex items-center gap-1.5',
+                            sel ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                          )}
+                        >
+                          <span>{h.emoji || '✨'}</span>
+                          <span>{h.name}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              </section>
+            )}
 
             {/* Auto popup */}
             <section className="bg-background rounded-2xl p-4 flex items-center justify-between">
               <span className="text-base text-foreground">Auto pop-up of habit log</span>
               <Switch checked={autoPopup} onCheckedChange={setAutoPopup} />
             </section>
+
 
             <Button
               onClick={handleSave}

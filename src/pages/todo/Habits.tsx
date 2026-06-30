@@ -1,19 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, addDays, startOfWeek, isSameDay, parseISO } from 'date-fns';
+import {
+  format,
+  addDays,
+  startOfWeek as dfStartOfWeek,
+  isSameDay,
+  parseISO,
+} from 'date-fns';
 import { Plus, PieChart, LayoutGrid, SlidersHorizontal, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
-import { Habit, HabitDayStatus } from '@/types/habit';
+import { Habit, HabitDayStatus, HabitSection } from '@/types/habit';
 import { loadHabits, saveHabit } from '@/utils/habitStorage';
-import { loadHabitSections, DEFAULT_HABIT_SECTION_ID } from '@/utils/habitSectionsStorage';
+import { loadHabitSections, DEFAULT_HABIT_SECTION_ID, getHabitSectionTree } from '@/utils/habitSectionsStorage';
 import { triggerHaptic } from '@/utils/haptics';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { toast } from 'sonner';
 import { readActiveFocus, cleanupStaleFocusKeys, clearActiveFocus } from '@/utils/focusSession';
-
-
 
 const Habits = () => {
   const navigate = useNavigate();
@@ -69,10 +73,31 @@ const Habits = () => {
     return rec.completed ? 'done' : null;
   };
 
+  /** Returns how many days this week (Mon-Sun) have a completed entry. */
+  const completedThisWeek = (habit: Habit, ref: Date): number => {
+    const weekStart = dfStartOfWeek(ref, { weekStartsOn: 1 });
+    let n = 0;
+    for (let i = 0; i < 7; i++) {
+      const k = format(addDays(weekStart, i), 'yyyy-MM-dd');
+      if (habit.completions.some((c) => c.date === k && c.completed)) n++;
+    }
+    return n;
+  };
+
   const isHabitDueOn = (habit: Habit, d: Date): boolean => {
     if (habit.frequency === 'daily') return true;
     if (habit.frequency === 'weekly') {
+      // Specific weekdays selected → respect them.
       if (habit.weeklyDays?.length) return habit.weeklyDays.includes(d.getDay());
+      // "N days per week" mode → due until quota for the week is met.
+      if (habit.weeklyCount && habit.weeklyCount > 0) {
+        const done = completedThisWeek(habit, d);
+        const todayKey = format(d, 'yyyy-MM-dd');
+        const alreadyDoneToday = habit.completions.some(
+          (c) => c.date === todayKey && c.completed
+        );
+        return alreadyDoneToday || done < habit.weeklyCount;
+      }
       return true;
     }
     if (habit.frequency === 'interval' && habit.intervalDays && habit.startDate) {
@@ -83,10 +108,63 @@ const Habits = () => {
     return true;
   };
 
+  /** Fire a child-habit toast once when the parent is completed today. */
+  const fireChainToast = (parent: Habit) => {
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    const children = habits.filter((h) => h.chainAfterHabitId === parent.id);
+    for (const child of children) {
+      const alreadyDone = child.completions.some(
+        (c) => c.date === todayKey && c.completed
+      );
+      if (alreadyDone) continue;
+      toast(`Next up: ${child.emoji || '✨'} ${child.name}`, {
+        action: {
+          label: 'Open',
+          onClick: () => navigate(`/todo/habits/${child.id}`),
+        },
+      });
+    }
+  };
+
   const cycleStatus = async (habit: Habit) => {
     triggerHaptic('medium').catch(() => {});
+    const isAmount = habit.goalType === 'amount' && (habit.goalAmount ?? 0) > 0;
+    const rec = habit.completions.find((c) => c.date === dateKey);
+
+    // Amount habits: tap = +1 toward the goal.
+    if (isAmount) {
+      const others = habit.completions.filter((c) => c.date !== dateKey);
+      const nextAmount = (rec?.amount ?? 0) + 1;
+      const wasCompleted = rec?.completed ?? false;
+      const completed = nextAmount >= (habit.goalAmount ?? 1);
+      const updated: Habit = {
+        ...habit,
+        completions: [
+          ...others,
+          {
+            date: dateKey,
+            amount: nextAmount,
+            completed,
+            status: completed ? 'done' : undefined,
+            note: rec?.note,
+          },
+        ],
+        updatedAt: new Date().toISOString(),
+      };
+      const previous = habits;
+      setHabits((h) => h.map((x) => (x.id === habit.id ? updated : x)));
+      try {
+        await saveHabit(updated);
+        if (completed && !wasCompleted) fireChainToast(updated);
+      } catch {
+        setHabits(previous);
+        toast.error('Could not save check-in. Please try again.');
+      }
+      return;
+    }
+
+    // Build / Avoid: cycle null → done → skipped → failed → null.
     const current = getStatus(habit);
-    // null -> done -> skipped -> failed -> null
     const next: HabitDayStatus | null =
       current === null ? 'done' : current === 'done' ? 'skipped' : current === 'skipped' ? 'failed' : null;
 
@@ -96,24 +174,28 @@ const Habits = () => {
       completions:
         next === null
           ? others
-          : [...others, { date: dateKey, completed: next === 'done', status: next }],
+          : [...others, { date: dateKey, completed: next === 'done', status: next, note: rec?.note }],
       updatedAt: new Date().toISOString(),
     };
-    // Optimistic UI — flip the checkbox immediately, then persist.
     const previous = habits;
     setHabits((h) => h.map((x) => (x.id === habit.id ? updated : x)));
     try {
       await saveHabit(updated);
+      if (next === 'done' && current !== 'done') fireChainToast(updated);
     } catch {
       setHabits(previous);
       toast.error('Could not save check-in. Please try again.');
     }
   };
 
-
   const visibleHabits = habits.filter((h) => isHabitDueOn(h, selectedDate));
 
-  const grouped = useMemo(() => {
+  /**
+   * Group habits by section, then arrange into a nested
+   * "root section → child sections" structure.
+   */
+  const { rootSections, childrenByParent, habitsBySection } = useMemo(() => {
+    const tree = getHabitSectionTree();
     const map: Record<string, Habit[]> = {};
     sections.forEach((s) => (map[s.id] = []));
     map[DEFAULT_HABIT_SECTION_ID] = map[DEFAULT_HABIT_SECTION_ID] || [];
@@ -121,8 +203,129 @@ const Habits = () => {
       const sid = h.sectionId && map[h.sectionId] ? h.sectionId : DEFAULT_HABIT_SECTION_ID;
       map[sid].push(h);
     });
-    return map;
+    return {
+      rootSections: tree.root,
+      childrenByParent: tree.childrenByParent,
+      habitsBySection: map,
+    };
   }, [visibleHabits, sections]);
+
+  const renderHabitRow = (h: Habit) => {
+    const status = getStatus(h);
+    const isAmount = h.goalType === 'amount' && (h.goalAmount ?? 0) > 0;
+    const rec = h.completions.find((c) => c.date === dateKey);
+    const isAvoid = h.kind === 'avoid';
+    const weeklyQuota =
+      h.frequency === 'weekly' && !h.weeklyDays?.length && (h.weeklyCount ?? 0) > 0
+        ? { done: completedThisWeek(h, selectedDate), goal: h.weeklyCount! }
+        : null;
+
+    return (
+      <button
+        key={h.id}
+        onClick={() => navigate(`/todo/habits/${h.id}`)}
+        className="w-full flex items-center gap-3 px-4 py-3 border-t border-border/40 text-left active:bg-muted/40"
+      >
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            cycleStatus(h);
+          }}
+          className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{
+            backgroundColor:
+              status === 'done'
+                ? `${h.color}22`
+                : status === 'skipped' || status === 'failed'
+                ? 'transparent'
+                : `${h.color}22`,
+          }}
+          aria-label="toggle status"
+        >
+          {isAmount && !status ? (
+            <span className="text-sm font-bold" style={{ color: h.color }}>
+              {rec?.amount ?? 0}
+            </span>
+          ) : status === 'done' ? (
+            <Check className="h-6 w-6" style={{ color: h.color }} strokeWidth={3} />
+          ) : status === 'skipped' ? (
+            <X className="h-6 w-6 text-emerald-500" strokeWidth={3} />
+          ) : status === 'failed' ? (
+            <X className="h-6 w-6 text-rose-400" strokeWidth={3} />
+          ) : (
+            <span className="text-2xl leading-none">{h.emoji || '✨'}</span>
+          )}
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="text-base text-foreground truncate flex items-center gap-1.5">
+            {isAvoid && <span className="text-[10px] font-semibold uppercase tracking-wide text-rose-500">Avoid</span>}
+            <span className="truncate">{h.name}</span>
+          </div>
+          {weeklyQuota && (
+            <div className="text-[11px] text-muted-foreground">
+              {weeklyQuota.done} / {weeklyQuota.goal} this week
+            </div>
+          )}
+          {isAmount && (
+            <div className="text-[11px] text-muted-foreground">
+              {rec?.amount ?? 0} / {h.goalAmount} {h.goalUnit || ''}
+            </div>
+          )}
+        </div>
+        <div className="text-right">
+          <div className="text-lg font-semibold text-foreground">
+            {h.completions.filter((c) => c.completed).length}
+          </div>
+          <div className="text-[11px] text-muted-foreground -mt-1">
+            Total Day{h.completions.filter((c) => c.completed).length === 1 ? '' : 's'}
+          </div>
+        </div>
+      </button>
+    );
+  };
+
+  const renderSection = (sec: HabitSection, depth: number) => {
+    const ownList = habitsBySection[sec.id] || [];
+    const children = childrenByParent[sec.id] || [];
+    // Hide a section entirely if it (and its children) have no visible habits.
+    const childHabitsCount = children.reduce(
+      (n, c) => n + (habitsBySection[c.id]?.length || 0),
+      0
+    );
+    if (ownList.length === 0 && childHabitsCount === 0) return null;
+    const isCollapsed = collapsed[sec.id];
+    return (
+      <div
+        key={sec.id}
+        className="bg-background rounded-2xl overflow-hidden"
+        style={{ marginLeft: depth * 12 }}
+      >
+        <button
+          onClick={() => setCollapsed((c) => ({ ...c, [sec.id]: !c[sec.id] }))}
+          className="w-full flex items-center justify-between px-4 py-3"
+        >
+          <span className="text-lg font-semibold text-foreground">{sec.name}</span>
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <span className="text-sm">{ownList.length + childHabitsCount}</span>
+            {isCollapsed ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </div>
+        </button>
+        {!isCollapsed && (
+          <div>
+            {ownList.map(renderHabitRow)}
+            {children.map((child) => (
+              <div key={child.id} className="border-t border-border/40 pl-3 py-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-2 pb-1">
+                  {child.name}
+                </div>
+                {(habitsBySection[child.id] || []).map(renderHabitRow)}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-muted/30 pb-32">
@@ -168,81 +371,13 @@ const Habits = () => {
         </div>
       </div>
 
-      {/* Sections */}
+      {/* Sections (with nested children) */}
       <div className="px-3 mt-3 space-y-3">
-        {sections.map((sec) => {
-          const list = grouped[sec.id] || [];
-          if (list.length === 0) return null;
-          const isCollapsed = collapsed[sec.id];
-          return (
-            <div key={sec.id} className="bg-background rounded-2xl overflow-hidden">
-              <button
-                onClick={() => setCollapsed((c) => ({ ...c, [sec.id]: !c[sec.id] }))}
-                className="w-full flex items-center justify-between px-4 py-3"
-              >
-                <span className="text-lg font-semibold text-foreground">{sec.name}</span>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <span className="text-sm">{list.length}</span>
-                  {isCollapsed ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </div>
-              </button>
-              {!isCollapsed && (
-                <div>
-                  {list.map((h) => {
-                    const status = getStatus(h);
-                    return (
-                      <button
-                        key={h.id}
-                        onClick={() => navigate(`/todo/habits/${h.id}`)}
-                        className="w-full flex items-center gap-3 px-4 py-3 border-t border-border/40 text-left active:bg-muted/40"
-                      >
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cycleStatus(h);
-                          }}
-                          className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{
-                            backgroundColor:
-                              status === 'done'
-                                ? `${h.color}22`
-                                : status === 'skipped' || status === 'failed'
-                                ? 'transparent'
-                                : `${h.color}22`,
-                          }}
-                          aria-label="toggle status"
-                        >
-                          {status === 'done' ? (
-                            <Check className="h-6 w-6" style={{ color: h.color }} strokeWidth={3} />
-                          ) : status === 'skipped' ? (
-                            <X className="h-6 w-6 text-emerald-500" strokeWidth={3} />
-                          ) : status === 'failed' ? (
-                            <X className="h-6 w-6 text-rose-400" strokeWidth={3} />
-                          ) : (
-                            <span className="text-2xl leading-none">{h.emoji || '✨'}</span>
-                          )}
-                        </button>
-                        <span className="flex-1 text-base text-foreground truncate">{h.name}</span>
-                        <div className="text-right">
-                          <div className="text-lg font-semibold text-foreground">
-                            {h.completions.filter((c) => c.completed).length}
-                          </div>
-                          <div className="text-[11px] text-muted-foreground -mt-1">
-                            Total Day{h.completions.filter((c) => c.completed).length === 1 ? '' : 's'}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {rootSections.map((sec) => renderSection(sec, 0))}
 
         {visibleHabits.length === 0 && (
           <div className="bg-background rounded-2xl p-10 text-center text-muted-foreground">
-            No habits yet. Tap “+ Add Habit” to create your first one.
+            No habits yet. Tap "+ Add Habit" to create your first one.
           </div>
         )}
       </div>
