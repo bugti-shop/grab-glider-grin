@@ -197,21 +197,23 @@ export function FlatTaskList({
     }
   }, [flat.length, onReorder]);
 
-  // Id → index map built from the frozen snapshot used during drag, so the
-  // hook can resolve the dragged row's *current* index right at drop time.
-  const flatIdIndexMap = useMemo(() => {
+  // Id → index map built from the LIVE list (not the frozen snapshot) so
+  // the hook can resolve the dragged row's current index right at drop time,
+  // even if completion-queue churn shifted indices during the gesture.
+  const liveIdIndexMap = useMemo(() => {
     const m = new Map<string, number>();
-    for (let i = 0; i < flat.length; i++) {
-      const id = flat[i]?.task?.id;
+    const live = liveFlatIndex.flat;
+    for (let i = 0; i < live.length; i++) {
+      const id = live[i]?.task?.id;
       if (id != null) m.set(String(id), i);
     }
     return m;
-  }, [flat]);
+  }, [liveFlatIndex]);
   const getItemId = useCallback((i: number) => flat[i]?.task?.id ?? null, [flat]);
   const resolveIndexById = useCallback((id: string | number) => {
-    const found = flatIdIndexMap.get(String(id));
+    const found = liveIdIndexMap.get(String(id));
     return found == null ? -1 : found;
-  }, [flatIdIndexMap]);
+  }, [liveIdIndexMap]);
   const handleDragStart = useCallback(() => {
     // Freeze the rendered list at the snapshot present when the drag began.
     setFrozenIndex(liveFlatIndex);
