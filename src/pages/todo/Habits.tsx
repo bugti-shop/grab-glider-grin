@@ -284,6 +284,18 @@ const Habits = () => {
           <div className="text-base text-foreground truncate flex items-center gap-1.5">
             {isAvoid && <span className="text-[10px] font-semibold uppercase tracking-wide text-rose-500">Avoid</span>}
             <span className="truncate">{h.name}</span>
+            {h.difficulty && (
+              <span
+                className={cn(
+                  'text-[10px] font-semibold px-1.5 py-0.5 rounded-md',
+                  h.difficulty === 'easy' && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
+                  h.difficulty === 'medium' && 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+                  h.difficulty === 'hard' && 'bg-rose-500/15 text-rose-600 dark:text-rose-300'
+                )}
+              >
+                {h.difficulty === 'easy' ? 'Easy' : h.difficulty === 'medium' ? 'Med' : 'Hard'}
+              </span>
+            )}
           </div>
           {weeklyQuota && (
             <div className="text-[11px] text-muted-foreground">
