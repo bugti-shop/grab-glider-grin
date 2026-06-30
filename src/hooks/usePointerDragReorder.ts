@@ -290,7 +290,10 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
 
   const getHandleProps = useCallback((index: number) => ({
     onPointerDown: onPointerDown(index),
-    style: { touchAction: 'none' as const } as React.CSSProperties,
+    // No `touch-action: none` by default — would break list scrolling on
+    // touch devices. We only suppress browser gestures once the drag is
+    // actually active (see getItemProps + active body cursor styles).
+    style: {} as React.CSSProperties,
   }), [onPointerDown]);
 
   return { getItemProps, getHandleProps, isDragging, draggingIndex };
