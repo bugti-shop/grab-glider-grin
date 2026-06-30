@@ -162,8 +162,9 @@ const useWhiteNoise = () => {
   const ctxRef = useRef<AudioContext | null>(null);
   const srcRef = useRef<AudioBufferSourceNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
+  const filterRef = useRef<BiquadFilterNode | null>(null);
 
-  const start = useCallback((volume: number) => {
+  const start = useCallback((volume: number, initial?: { cutoff: number; q: number }) => {
     try {
       const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (!AC) return;
@@ -182,12 +183,17 @@ const useWhiteNoise = () => {
       const src = ctx.createBufferSource();
       src.buffer = buffer;
       src.loop = true;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = initial?.cutoff ?? 4000;
+      filter.Q.value = initial?.q ?? 0.7;
       const gain = ctx.createGain();
       gain.gain.value = Math.max(0, Math.min(1, volume));
-      src.connect(gain).connect(ctx.destination);
+      src.connect(filter).connect(gain).connect(ctx.destination);
       src.start();
       srcRef.current = src;
       gainRef.current = gain;
+      filterRef.current = filter;
     } catch {}
   }, []);
 
@@ -196,8 +202,10 @@ const useWhiteNoise = () => {
       srcRef.current?.stop();
       srcRef.current?.disconnect();
       gainRef.current?.disconnect();
+      filterRef.current?.disconnect();
       srcRef.current = null;
       gainRef.current = null;
+      filterRef.current = null;
     } catch {}
   }, []);
 
@@ -207,11 +215,23 @@ const useWhiteNoise = () => {
     }
   }, []);
 
+  // Smoothly drift the lowpass cutoff/Q toward the new target.
+  const adapt = useCallback((target: { cutoff: number; q: number }) => {
+    const ctx = ctxRef.current;
+    const f = filterRef.current;
+    if (!ctx || !f) return;
+    try {
+      const now = ctx.currentTime;
+      f.frequency.setTargetAtTime(target.cutoff, now, 3.5);
+      f.Q.setTargetAtTime(target.q, now, 3.5);
+    } catch {}
+  }, []);
+
   const isRunning = useCallback(() => !!srcRef.current, []);
 
   useEffect(() => () => { stop(); try { ctxRef.current?.close(); } catch {} }, [stop]);
 
-  return { start, stop, setVolume, isRunning };
+  return { start, stop, setVolume, adapt, isRunning };
 };
 
 // ---- Component -------------------------------------------------------------
