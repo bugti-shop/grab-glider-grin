@@ -790,6 +790,32 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           </div>
         </div>
       )}
+      <SoundLibrary
+        open={showSoundLib}
+        onClose={() => setShowSoundLib(false)}
+        selectedId={prefs.soundTrackId}
+        onSelect={(t) => {
+          updatePrefs({ soundTrackId: t ? t.id : null, whiteNoise: true });
+        }}
+        volume={prefs.whiteNoiseVolume}
+        muted={prefs.whiteNoiseMuted}
+        onVolumeChange={(v) => updatePrefs({ whiteNoiseVolume: v, whiteNoiseMuted: false })}
+        onMuteToggle={() => updatePrefs({ whiteNoiseMuted: !prefs.whiteNoiseMuted })}
+      />
+
+      {showBackgroundPrompt && (
+        <div className="absolute inset-0 bg-black/70 flex items-end sm:items-center justify-center z-20 px-4" onClick={() => setShowBackgroundPrompt(false)}>
+          <div className="bg-background text-foreground rounded-2xl p-5 w-full max-w-sm space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold">Exit focus session?</h3>
+            <p className="text-sm text-muted-foreground">Timer aur sounds dono background mein chalte rahenge. Top bar mein remaining time dikhega.</p>
+            <div className="flex flex-col gap-2 pt-2">
+              <button onClick={continueInBackground} className="w-full py-2.5 rounded-lg text-sm bg-primary text-primary-foreground font-medium">Run in Background</button>
+              <button onClick={exitFully} className="w-full py-2.5 rounded-lg text-sm bg-destructive text-destructive-foreground font-medium">End session</button>
+              <button onClick={() => setShowBackgroundPrompt(false)} className="w-full py-2.5 rounded-lg text-sm hover:bg-muted">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
