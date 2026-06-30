@@ -359,13 +359,18 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           setProgress({ phase: 'saving', current: p.written, total: p.total, message: 'Saving tasks…' });
         });
 
-        // Switch the Today view to the first imported folder so users actually SEE the tasks.
-        if (firstImportedFolderId) {
-          await setSetting('todoSelectedFolder', firstImportedFolderId);
-          window.dispatchEvent(new Event('selectedFolderChanged'));
-        }
         window.dispatchEvent(new Event('tasksRestored'));
         window.dispatchEvent(new Event('tasksUpdated'));
+        // Switch the Today view to the first imported folder AFTER folders/tasks
+        // have been picked up by state listeners, so the selection isn't clobbered
+        // by the "default to first folder" effect.
+        if (firstImportedFolderId) {
+          await setSetting('todoSelectedFolder', firstImportedFolderId);
+          setTimeout(() => {
+            window.dispatchEvent(new Event('selectedFolderChanged'));
+          }, 150);
+        }
+
       }
       if (importResult.notes.length > 0) {
         const tagged = importResult.notes.map(n => ({
