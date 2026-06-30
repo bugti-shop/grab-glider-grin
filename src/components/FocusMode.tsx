@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, MoreHorizontal, X, ShieldAlert, Timer as TimerIcon, Maximize2, Music2, Check, Volume2, VolumeX, Bell, BellOff } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, X, ShieldAlert, Timer as TimerIcon, Maximize2, Music2, Check, Volume2, VolumeX, Bell, BellOff, ArrowDownToLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { addPomodoroSession } from '@/utils/pomodoroStorage';
 import { addNotification } from '@/utils/notificationStore';
 import { sendWebNotification, requestNotificationPermission } from '@/utils/webNotifications';
+import { setFocusBgState, clearFocusBgState, onFocusBgCommand } from '@/utils/focusBackgroundState';
+import { SoundLibrary } from '@/components/focus/SoundLibrary';
+import { FocusFlipClock } from '@/components/focus/FocusFlipClock';
+import { findTrack, FocusTrack } from '@/components/focus/FocusSounds';
 import bgMountain from '@/assets/focus/focus-mountain.jpg';
 import bgForest from '@/assets/focus/focus-forest.jpg';
 import bgOcean from '@/assets/focus/focus-ocean.jpg';
