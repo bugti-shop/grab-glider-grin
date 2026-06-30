@@ -194,6 +194,41 @@ export function extractUrlAndText(payload: string): { url: string; text: string 
   return { url: '', text: trimmed };
 }
 
+/**
+ * Strip common boilerplate from clipped article content: ad slots,
+ * "More Stories" rails, newsletter signups, footer menus, cookie banners,
+ * social-share rows, and "Read in app" / subscribe CTAs.
+ * Pure heuristics — safe on already-clean Readability output.
+ */
+export function cleanClippedContent(raw: string): string {
+  if (!raw) return '';
+  // Markers that, when matched on a line, cut everything from that line onward.
+  const cutMarkers: RegExp[] = [
+    /^\s*(more stories|related stories|related articles|read more|recommended for you|you may also like|trending now|popular now|most read)\b/i,
+    /^\s*(newsletter|subscribe to (our )?newsletter|sign up for (our )?newsletter|get the newsletter)\b/i,
+    /^\s*(footer|site map|sitemap|©\s*\d{4}|copyright\s*©?\s*\d{4})/i,
+    /^\s*(terms of (use|service)|privacy policy|cookie (policy|preferences)|do not sell my (personal )?info)/i,
+    /^\s*(follow us|share this article|share on (facebook|twitter|x|linkedin))/i,
+  ];
+  // Markers that drop only the matching line (ads, "Read in app", etc.).
+  const dropLine: RegExp[] = [
+    /\b(advertisement|sponsored|promoted content|ad\s*choices)\b/i,
+    /^\s*(read in app|open in app|continue in app|download the app)\b/i,
+    /^\s*(sign in|log in|subscribe now|become a member|create (a )?free account)\b/i,
+    /^\s*(skip to (content|main)|jump to (content|main))/i,
+    /^\s*(image|photo|caption|credit)\s*:/i,
+  ];
+  const lines = raw.replace(/\r\n/g, '\n').split('\n');
+  const out: string[] = [];
+  for (const line of lines) {
+    if (cutMarkers.some((re) => re.test(line))) break;
+    if (dropLine.some((re) => re.test(line))) continue;
+    out.push(line);
+  }
+  // Collapse 3+ blank lines, trim.
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 /** Build the markdown body of a clip note. */
 export function buildClipNoteBody(opts: {
   url?: string;
@@ -226,9 +261,14 @@ export function buildClipNoteBody(opts: {
     return body.trim();
   }
   if (selection) body += `> ${escapeMarkdown(selection)}\n\n`;
-  if (mode !== 'selection' && content) body += escapeMarkdown(content);
+  // Article / fullpage mode: scrub boilerplate before emitting.
+  if (mode !== 'selection' && content) {
+    const cleaned = mode === 'article' ? cleanClippedContent(content) : content;
+    if (cleaned) body += escapeMarkdown(cleaned);
+  }
   return body.trim();
 }
+
 
 /** Build a `/webclipper?…` URL from a normalized payload. Safe for navigation. */
 export function buildClipperUrl(payload: {
