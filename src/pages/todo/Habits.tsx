@@ -27,6 +27,7 @@ import { readActiveFocus, cleanupStaleFocusKeys, clearActiveFocus } from '@/util
 import { checkMilestones, milestoneEmoji } from '@/utils/habitMilestones';
 import { HabitImportSheet } from '@/components/habits/HabitImportSheet';
 import { isHabitDueOnDate as smartIsHabitDueOnDate, isMakeUpDay } from '@/utils/habitScheduler';
+import { applyStreakFreezes, freezesRemaining, getFreezeState } from '@/utils/habitFreezes';
 
 const Habits = () => {
   const navigate = useNavigate();
@@ -40,7 +41,25 @@ const Habits = () => {
 
   const load = useCallback(async () => {
     const loaded = await loadHabits();
-    setHabits(loaded.filter((h) => !h.isArchived));
+    // Apply streak freezes lazily for any active habit so the UI always
+    // reflects up-to-date streak protection. Persist only when changed.
+    const refreshed: Habit[] = [];
+    for (const h of loaded) {
+      if (h.isArchived) { refreshed.push(h); continue; }
+      const before = h.freezeState;
+      const after = applyStreakFreezes(h);
+      const changed =
+        after.currentStreak !== h.currentStreak ||
+        after.bestStreak !== h.bestStreak ||
+        JSON.stringify(after.freezeState) !== JSON.stringify(before);
+      if (changed) {
+        try { await saveHabit(after); } catch {}
+        refreshed.push(after);
+      } else {
+        refreshed.push(h);
+      }
+    }
+    setHabits(refreshed.filter((h) => !h.isArchived));
   }, []);
 
   useEffect(() => {
@@ -67,6 +86,24 @@ const Habits = () => {
     }
     navigate(`/todo/habits/${active.habitId}`, { replace: true });
   }, [navigate]);
+
+  // Handle widget tap deep-link: /todo/habits?check=<id> → cycle that habit.
+  useEffect(() => {
+    if (habits.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const checkId = params.get('check');
+    if (!checkId) return;
+    const target = habits.find((h) => h.id === checkId);
+    if (target) {
+      cycleStatus(target);
+      toast.success(`${target.emoji || '✨'} ${target.name} — checked in`);
+    }
+    // Clean the URL so a refresh doesn't re-trigger.
+    params.delete('check');
+    const next = window.location.pathname + (params.toString() ? `?${params}` : '');
+    window.history.replaceState({}, '', next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habits.length]);
 
   // 7-day strip ending today
   const weekDays = useMemo(() => {
@@ -296,6 +333,14 @@ const Habits = () => {
                 title="Rescheduled from a missed day"
               >
                 Make-up
+              </span>
+            )}
+            {(getFreezeState(h).frozenDates?.length ?? 0) > 0 && (
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-500/15 text-sky-600 dark:text-sky-300"
+                title={`Streak protected • ${freezesRemaining(h)} freeze${freezesRemaining(h) === 1 ? '' : 's'} left this month`}
+              >
+                ❄ {freezesRemaining(h)}
               </span>
             )}
           </div>

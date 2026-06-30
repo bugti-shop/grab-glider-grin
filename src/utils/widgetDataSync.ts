@@ -7,6 +7,9 @@ import { getSetting, setSetting } from './settingsStorage';
 import { Note, NoteType, TodoItem, Folder } from '@/types/note';
 import { loadFolders } from './folderStorage';
 import { loadStreakData } from './streakStorage';
+import { loadHabits } from './habitStorage';
+import { isHabitDueOnDate } from './habitScheduler';
+import { format } from 'date-fns';
 
 // Widget configuration types
 export interface WidgetConfig {
@@ -69,6 +72,7 @@ const WIDGET_CONFIG_KEY = `${WIDGET_PREFS_PREFIX}config`;
 const WIDGET_NOTES_BY_TYPE_KEY = `${WIDGET_PREFS_PREFIX}notes_by_type`;
 const WIDGET_FOLDERS_KEY = `${WIDGET_PREFS_PREFIX}folders`;
 const WIDGET_STREAK_KEY = `streak_data`;
+const WIDGET_HABITS_KEY = `${WIDGET_PREFS_PREFIX}habits`;
 
 /**
  * Widget Data Sync Manager
@@ -132,6 +136,7 @@ class WidgetDataSyncManager {
     window.addEventListener('sectionsUpdated', () => this.syncSections());
     window.addEventListener('foldersUpdated', () => this.syncFolders());
     window.addEventListener('streakUpdated', () => this.syncStreak());
+    window.addEventListener('habitsUpdated', () => this.syncHabits());
 
     console.log('[WidgetSync] Initialized successfully');
   }
@@ -177,6 +182,7 @@ class WidgetDataSyncManager {
         this.syncSections(),
         this.syncFolders(),
         this.syncStreak(),
+        this.syncHabits(),
       ]);
       console.log('[WidgetSync] All data synced');
     } catch (error) {
@@ -358,6 +364,53 @@ class WidgetDataSyncManager {
       this.notifyWidgetUpdate('streak');
     } catch (error) {
       console.error('[WidgetSync] Streak sync error:', error);
+    }
+  }
+
+  /**
+   * Sync today's habits to SharedPreferences for the HabitsListWidget.
+   * Limits to ~15 due-today habits with a tiny payload for fast widget renders.
+   */
+  async syncHabits(): Promise<void> {
+    try {
+      const all = await loadHabits();
+      const today = new Date();
+      const todayKey = format(today, 'yyyy-MM-dd');
+      const due = all.filter((h) => !h.isArchived && isHabitDueOnDate(h, today));
+
+      const habits = due.slice(0, 15).map((h) => {
+        const rec = h.completions.find((c) => c.date === todayKey);
+        const isAmount = h.goalType === 'amount' && (h.goalAmount ?? 0) > 0;
+        const done = isAmount
+          ? (rec?.amount ?? 0) >= (h.goalAmount ?? 1)
+          : !!rec?.completed;
+        return {
+          id: h.id,
+          name: h.name,
+          emoji: h.emoji || '✨',
+          color: h.color || '#3c78f0',
+          done,
+          streak: h.currentStreak || 0,
+          progress: isAmount ? `${rec?.amount ?? 0} / ${h.goalAmount} ${h.goalUnit || ''}`.trim() : '',
+        };
+      });
+
+      const doneCount = habits.filter((h) => h.done).length;
+      await Preferences.set({
+        key: WIDGET_HABITS_KEY,
+        value: JSON.stringify({
+          today: {
+            done: doneCount,
+            total: due.length,
+            label: format(today, 'EEEE, MMM d'),
+          },
+          habits,
+          lastUpdated: today.toISOString(),
+        }),
+      });
+      this.notifyWidgetUpdate('habits');
+    } catch (error) {
+      console.error('[WidgetSync] Habits sync error:', error);
     }
   }
 
