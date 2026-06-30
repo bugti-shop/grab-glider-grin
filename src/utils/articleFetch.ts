@@ -301,11 +301,12 @@ export const fetchArticleFromUrl = async (
   try {
     url = new URL(rawUrl.trim());
   } catch {
-    throw new Error('Please enter a valid URL (https://…)');
+    throw new ArticleFetchError('Please enter a valid URL (https://…)', 'invalid_url');
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new Error('Only http/https URLs are supported.');
+    throw new ArticleFetchError('Only http/https URLs are supported.', 'unsupported_protocol');
   }
+
 
   const raw = await fetchHtml(url.toString(), opts.signal);
   const doc = new DOMParser().parseFromString(raw, 'text/html');
