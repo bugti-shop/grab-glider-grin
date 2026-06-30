@@ -342,8 +342,12 @@ export const fetchArticleFromUrl = async (
   cleanNode(clone, baseHref || base);
 
   if ((clone.textContent || '').trim().length < 120) {
-    throw new Error('Could not find readable article content on this page.');
+    throw new ArticleFetchError(
+      'We reached the page but couldn\'t find readable article text — it may be a JS-only app, paywalled, or mostly media.',
+      'unreadable',
+    );
   }
+
 
   const headings = collectHeadings(clone);
   const html = sanitizeHtml(clone.innerHTML);
