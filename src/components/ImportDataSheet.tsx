@@ -112,6 +112,18 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
   const [pendingFileName, setPendingFileName] = useState<string>('');
   const [pendingColumnMap, setPendingColumnMap] = useState<CsvColumnMap | undefined>(undefined);
 
+  // Per-row mapping diagnostics surfaced in the result view.
+  type UnmappedRow = {
+    title: string;
+    originalFolderId?: string;
+    originalSectionId?: string;
+    reason: string;
+    fallbackFolder: string;
+    fallbackSection: string;
+  };
+  const [unmappedRows, setUnmappedRows] = useState<UnmappedRow[]>([]);
+
+
   const reset = () => {
     setSelectedSource(null);
     setResult(null);
