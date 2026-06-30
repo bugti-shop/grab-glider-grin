@@ -276,7 +276,7 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
   const BadgeIcon = badge.icon;
 
   return (
-    <div className="relative overflow-hidden rounded-lg perf-contain-item">
+    <div className="relative overflow-hidden rounded-lg perf-contain-item h-full w-full flex">
       {/* Swipe action backgrounds */}
       <div className="absolute inset-0 flex">
         {/* Left side actions - Favorite + Pin (swipe right reveals) */}
@@ -353,7 +353,7 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
           transform: `translateX(${swipeOffset}px)`,
         }}
       >
-        <div className="p-4">
+        <div className="p-4 h-full flex flex-col">
           <div className="flex items-start justify-between gap-2">
             {/* Selection checkbox */}
             {isSelectionMode && (
