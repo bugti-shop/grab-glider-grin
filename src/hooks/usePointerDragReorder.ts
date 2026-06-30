@@ -56,7 +56,7 @@ export interface PointerDragApi {
   };
   /** Spread onto a drag handle (or the whole row to make it draggable). */
   getHandleProps: (index: number) => {
-    onPointerDown: (e: React.PointerEvent) => void;
+    onPointerDownCapture: (e: React.PointerEvent) => void;
     style: React.CSSProperties;
   };
   /** True while the user is actively dragging an item. */
