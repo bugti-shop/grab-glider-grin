@@ -396,18 +396,27 @@ class WidgetDataSyncManager {
       });
 
       const doneCount = habits.filter((h) => h.done).length;
-      await Preferences.set({
-        key: WIDGET_HABITS_KEY,
-        value: JSON.stringify({
-          today: {
-            done: doneCount,
-            total: due.length,
-            label: format(today, 'EEEE, MMM d'),
-          },
-          habits,
-          lastUpdated: today.toISOString(),
-        }),
+      const payload = JSON.stringify({
+        today: {
+          done: doneCount,
+          total: due.length,
+          label: format(today, 'EEEE, MMM d'),
+        },
+        habits,
+        lastUpdated: today.toISOString(),
       });
+      await Preferences.set({ key: WIDGET_HABITS_KEY, value: payload });
+      // Also mirror to the iOS App Group so the WidgetKit extension can
+      // read the same payload via UserDefaults(suiteName:). No-op on Android.
+      if (Capacitor.getPlatform() === 'ios') {
+        try {
+          await Preferences.configure({ group: 'group.nota.npd.com.shareextension' });
+          await Preferences.set({ key: WIDGET_HABITS_KEY, value: payload });
+        } catch {}
+        try {
+          await Preferences.configure({ group: 'NativeStorage' });
+        } catch {}
+      }
       this.notifyWidgetUpdate('habits');
     } catch (error) {
       console.error('[WidgetSync] Habits sync error:', error);
