@@ -446,8 +446,6 @@ const Habits = () => {
 };
 
 export default Habits;
-    </div>
-  );
-};
+
 
 export default Habits;
