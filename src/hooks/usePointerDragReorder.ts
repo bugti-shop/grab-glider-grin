@@ -25,8 +25,12 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const LONG_PRESS_MS = 220;
-const MOVE_THRESHOLD_PX = 6;
+const LONG_PRESS_MS = 200;
+// Mouse / pen: activate immediately on small motion (click-and-drag).
+const MOUSE_MOVE_THRESHOLD_PX = 6;
+// Touch: tolerate finger wobble during the long-press hold so a straight
+// vertical press still arms the drag. Only obvious scroll motion aborts.
+const TOUCH_HOLD_TOLERANCE_PX = 10;
 const GHOST_OPACITY = 0.92;
 const PLACEHOLDER_HEIGHT_PX = 2;
 const PLACEHOLDER_COLOR = 'hsl(217 91% 60%)'; // blue accent — visual only
