@@ -86,6 +86,7 @@ interface FocusPrefs {
   whiteNoiseMuted: boolean;
   fullScreen: boolean;
   notifications: boolean;
+  soundTrackId: string | null; // selected track from SoundLibrary, null = synth white noise
 }
 
 const DEFAULT_PREFS: FocusPrefs = {
@@ -96,6 +97,7 @@ const DEFAULT_PREFS: FocusPrefs = {
   whiteNoiseMuted: false,
   fullScreen: false,
   notifications: true,
+  soundTrackId: null,
 };
 
 const loadPrefs = (): FocusPrefs => {
