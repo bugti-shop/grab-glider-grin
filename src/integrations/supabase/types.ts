@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_leads: {
+        Row: {
+          audience: string
+          company_name: string
+          contact_name: string
+          created_at: string
+          id: string
+          message: string | null
+          role: string | null
+          source: string | null
+          team_size: number
+          use_case: string | null
+          user_id: string | null
+          work_email: string
+        }
+        Insert: {
+          audience: string
+          company_name: string
+          contact_name: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          role?: string | null
+          source?: string | null
+          team_size: number
+          use_case?: string | null
+          user_id?: string | null
+          work_email: string
+        }
+        Update: {
+          audience?: string
+          company_name?: string
+          contact_name?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          role?: string | null
+          source?: string | null
+          team_size?: number
+          use_case?: string | null
+          user_id?: string | null
+          work_email?: string
+        }
+        Relationships: []
+      }
       countdowns: {
         Row: {
           created_at: string
