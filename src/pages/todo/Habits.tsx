@@ -447,5 +447,3 @@ const Habits = () => {
 
 export default Habits;
 
-
-export default Habits;
