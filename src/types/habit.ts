@@ -100,6 +100,15 @@ export interface Habit {
   /** Best streak ever (cached) */
   bestStreak: number;
 
+  /** Subjective difficulty for filtering and effort awareness. */
+  difficulty?: HabitDifficulty;
+
+  /**
+   * Day-count thresholds (e.g. 7, 30, 100) already celebrated for this habit.
+   * Used to avoid re-firing milestone toasts.
+   */
+  unlockedMilestones?: number[];
+
   isArchived: boolean;
   createdAt: string; // ISO
   updatedAt: string; // ISO
