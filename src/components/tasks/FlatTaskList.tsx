@@ -197,10 +197,39 @@ export function FlatTaskList({
     }
   }, [flat.length, onReorder]);
 
+  // Id → index map built from the frozen snapshot used during drag, so the
+  // hook can resolve the dragged row's *current* index right at drop time.
+  const flatIdIndexMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (let i = 0; i < flat.length; i++) {
+      const id = flat[i]?.task?.id;
+      if (id != null) m.set(String(id), i);
+    }
+    return m;
+  }, [flat]);
+  const getItemId = useCallback((i: number) => flat[i]?.task?.id ?? null, [flat]);
+  const resolveIndexById = useCallback((id: string | number) => {
+    const found = flatIdIndexMap.get(String(id));
+    return found == null ? -1 : found;
+  }, [flatIdIndexMap]);
+  const handleDragStart = useCallback(() => {
+    // Freeze the rendered list at the snapshot present when the drag began.
+    setFrozenIndex(liveFlatIndex);
+  }, [liveFlatIndex]);
+  const handleDragEnd = useCallback(() => {
+    // Release the freeze on the next frame so the post-reorder state can
+    // paint cleanly without a flicker back to the stale snapshot.
+    requestAnimationFrame(() => setFrozenIndex(null));
+  }, []);
+
   const pointerDrag = usePointerDragReorder({
     itemCount: flat.length,
     onReorder: handlePointerReorder,
     disabled: !dndEnabled,
+    getItemId,
+    resolveIndexById,
+    onDragStart: handleDragStart,
+    onDragEnd: handleDragEnd,
   });
 
   const move = useCallback(
