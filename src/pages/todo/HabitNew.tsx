@@ -122,8 +122,11 @@ const HabitNew = () => {
       if (h.startDate) setStartDate(new Date(h.startDate));
       setGoalDays(h.goalDays || 0);
       if (h.sectionId) setSectionId(h.sectionId);
-      if (h.reminder?.enabled) setReminderTime(h.reminder.time);
+      if (h.reminders && h.reminders.length > 0) setReminders(h.reminders);
+      else if (h.reminder?.enabled) setReminders([h.reminder]);
       setAutoPopup(!!h.autoPopupLog);
+      setKind(h.kind ?? 'build');
+      setChainAfterHabitId(h.chainAfterHabitId);
     })();
     return () => { cancelled = true; };
   }, [editId]);
