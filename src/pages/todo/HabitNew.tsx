@@ -15,14 +15,15 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
-import { Habit, HabitFrequencyType, HabitGoalType } from '@/types/habit';
+import { Habit, HabitFrequencyType, HabitGoalType, HabitKind, HabitReminder } from '@/types/habit';
 import { saveHabit, loadHabits } from '@/utils/habitStorage';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { loadHabitSections, DEFAULT_HABIT_SECTION_ID } from '@/utils/habitSectionsStorage';
+import { loadHabitSections, DEFAULT_HABIT_SECTION_ID, getHabitSectionTree } from '@/utils/habitSectionsStorage';
 import { genId } from '@/utils/genId';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/utils/haptics';
 import { scheduleHabitReminder, testHabitReminder } from '@/utils/habitReminders';
+import { RemindersList } from '@/components/habits/RemindersList';
 import { toast } from 'sonner';
 
 const ICON_GRID = [
