@@ -130,14 +130,36 @@ export const FlatView = ({
                 useWindow={virtualizationSettings.tasks.windowing}
                 onReorder={(from, to) => {
                   if (from === to) return;
+                  // `from`/`to` are indices into the flattened row list (which
+                  // includes promoted subtasks). Map them back to indices in
+                  // the root-only `virtualOrderedItems` array so the drop
+                  // lands exactly where the blue placeholder line was shown.
+                  const flatRows = flatIndex.flat;
+                  const fromRow = flatRows[from];
+                  if (!fromRow || fromRow.depth !== 0) return; // only root rows are reorderable
+                  const fromId = fromRow.task.id;
                   const ids = virtualOrderedItems.map(i => i.id);
-                  moveTaskInSectionOrder('flat-virtual', ids, from, to);
-                  // Persist new order for every section bucket touched so the
-                  // flat view stays consistent at scale (sections are merged
-                  // into one virtual list when virtualized).
-                  // Touch drops are verified immediately after `touchend`; flush
-                  // this tiny nonce update so the reordered index is reflected
-                  // in the virtualized UI before the event handler returns.
+                  const fromRootIdx = ids.indexOf(fromId);
+                  if (fromRootIdx === -1) return;
+
+                  // Resolve drop target. `to` is the post-removal insertion
+                  // index in the flat list. Find the nearest root row at or
+                  // after `to` (in the original flat list) and use its root
+                  // index as the insertion point. If past the end, append.
+                  let toRootIdx = ids.length - 1;
+                  const insertionFlatIdx = to >= from ? to + 1 : to; // restore pre-removal flat index
+                  let anchorRootId: string | null = null;
+                  for (let i = insertionFlatIdx; i < flatRows.length; i++) {
+                    if (flatRows[i].depth === 0) { anchorRootId = flatRows[i].task.id; break; }
+                  }
+                  if (anchorRootId) {
+                    const anchorIdx = ids.indexOf(anchorRootId);
+                    if (anchorIdx !== -1) toRootIdx = anchorIdx > fromRootIdx ? anchorIdx - 1 : anchorIdx;
+                  } else {
+                    toRootIdx = ids.length - 1; // dropped after last root → end
+                  }
+
+                  moveTaskInSectionOrder('flat-virtual', ids, fromRootIdx, toRootIdx);
                   flushSync(() => {
                     setLocalOrderVersion(v => v + 1);
                     setOrderVersion(v => v + 1);
