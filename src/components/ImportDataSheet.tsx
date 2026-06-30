@@ -257,60 +257,101 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       }
 
       // ── Task folders/sections (Today reads from settings: 'todoFolders' / 'todoSections') ──
-      let taskImportFolderId: string | undefined;
-      let defaultImportSectionId: string | undefined;
+      // Ensure every imported task lands in a real folder AND a real section:
+      //   1. Persist parser-supplied folders (or a single fallback if none).
+      //   2. Persist parser-supplied sections, remapping any dangling folderId
+      //      to the fallback.
+      //   3. For every folder that ends up holding tasks but has no section,
+      //      auto-create a default section so the task is never "section-less".
+      //   4. Re-tag each task with a valid (folderId, sectionId) pair.
       if (importResult.tasks.length > 0) {
         const existingTaskFolders = (await getSetting<NotesFolder[]>('todoFolders', [])) || [];
         const taskFolders = [...existingTaskFolders];
-        const existingIds = new Set(taskFolders.map(f => f.id));
+        const existingFolderIds = new Set(taskFolders.map(f => f.id));
 
-        if (importResult.folders && importResult.folders.length > 0) {
-          const imported = importResult.folders.map(f => withFolderDefaults(f));
-          imported.forEach(f => { if (!existingIds.has(f.id)) taskFolders.push(f); });
-          taskImportFolderId = imported[0]?.id;
+        const parserFolders = (importResult.folders || []).map(f => withFolderDefaults(f));
+        parserFolders.forEach(f => { if (!existingFolderIds.has(f.id)) taskFolders.push(f); });
+
+        let fallbackFolderId: string;
+        if (parserFolders.length === 0) {
+          fallbackFolderId = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-tasks-${Date.now()}`;
+          taskFolders.push(withFolderDefaults({ id: fallbackFolderId, name: importFolderName }));
         } else {
-          const id = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-tasks-${Date.now()}`;
-          taskImportFolderId = id;
-          taskFolders.push(withFolderDefaults({ id, name: importFolderName }));
+          fallbackFolderId = parserFolders[0].id;
         }
+        // (taskImportFolderId is reserved for downstream use if needed.)
+        void fallbackFolderId;
 
         await setSetting('todoFolders', taskFolders);
         window.dispatchEvent(new Event('foldersRestored'));
         window.dispatchEvent(new Event('foldersUpdated'));
 
+        const allTaskFolderIds = new Set(taskFolders.map(f => f.id));
         const existingSections = (await getSetting<TaskSection[]>('todoSections', [])) || [];
-        const importedSections = importResult.sections && importResult.sections.length > 0
-          ? importResult.sections.map((section, index) => ({
-              ...section,
-              color: section.color || '#3b82f6',
-              isCollapsed: false,
-              order: existingSections.length + index,
-              folderId: section.folderId || taskImportFolderId,
-            }))
-          : [];
-        if (importedSections.length === 0) {
-          defaultImportSectionId = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-section-${Date.now()}`;
-          importedSections.push({
-            id: defaultImportSectionId,
-            name: importFolderName,
+
+        const parserSections: TaskSection[] = (importResult.sections || []).map((section, index) => ({
+          ...section,
+          id: section.id || ((crypto as any).randomUUID ? crypto.randomUUID() : `imp-sec-${Date.now()}-${index}`),
+          color: section.color || '#3b82f6',
+          isCollapsed: false,
+          order: existingSections.length + index,
+          folderId: section.folderId && allTaskFolderIds.has(section.folderId) ? section.folderId : fallbackFolderId,
+        }));
+
+        // First section per folder (used as the default when a task has no sectionId).
+        const folderDefaultSectionId = new Map<string, string>();
+        parserSections.forEach(s => {
+          if (s.folderId && !folderDefaultSectionId.has(s.folderId)) folderDefaultSectionId.set(s.folderId, s.id);
+        });
+        existingSections.forEach(s => {
+          if (s.folderId && !folderDefaultSectionId.has(s.folderId)) folderDefaultSectionId.set(s.folderId, s.id);
+        });
+
+        // Which folders will actually receive tasks?
+        const foldersInUse = new Set<string>();
+        importResult.tasks.forEach(t => {
+          foldersInUse.add(t.folderId && allTaskFolderIds.has(t.folderId) ? t.folderId : fallbackFolderId);
+        });
+
+        // Auto-create a default section for any in-use folder that lacks one.
+        const autoSections: TaskSection[] = [];
+        let nextOrder = existingSections.length + parserSections.length;
+        foldersInUse.forEach(fid => {
+          if (folderDefaultSectionId.has(fid)) return;
+          const sid = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-sec-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          const folderName = taskFolders.find(f => f.id === fid)?.name || importFolderName;
+          autoSections.push({
+            id: sid,
+            name: folderName === importFolderName ? importFolderName : `Imported · ${folderName}`,
             color: '#3b82f6',
             isCollapsed: false,
-            order: existingSections.length,
-            folderId: taskImportFolderId,
+            order: nextOrder++,
+            folderId: fid,
           });
-        }
-        await setSetting('todoSections', [...existingSections, ...importedSections]);
-        window.dispatchEvent(new Event('sectionsRestored'));
-        window.dispatchEvent(new Event('sectionsUpdated'));
-      }
+          folderDefaultSectionId.set(fid, sid);
+        });
 
-      if (importResult.tasks.length > 0) {
-        const tagged = importResult.tasks.map(t => ({
-          ...t,
-          folderId: t.folderId || taskImportFolderId,
-          sectionId: t.sectionId || defaultImportSectionId,
-        }));
-        // Worker-backed chunked insert — keeps the UI alive at 10k+ items.
+        const allNewSections = [...parserSections, ...autoSections];
+        if (allNewSections.length > 0) {
+          await setSetting('todoSections', [...existingSections, ...allNewSections]);
+          window.dispatchEvent(new Event('sectionsRestored'));
+          window.dispatchEvent(new Event('sectionsUpdated'));
+        }
+
+        // Build the lookup set of all known sections for sectionId validation.
+        const allSectionIds = new Set<string>([
+          ...existingSections.map(s => s.id),
+          ...allNewSections.map(s => s.id),
+        ]);
+
+        const tagged = importResult.tasks.map(t => {
+          const folderId = (t.folderId && allTaskFolderIds.has(t.folderId)) ? t.folderId : fallbackFolderId;
+          const sectionId = (t.sectionId && allSectionIds.has(t.sectionId))
+            ? t.sectionId
+            : folderDefaultSectionId.get(folderId);
+          return { ...t, folderId, sectionId };
+        });
+
         await bulkPutTasksInWorker(tagged, false, (p) => {
           setProgress({ phase: 'saving', current: p.written, total: p.total, message: 'Saving tasks…' });
         });
