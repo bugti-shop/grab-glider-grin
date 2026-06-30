@@ -123,7 +123,13 @@ export function FlatTaskList({
   className,
 }: FlatTaskListProps) {
   const [virtualizationSettings] = useVirtualizationSettings();
-  const flatIndex = useMemo(() => index ?? flattenTasks(items), [index, items]);
+  const liveFlatIndex = useMemo(() => index ?? flattenTasks(items), [index, items]);
+  // Drag freeze: while a drag gesture is active we keep rendering the
+  // snapshot captured at drag-start so virtualization indices, row positions,
+  // and DOM keys cannot shift mid-gesture (e.g. from a concurrent task
+  // completion queue). Released after onReorder commits.
+  const [frozenIndex, setFrozenIndex] = useState<FlatTaskIndex | null>(null);
+  const flatIndex = frozenIndex ?? liveFlatIndex;
   const flat = flatIndex.flat;
   const resolvedRowHeight = rowHeight ?? virtualizationSettings.tasks.rowHeight;
   const resolvedOverscan = getAdaptiveOverscan(overscan ?? virtualizationSettings.tasks.overscan, flat.length);
