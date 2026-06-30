@@ -676,10 +676,42 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           )}
         </div>
 
-        <div className="flex items-center justify-center mb-8">
-          <button onClick={handleAction} className="px-12 py-3 rounded-full border border-white/80 text-white text-lg font-medium hover:bg-white/10 transition active:scale-95">
-            {actionLabel}
-          </button>
+        <div className="flex items-center justify-center gap-3 mb-8">
+          {(() => {
+            const hasSession = !!sessionRef.current;
+            if (remaining === 0) {
+              return (
+                <button onClick={() => discardSession(false)} className="px-10 py-3 rounded-full border border-white/80 text-white text-lg font-medium hover:bg-white/10 transition active:scale-95 inline-flex items-center gap-2">
+                  <Play className="h-5 w-5" /> Restart
+                </button>
+              );
+            }
+            if (!hasSession && !running) {
+              return (
+                <button onClick={startSession} className="px-12 py-3 rounded-full border border-white/80 text-white text-lg font-medium hover:bg-white/10 transition active:scale-95 inline-flex items-center gap-2">
+                  <Play className="h-5 w-5" /> Start
+                </button>
+              );
+            }
+            return (
+              <>
+                <button
+                  onClick={running ? pauseSession : resumeSession}
+                  className="px-8 py-3 rounded-full border border-white/80 text-white text-base font-medium hover:bg-white/10 transition active:scale-95 inline-flex items-center gap-2"
+                >
+                  {running ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                  {running ? 'Pause' : 'Resume'}
+                </button>
+                <button
+                  onClick={() => { discardSession(true); }}
+                  className="px-8 py-3 rounded-full bg-red-500/90 border border-red-400 text-white text-base font-medium hover:bg-red-500 transition active:scale-95 inline-flex items-center gap-2"
+                  aria-label="Stop focus"
+                >
+                  <Square className="h-5 w-5 fill-white" /> Stop
+                </button>
+              </>
+            );
+          })()}
         </div>
 
         <div className="grid grid-cols-4 gap-1 px-4">
