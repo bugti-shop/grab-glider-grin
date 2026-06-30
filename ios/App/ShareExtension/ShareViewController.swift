@@ -2,28 +2,12 @@
 //  ShareViewController.swift
 //  Flowist Share Extension
 //
-//  Receives content (URL / selected text / page snippet) from any iOS
+//  Receives content (URL / selected text / image / PDF) from any iOS
 //  app's Share sheet, writes it to the App Group's shared UserDefaults
 //  under the `sharedItems` key, then opens the main Flowist app via
-//  the custom URL scheme. The main app's `send-intent` plugin then
-//  reads the App Group payload and `useShareIntent` forwards it to
-//  /webclipper.
-//
-//  REQUIRED Xcode wiring (manual — must be done on your Mac):
-//   1. Open `ios/App/App.xcworkspace`.
-//   2. File → New → Target → Share Extension. Name: "ShareExtension",
-//      Bundle ID suffix: `.shareextension`.
-//   3. Replace the generated `ShareViewController.swift` with THIS file.
-//   4. Replace the generated `Info.plist` with `Info.plist` from this
-//      same folder (handles text + URL activation rules).
-//   5. In both the App target AND the ShareExtension target:
-//        Signing & Capabilities → + Capability → App Groups
-//        → add `group.nota.npd.com.shareextension`
-//   6. Add a URL scheme to the main app's Info.plist:
-//        CFBundleURLSchemes → ["flowist"]
-//   7. Build → Run on a device or simulator.
-//
-//  See SHARE_CLIPPER_TESTING.md for the end-to-end checklist.
+//  the `flowist://` URL scheme. The main app's `send-intent` plugin
+//  then reads the App Group payload and `useShareIntent` forwards it
+//  to /webclipper.
 //
 
 import UIKit
@@ -36,9 +20,6 @@ class ShareViewController: UIViewController {
     // MUST match the App Group ID added in Signing & Capabilities for
     // BOTH the main app target and this extension target.
     private let appGroupId = "group.nota.npd.com.shareextension"
-
-    // Main app's custom URL scheme — defined in the main app's Info.plist
-    // under CFBundleURLTypes → CFBundleURLSchemes.
     private let hostAppScheme = "flowist"
 
     override func viewDidLoad() {
@@ -57,15 +38,16 @@ class ShareViewController: UIViewController {
 
         var collected: [[String: String]] = []
         let group = DispatchGroup()
+        let titleHint = extensionItem.attributedContentText?.string
 
         for provider in attachments {
-            // Plain text (selection share from Safari, Notes, etc.)
+            // ---- Plain text (selection / snippet) ----
             if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
                 group.enter()
                 provider.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { item, _ in
                     if let text = item as? String {
                         collected.append([
-                            "title": extensionItem.attributedContentText?.string ?? "Shared text",
+                            "title": titleHint ?? "Shared text",
                             "type": "text/plain",
                             "url": text
                         ])
@@ -73,18 +55,57 @@ class ShareViewController: UIViewController {
                     group.leave()
                 }
             }
-            // URL (link share from Chrome, Safari, Twitter, etc.)
+
+            // ---- URL (link share from Chrome, Safari, Twitter…) ----
             if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
                 group.enter()
                 provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { item, _ in
                     if let url = item as? URL {
                         collected.append([
-                            "title": extensionItem.attributedContentText?.string ?? url.host ?? "Shared link",
+                            "title": titleHint ?? url.host ?? "Shared link",
                             "type": "text/url",
                             "url": url.absoluteString
                         ])
                     }
                     group.leave()
+                }
+            }
+
+            // ---- Image (from Photos / Files / camera roll) ----
+            if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                group.enter()
+                provider.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) { item, _ in
+                    defer { group.leave() }
+                    if let url = item as? URL, let saved = self.copyToAppGroup(srcURL: url, ext: url.pathExtension.isEmpty ? "jpg" : url.pathExtension) {
+                        collected.append([
+                            "title": titleHint ?? "Shared image",
+                            "type": "image/*",
+                            "url": saved.absoluteString
+                        ])
+                    } else if let img = item as? UIImage,
+                              let data = img.jpegData(compressionQuality: 0.92),
+                              let saved = self.writeDataToAppGroup(data: data, ext: "jpg") {
+                        collected.append([
+                            "title": titleHint ?? "Shared image",
+                            "type": "image/*",
+                            "url": saved.absoluteString
+                        ])
+                    }
+                }
+            }
+
+            // ---- PDF ----
+            if provider.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) {
+                group.enter()
+                provider.loadItem(forTypeIdentifier: UTType.pdf.identifier, options: nil) { item, _ in
+                    defer { group.leave() }
+                    if let url = item as? URL, let saved = self.copyToAppGroup(srcURL: url, ext: "pdf") {
+                        collected.append([
+                            "title": titleHint ?? url.lastPathComponent,
+                            "type": "application/pdf",
+                            "url": saved.absoluteString
+                        ])
+                    }
                 }
             }
         }
@@ -97,12 +118,44 @@ class ShareViewController: UIViewController {
         }
     }
 
+    // Persists binary attachments into the App Group container so the
+    // main app can read them as `file://` URLs.
+    private func copyToAppGroup(srcURL: URL, ext: String) -> URL? {
+        guard let containerURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else { return nil }
+        let inboxDir = containerURL.appendingPathComponent("shareInbox", isDirectory: true)
+        try? FileManager.default.createDirectory(at: inboxDir, withIntermediateDirectories: true)
+        let dest = inboxDir.appendingPathComponent("\(UUID().uuidString).\(ext)")
+        do {
+            if FileManager.default.fileExists(atPath: dest.path) {
+                try FileManager.default.removeItem(at: dest)
+            }
+            try FileManager.default.copyItem(at: srcURL, to: dest)
+            return dest
+        } catch {
+            return nil
+        }
+    }
+
+    private func writeDataToAppGroup(data: Data, ext: String) -> URL? {
+        guard let containerURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else { return nil }
+        let inboxDir = containerURL.appendingPathComponent("shareInbox", isDirectory: true)
+        try? FileManager.default.createDirectory(at: inboxDir, withIntermediateDirectories: true)
+        let dest = inboxDir.appendingPathComponent("\(UUID().uuidString).\(ext)")
+        do {
+            try data.write(to: dest)
+            return dest
+        } catch {
+            return nil
+        }
+    }
+
     private func persistToAppGroup(items: [[String: String]]) {
         guard
             !items.isEmpty,
             let defaults = UserDefaults(suiteName: appGroupId)
         else { return }
-        // The `send-intent` plugin reads this key on the JS side.
         defaults.set(items, forKey: "sharedItems")
         defaults.synchronize()
     }
@@ -118,7 +171,6 @@ class ShareViewController: UIViewController {
             }
             responder = r.next
         }
-        // Fallback for iOS 18+: openURL via the extensionContext if available.
         _ = self.extensionContext?.open(url, completionHandler: nil)
     }
 
