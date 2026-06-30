@@ -27,6 +27,7 @@ import { readActiveFocus, cleanupStaleFocusKeys, clearActiveFocus } from '@/util
 import { checkMilestones, milestoneEmoji } from '@/utils/habitMilestones';
 import { HabitImportSheet } from '@/components/habits/HabitImportSheet';
 import { isHabitDueOnDate as smartIsHabitDueOnDate, isMakeUpDay } from '@/utils/habitScheduler';
+import { applyStreakFreezes, freezesRemaining, getFreezeState } from '@/utils/habitFreezes';
 
 const Habits = () => {
   const navigate = useNavigate();
@@ -40,7 +41,25 @@ const Habits = () => {
 
   const load = useCallback(async () => {
     const loaded = await loadHabits();
-    setHabits(loaded.filter((h) => !h.isArchived));
+    // Apply streak freezes lazily for any active habit so the UI always
+    // reflects up-to-date streak protection. Persist only when changed.
+    const refreshed: Habit[] = [];
+    for (const h of loaded) {
+      if (h.isArchived) { refreshed.push(h); continue; }
+      const before = h.freezeState;
+      const after = applyStreakFreezes(h);
+      const changed =
+        after.currentStreak !== h.currentStreak ||
+        after.bestStreak !== h.bestStreak ||
+        JSON.stringify(after.freezeState) !== JSON.stringify(before);
+      if (changed) {
+        try { await saveHabit(after); } catch {}
+        refreshed.push(after);
+      } else {
+        refreshed.push(h);
+      }
+    }
+    setHabits(refreshed.filter((h) => !h.isArchived));
   }, []);
 
   useEffect(() => {
