@@ -17,8 +17,7 @@ import {
   parseCSVHeaders,
   autoDetectColumnMap,
 } from '@/utils/importData';
-import { loadNotesFromDB, saveNotesToDB, bulkPutNotesInDB } from '@/utils/noteStorage';
-import { loadTodoItems, saveTodoItems } from '@/utils/todoItemsStorage';
+import { bulkPutNotesInDB } from '@/utils/noteStorage';
 import { bulkPutTasksInWorker } from '@/utils/taskStorage';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import type { Folder as NotesFolder, TaskSection } from '@/types/note';
