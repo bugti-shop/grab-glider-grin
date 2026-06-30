@@ -560,9 +560,21 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   const filled = Math.round(ticks * progress);
 
   const content = (
-    <div className="fixed inset-0 z-[100] text-white" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${bg})` }} />
-      <div className="absolute inset-0 bg-black/35" />
+    <div
+      className="fixed inset-0 z-[100] text-white"
+      role="dialog"
+      aria-modal="true"
+      style={backgrounded ? { opacity: 0, pointerEvents: 'none' } : undefined}
+      aria-hidden={backgrounded || undefined}
+    >
+      {prefs.fullScreen ? (
+        <div className="absolute inset-0 bg-black" />
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${bg})` }} />
+          <div className="absolute inset-0 bg-black/35" />
+        </>
+      )}
 
       <div className="relative h-full w-full flex flex-col" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)', paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
         <div className="flex items-center justify-between px-4">
