@@ -601,32 +601,42 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
         )}
 
         <div className="flex-1 flex flex-col items-center justify-center select-none">
-          <div className="relative" style={{ width: size, height: size }}>
-            <svg width={size} height={size} className="-rotate-90 absolute inset-0">
-              {Array.from({ length: ticks }).map((_, i) => {
-                const angle = (i / ticks) * Math.PI * 2;
-                const x1 = cx + Math.cos(angle) * (r - 14);
-                const y1 = cy + Math.sin(angle) * (r - 14);
-                const x2 = cx + Math.cos(angle) * r;
-                const y2 = cy + Math.sin(angle) * r;
-                const isActive = i < filled;
-                const isHead = i === filled - 1 || (filled === 0 && i === 0);
-                return (
-                  <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-                    stroke={isHead && progress > 0 ? '#ff4d4f' : 'rgba(255,255,255,0.55)'}
-                    strokeWidth={isHead && progress > 0 ? 4 : 2}
-                    strokeLinecap="round"
-                    opacity={isActive ? 0.95 : 0.35}
-                  />
-                );
-              })}
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <button onClick={() => !running && setShowDurations(true)} className="font-light tabular-nums text-white" style={{ fontSize: hh > 0 ? 56 : 68, letterSpacing: 1 }}>
-                {timeStr}
-              </button>
+          {prefs.fullScreen ? (
+            <button
+              onClick={() => !running && setShowDurations(true)}
+              className="w-full flex items-center justify-center"
+              aria-label="Change duration"
+            >
+              <FocusFlipClock hours={hh} minutes={mm} seconds={ss} showHours={hh > 0} />
+            </button>
+          ) : (
+            <div className="relative" style={{ width: size, height: size }}>
+              <svg width={size} height={size} className="-rotate-90 absolute inset-0">
+                {Array.from({ length: ticks }).map((_, i) => {
+                  const angle = (i / ticks) * Math.PI * 2;
+                  const x1 = cx + Math.cos(angle) * (r - 14);
+                  const y1 = cy + Math.sin(angle) * (r - 14);
+                  const x2 = cx + Math.cos(angle) * r;
+                  const y2 = cy + Math.sin(angle) * r;
+                  const isActive = i < filled;
+                  const isHead = i === filled - 1 || (filled === 0 && i === 0);
+                  return (
+                    <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+                      stroke={isHead && progress > 0 ? '#ff4d4f' : 'rgba(255,255,255,0.55)'}
+                      strokeWidth={isHead && progress > 0 ? 4 : 2}
+                      strokeLinecap="round"
+                      opacity={isActive ? 0.95 : 0.35}
+                    />
+                  );
+                })}
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <button onClick={() => !running && setShowDurations(true)} className="font-light tabular-nums text-white" style={{ fontSize: hh > 0 ? 56 : 68, letterSpacing: 1 }}>
+                  {timeStr}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
           {!running && remaining === total && (
             <button onClick={() => setShowDurations(true)} className="mt-3 text-xs uppercase tracking-widest text-white/70 hover:text-white">
               {prefs.durationMin} min · tap to change
