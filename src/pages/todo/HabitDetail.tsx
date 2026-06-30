@@ -51,6 +51,10 @@ const HabitDetail = () => {
   const [focusSecs, setFocusSecs] = useState(25 * 60);
   const [focusRunning, setFocusRunning] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reflectionOpen, setReflectionOpen] = useState(false);
+  const [reflectionDate, setReflectionDate] = useState<string>('');
+  const [reflectionReadOnly, setReflectionReadOnly] = useState(false);
+  const [parentHabit, setParentHabit] = useState<Habit | null>(null);
   // Sweep finished/stale focus entries from prior sessions once per mount.
   useEffect(() => { cleanupStaleFocusKeys(); }, []);
 
