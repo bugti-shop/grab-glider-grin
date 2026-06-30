@@ -511,17 +511,6 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     ? `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
     : `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
 
-  const handleAction = () => {
-    if (remaining === 0) {
-      discardSession(false);
-      return;
-    }
-    if (running) pauseSession();
-    else if (sessionRef.current) resumeSession();
-    else startSession();
-  };
-
-  const actionLabel = remaining === 0 ? 'Restart' : running ? 'Pause' : (sessionRef.current ? 'Resume' : 'Start');
 
   const attemptClose = () => {
     if (prefs.strict && running) { setConfirmExit(true); return; }
