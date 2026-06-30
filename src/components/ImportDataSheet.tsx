@@ -534,6 +534,42 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
               )}
             </div>
 
+            {unmappedRows.length > 0 && (
+              <details className="w-full mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3" open>
+                <summary className="cursor-pointer text-xs font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {unmappedRows.length} row{unmappedRows.length === 1 ? '' : 's'} fell back to default mapping
+                </summary>
+                <div className="mt-2 max-h-64 overflow-auto rounded border border-amber-500/30 bg-background/60">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/60 text-muted-foreground">
+                      <tr>
+                        <th className="text-left px-2 py-1.5 font-medium">Title</th>
+                        <th className="text-left px-2 py-1.5 font-medium">Reason</th>
+                        <th className="text-left px-2 py-1.5 font-medium">→ Folder</th>
+                        <th className="text-left px-2 py-1.5 font-medium">→ Section</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {unmappedRows.slice(0, 200).map((r, i) => (
+                        <tr key={i} className="align-top">
+                          <td className="px-2 py-1.5 text-foreground truncate max-w-[10rem]" title={r.title}>{r.title}</td>
+                          <td className="px-2 py-1.5 text-muted-foreground font-mono">{r.reason}</td>
+                          <td className="px-2 py-1.5 text-muted-foreground">{r.fallbackFolder}</td>
+                          <td className="px-2 py-1.5 text-muted-foreground">{r.fallbackSection}</td>
+                        </tr>
+                      ))}
+                      {unmappedRows.length > 200 && (
+                        <tr><td colSpan={4} className="px-2 py-1.5 italic text-muted-foreground">…and {unmappedRows.length - 200} more</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+
+
+
             {result.errors && result.errors.length > 0 && (
               <details className="w-full mt-2 rounded-lg border border-border bg-muted/30 p-3">
                 <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
