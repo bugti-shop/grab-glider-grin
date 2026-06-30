@@ -334,15 +334,37 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   // ---- White noise side effects ------------------------------------------
   useEffect(() => {
     if (prefs.whiteNoise && running && !prefs.whiteNoiseMuted) {
-      noise.start(prefs.whiteNoiseVolume);
+      const total = prefs.durationMin * 60;
+      const progress = total > 0 ? 1 - remaining / total : 0;
+      const initial = prefs.whiteNoiseAdaptive
+        ? adaptiveNoiseTarget(new Date().getHours(), progress)
+        : { cutoff: 8000, q: 0.7 };
+      noise.start(prefs.whiteNoiseVolume, initial);
     } else {
       noise.stop();
     }
-  }, [prefs.whiteNoise, prefs.whiteNoiseMuted, running, noise, prefs.whiteNoiseVolume]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs.whiteNoise, prefs.whiteNoiseMuted, running, prefs.whiteNoiseVolume, prefs.whiteNoiseAdaptive]);
 
   useEffect(() => {
     if (noise.isRunning()) noise.setVolume(prefs.whiteNoiseMuted ? 0 : prefs.whiteNoiseVolume);
   }, [prefs.whiteNoiseVolume, prefs.whiteNoiseMuted, noise]);
+
+  // Adaptive: drift the lowpass cutoff/Q over time. Recomputes every ~5s
+  // using current hour-of-day and session progress.
+  useEffect(() => {
+    if (!prefs.whiteNoise || !running || !prefs.whiteNoiseAdaptive) return;
+    const tick = () => {
+      const total = prefs.durationMin * 60;
+      const progress = total > 0 ? 1 - remaining / total : 0;
+      noise.adapt(adaptiveNoiseTarget(new Date().getHours(), progress));
+    };
+    tick();
+    const id = setInterval(tick, 5000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs.whiteNoise, prefs.whiteNoiseAdaptive, running, prefs.durationMin]);
+
 
   // ---- Lifecycle: start / pause / resume / complete -----------------------
   const startSession = () => {
