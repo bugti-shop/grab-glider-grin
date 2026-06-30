@@ -136,6 +136,8 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
     setPendingText('');
     setPendingFileName('');
     setPendingColumnMap(undefined);
+    setUnmappedRows([]);
+
   };
 
   const handleSourceSelect = (source: ImportSource) => {
