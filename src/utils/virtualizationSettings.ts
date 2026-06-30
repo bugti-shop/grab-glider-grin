@@ -14,19 +14,16 @@ export interface VirtualizationSettings {
   };
 }
 
-// Bumped to v2 when the notes row-height default was tightened so existing
-// installs adopt the new compact spacing instead of inheriting the old 165px.
-const STORAGE_KEY = 'flowist:virtualization-settings:v3';
+const STORAGE_KEY = 'flowist:virtualization-settings:v4';
 const EVENT_NAME = 'flowist:virtualization-settings-changed';
 
 export const DEFAULT_VIRTUALIZATION_SETTINGS: VirtualizationSettings = {
   notes: {
     overscan: 6,
-    // Tuned to the natural NoteCard height (title + 2-line preview + footer
-    // chip + 16px internal padding ≈ 116-120px). Keeping the row tight
-    // eliminates the large white gap between cards while still leaving room
-    // for the 8px inter-row padding rendered inside the row container.
-    rowHeight: 145,
+    // 148px row keeps a uniform gap between cards regardless of content
+    // length. Combined with `h-full` on the card itself, empty/blank notes
+    // stretch to fill the row so the spacing never looks lopsided.
+    rowHeight: 148,
     windowing: true,
   },
   tasks: {
