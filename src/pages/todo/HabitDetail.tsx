@@ -382,7 +382,24 @@ const HabitDetail = () => {
           <span>{habit.emoji || '✨'}</span>
         </div>
         <h1 className="mt-8 text-white text-[34px] font-extrabold leading-tight drop-shadow-sm">{habit.name}</h1>
-        <p className="mt-2 text-white/85 text-[15px]">{habit.quote || 'Keep going, one day at a time'}</p>
+        <p className="mt-2 text-white/85 text-[15px]">
+          {isAvoid
+            ? `Days clean: ${streak} · Best clean streak: ${bestStreak}`
+            : habit.quote || 'Keep going, one day at a time'}
+        </p>
+        {parentHabit && (
+          <p className="mt-2 text-white/75 text-[12px]">
+            After: {parentHabit.emoji || '✨'} {parentHabit.name}
+          </p>
+        )}
+        {(habit.goalDays ?? 0) > 0 && (
+          <div className="mt-4 max-w-sm mx-auto">
+            <Progress value={Math.min(100, Math.round((totalCheckins / (habit.goalDays || 1)) * 100))} className="h-2 bg-white/30" />
+            <p className="text-white/80 text-[12px] mt-1.5">
+              Day {Math.min(totalCheckins, habit.goalDays || 0)} of {habit.goalDays}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Tap-to-check OR achieved stats card */}
