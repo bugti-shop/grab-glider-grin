@@ -368,6 +368,53 @@ class WidgetDataSyncManager {
   }
 
   /**
+   * Sync today's habits to SharedPreferences for the HabitsListWidget.
+   * Limits to ~15 due-today habits with a tiny payload for fast widget renders.
+   */
+  async syncHabits(): Promise<void> {
+    try {
+      const all = await loadHabits();
+      const today = new Date();
+      const todayKey = format(today, 'yyyy-MM-dd');
+      const due = all.filter((h) => !h.isArchived && isHabitDueOnDate(h, today));
+
+      const habits = due.slice(0, 15).map((h) => {
+        const rec = h.completions.find((c) => c.date === todayKey);
+        const isAmount = h.goalType === 'amount' && (h.goalAmount ?? 0) > 0;
+        const done = isAmount
+          ? (rec?.amount ?? 0) >= (h.goalAmount ?? 1)
+          : !!rec?.completed;
+        return {
+          id: h.id,
+          name: h.name,
+          emoji: h.emoji || '✨',
+          color: h.color || '#3c78f0',
+          done,
+          streak: h.currentStreak || 0,
+          progress: isAmount ? `${rec?.amount ?? 0} / ${h.goalAmount} ${h.goalUnit || ''}`.trim() : '',
+        };
+      });
+
+      const doneCount = habits.filter((h) => h.done).length;
+      await Preferences.set({
+        key: WIDGET_HABITS_KEY,
+        value: JSON.stringify({
+          today: {
+            done: doneCount,
+            total: due.length,
+            label: format(today, 'EEEE, MMM d'),
+          },
+          habits,
+          lastUpdated: today.toISOString(),
+        }),
+      });
+      this.notifyWidgetUpdate('habits');
+    } catch (error) {
+      console.error('[WidgetSync] Habits sync error:', error);
+    }
+  }
+
+  /**
    * Save widget configuration
    */
   async saveWidgetConfig(configs: WidgetConfig[]): Promise<void> {
