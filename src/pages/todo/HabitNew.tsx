@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
-import { Habit, HabitFrequencyType, HabitGoalType, HabitKind, HabitReminder } from '@/types/habit';
+import { Habit, HabitDifficulty, HabitFrequencyType, HabitGoalType, HabitKind, HabitReminder } from '@/types/habit';
 import { saveHabit, loadHabits } from '@/utils/habitStorage';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { loadHabitSections, DEFAULT_HABIT_SECTION_ID, getHabitSectionTree } from '@/utils/habitSectionsStorage';
@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/utils/haptics';
 import { scheduleHabitReminder, testHabitReminder } from '@/utils/habitReminders';
 import { RemindersList } from '@/components/habits/RemindersList';
+import { HABIT_COLOR_SWATCHES, DEFAULT_HABIT_COLOR } from '@/utils/habitColors';
 import { toast } from 'sonner';
 
 const ICON_GRID = [
