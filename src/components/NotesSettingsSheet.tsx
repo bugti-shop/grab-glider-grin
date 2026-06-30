@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { toast } from 'sonner';
 import { useHardwareBackButton } from '@/hooks/useHardwareBackButton';
+import { OrganizeModeRow } from './OrganizeModeRow';
 import {
   Select,
   SelectContent,
