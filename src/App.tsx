@@ -838,6 +838,7 @@ const AppContent = () => {
       <Sonner />
       <PerfDiagnosticsPanel />
       <FocusBackgroundBar />
+      <RadixPointerEventsRescue />
       
       
       {showOnboarding && (
