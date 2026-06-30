@@ -109,6 +109,18 @@ export interface Habit {
    */
   unlockedMilestones?: number[];
 
+  /**
+   * Per-habit streak-freeze state. Defaults to 2 free passes per calendar
+   * month, auto-consumed on missed scheduled days to keep streak intact.
+   * Populated lazily by `applyStreakFreezes` — see `utils/habitFreezes.ts`.
+   */
+  freezeState?: {
+    freezesPerMonth: number;
+    freezesUsedThisMonth: number;
+    freezeMonth: string;
+    frozenDates: string[];
+  };
+
   isArchived: boolean;
   createdAt: string; // ISO
   updatedAt: string; // ISO
