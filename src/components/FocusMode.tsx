@@ -702,9 +702,12 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           />
           <OptionButton
             icon={<Music2 className="h-6 w-6" />}
-            label="White Noise"
+            label={prefs.whiteNoise ? 'Sounds' : 'White Noise'}
             active={prefs.whiteNoise}
-            onClick={() => updatePrefs({ whiteNoise: !prefs.whiteNoise })}
+            onClick={() => {
+              if (prefs.whiteNoise) setShowSoundLib(true);
+              else updatePrefs({ whiteNoise: true });
+            }}
           />
         </div>
       </div>
