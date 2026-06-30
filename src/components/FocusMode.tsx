@@ -81,6 +81,7 @@ interface FocusPrefs {
   whiteNoise: boolean;
   whiteNoiseVolume: number; // 0..1
   whiteNoiseMuted: boolean;
+  whiteNoiseAdaptive: boolean; // evolve cutoff/warmth by time-of-day + progress
   fullScreen: boolean;
   notifications: boolean;
 }
@@ -91,8 +92,27 @@ const DEFAULT_PREFS: FocusPrefs = {
   whiteNoise: false,
   whiteNoiseVolume: 0.4,
   whiteNoiseMuted: false,
+  whiteNoiseAdaptive: true,
   fullScreen: false,
   notifications: true,
+};
+
+// ---- Adaptive noise profile -----------------------------------------------
+// Returns target lowpass cutoff (Hz) and Q based on local hour-of-day and
+// session progress (0..1). Morning is brighter/airier, evening warms down,
+// and the soundscape gradually darkens as the session progresses so attention
+// drifts inward.
+const adaptiveNoiseTarget = (hour: number, progress: number) => {
+  let baseCutoff: number;
+  if (hour >= 5 && hour < 11) baseCutoff = 4800;        // morning — crisp
+  else if (hour >= 11 && hour < 17) baseCutoff = 3400;  // midday — focused
+  else if (hour >= 17 && hour < 22) baseCutoff = 1900;  // evening — warm
+  else baseCutoff = 1100;                                // night — deep
+  // Darken over the session: 1.0 → ~0.55
+  const p = Math.max(0, Math.min(1, progress));
+  const cutoff = Math.max(550, baseCutoff * (1 - p * 0.45));
+  const q = 0.55 + p * 0.35;
+  return { cutoff, q };
 };
 
 const loadPrefs = (): FocusPrefs => {
