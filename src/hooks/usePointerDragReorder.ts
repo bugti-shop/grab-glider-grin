@@ -302,12 +302,18 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     const s = stateRef.current;
     if (!s) return;
     if (s.active && s.moved) {
-      const finalHit = hitTestIndex(e.clientX, e.clientY);
-      if (finalHit) {
-        s.lastToIndex = finalHit.before ? finalHit.index : finalHit.index + 1;
-        s.lastToBefore = finalHit.before;
-        const slot = document.querySelector<HTMLElement>(`[${itemAttr}="${finalHit.index}"]`);
-        s.lastToId = slot?.getAttribute('data-pdrag-id') ?? null;
+      // Snap to the last placeholder position rather than re-hit-testing at
+      // pointerup. The blue line the user sees IS the drop target — trust it.
+      // Only fall back to a fresh hit-test if no placeholder was ever shown
+      // (e.g. drop happened before the first move event).
+      if (s.lastToId == null) {
+        const finalHit = hitTestIndex(e.clientX, e.clientY);
+        if (finalHit) {
+          s.lastToIndex = finalHit.before ? finalHit.index : finalHit.index + 1;
+          s.lastToBefore = finalHit.before;
+          const slot = document.querySelector<HTMLElement>(`[${itemAttr}="${finalHit.index}"]`);
+          s.lastToId = slot?.getAttribute('data-pdrag-id') ?? null;
+        }
       }
       // Resolve indices against the *current* list at drop time using stable
       // ids. This neutralizes any reconciliation (task completion, sync, etc.)
