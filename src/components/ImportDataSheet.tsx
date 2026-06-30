@@ -264,6 +264,10 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       //   3. For every folder that ends up holding tasks but has no section,
       //      auto-create a default section so the task is never "section-less".
       //   4. Re-tag each task with a valid (folderId, sectionId) pair.
+      let unmappedFolderCount = 0;
+      let unmappedSectionCount = 0;
+      let firstImportedFolderId: string | undefined;
+
       if (importResult.tasks.length > 0) {
         const existingTaskFolders = (await getSetting<NotesFolder[]>('todoFolders', [])) || [];
         const taskFolders = [...existingTaskFolders];
@@ -279,8 +283,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
         } else {
           fallbackFolderId = parserFolders[0].id;
         }
-        // (taskImportFolderId is reserved for downstream use if needed.)
-        void fallbackFolderId;
+        firstImportedFolderId = fallbackFolderId;
 
         await setSetting('todoFolders', taskFolders);
         window.dispatchEvent(new Event('foldersRestored'));
@@ -298,7 +301,6 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           folderId: section.folderId && allTaskFolderIds.has(section.folderId) ? section.folderId : fallbackFolderId,
         }));
 
-        // First section per folder (used as the default when a task has no sectionId).
         const folderDefaultSectionId = new Map<string, string>();
         parserSections.forEach(s => {
           if (s.folderId && !folderDefaultSectionId.has(s.folderId)) folderDefaultSectionId.set(s.folderId, s.id);
@@ -307,13 +309,11 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           if (s.folderId && !folderDefaultSectionId.has(s.folderId)) folderDefaultSectionId.set(s.folderId, s.id);
         });
 
-        // Which folders will actually receive tasks?
         const foldersInUse = new Set<string>();
         importResult.tasks.forEach(t => {
           foldersInUse.add(t.folderId && allTaskFolderIds.has(t.folderId) ? t.folderId : fallbackFolderId);
         });
 
-        // Auto-create a default section for any in-use folder that lacks one.
         const autoSections: TaskSection[] = [];
         let nextOrder = existingSections.length + parserSections.length;
         foldersInUse.forEach(fid => {
@@ -323,10 +323,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           autoSections.push({
             id: sid,
             name: folderName === importFolderName ? importFolderName : `Imported · ${folderName}`,
-            color: '#3b82f6',
-            isCollapsed: false,
-            order: nextOrder++,
-            folderId: fid,
+            color: '#3b82f6', isCollapsed: false, order: nextOrder++, folderId: fid,
           });
           folderDefaultSectionId.set(fid, sid);
         });
@@ -338,23 +335,35 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           window.dispatchEvent(new Event('sectionsUpdated'));
         }
 
-        // Build the lookup set of all known sections for sectionId validation.
         const allSectionIds = new Set<string>([
           ...existingSections.map(s => s.id),
           ...allNewSections.map(s => s.id),
         ]);
 
+        // Validate every task ends up with a real folderId + sectionId; count unmapped.
         const tagged = importResult.tasks.map(t => {
-          const folderId = (t.folderId && allTaskFolderIds.has(t.folderId)) ? t.folderId : fallbackFolderId;
-          const sectionId = (t.sectionId && allSectionIds.has(t.sectionId))
-            ? t.sectionId
-            : folderDefaultSectionId.get(folderId);
+          let folderId = t.folderId;
+          if (!folderId || !allTaskFolderIds.has(folderId)) {
+            unmappedFolderCount++;
+            folderId = fallbackFolderId;
+          }
+          let sectionId = t.sectionId;
+          if (!sectionId || !allSectionIds.has(sectionId)) {
+            unmappedSectionCount++;
+            sectionId = folderDefaultSectionId.get(folderId);
+          }
           return { ...t, folderId, sectionId };
         });
 
         await bulkPutTasksInWorker(tagged, false, (p) => {
           setProgress({ phase: 'saving', current: p.written, total: p.total, message: 'Saving tasks…' });
         });
+
+        // Switch the Today view to the first imported folder so users actually SEE the tasks.
+        if (firstImportedFolderId) {
+          await setSetting('todoSelectedFolder', firstImportedFolderId);
+          window.dispatchEvent(new Event('selectedFolderChanged'));
+        }
         window.dispatchEvent(new Event('tasksRestored'));
         window.dispatchEvent(new Event('tasksUpdated'));
       }
@@ -363,7 +372,6 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           ...n,
           folderId: n.folderId || noteImportFolderId,
         }));
-        // Chunked bulk put — does NOT re-serialise the existing store.
         await bulkPutNotesInDB(tagged as any);
         window.dispatchEvent(new Event('notesUpdated'));
       }
@@ -385,10 +393,12 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
         {
           description: [
             parts || 'No items found',
+            unmappedFolderCount ? `${unmappedFolderCount} unmapped → fallback folder` : null,
+            unmappedSectionCount ? `${unmappedSectionCount} auto-sectioned` : null,
             skipped ? `${skipped} skipped` : null,
             errored && errored !== skipped ? `${errored} error${errored === 1 ? '' : 's'}` : null,
           ].filter(Boolean).join(' • '),
-          duration: 6000,
+          duration: 7000,
         }
       );
     } catch (e) {
