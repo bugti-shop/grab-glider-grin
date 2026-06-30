@@ -174,10 +174,13 @@ export const DesktopSidebar = () => {
     if (location.pathname.startsWith('/notesdashboard')) {
       dispatch();
     } else {
-      navigate('/notesdashboard');
-      setTimeout(dispatch, 250);
+      // Use URL param so Index.tsx's mount-time handler reliably opens the
+      // correct editor even if the page is still lazy-loading. A setTimeout
+      // dispatch races against route code-splitting and frequently misses.
+      navigate(`/notesdashboard?newNote=${type}`);
     }
   }, [navigate, location.pathname]);
+
 
   const toggleCollapsed = () => {
     triggerHaptic('light').catch(() => {});
