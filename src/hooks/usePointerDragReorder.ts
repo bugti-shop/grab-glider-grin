@@ -56,7 +56,7 @@ export interface PointerDragApi {
   };
   /** Spread onto a drag handle (or the whole row to make it draggable). */
   getHandleProps: (index: number) => {
-    onPointerDown: (e: React.PointerEvent) => void;
+    onPointerDownCapture: (e: React.PointerEvent) => void;
     style: React.CSSProperties;
   };
   /** True while the user is actively dragging an item. */
@@ -292,12 +292,19 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
 
   const onPointerDown = useCallback((index: number) => (e: React.PointerEvent) => {
     if (disabled) return;
-    // Only primary button / first touch.
     if (e.button !== undefined && e.button !== 0) return;
+    // Ignore interactive controls so taps still work.
+    const target = e.target as HTMLElement | null;
+    if (target && target.closest('button, a, input, textarea, select, [role="button"], [role="checkbox"], [data-no-drag]')) {
+      return;
+    }
     if (stateRef.current) cleanup();
 
     const sourceEl = (e.currentTarget as HTMLElement).closest<HTMLElement>(`[${itemAttr}]`);
     if (!sourceEl) return;
+
+    // Capture pointer so virtualizer recycling doesn't drop our events.
+    try { (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); } catch {}
 
     stateRef.current = {
       startX: e.clientX,
@@ -314,12 +321,13 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       lastToIndex: index,
     };
 
-    // Long-press to arm drag (lets tap/scroll work normally).
     stateRef.current.longPressTimer = setTimeout(() => {
       const s = stateRef.current;
       if (!s) return;
       s.armed = true;
-      // Activate immediately on long-press even without motion.
+      // Re-resolve sourceEl in case virtualizer recycled the DOM node.
+      const fresh = document.querySelector<HTMLElement>(`[${itemAttr}="${s.fromIndex}"]`);
+      if (fresh) s.sourceEl = fresh;
       activateDrag(s.startX, s.startY);
     }, LONG_PRESS_MS);
 
@@ -334,10 +342,9 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
   }), [isDragging]);
 
   const getHandleProps = useCallback((index: number) => ({
-    onPointerDown: onPointerDown(index),
-    // No `touch-action: none` by default — would break list scrolling on
-    // touch devices. We only suppress browser gestures once the drag is
-    // actually active (see getItemProps + active body cursor styles).
+    // Capture phase fires before child buttons / swipe handlers can
+    // stopPropagation or trigger remounts that would kill the drag.
+    onPointerDownCapture: onPointerDown(index),
     style: {} as React.CSSProperties,
   }), [onPointerDown]);
 
