@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { readActiveFocus, cleanupStaleFocusKeys, clearActiveFocus } from '@/utils/focusSession';
 import { checkMilestones, milestoneEmoji } from '@/utils/habitMilestones';
 import { HabitImportSheet } from '@/components/habits/HabitImportSheet';
+import { isHabitDueOnDate as smartIsHabitDueOnDate, isMakeUpDay } from '@/utils/habitScheduler';
 
 const Habits = () => {
   const navigate = useNavigate();
@@ -94,27 +95,20 @@ const Habits = () => {
   };
 
   const isHabitDueOn = (habit: Habit, d: Date): boolean => {
-    if (habit.frequency === 'daily') return true;
-    if (habit.frequency === 'weekly') {
-      // Specific weekdays selected → respect them.
-      if (habit.weeklyDays?.length) return habit.weeklyDays.includes(d.getDay());
-      // "N days per week" mode → due until quota for the week is met.
-      if (habit.weeklyCount && habit.weeklyCount > 0) {
-        const done = completedThisWeek(habit, d);
-        const todayKey = format(d, 'yyyy-MM-dd');
-        const alreadyDoneToday = habit.completions.some(
-          (c) => c.date === todayKey && c.completed
-        );
-        return alreadyDoneToday || done < habit.weeklyCount;
-      }
-      return true;
+    if (
+      habit.frequency === 'weekly' &&
+      !habit.weeklyDays?.length &&
+      habit.weeklyCount &&
+      habit.weeklyCount > 0
+    ) {
+      const done = completedThisWeek(habit, d);
+      const todayKey = format(d, 'yyyy-MM-dd');
+      const alreadyDoneToday = habit.completions.some(
+        (c) => c.date === todayKey && c.completed
+      );
+      return alreadyDoneToday || done < habit.weeklyCount;
     }
-    if (habit.frequency === 'interval' && habit.intervalDays && habit.startDate) {
-      const start = parseISO(habit.startDate);
-      const diff = Math.floor((d.getTime() - start.getTime()) / 86400000);
-      return diff >= 0 && diff % habit.intervalDays === 0;
-    }
-    return true;
+    return smartIsHabitDueOnDate(habit, d);
   };
 
   /** Fire a child-habit toast once when the parent is completed today. */
@@ -294,6 +288,14 @@ const Habits = () => {
                 )}
               >
                 {h.difficulty === 'easy' ? 'Easy' : h.difficulty === 'medium' ? 'Med' : 'Hard'}
+              </span>
+            )}
+            {isMakeUpDay(h, selectedDate) && (
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-300"
+                title="Rescheduled from a missed day"
+              >
+                Make-up
               </span>
             )}
           </div>
