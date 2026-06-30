@@ -10,7 +10,6 @@ import bgMountain from '@/assets/focus/focus-mountain.jpg';
 import bgForest from '@/assets/focus/focus-forest.jpg';
 import bgOcean from '@/assets/focus/focus-ocean.jpg';
 import bgAlpine from '@/assets/focus/focus-alpine.jpg';
-import bgFujiNight from '@/assets/focus/focus-fuji-night.jpg';
 
 const fmtMMSS = (sec: number) => {
   const s = Math.max(0, Math.floor(sec));
@@ -68,7 +67,7 @@ interface FocusModeProps {
   onComplete?: () => void;
 }
 
-const BACKGROUNDS = [bgFujiNight, bgMountain, bgAlpine, bgForest, bgOcean];
+const BACKGROUNDS = [bgMountain, bgAlpine, bgForest, bgOcean];
 const DURATION_OPTIONS = [15, 25, 30, 45, 60, 90, 120];
 
 // ---- Persistence -----------------------------------------------------------
@@ -81,7 +80,6 @@ interface FocusPrefs {
   whiteNoise: boolean;
   whiteNoiseVolume: number; // 0..1
   whiteNoiseMuted: boolean;
-  whiteNoiseAdaptive: boolean; // evolve cutoff/warmth by time-of-day + progress
   fullScreen: boolean;
   notifications: boolean;
 }
@@ -92,27 +90,8 @@ const DEFAULT_PREFS: FocusPrefs = {
   whiteNoise: false,
   whiteNoiseVolume: 0.4,
   whiteNoiseMuted: false,
-  whiteNoiseAdaptive: true,
   fullScreen: false,
   notifications: true,
-};
-
-// ---- Adaptive noise profile -----------------------------------------------
-// Returns target lowpass cutoff (Hz) and Q based on local hour-of-day and
-// session progress (0..1). Morning is brighter/airier, evening warms down,
-// and the soundscape gradually darkens as the session progresses so attention
-// drifts inward.
-const adaptiveNoiseTarget = (hour: number, progress: number) => {
-  let baseCutoff: number;
-  if (hour >= 5 && hour < 11) baseCutoff = 4800;        // morning — crisp
-  else if (hour >= 11 && hour < 17) baseCutoff = 3400;  // midday — focused
-  else if (hour >= 17 && hour < 22) baseCutoff = 1900;  // evening — warm
-  else baseCutoff = 1100;                                // night — deep
-  // Darken over the session: 1.0 → ~0.55
-  const p = Math.max(0, Math.min(1, progress));
-  const cutoff = Math.max(550, baseCutoff * (1 - p * 0.45));
-  const q = 0.55 + p * 0.35;
-  return { cutoff, q };
 };
 
 const loadPrefs = (): FocusPrefs => {
@@ -162,9 +141,8 @@ const useWhiteNoise = () => {
   const ctxRef = useRef<AudioContext | null>(null);
   const srcRef = useRef<AudioBufferSourceNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
-  const filterRef = useRef<BiquadFilterNode | null>(null);
 
-  const start = useCallback((volume: number, initial?: { cutoff: number; q: number }) => {
+  const start = useCallback((volume: number) => {
     try {
       const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (!AC) return;
@@ -183,17 +161,12 @@ const useWhiteNoise = () => {
       const src = ctx.createBufferSource();
       src.buffer = buffer;
       src.loop = true;
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = initial?.cutoff ?? 4000;
-      filter.Q.value = initial?.q ?? 0.7;
       const gain = ctx.createGain();
       gain.gain.value = Math.max(0, Math.min(1, volume));
-      src.connect(filter).connect(gain).connect(ctx.destination);
+      src.connect(gain).connect(ctx.destination);
       src.start();
       srcRef.current = src;
       gainRef.current = gain;
-      filterRef.current = filter;
     } catch {}
   }, []);
 
@@ -202,10 +175,8 @@ const useWhiteNoise = () => {
       srcRef.current?.stop();
       srcRef.current?.disconnect();
       gainRef.current?.disconnect();
-      filterRef.current?.disconnect();
       srcRef.current = null;
       gainRef.current = null;
-      filterRef.current = null;
     } catch {}
   }, []);
 
@@ -215,23 +186,11 @@ const useWhiteNoise = () => {
     }
   }, []);
 
-  // Smoothly drift the lowpass cutoff/Q toward the new target.
-  const adapt = useCallback((target: { cutoff: number; q: number }) => {
-    const ctx = ctxRef.current;
-    const f = filterRef.current;
-    if (!ctx || !f) return;
-    try {
-      const now = ctx.currentTime;
-      f.frequency.setTargetAtTime(target.cutoff, now, 3.5);
-      f.Q.setTargetAtTime(target.q, now, 3.5);
-    } catch {}
-  }, []);
-
   const isRunning = useCallback(() => !!srcRef.current, []);
 
   useEffect(() => () => { stop(); try { ctxRef.current?.close(); } catch {} }, [stop]);
 
-  return { start, stop, setVolume, adapt, isRunning };
+  return { start, stop, setVolume, isRunning };
 };
 
 // ---- Component -------------------------------------------------------------
@@ -334,37 +293,15 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   // ---- White noise side effects ------------------------------------------
   useEffect(() => {
     if (prefs.whiteNoise && running && !prefs.whiteNoiseMuted) {
-      const total = prefs.durationMin * 60;
-      const progress = total > 0 ? 1 - remaining / total : 0;
-      const initial = prefs.whiteNoiseAdaptive
-        ? adaptiveNoiseTarget(new Date().getHours(), progress)
-        : { cutoff: 8000, q: 0.7 };
-      noise.start(prefs.whiteNoiseVolume, initial);
+      noise.start(prefs.whiteNoiseVolume);
     } else {
       noise.stop();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefs.whiteNoise, prefs.whiteNoiseMuted, running, prefs.whiteNoiseVolume, prefs.whiteNoiseAdaptive]);
+  }, [prefs.whiteNoise, prefs.whiteNoiseMuted, running, noise, prefs.whiteNoiseVolume]);
 
   useEffect(() => {
     if (noise.isRunning()) noise.setVolume(prefs.whiteNoiseMuted ? 0 : prefs.whiteNoiseVolume);
   }, [prefs.whiteNoiseVolume, prefs.whiteNoiseMuted, noise]);
-
-  // Adaptive: drift the lowpass cutoff/Q over time. Recomputes every ~5s
-  // using current hour-of-day and session progress.
-  useEffect(() => {
-    if (!prefs.whiteNoise || !running || !prefs.whiteNoiseAdaptive) return;
-    const tick = () => {
-      const total = prefs.durationMin * 60;
-      const progress = total > 0 ? 1 - remaining / total : 0;
-      noise.adapt(adaptiveNoiseTarget(new Date().getHours(), progress));
-    };
-    tick();
-    const id = setInterval(tick, 5000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefs.whiteNoise, prefs.whiteNoiseAdaptive, running, prefs.durationMin]);
-
 
   // ---- Lifecycle: start / pause / resume / complete -----------------------
   const startSession = () => {
@@ -708,18 +645,6 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           <MenuRow label={prefs.strict ? 'Disable Strict Mode' : 'Enable Strict Mode'} icon={<ShieldAlert className="h-4 w-4" />} onClick={() => { updatePrefs({ strict: !prefs.strict }); setShowMenu(false); }} />
           <MenuRow label="Change Duration" icon={<TimerIcon className="h-4 w-4" />} onClick={() => { setShowDurations(true); setShowMenu(false); }} />
           <MenuRow label="Toggle Full Screen" icon={<Maximize2 className="h-4 w-4" />} onClick={() => { toggleFullscreen(); setShowMenu(false); }} />
-          {prefs.whiteNoise && (
-            <MenuRow
-              label={prefs.whiteNoiseAdaptive ? 'Disable Adaptive Noise' : 'Enable Adaptive Noise'}
-              icon={<Music2 className="h-4 w-4" />}
-              onClick={() => {
-                const next = !prefs.whiteNoiseAdaptive;
-                updatePrefs({ whiteNoiseAdaptive: next });
-                toast.message(next ? 'Adaptive noise on — evolves by time of day' : 'Adaptive noise off');
-                setShowMenu(false);
-              }}
-            />
-          )}
           <MenuRow label={prefs.whiteNoise ? 'Stop White Noise' : 'Play White Noise'} icon={<Music2 className="h-4 w-4" />} onClick={() => { updatePrefs({ whiteNoise: !prefs.whiteNoise }); setShowMenu(false); }} />
           <MenuRow
             label={prefs.notifications ? 'Disable Notifications' : 'Enable Notifications'}
