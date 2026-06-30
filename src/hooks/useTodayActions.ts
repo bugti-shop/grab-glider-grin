@@ -837,7 +837,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         setIsBulkStatusOpen(true); break;
     }
     setIsSelectActionsOpen(false);
-  }, [items, selectedTaskIds, uncompletedItems, requireFeature, setItems, setSelectedTaskIds, setIsSelectionMode, setIsMoveToFolderOpen, setIsPrioritySheetOpen, setIsBulkDateSheetOpen, setIsBulkReminderSheetOpen, setIsBulkRepeatSheetOpen, setIsBulkSectionMoveOpen, setIsBulkStatusOpen, setIsSelectActionsOpen, convertToNotes, t, persistBulkTasks]);
+  }, [items, selectedTaskIds, uncompletedItems, requireFeature, setItems, setSelectedTaskIds, setIsSelectionMode, setIsMoveToFolderOpen, setIsPrioritySheetOpen, setIsBulkDateSheetOpen, setIsBulkReminderSheetOpen, setIsBulkRepeatSheetOpen, setIsBulkSectionMoveOpen, setIsBulkStatusOpen, setIsSelectActionsOpen, convertToNotes, t, persistBulkTasks, markSingleTaskPersisted, rebuildItemLookups]);
 
   const handleMoveToFolder = useCallback((folderId: string | null) => {
     const now = new Date();
