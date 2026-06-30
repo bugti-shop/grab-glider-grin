@@ -71,12 +71,13 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     startX: number;
     startY: number;
     pointerId: number;
+    pointerType: string;
     fromIndex: number;
     sourceEl: HTMLElement | null;
     ghostEl: HTMLElement | null;
     placeholderEl: HTMLElement | null;
     longPressTimer: ReturnType<typeof setTimeout> | null;
-    armed: boolean;     // long-press fired, awaiting motion confirmation
+    armed: boolean;     // long-press fired (touch) OR distance threshold met (mouse)
     active: boolean;    // ghost is in DOM, drag in progress
     lastToIndex: number;
   } | null>(null);
