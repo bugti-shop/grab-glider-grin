@@ -132,11 +132,18 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
         }
       }
     }
-    // Fallback: ghost / placeholder / overlay swallowed elementFromPoint.
-    // Scan all rendered slots and find the one whose vertical band contains y.
-    const slots = document.querySelectorAll<HTMLElement>(`[${itemAttr}]`);
+    // Fallback: ghost / placeholder / overlay swallowed elementFromPoint,
+    // OR the pointer is above the first / below the last row. Scan all
+    // rendered slots and either: (a) find the one whose vertical band
+    // contains y, or (b) snap to the nearest edge (top of first row when
+    // dragging above, bottom of last row when dragging below). This makes
+    // the drop commit at the visible blue line no matter how far the user
+    // pulls past the list.
+    const slots = Array.from(document.querySelectorAll<HTMLElement>(`[${itemAttr}]`))
+      .filter((s) => !s.hasAttribute('data-pdrag-ghost'));
+    let topMost: { el: HTMLElement; rect: DOMRect } | null = null;
+    let bottomMost: { el: HTMLElement; rect: DOMRect } | null = null;
     for (const s of slots) {
-      if (s.hasAttribute('data-pdrag-ghost')) continue;
       const r = s.getBoundingClientRect();
       if (r.height <= 0) continue;
       if (y >= r.top && y <= r.bottom) {
@@ -146,6 +153,18 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
         const before = y < r.top + r.height / 2;
         return { index: idx, before };
       }
+      if (!topMost || r.top < topMost.rect.top) topMost = { el: s, rect: r };
+      if (!bottomMost || r.bottom > bottomMost.rect.bottom) bottomMost = { el: s, rect: r };
+    }
+    // Above the first row → insert before it.
+    if (topMost && y < topMost.rect.top) {
+      const idx = Number(topMost.el.getAttribute(itemAttr));
+      if (Number.isFinite(idx)) return { index: idx, before: true };
+    }
+    // Below the last row → insert after it.
+    if (bottomMost && y > bottomMost.rect.bottom) {
+      const idx = Number(bottomMost.el.getAttribute(itemAttr));
+      if (Number.isFinite(idx)) return { index: idx, before: false };
     }
     return null;
   }, [itemAttr]);
