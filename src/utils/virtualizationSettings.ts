@@ -26,7 +26,7 @@ export const DEFAULT_VIRTUALIZATION_SETTINGS: VirtualizationSettings = {
     // chip + 16px internal padding ≈ 116-120px). Keeping the row tight
     // eliminates the large white gap between cards while still leaving room
     // for the 8px inter-row padding rendered inside the row container.
-    rowHeight: 124,
+    rowHeight: 145,
     windowing: true,
   },
   tasks: {
