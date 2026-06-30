@@ -64,6 +64,8 @@ const HabitNew = () => {
   const [emoji, setEmoji] = useState(prefill?.emoji ?? '🍌');
   const [quote, setQuote] = useState(prefill?.quote ?? QUOTES[0]);
   const [kind, setKind] = useState<HabitKind>('build');
+  const [color, setColor] = useState<string>(DEFAULT_HABIT_COLOR);
+  const [difficulty, setDifficulty] = useState<HabitDifficulty | undefined>(undefined);
 
   // Details
   const [frequency, setFrequency] = useState<HabitFrequencyType>('daily');
