@@ -33,22 +33,24 @@ export const SoundLibrary = ({
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 p-1 bg-muted rounded-xl mb-3">
-          <button
-            onClick={() => setTab('sound')}
-            className={cn('flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center gap-1.5',
-              tab === 'sound' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
-          >
-            <Waves className="h-4 w-4" /> Sounds ({FOCUS_SOUNDS.length})
-          </button>
-          <button
-            onClick={() => setTab('music')}
-            className={cn('flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center gap-1.5',
-              tab === 'music' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
-          >
-            <Music2 className="h-4 w-4" /> Music ({FOCUS_MUSIC.length})
-          </button>
-        </div>
+        {FOCUS_MUSIC.length > 0 && (
+          <div className="flex gap-2 p-1 bg-muted rounded-xl mb-3">
+            <button
+              onClick={() => setTab('sound')}
+              className={cn('flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center gap-1.5',
+                tab === 'sound' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
+            >
+              <Waves className="h-4 w-4" /> Sounds ({FOCUS_SOUNDS.length})
+            </button>
+            <button
+              onClick={() => setTab('music')}
+              className={cn('flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center gap-1.5',
+                tab === 'music' ? 'bg-background shadow-sm' : 'text-muted-foreground')}
+            >
+              <Music2 className="h-4 w-4" /> Music ({FOCUS_MUSIC.length})
+            </button>
+          </div>
+        )}
 
         {/* Volume */}
         <div className="flex items-center gap-3 mb-4 px-1">
