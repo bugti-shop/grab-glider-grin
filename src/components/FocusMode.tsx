@@ -708,6 +708,18 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           <MenuRow label={prefs.strict ? 'Disable Strict Mode' : 'Enable Strict Mode'} icon={<ShieldAlert className="h-4 w-4" />} onClick={() => { updatePrefs({ strict: !prefs.strict }); setShowMenu(false); }} />
           <MenuRow label="Change Duration" icon={<TimerIcon className="h-4 w-4" />} onClick={() => { setShowDurations(true); setShowMenu(false); }} />
           <MenuRow label="Toggle Full Screen" icon={<Maximize2 className="h-4 w-4" />} onClick={() => { toggleFullscreen(); setShowMenu(false); }} />
+          {prefs.whiteNoise && (
+            <MenuRow
+              label={prefs.whiteNoiseAdaptive ? 'Disable Adaptive Noise' : 'Enable Adaptive Noise'}
+              icon={<Music2 className="h-4 w-4" />}
+              onClick={() => {
+                const next = !prefs.whiteNoiseAdaptive;
+                updatePrefs({ whiteNoiseAdaptive: next });
+                toast.message(next ? 'Adaptive noise on — evolves by time of day' : 'Adaptive noise off');
+                setShowMenu(false);
+              }}
+            />
+          )}
           <MenuRow label={prefs.whiteNoise ? 'Stop White Noise' : 'Play White Noise'} icon={<Music2 className="h-4 w-4" />} onClick={() => { updatePrefs({ whiteNoise: !prefs.whiteNoise }); setShowMenu(false); }} />
           <MenuRow
             label={prefs.notifications ? 'Disable Notifications' : 'Enable Notifications'}
