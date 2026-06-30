@@ -439,6 +439,13 @@ const Habits = () => {
       </Button>
 
       <TodoBottomNavigation />
+
+      <HabitImportSheet open={importOpen} onOpenChange={setImportOpen} />
+    </div>
+  );
+};
+
+export default Habits;
     </div>
   );
 };
