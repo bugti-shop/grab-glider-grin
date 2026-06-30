@@ -10,6 +10,7 @@ import bgMountain from '@/assets/focus/focus-mountain.jpg';
 import bgForest from '@/assets/focus/focus-forest.jpg';
 import bgOcean from '@/assets/focus/focus-ocean.jpg';
 import bgAlpine from '@/assets/focus/focus-alpine.jpg';
+import bgFujiNight from '@/assets/focus/focus-fuji-night.jpg';
 
 const fmtMMSS = (sec: number) => {
   const s = Math.max(0, Math.floor(sec));
@@ -67,7 +68,7 @@ interface FocusModeProps {
   onComplete?: () => void;
 }
 
-const BACKGROUNDS = [bgMountain, bgAlpine, bgForest, bgOcean];
+const BACKGROUNDS = [bgFujiNight, bgMountain, bgAlpine, bgForest, bgOcean];
 const DURATION_OPTIONS = [15, 25, 30, 45, 60, 90, 120];
 
 // ---- Persistence -----------------------------------------------------------
