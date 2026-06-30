@@ -249,21 +249,6 @@ const parseTickTickCSV = (text: string): ImportResult => {
     const rows = parseCSV(cleaned);
     if (rows.length === 0) return { success: false, tasks: [], notes: [], error: 'No data found in CSV', stats: { tasks: 0, notes: 0 } };
 
-    const sectionMap = new Map<string, TaskSection>();
-    if (raw && typeof raw === 'object' && Array.isArray((raw as any).sections)) {
-      for (const s of (raw as any).sections) {
-        const sid = s?.id != null ? String(s.id) : '';
-        if (!sid) continue;
-        sectionMap.set(sid, {
-          id: generateId(),
-          name: String(s.name || `Section ${sid}`),
-          color: '#3b82f6',
-          isCollapsed: false,
-          order: sectionMap.size,
-        });
-      }
-    }
-
     const tasks: TodoItem[] = [];
     const folderMap = new Map<string, Folder>();
     let failed = 0;
@@ -530,6 +515,21 @@ const parseTodoistJSON = (text: string): ImportResult => {
           name: String(p.name || `Project ${pid}`),
           createdAt: new Date(),
         } as Folder);
+      }
+    }
+
+    const sectionMap = new Map<string, TaskSection>();
+    if (raw && typeof raw === 'object' && Array.isArray((raw as any).sections)) {
+      for (const s of (raw as any).sections) {
+        const sid = s?.id != null ? String(s.id) : '';
+        if (!sid) continue;
+        sectionMap.set(sid, {
+          id: generateId(),
+          name: String(s.name || `Section ${sid}`),
+          color: '#3b82f6',
+          isCollapsed: false,
+          order: sectionMap.size,
+        });
       }
     }
 
@@ -1040,7 +1040,10 @@ const parseGenericJSON = (
           priority: (item.priority as Priority) || 'none',
           dueDate: item.dueDate ? new Date(String(item.dueDate)) : undefined,
           tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
-          createdAt: Number(item.createdAt ?? Date.now()),
+          folderId: typeof item.folderId === 'string' ? item.folderId : undefined,
+          sectionId: typeof item.sectionId === 'string' ? item.sectionId : undefined,
+          createdAt: item.createdAt ? new Date(String(item.createdAt)) : new Date(),
+          modifiedAt: item.modifiedAt ? new Date(String(item.modifiedAt)) : new Date(),
         } as unknown as TodoItem);
       }
     } catch (e) {
@@ -1057,8 +1060,8 @@ const parseGenericJSON = (
     if (Array.isArray(obj.tasks)) (obj.tasks as Record<string, unknown>[]).forEach((t, i) => pushItem({ ...t, type: 'task' }, i));
     if (Array.isArray(obj.notes)) (obj.notes as Record<string, unknown>[]).forEach((n, i) => pushItem({ ...n, type: 'note' }, i));
     if (Array.isArray(obj.folders)) (obj.folders as Folder[]).forEach(f => { if (f && f.id && f.name) folders.push(f); });
-    if (Array.isArray(obj.sections)) (obj.sections as TaskSection[]).forEach(s => { if (s && s.id && s.name) sections.push(s); });
-    if (Array.isArray(obj.todoSections)) (obj.todoSections as TaskSection[]).forEach(s => { if (s && s.id && s.name) sections.push(s); });
+    if (Array.isArray(obj.sections)) (obj.sections as unknown as TaskSection[]).forEach(s => { if (s && s.id && s.name) sections.push(s); });
+    if (Array.isArray(obj.todoSections)) (obj.todoSections as unknown as TaskSection[]).forEach(s => { if (s && s.id && s.name) sections.push(s); });
     if (Array.isArray(obj.items)) items = obj.items as Record<string, unknown>[];
   } else {
     return { success: false, tasks: [], notes: [], error: 'JSON must be an array or an object with tasks/notes/items', stats: { tasks: 0, notes: 0 } };
