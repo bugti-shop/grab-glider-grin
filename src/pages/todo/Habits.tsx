@@ -35,6 +35,7 @@ const Habits = () => {
   const [sections, setSections] = useState(() => loadHabitSections());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [importOpen, setImportOpen] = useState(false);
 
   const load = useCallback(async () => {
     const loaded = await loadHabits();
