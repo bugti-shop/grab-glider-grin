@@ -65,7 +65,13 @@ export const useTodayState = () => {
 
   // UI state
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [isInputOpen, setIsInputOpen] = useState(false);
+  // Initialize from URL synchronously so a widget tap (?add=1) opens the
+  // Task Input Sheet on the FIRST paint — no main-screen flash in between.
+  const [isInputOpen, setIsInputOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return new URLSearchParams(window.location.search).get('add') === '1'; }
+    catch { return false; }
+  });
   const [inputSectionId, setInputSectionId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<TodoItem | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
