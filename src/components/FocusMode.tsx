@@ -68,7 +68,7 @@ interface FocusModeProps {
   onComplete?: () => void;
 }
 
-const BACKGROUNDS = [bgMountain, bgAlpine, bgForest, bgOcean];
+const BACKGROUNDS = [bgFujiNight, bgMountain, bgAlpine, bgForest, bgOcean];
 const DURATION_OPTIONS = [15, 25, 30, 45, 60, 90, 120];
 
 // ---- Persistence -----------------------------------------------------------
