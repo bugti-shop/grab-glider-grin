@@ -317,14 +317,15 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, running]);
 
-  // ---- White noise side effects ------------------------------------------
+  // ---- Audio side effects ------------------------------------------------
   useEffect(() => {
     if (prefs.whiteNoise && running && !prefs.whiteNoiseMuted) {
-      noise.start(prefs.whiteNoiseVolume);
+      noise.start(currentTrack, prefs.whiteNoiseVolume);
     } else {
       noise.stop();
     }
-  }, [prefs.whiteNoise, prefs.whiteNoiseMuted, running, noise, prefs.whiteNoiseVolume]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs.whiteNoise, prefs.whiteNoiseMuted, running, prefs.soundTrackId]);
 
   useEffect(() => {
     if (noise.isRunning()) noise.setVolume(prefs.whiteNoiseMuted ? 0 : prefs.whiteNoiseVolume);
