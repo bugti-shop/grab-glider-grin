@@ -39,6 +39,8 @@ export interface HabitSection {
   parentSectionId?: string;
 }
 
+export type HabitDifficulty = 'easy' | 'medium' | 'hard';
+
 export interface Habit {
   id: string;
   name: string;
