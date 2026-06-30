@@ -16,7 +16,7 @@ export interface VirtualizationSettings {
 
 // Bumped to v2 when the notes row-height default was tightened so existing
 // installs adopt the new compact spacing instead of inheriting the old 165px.
-const STORAGE_KEY = 'flowist:virtualization-settings:v2';
+const STORAGE_KEY = 'flowist:virtualization-settings:v3';
 const EVENT_NAME = 'flowist:virtualization-settings-changed';
 
 export const DEFAULT_VIRTUALIZATION_SETTINGS: VirtualizationSettings = {
@@ -26,7 +26,7 @@ export const DEFAULT_VIRTUALIZATION_SETTINGS: VirtualizationSettings = {
     // chip + 16px internal padding ≈ 116-120px). Keeping the row tight
     // eliminates the large white gap between cards while still leaving room
     // for the 8px inter-row padding rendered inside the row container.
-    rowHeight: 124,
+    rowHeight: 145,
     windowing: true,
   },
   tasks: {
