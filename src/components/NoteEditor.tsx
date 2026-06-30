@@ -1178,9 +1178,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <FileText className="h-4 w-4 mr-2" />
                   {metaDescription ? t('editor.editMetaDescription') : t('editor.addMetaDescription')}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowImportArticle(true)}>
+                <DropdownMenuItem onClick={() => navigate('/webclipper')}>
                   <Globe className="h-4 w-4 mr-2 text-primary" />
-                  <span className="font-medium">{t('editor.importFromUrl', 'Import from URL')}</span>
+                  <span className="font-medium">{t('editor.webClipper', 'Web Clipper')}</span>
                 </DropdownMenuItem>
 
 
