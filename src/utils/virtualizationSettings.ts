@@ -46,7 +46,7 @@ export function normalizeVirtualizationSettings(input: Partial<VirtualizationSet
   return {
     notes: {
       overscan: clampNumber(input?.notes?.overscan, 2, 24, DEFAULT_VIRTUALIZATION_SETTINGS.notes.overscan),
-      rowHeight: clampNumber(input?.notes?.rowHeight, 120, 260, DEFAULT_VIRTUALIZATION_SETTINGS.notes.rowHeight),
+      rowHeight: clampNumber(input?.notes?.rowHeight, 96, 260, DEFAULT_VIRTUALIZATION_SETTINGS.notes.rowHeight),
       windowing: input?.notes?.windowing !== false,
     },
     tasks: {
