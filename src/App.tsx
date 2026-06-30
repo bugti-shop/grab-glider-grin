@@ -823,6 +823,7 @@ const AppContent = () => {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
               <Route path="/mustafabugti890" element={<PremiumUnlock />} />
+              <Route path="/business" element={<Business />} />
               <Route path="*" element={<Landing />} />
 
             </Routes>
