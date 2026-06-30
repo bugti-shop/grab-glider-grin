@@ -95,27 +95,20 @@ const Habits = () => {
   };
 
   const isHabitDueOn = (habit: Habit, d: Date): boolean => {
-    if (habit.frequency === 'daily') return true;
-    if (habit.frequency === 'weekly') {
-      // Specific weekdays selected → respect them.
-      if (habit.weeklyDays?.length) return habit.weeklyDays.includes(d.getDay());
-      // "N days per week" mode → due until quota for the week is met.
-      if (habit.weeklyCount && habit.weeklyCount > 0) {
-        const done = completedThisWeek(habit, d);
-        const todayKey = format(d, 'yyyy-MM-dd');
-        const alreadyDoneToday = habit.completions.some(
-          (c) => c.date === todayKey && c.completed
-        );
-        return alreadyDoneToday || done < habit.weeklyCount;
-      }
-      return true;
+    if (
+      habit.frequency === 'weekly' &&
+      !habit.weeklyDays?.length &&
+      habit.weeklyCount &&
+      habit.weeklyCount > 0
+    ) {
+      const done = completedThisWeek(habit, d);
+      const todayKey = format(d, 'yyyy-MM-dd');
+      const alreadyDoneToday = habit.completions.some(
+        (c) => c.date === todayKey && c.completed
+      );
+      return alreadyDoneToday || done < habit.weeklyCount;
     }
-    if (habit.frequency === 'interval' && habit.intervalDays && habit.startDate) {
-      const start = parseISO(habit.startDate);
-      const diff = Math.floor((d.getTime() - start.getTime()) / 86400000);
-      return diff >= 0 && diff % habit.intervalDays === 0;
-    }
-    return true;
+    return smartIsHabitDueOnDate(habit, d);
   };
 
   /** Fire a child-habit toast once when the parent is completed today. */
