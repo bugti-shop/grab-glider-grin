@@ -99,6 +99,10 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     document.body.style.removeProperty('user-select');
     document.body.style.removeProperty('-webkit-user-select');
     document.body.style.removeProperty('cursor');
+    // Immediately restore scroll on drop / cancel — no delay.
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('touch-action');
+    document.documentElement.style.removeProperty('overflow');
     window.removeEventListener('pointermove', handlePointerMove);
     window.removeEventListener('pointerup', handlePointerUp);
     window.removeEventListener('pointercancel', handlePointerUp);
@@ -245,6 +249,14 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     document.body.style.userSelect = 'none';
     (document.body.style as any).webkitUserSelect = 'none';
     document.body.style.cursor = 'grabbing';
+
+    document.body.style.userSelect = 'none';
+    (document.body.style as any).webkitUserSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+    // Hard-lock page scroll the instant the drag activates. Restored in cleanup().
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    document.documentElement.style.overflow = 'hidden';
 
     setIsDragging(true);
     setDraggingIndex(s.fromIndex);

@@ -275,7 +275,21 @@ export function FlatTaskList({
   // hello-pangea/dnd owns the drag lifecycle. Library-grade drop accuracy,
   // native keyboard reorder (Space → ↑/↓ → Space), and a11y announcements.
   if (dndEnabled && flat.length > 0 && flat.length <= HELLO_PANGEA_CAP) {
+    const lockBodyScroll = () => {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      document.documentElement.style.overflow = 'hidden';
+    };
+    const unlockBodyScroll = () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+    };
+    const onDragStart = () => {
+      lockBodyScroll();
+    };
     const onDragEnd = (result: DropResult) => {
+      unlockBodyScroll();
       const from = result.source.index;
       const to = result.destination?.index;
       if (to == null || to === from) return;
@@ -298,7 +312,7 @@ export function FlatTaskList({
         data-virt-windowing="hello-pangea"
         data-virt-row-count={flat.length}
       >
-        <DragDropContext onDragEnd={onDragEnd}>
+        <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <Droppable droppableId="flat-task-list">
             {(provided) => (
               <div ref={provided.innerRef} {...provided.droppableProps}>
