@@ -169,6 +169,9 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     s.placeholderEl.style.left = `${rect.left}px`;
     s.placeholderEl.style.width = `${rect.width}px`;
     s.lastToIndex = hit.before ? hit.index : hit.index + 1;
+    s.lastToBefore = hit.before;
+    const idAttr = slot.getAttribute('data-pdrag-id');
+    s.lastToId = idAttr ?? null;
   }, [itemAttr]);
 
   const handlePointerMove = useCallback((e: PointerEvent) => {
