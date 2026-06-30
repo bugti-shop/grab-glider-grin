@@ -43,8 +43,17 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
     private void storeWidgetPath(Intent intent) {
         if (intent == null) return;
         String path = intent.getStringExtra("widget_path");
+        // Quick-Add widget shortcut: force the canonical route even if
+        // `widget_path` was dropped by the launcher. This ensures the Task
+        // Input Sheet opens on the very first paint with no main-screen flash.
+        boolean quickAdd = intent.getBooleanExtra("openQuickAdd", false);
+        if (quickAdd && (path == null || path.isEmpty())) {
+            path = "/todo/today?add=1";
+        }
         Uri data = intent.getData();
-        if ((path == null || path.isEmpty()) && data != null && "flowist".equals(data.getScheme()) && "widget".equals(data.getHost())) {
+        if ((path == null || path.isEmpty()) && data != null
+                && ("flowist".equals(data.getScheme()) || "codaib".equals(data.getScheme()))
+                && "widget".equals(data.getHost())) {
             path = data.getPath();
             String query = data.getEncodedQuery();
             if (path != null && query != null && !query.isEmpty()) path = path + "?" + query;
