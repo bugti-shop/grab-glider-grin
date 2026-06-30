@@ -214,6 +214,23 @@ const HabitNew = () => {
       <div className="px-3 space-y-3">
         {step === STEP_BASICS ? (
           <>
+            {/* Build / Avoid toggle */}
+            <section className="bg-background rounded-2xl p-2 flex">
+              {(['build', 'avoid'] as HabitKind[]).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setKind(k)}
+                  className={cn(
+                    'flex-1 h-11 rounded-xl text-sm font-semibold capitalize transition-colors',
+                    kind === k ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                  )}
+                >
+                  {k === 'build' ? '🌱 Build a habit' : '🚫 Avoid / Quit'}
+                </button>
+              ))}
+            </section>
+
             {/* Name */}
             <section className="bg-background rounded-2xl p-4">
               <Label className="text-base text-foreground">Name</Label>
