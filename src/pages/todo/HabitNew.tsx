@@ -400,43 +400,66 @@ const HabitNew = () => {
               </div>
             </section>
 
-            {/* Reminder */}
+            {/* Reminders (multi) */}
             <section className="bg-background rounded-2xl p-4">
-              <Label className="text-base text-foreground">Reminder</Label>
-              <div className="mt-3">
-                {reminderTime ? (
-                  <div className="flex items-center justify-between gap-2">
-                    <Input
-                      type="time"
-                      value={reminderTime}
-                      onChange={(e) => setReminderTime(e.target.value)}
-                      className="h-11 w-36 bg-muted/60 border-0"
-                    />
-                    <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" onClick={handleTestReminder}>
-                        Test
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setReminderTime(null)}>
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setReminderTime('08:00')}
-                    className="flex items-center gap-2 text-primary text-base font-medium"
-                  >
-                    <Plus className="h-4 w-4" /> Add
-                  </button>
+              <div className="flex items-center justify-between">
+                <Label className="text-base text-foreground">Reminders</Label>
+                {reminders.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={handleTestReminder}>
+                    Test
+                  </Button>
                 )}
               </div>
+              <div className="mt-3">
+                <RemindersList reminders={reminders} onChange={setReminders} maxReminders={5} />
+              </div>
             </section>
+
+            {/* Stack after (habit chain) */}
+            {allHabits.filter((h) => h.id !== editingRef.current?.id).length > 0 && (
+              <section className="bg-background rounded-2xl p-4">
+                <Label className="text-base text-foreground">Stack after</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Triggered when the chosen habit is checked in for the day.
+                </p>
+                <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
+                  <button
+                    onClick={() => setChainAfterHabitId(undefined)}
+                    className={cn(
+                      'px-4 h-10 rounded-lg text-sm font-medium whitespace-nowrap',
+                      !chainAfterHabitId ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                    )}
+                  >
+                    None
+                  </button>
+                  {allHabits
+                    .filter((h) => h.id !== editingRef.current?.id)
+                    .map((h) => {
+                      const sel = chainAfterHabitId === h.id;
+                      return (
+                        <button
+                          key={h.id}
+                          onClick={() => setChainAfterHabitId(h.id)}
+                          className={cn(
+                            'px-4 h-10 rounded-lg text-sm font-medium whitespace-nowrap flex items-center gap-1.5',
+                            sel ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                          )}
+                        >
+                          <span>{h.emoji || '✨'}</span>
+                          <span>{h.name}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              </section>
+            )}
 
             {/* Auto popup */}
             <section className="bg-background rounded-2xl p-4 flex items-center justify-between">
               <span className="text-base text-foreground">Auto pop-up of habit log</span>
               <Switch checked={autoPopup} onCheckedChange={setAutoPopup} />
             </section>
+
 
             <Button
               onClick={handleSave}
