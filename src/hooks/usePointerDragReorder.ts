@@ -250,10 +250,17 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     setDraggingIndex(s.fromIndex);
   }, []);
 
-  const handlePointerUp = useCallback((_e: PointerEvent) => {
+  const handlePointerUp = useCallback((e: PointerEvent) => {
     const s = stateRef.current;
     if (!s) return;
     if (s.active) {
+      // Final synchronous hit-test at the up coordinates — guarantees the
+      // drop position matches the last indicator the user saw, even if the
+      // last pointermove didn't fire exactly at the release point.
+      const finalHit = hitTestIndex(e.clientX, e.clientY);
+      if (finalHit) {
+        s.lastToIndex = finalHit.before ? finalHit.index : finalHit.index + 1;
+      }
       const from = s.fromIndex;
       let to = s.lastToIndex;
       // Adjust for removal of source slot when moving downward.
@@ -266,7 +273,7 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       }
     }
     cleanup();
-  }, [cleanup, onReorder]);
+  }, [cleanup, hitTestIndex, onReorder]);
 
   // Keep latest move/up refs stable on the window listeners.
   useEffect(() => () => cleanup(), [cleanup]);
