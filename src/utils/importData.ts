@@ -249,6 +249,21 @@ const parseTickTickCSV = (text: string): ImportResult => {
     const rows = parseCSV(cleaned);
     if (rows.length === 0) return { success: false, tasks: [], notes: [], error: 'No data found in CSV', stats: { tasks: 0, notes: 0 } };
 
+    const sectionMap = new Map<string, TaskSection>();
+    if (raw && typeof raw === 'object' && Array.isArray((raw as any).sections)) {
+      for (const s of (raw as any).sections) {
+        const sid = s?.id != null ? String(s.id) : '';
+        if (!sid) continue;
+        sectionMap.set(sid, {
+          id: generateId(),
+          name: String(s.name || `Section ${sid}`),
+          color: '#3b82f6',
+          isCollapsed: false,
+          order: sectionMap.size,
+        });
+      }
+    }
+
     const tasks: TodoItem[] = [];
     const folderMap = new Map<string, Folder>();
     let failed = 0;
@@ -554,6 +569,23 @@ const parseTodoistJSON = (text: string): ImportResult => {
           folderId = folder.id;
         }
 
+        const sourceSectionId = t.section_id != null ? String(t.section_id) : '';
+        let sectionId: string | undefined;
+        if (sourceSectionId) {
+          let section = sectionMap.get(sourceSectionId);
+          if (!section) {
+            section = {
+              id: generateId(),
+              name: `Section ${sourceSectionId}`,
+              color: '#3b82f6',
+              isCollapsed: false,
+              order: sectionMap.size,
+            };
+            sectionMap.set(sourceSectionId, section);
+          }
+          sectionId = section.id;
+        }
+
         const pNum = Number(t.priority);
         const priority = priorityMap[Number.isFinite(pNum) && pNum >= 1 && pNum <= 4 ? pNum : 1] || 'none';
 
@@ -566,6 +598,7 @@ const parseTodoistJSON = (text: string): ImportResult => {
           dueDate: resolveDue(t),
           tags: Array.isArray(t.labels) ? t.labels.map(String) : undefined,
           folderId,
+          sectionId,
           createdAt: t.created_at ? new Date(t.created_at) : new Date(),
           modifiedAt: new Date(),
         } as TodoItem);
@@ -580,8 +613,9 @@ const parseTodoistJSON = (text: string): ImportResult => {
     }
 
     const folders = Array.from(projectFolders.values());
+    const sections = Array.from(sectionMap.values());
     return {
-      success: true, tasks, notes: [], folders: folders.length ? folders : undefined,
+      success: true, tasks, notes: [], folders: folders.length ? folders : undefined, sections: sections.length ? sections : undefined,
       stats: { tasks: tasks.length, notes: 0, folders: folders.length || undefined, failed },
       errors: errors.length ? errors : undefined,
       warnings: warnings.length ? warnings : undefined,
@@ -974,6 +1008,7 @@ const parseGenericJSON = (
   const tasks: TodoItem[] = [];
   const notes: Note[] = [];
   const folders: Folder[] = [];
+  const sections: TaskSection[] = [];
   const errors: string[] = [];
   let failed = 0;
 
@@ -1022,6 +1057,8 @@ const parseGenericJSON = (
     if (Array.isArray(obj.tasks)) (obj.tasks as Record<string, unknown>[]).forEach((t, i) => pushItem({ ...t, type: 'task' }, i));
     if (Array.isArray(obj.notes)) (obj.notes as Record<string, unknown>[]).forEach((n, i) => pushItem({ ...n, type: 'note' }, i));
     if (Array.isArray(obj.folders)) (obj.folders as Folder[]).forEach(f => { if (f && f.id && f.name) folders.push(f); });
+    if (Array.isArray(obj.sections)) (obj.sections as TaskSection[]).forEach(s => { if (s && s.id && s.name) sections.push(s); });
+    if (Array.isArray(obj.todoSections)) (obj.todoSections as TaskSection[]).forEach(s => { if (s && s.id && s.name) sections.push(s); });
     if (Array.isArray(obj.items)) items = obj.items as Record<string, unknown>[];
   } else {
     return { success: false, tasks: [], notes: [], error: 'JSON must be an array or an object with tasks/notes/items', stats: { tasks: 0, notes: 0 } };
@@ -1040,6 +1077,7 @@ const parseGenericJSON = (
     tasks,
     notes,
     folders: folders.length ? folders : undefined,
+    sections: sections.length ? sections : undefined,
     stats: { tasks: tasks.length, notes: notes.length, folders: folders.length || undefined, failed },
     errors: errors.length ? errors : undefined,
   };

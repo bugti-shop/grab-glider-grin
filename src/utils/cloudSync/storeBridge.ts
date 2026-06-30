@@ -58,6 +58,9 @@ export function pushNotes(notes: Note[]): void {
 export function pushNoteDelete(id: string): void {
   enqueueWrite('notes', 'delete', { id });
 }
+export function pushNoteDeletes(ids: string[]): void {
+  enqueueWrites(ids.map((id) => ({ table: 'notes', op: 'delete', row: { id } })) as any);
+}
 
 export function pushTasks(tasks: TodoItem[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];

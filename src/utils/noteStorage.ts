@@ -629,8 +629,8 @@ export const bulkDeleteNotesFromDB = async (
   // 2. Track deletions in one shot for sync. Avoids 10k debounced uploads.
   if (!skipCloudSync) {
     try {
-      const { trackDeletion, loadDeletions } = await import('@/utils/deletionTracker');
-      noteIds.forEach(id => trackDeletion(id, 'notes'));
+      const { trackDeletions, loadDeletions } = await import('@/utils/deletionTracker');
+      trackDeletions(noteIds, 'notes');
       import('@/utils/googleDriveSync').then(({ uploadCategory }) => {
         uploadCategory('flowist_deletions.json', loadDeletions()).catch(() => {});
       }).catch(() => {});
