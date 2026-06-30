@@ -235,7 +235,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           return;
         }
         // Session would have completed while we were away — log it
-        const completed = dur * 60 - (existing.accumulatedSec ?? 0);
+        const elapsedAway = Math.max(0, dur * 60 - (existing.accumulatedSec ?? 0));
         try {
           addPomodoroSession({
             taskId: existing.taskId, type: 'focus',
@@ -244,11 +244,15 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
             durationSec: dur * 60,
           });
         } catch {}
+        notifyFocus(prefs.notifications, 'ended_away', {
+          taskTitle: existing.taskTitle,
+          elapsedSec: dur * 60,
+        });
+        void elapsedAway;
         writeSession(null);
         sessionRef.current = null;
         setRemaining(dur * 60);
         setRunning(false);
-        void completed;
       } else if (typeof existing.remainingSec === 'number') {
         setRemaining(existing.remainingSec);
         setRunning(false);
