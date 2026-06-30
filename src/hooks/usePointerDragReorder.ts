@@ -348,12 +348,14 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
 
   const armAndMaybeActivate = useCallback((index: number, x: number, y: number, pointerType: string, sourceEl: HTMLElement) => {
     if (stateRef.current) cleanup();
+    const initialId = getItemId?.(index) ?? sourceEl.getAttribute('data-pdrag-id') ?? null;
     stateRef.current = {
       startX: x,
       startY: y,
       pointerId: -1,
       pointerType,
       fromIndex: index,
+      fromId: initialId,
       sourceEl,
       ghostEl: null,
       placeholderEl: null,
@@ -362,6 +364,8 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       active: false,
       moved: false,
       lastToIndex: index,
+      lastToId: null,
+      lastToBefore: true,
     };
     stateRef.current.longPressTimer = setTimeout(() => {
       const s = stateRef.current;
