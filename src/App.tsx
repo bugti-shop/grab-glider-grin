@@ -38,6 +38,7 @@ import { widgetDataSync } from "@/utils/widgetDataSync";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useShareIntent } from "@/hooks/useShareIntent";
 import { PerfDiagnosticsPanel } from "@/components/PerfDiagnosticsPanel";
+import { FocusBackgroundBar } from "@/components/focus/FocusBackgroundBar";
 import { DesktopSidebar } from "@/components/desktop/DesktopSidebar";
 import { WidgetAddTask, WidgetNewSticky, WidgetNewLined, WidgetNewRegular, WidgetNewSketch } from "@/pages/WidgetEntry";
 
@@ -835,6 +836,8 @@ const AppContent = () => {
       <Toaster />
       <Sonner />
       <PerfDiagnosticsPanel />
+      <FocusBackgroundBar />
+      
       
       {showOnboarding && (
         <Suspense fallback={<BrandedFallback />}>

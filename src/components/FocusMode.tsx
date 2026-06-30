@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, MoreHorizontal, X, ShieldAlert, Timer as TimerIcon, Maximize2, Music2, Check, Volume2, VolumeX, Bell, BellOff } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, X, ShieldAlert, Timer as TimerIcon, Maximize2, Music2, Check, Volume2, VolumeX, Bell, BellOff, ArrowDownToLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { addPomodoroSession } from '@/utils/pomodoroStorage';
 import { addNotification } from '@/utils/notificationStore';
 import { sendWebNotification, requestNotificationPermission } from '@/utils/webNotifications';
+import { setFocusBgState, clearFocusBgState, onFocusBgCommand } from '@/utils/focusBackgroundState';
+import { SoundLibrary } from '@/components/focus/SoundLibrary';
+import { FocusFlipClock } from '@/components/focus/FocusFlipClock';
+import { findTrack, FocusTrack } from '@/components/focus/FocusSounds';
 import bgMountain from '@/assets/focus/focus-mountain.jpg';
 import bgForest from '@/assets/focus/focus-forest.jpg';
 import bgOcean from '@/assets/focus/focus-ocean.jpg';
@@ -82,6 +86,7 @@ interface FocusPrefs {
   whiteNoiseMuted: boolean;
   fullScreen: boolean;
   notifications: boolean;
+  soundTrackId: string | null; // selected track from SoundLibrary, null = synth white noise
 }
 
 const DEFAULT_PREFS: FocusPrefs = {
@@ -92,6 +97,7 @@ const DEFAULT_PREFS: FocusPrefs = {
   whiteNoiseMuted: false,
   fullScreen: false,
   notifications: true,
+  soundTrackId: null,
 };
 
 const loadPrefs = (): FocusPrefs => {
@@ -136,19 +142,30 @@ const writeSession = (s: ActiveSession | null) => {
   } catch {}
 };
 
-// ---- White noise -----------------------------------------------------------
-const useWhiteNoise = () => {
+// ---- Focus audio: either an HTML <audio> URL or synthesized white noise ----
+const useFocusAudio = () => {
   const ctxRef = useRef<AudioContext | null>(null);
   const srcRef = useRef<AudioBufferSourceNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const start = useCallback((volume: number) => {
+  const stop = useCallback(() => {
+    try { srcRef.current?.stop(); srcRef.current?.disconnect(); gainRef.current?.disconnect(); } catch {}
+    srcRef.current = null;
+    gainRef.current = null;
+    if (audioRef.current) {
+      try { audioRef.current.pause(); audioRef.current.src = ''; } catch {}
+      audioRef.current = null;
+    }
+  }, []);
+
+  const startSynth = useCallback((volume: number) => {
     try {
       const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (!AC) return;
       if (!ctxRef.current) ctxRef.current = new AC();
       const ctx = ctxRef.current!;
-      if (srcRef.current) return; // already running
+      if (srcRef.current) return;
       const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
       const data = buffer.getChannelData(0);
       let lastOut = 0;
@@ -170,23 +187,30 @@ const useWhiteNoise = () => {
     } catch {}
   }, []);
 
-  const stop = useCallback(() => {
+  const startUrl = useCallback((url: string, volume: number) => {
     try {
-      srcRef.current?.stop();
-      srcRef.current?.disconnect();
-      gainRef.current?.disconnect();
-      srcRef.current = null;
-      gainRef.current = null;
+      const a = new Audio(url);
+      a.loop = true;
+      a.crossOrigin = 'anonymous';
+      a.volume = Math.max(0, Math.min(1, volume));
+      a.play().catch(() => { toast.message('Audio blocked — tap Play again'); });
+      audioRef.current = a;
     } catch {}
   }, []);
 
+  const start = useCallback((track: FocusTrack | null, volume: number) => {
+    stop();
+    if (track) startUrl(track.url, volume);
+    else startSynth(volume);
+  }, [stop, startSynth, startUrl]);
+
   const setVolume = useCallback((v: number) => {
-    if (gainRef.current) {
-      try { gainRef.current.gain.value = Math.max(0, Math.min(1, v)); } catch {}
-    }
+    const clamped = Math.max(0, Math.min(1, v));
+    if (gainRef.current) { try { gainRef.current.gain.value = clamped; } catch {} }
+    if (audioRef.current) { try { audioRef.current.volume = clamped; } catch {} }
   }, []);
 
-  const isRunning = useCallback(() => !!srcRef.current, []);
+  const isRunning = useCallback(() => !!srcRef.current || !!audioRef.current, []);
 
   useEffect(() => () => { stop(); try { ctxRef.current?.close(); } catch {} }, [stop]);
 
@@ -201,10 +225,14 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   const [showDurations, setShowDurations] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [showSoundLib, setShowSoundLib] = useState(false);
+  const [showBackgroundPrompt, setShowBackgroundPrompt] = useState(false);
+  const [backgrounded, setBackgrounded] = useState(false);
 
   const sessionRef = useRef<ActiveSession | null>(null);
   const bg = useMemo(() => BACKGROUNDS[Math.floor(Math.random() * BACKGROUNDS.length)], [open]);
-  const noise = useWhiteNoise();
+  const noise = useFocusAudio();
+  const currentTrack = prefs.soundTrackId ? findTrack(prefs.soundTrackId) ?? null : null;
 
   const updatePrefs = useCallback((patch: Partial<FocusPrefs>) => {
     setPrefs(prev => {
@@ -229,7 +257,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           updatePrefs({ durationMin: dur });
           // restart noise if it was on
           if (prefs.whiteNoise && !prefs.whiteNoiseMuted) {
-            noise.start(prefs.whiteNoiseVolume);
+            noise.start(currentTrack, prefs.whiteNoiseVolume);
           }
           toast.message('Resumed your focus session');
           return;
@@ -290,14 +318,15 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, running]);
 
-  // ---- White noise side effects ------------------------------------------
+  // ---- Audio side effects ------------------------------------------------
   useEffect(() => {
     if (prefs.whiteNoise && running && !prefs.whiteNoiseMuted) {
-      noise.start(prefs.whiteNoiseVolume);
+      noise.start(currentTrack, prefs.whiteNoiseVolume);
     } else {
       noise.stop();
     }
-  }, [prefs.whiteNoise, prefs.whiteNoiseMuted, running, noise, prefs.whiteNoiseVolume]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs.whiteNoise, prefs.whiteNoiseMuted, running, prefs.soundTrackId]);
 
   useEffect(() => {
     if (noise.isRunning()) noise.setVolume(prefs.whiteNoiseMuted ? 0 : prefs.whiteNoiseVolume);
@@ -329,10 +358,12 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     const s = sessionRef.current;
     if (!s) { startSession(); return; }
     const now = Date.now();
-    s.endAt = now + (s.remainingSec ?? remaining) * 1000;
+    const remainAtResume = (s.remainingSec ?? remaining);
+    s.endAt = now + remainAtResume * 1000;
     s.remainingSec = undefined;
     s.lastEventAt = now;
     writeSession(s);
+    setRemaining(remainAtResume);
     setRunning(true);
   };
 
@@ -423,8 +454,10 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     try {
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
+        try { await (screen.orientation as any)?.lock?.('landscape'); } catch {}
         updatePrefs({ fullScreen: true });
       } else {
+        try { (screen.orientation as any)?.unlock?.(); } catch {}
         await document.exitFullscreen();
         updatePrefs({ fullScreen: false });
       }
@@ -434,10 +467,38 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   // Apply saved fullscreen preference on open
   useEffect(() => {
     if (open && prefs.fullScreen && !document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().then(() => {
+        try { (screen.orientation as any)?.lock?.('landscape'); } catch {}
+      }).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // ---- Background mode bridge: publish state, listen for bar commands ---
+  useEffect(() => {
+    if (!open) return;
+    const active = backgrounded && (running || !!sessionRef.current);
+    setFocusBgState({
+      active,
+      running,
+      taskTitle: sessionRef.current?.taskTitle,
+      endAt: sessionRef.current?.endAt,
+      remainingSec: sessionRef.current?.remainingSec ?? remaining,
+    });
+    if (!backgrounded) {
+      // visible: ensure bar is hidden
+      clearFocusBgState();
+    }
+  }, [open, backgrounded, running, remaining]);
+
+  useEffect(() => {
+    return onFocusBgCommand((cmd) => {
+      if (cmd === 'open') setBackgrounded(false);
+      else if (cmd === 'toggle') { if (running) pauseSession(); else resumeSession(); }
+      else if (cmd === 'stop') { discardSession(true); clearFocusBgState(); setBackgrounded(false); onClose(); }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
 
   if (!open) return null;
 
@@ -464,11 +525,28 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
 
   const attemptClose = () => {
     if (prefs.strict && running) { setConfirmExit(true); return; }
-    if (sessionRef.current) {
-      // log partial and clear
-      if (running) pauseSession();
+    // If a session is active, offer background-mode option
+    if (sessionRef.current && (running || (sessionRef.current.remainingSec ?? 0) > 0)) {
+      setShowBackgroundPrompt(true);
+      return;
     }
     noise.stop();
+    clearFocusBgState();
+    onClose();
+  };
+
+  const continueInBackground = () => {
+    setShowBackgroundPrompt(false);
+    setBackgrounded(true);
+    onClose(); // hides the host sheet/page wrapper; bar will keep showing
+  };
+
+  const exitFully = () => {
+    setShowBackgroundPrompt(false);
+    if (sessionRef.current && running) pauseSession();
+    noise.stop();
+    clearFocusBgState();
+    setBackgrounded(false);
     onClose();
   };
 
@@ -482,9 +560,21 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   const filled = Math.round(ticks * progress);
 
   const content = (
-    <div className="fixed inset-0 z-[100] text-white" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${bg})` }} />
-      <div className="absolute inset-0 bg-black/35" />
+    <div
+      className="fixed inset-0 z-[100] text-white"
+      role="dialog"
+      aria-modal="true"
+      style={backgrounded ? { opacity: 0, pointerEvents: 'none' } : undefined}
+      aria-hidden={backgrounded || undefined}
+    >
+      {prefs.fullScreen ? (
+        <div className="absolute inset-0 bg-black" />
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${bg})` }} />
+          <div className="absolute inset-0 bg-black/35" />
+        </>
+      )}
 
       <div className="relative h-full w-full flex flex-col" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)', paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
         <div className="flex items-center justify-between px-4">
@@ -511,60 +601,77 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
         )}
 
         <div className="flex-1 flex flex-col items-center justify-center select-none">
-          <div className="relative" style={{ width: size, height: size }}>
-            <svg width={size} height={size} className="-rotate-90 absolute inset-0">
-              {Array.from({ length: ticks }).map((_, i) => {
-                const angle = (i / ticks) * Math.PI * 2;
-                const x1 = cx + Math.cos(angle) * (r - 14);
-                const y1 = cy + Math.sin(angle) * (r - 14);
-                const x2 = cx + Math.cos(angle) * r;
-                const y2 = cy + Math.sin(angle) * r;
-                const isActive = i < filled;
-                const isHead = i === filled - 1 || (filled === 0 && i === 0);
-                return (
-                  <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-                    stroke={isHead && progress > 0 ? '#ff4d4f' : 'rgba(255,255,255,0.55)'}
-                    strokeWidth={isHead && progress > 0 ? 4 : 2}
-                    strokeLinecap="round"
-                    opacity={isActive ? 0.95 : 0.35}
-                  />
-                );
-              })}
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <button onClick={() => !running && setShowDurations(true)} className="font-light tabular-nums text-white" style={{ fontSize: hh > 0 ? 56 : 68, letterSpacing: 1 }}>
-                {timeStr}
-              </button>
+          {prefs.fullScreen ? (
+            <button
+              onClick={() => !running && setShowDurations(true)}
+              className="w-full flex items-center justify-center"
+              aria-label="Change duration"
+            >
+              <FocusFlipClock hours={hh} minutes={mm} seconds={ss} showHours={hh > 0} />
+            </button>
+          ) : (
+            <div className="relative" style={{ width: size, height: size }}>
+              <svg width={size} height={size} className="-rotate-90 absolute inset-0">
+                {Array.from({ length: ticks }).map((_, i) => {
+                  const angle = (i / ticks) * Math.PI * 2;
+                  const x1 = cx + Math.cos(angle) * (r - 14);
+                  const y1 = cy + Math.sin(angle) * (r - 14);
+                  const x2 = cx + Math.cos(angle) * r;
+                  const y2 = cy + Math.sin(angle) * r;
+                  const isActive = i < filled;
+                  const isHead = i === filled - 1 || (filled === 0 && i === 0);
+                  return (
+                    <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+                      stroke={isHead && progress > 0 ? '#ff4d4f' : 'rgba(255,255,255,0.55)'}
+                      strokeWidth={isHead && progress > 0 ? 4 : 2}
+                      strokeLinecap="round"
+                      opacity={isActive ? 0.95 : 0.35}
+                    />
+                  );
+                })}
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <button onClick={() => !running && setShowDurations(true)} className="font-light tabular-nums text-white" style={{ fontSize: hh > 0 ? 56 : 68, letterSpacing: 1 }}>
+                  {timeStr}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
           {!running && remaining === total && (
             <button onClick={() => setShowDurations(true)} className="mt-3 text-xs uppercase tracking-widest text-white/70 hover:text-white">
               {prefs.durationMin} min · tap to change
             </button>
           )}
 
-          {/* White noise volume bar — visible only when white noise is on */}
+          {/* Sound selection + volume — visible only when sound is on */}
           {prefs.whiteNoise && (
-            <div className="mt-6 w-full max-w-xs px-6 flex items-center gap-3">
+            <div className="mt-6 w-full max-w-xs px-6 space-y-2">
               <button
-                onClick={() => updatePrefs({ whiteNoiseMuted: !prefs.whiteNoiseMuted })}
-                className="h-9 w-9 grid place-items-center rounded-full bg-white/15 hover:bg-white/25"
-                aria-label={prefs.whiteNoiseMuted ? 'Unmute' : 'Mute'}
+                onClick={() => setShowSoundLib(true)}
+                className="w-full text-xs text-white/80 hover:text-white flex items-center justify-center gap-1.5"
               >
-                {prefs.whiteNoiseMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                <Music2 className="h-3.5 w-3.5" />
+                {currentTrack ? `${currentTrack.emoji} ${currentTrack.name}` : 'White Noise (synth)'} · change
               </button>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(prefs.whiteNoiseVolume * 100)}
-                onChange={(e) => updatePrefs({ whiteNoiseVolume: Number(e.target.value) / 100, whiteNoiseMuted: false })}
-                className="flex-1 accent-white"
-                aria-label="White noise volume"
-              />
-              <span className="text-xs tabular-nums w-8 text-right text-white/80">
-                {prefs.whiteNoiseMuted ? 0 : Math.round(prefs.whiteNoiseVolume * 100)}
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => updatePrefs({ whiteNoiseMuted: !prefs.whiteNoiseMuted })}
+                  className="h-9 w-9 grid place-items-center rounded-full bg-white/15 hover:bg-white/25"
+                  aria-label={prefs.whiteNoiseMuted ? 'Unmute' : 'Mute'}
+                >
+                  {prefs.whiteNoiseMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                </button>
+                <input
+                  type="range" min={0} max={100}
+                  value={Math.round(prefs.whiteNoiseVolume * 100)}
+                  onChange={(e) => updatePrefs({ whiteNoiseVolume: Number(e.target.value) / 100, whiteNoiseMuted: false })}
+                  className="flex-1 accent-white"
+                  aria-label="Volume"
+                />
+                <span className="text-xs tabular-nums w-8 text-right text-white/80">
+                  {prefs.whiteNoiseMuted ? 0 : Math.round(prefs.whiteNoiseVolume * 100)}
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -595,9 +702,12 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           />
           <OptionButton
             icon={<Music2 className="h-6 w-6" />}
-            label="White Noise"
+            label={prefs.whiteNoise ? 'Sounds' : 'White Noise'}
             active={prefs.whiteNoise}
-            onClick={() => updatePrefs({ whiteNoise: !prefs.whiteNoise })}
+            onClick={() => {
+              if (prefs.whiteNoise) setShowSoundLib(true);
+              else updatePrefs({ whiteNoise: true });
+            }}
           />
         </div>
       </div>
@@ -646,6 +756,8 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           <MenuRow label="Change Duration" icon={<TimerIcon className="h-4 w-4" />} onClick={() => { setShowDurations(true); setShowMenu(false); }} />
           <MenuRow label="Toggle Full Screen" icon={<Maximize2 className="h-4 w-4" />} onClick={() => { toggleFullscreen(); setShowMenu(false); }} />
           <MenuRow label={prefs.whiteNoise ? 'Stop White Noise' : 'Play White Noise'} icon={<Music2 className="h-4 w-4" />} onClick={() => { updatePrefs({ whiteNoise: !prefs.whiteNoise }); setShowMenu(false); }} />
+          <MenuRow label="Browse Sounds & Music" icon={<Music2 className="h-4 w-4" />} onClick={() => { setShowSoundLib(true); setShowMenu(false); }} />
+          <MenuRow label="Run in Background" icon={<ArrowDownToLine className="h-4 w-4" />} onClick={() => { setShowMenu(false); continueInBackground(); }} />
           <MenuRow
             label={prefs.notifications ? 'Disable Notifications' : 'Enable Notifications'}
             icon={prefs.notifications ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
@@ -674,6 +786,32 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
             <div className="flex gap-2 justify-end pt-2">
               <button onClick={() => setConfirmExit(false)} className="px-4 py-2 rounded-lg text-sm hover:bg-muted">Stay</button>
               <button onClick={() => { setConfirmExit(false); discardSession(true); onClose(); }} className="px-4 py-2 rounded-lg text-sm bg-destructive text-destructive-foreground">Exit anyway</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <SoundLibrary
+        open={showSoundLib}
+        onClose={() => setShowSoundLib(false)}
+        selectedId={prefs.soundTrackId}
+        onSelect={(t) => {
+          updatePrefs({ soundTrackId: t ? t.id : null, whiteNoise: true });
+        }}
+        volume={prefs.whiteNoiseVolume}
+        muted={prefs.whiteNoiseMuted}
+        onVolumeChange={(v) => updatePrefs({ whiteNoiseVolume: v, whiteNoiseMuted: false })}
+        onMuteToggle={() => updatePrefs({ whiteNoiseMuted: !prefs.whiteNoiseMuted })}
+      />
+
+      {showBackgroundPrompt && (
+        <div className="absolute inset-0 bg-black/70 flex items-end sm:items-center justify-center z-20 px-4" onClick={() => setShowBackgroundPrompt(false)}>
+          <div className="bg-background text-foreground rounded-2xl p-5 w-full max-w-sm space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold">Exit focus session?</h3>
+            <p className="text-sm text-muted-foreground">Timer aur sounds dono background mein chalte rahenge. Top bar mein remaining time dikhega.</p>
+            <div className="flex flex-col gap-2 pt-2">
+              <button onClick={continueInBackground} className="w-full py-2.5 rounded-lg text-sm bg-primary text-primary-foreground font-medium">Run in Background</button>
+              <button onClick={exitFully} className="w-full py-2.5 rounded-lg text-sm bg-destructive text-destructive-foreground font-medium">End session</button>
+              <button onClick={() => setShowBackgroundPrompt(false)} className="w-full py-2.5 rounded-lg text-sm hover:bg-muted">Cancel</button>
             </div>
           </div>
         </div>
