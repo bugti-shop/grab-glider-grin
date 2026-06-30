@@ -3,7 +3,7 @@
 // Evernote ENEX imports preserve notebook structure as folders and migrate
 // inline image / PDF resources into IndexedDB-backed attachments.
 
-import { TodoItem, Note, Priority, Folder, TaskAttachment } from '@/types/note';
+import { TodoItem, Note, Priority, Folder, TaskAttachment, TaskSection } from '@/types/note';
 import { saveTaskMedia } from '@/utils/taskMediaStorage';
 
 export type ImportSource = 'todoist' | 'ticktick' | 'notion' | 'evernote' | 'csv-tasks' | 'csv-notes' | 'json';
@@ -21,6 +21,8 @@ export interface ImportResult {
   notes: Note[];
   /** Folders detected in the import (e.g. Evernote notebooks). Optional. */
   folders?: Folder[];
+  /** Task sections detected in the import (e.g. Todoist sections). Optional. */
+  sections?: TaskSection[];
   error?: string;
   stats: {
     tasks: number;
@@ -138,8 +140,8 @@ const parseTodoistCSV = (text: string): ImportResult => {
     if (rows.length === 0) return { success: false, tasks: [], notes: [], error: 'No data found in CSV', stats: { tasks: 0, notes: 0 } };
 
     const rootTasks: TodoItem[] = [];
-    const folders: Folder[] = [];
-    let currentFolderId: string | undefined;
+    const sections: TaskSection[] = [];
+    let currentSectionId: string | undefined;
     let failed = 0;
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -161,9 +163,15 @@ const parseTodoistCSV = (text: string): ImportResult => {
         if (!content) continue;
 
         if (type === 'section') {
-          const folder: Folder = { id: generateId(), name: content, createdAt: new Date() } as Folder;
-          folders.push(folder);
-          currentFolderId = folder.id;
+          const section: TaskSection = {
+            id: generateId(),
+            name: content,
+            color: '#3b82f6',
+            isCollapsed: false,
+            order: sections.length,
+          };
+          sections.push(section);
+          currentSectionId = section.id;
           stack.length = 0; // sections reset nesting
           continue;
         }
@@ -188,7 +196,7 @@ const parseTodoistCSV = (text: string): ImportResult => {
           priority: priorityMap[rawPriority] || 'none',
           description: row['DESCRIPTION'] || row['description'] || undefined,
           dueDate: dateStr ? new Date(dateStr) : undefined,
-          folderId: currentFolderId,
+          sectionId: currentSectionId,
           createdAt: new Date(),
           modifiedAt: new Date(),
         } as TodoItem;
@@ -217,8 +225,8 @@ const parseTodoistCSV = (text: string): ImportResult => {
       success: true,
       tasks: rootTasks,
       notes: [],
-      folders,
-      stats: { tasks: countAll(rootTasks), notes: 0, folders: folders.length, failed },
+      sections,
+      stats: { tasks: countAll(rootTasks), notes: 0, folders: 0, failed },
       errors: errors.length ? errors : undefined,
       warnings: warnings.length ? warnings : undefined,
     };
