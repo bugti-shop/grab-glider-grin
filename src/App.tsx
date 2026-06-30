@@ -835,6 +835,8 @@ const AppContent = () => {
       <Toaster />
       <Sonner />
       <PerfDiagnosticsPanel />
+      <FocusBackgroundBar />
+      
       
       {showOnboarding && (
         <Suspense fallback={<BrandedFallback />}>
