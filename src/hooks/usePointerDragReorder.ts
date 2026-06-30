@@ -250,6 +250,14 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     (document.body.style as any).webkitUserSelect = 'none';
     document.body.style.cursor = 'grabbing';
 
+    document.body.style.userSelect = 'none';
+    (document.body.style as any).webkitUserSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+    // Hard-lock page scroll the instant the drag activates. Restored in cleanup().
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+    document.documentElement.style.overflow = 'hidden';
+
     setIsDragging(true);
     setDraggingIndex(s.fromIndex);
   }, []);
