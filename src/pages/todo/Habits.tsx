@@ -173,11 +173,12 @@ const Habits = () => {
         ],
         updatedAt: new Date().toISOString(),
       };
+      const withMilestones = fireMilestoneToasts(habit, updated);
       const previous = habits;
-      setHabits((h) => h.map((x) => (x.id === habit.id ? updated : x)));
+      setHabits((h) => h.map((x) => (x.id === habit.id ? withMilestones : x)));
       try {
-        await saveHabit(updated);
-        if (completed && !wasCompleted) fireChainToast(updated);
+        await saveHabit(withMilestones);
+        if (completed && !wasCompleted) fireChainToast(withMilestones);
       } catch {
         setHabits(previous);
         toast.error('Could not save check-in. Please try again.');
