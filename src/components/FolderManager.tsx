@@ -1,7 +1,10 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Folder as FolderIcon, Plus, Edit2, Trash2, FolderOpen, FolderPlus, FolderMinus, MoreVertical, Star, ArrowUpDown, Clock, FileText, StickyNote, CheckSquare, Filter, Code, Palette, Receipt, Archive, LayoutGrid, List, PenTool, Upload } from 'lucide-react';
+import { Folder as FolderIcon, Plus, Edit2, Trash2, FolderOpen, FolderPlus, FolderMinus, MoreVertical, Star, ArrowUpDown, Clock, FileText, StickyNote, CheckSquare, Filter, Code, Palette, Receipt, Archive, LayoutGrid, List, PenTool, Upload, Download } from 'lucide-react';
 import { ImportDataSheet } from '@/components/ImportDataSheet';
+import { toast } from 'sonner';
+import { loadNotesFromDB } from '@/utils/noteStorage';
+import { exportNotesCsv } from '@/utils/csvExport';
 import { cn } from '@/lib/utils';
 import { Folder, Note, NoteType } from '@/types/note';
 import { Button } from '@/components/ui/button';
@@ -334,6 +337,28 @@ export const FolderManager = ({
               <Upload className="h-4 w-4 mr-2" />
               Import Notes
             </DropdownMenuItem>
+
+            {/* Export Notes (CSV) */}
+            <DropdownMenuItem
+              onClick={async () => {
+                try {
+                  const notes = await loadNotesFromDB();
+                  if (!notes || notes.length === 0) {
+                    toast.info('No notes to export');
+                    return;
+                  }
+                  const { filename, count } = exportNotesCsv(notes);
+                  toast.success(`Exported ${count} notes → ${filename}`);
+                } catch (err) {
+                  console.error('[ExportNotes] failed', err);
+                  toast.error('Export failed');
+                }
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export Notes (CSV)
+            </DropdownMenuItem>
+            
             
             {/* Add Notes to Folder */}
             {isCustomFolder && onAddNotesToFolder && availableNotes.length > 0 && (
