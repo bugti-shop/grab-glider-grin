@@ -401,6 +401,7 @@ const HabitNew = () => {
               <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1">
                 {sections.map((s) => {
                   const sel = sectionId === s.id;
+                  const parent = s.parentSectionId ? sections.find((p) => p.id === s.parentSectionId) : null;
                   return (
                     <button
                       key={s.id}
@@ -410,12 +411,13 @@ const HabitNew = () => {
                         sel ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
                       )}
                     >
-                      {s.name}
+                      {parent ? `${parent.name} › ${s.name}` : s.name}
                     </button>
                   );
                 })}
               </div>
             </section>
+
 
             {/* Reminders (multi) */}
             <section className="bg-background rounded-2xl p-4">
