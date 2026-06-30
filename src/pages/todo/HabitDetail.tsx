@@ -402,71 +402,99 @@ const HabitDetail = () => {
         )}
       </div>
 
-      {/* Tap-to-check OR achieved stats card */}
+      {/* Tap-to-check OR amount counter OR achieved stats card */}
       <div className="relative z-10 px-6 mt-4">
-        <AnimatePresence mode="wait" initial={false}>
-          {!todayDone ? (
-            <motion.button
-              key="check"
-              type="button"
-              onClick={toggleToday}
-              disabled={saving}
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              whileTap={{ scale: 0.97 }}
-              className="relative w-full h-16 rounded-full overflow-hidden select-none flex items-center justify-center gap-3 text-white font-semibold text-[15px] tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:opacity-70 disabled:cursor-not-allowed"
-              style={{ background: 'rgba(255,255,255,0.28)' }}
-              aria-label={saving ? 'Saving check-in' : 'Check in'}
-              aria-busy={saving}
-            >
-              <motion.span
-                className="h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center"
-                style={{ color: headerColor }}
-                animate={saving ? { scale: [1, 0.9, 1] } : { scale: 1 }}
-                transition={saving ? { duration: 0.8, repeat: Infinity } : { duration: 0.2 }}
-              >
-                <Check className="h-6 w-6" strokeWidth={3} />
-              </motion.span>
-              <span>{saving ? 'Saving…' : 'Tap to check in'}</span>
-            </motion.button>
-
-
-          ) : (
-            <motion.div
-              key="stats"
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              className="rounded-2xl bg-white shadow-xl p-5"
-            >
-              <div className="grid grid-cols-3 text-center">
-                <div>
-                  <div className="text-[32px] font-bold text-foreground leading-none">{totalCheckins}</div>
-                  <div className="text-xs text-muted-foreground mt-2">Total check-ins</div>
-                </div>
-                <div>
-                  <div className="text-[32px] font-bold text-foreground leading-none">{bestStreak}</div>
-                  <div className="text-xs text-muted-foreground mt-2">Best Streak</div>
-                </div>
-                <div>
-                  <div className="text-[32px] font-bold text-foreground leading-none">{streak}</div>
-                  <div className="text-xs text-muted-foreground mt-2">Streak</div>
-                </div>
-              </div>
-              <button
-                onClick={() => { triggerHaptic('light').catch(() => {}); }}
-                className="mt-4 w-full h-12 rounded-full text-white font-semibold text-[15px]"
-                style={{ background: headerColor, opacity: 0.85 }}
-              >
-                <Share2 className="inline-block h-4 w-4 mr-2 -mt-0.5" /> Share
-              </button>
-              <button
+        {isAmount ? (
+          <HabitAmountCounter
+            current={todayAmount}
+            goalAmount={habit.goalAmount ?? 1}
+            goalUnit={habit.goalUnit}
+            color={headerColor}
+            onChange={setTodayAmount}
+          />
+        ) : (
+          <AnimatePresence mode="wait" initial={false}>
+            {!todayDone ? (
+              <motion.button
+                key="check"
+                type="button"
                 onClick={toggleToday}
-                className="mt-2 w-full text-[12px] text-muted-foreground underline"
+                disabled={saving}
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                whileTap={{ scale: 0.97 }}
+                className="relative w-full h-16 rounded-full overflow-hidden select-none flex items-center justify-center gap-3 text-white font-semibold text-[15px] tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:opacity-70 disabled:cursor-not-allowed"
+                style={{ background: 'rgba(255,255,255,0.28)' }}
+                aria-label={saving ? 'Saving check-in' : 'Check in'}
+                aria-busy={saving}
               >
-                Undo today's check-in
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                <motion.span
+                  className="h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center"
+                  style={{ color: headerColor }}
+                  animate={saving ? { scale: [1, 0.9, 1] } : { scale: 1 }}
+                  transition={saving ? { duration: 0.8, repeat: Infinity } : { duration: 0.2 }}
+                >
+                  <Check className="h-6 w-6" strokeWidth={3} />
+                </motion.span>
+                <span>
+                  {saving
+                    ? 'Saving…'
+                    : isAvoid
+                    ? 'I avoided it today'
+                    : 'Tap to check in'}
+                </span>
+              </motion.button>
+            ) : (
+              <motion.div
+                key="stats"
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                className="rounded-2xl bg-white shadow-xl p-5"
+              >
+                <div className="grid grid-cols-3 text-center">
+                  <div>
+                    <div className="text-[32px] font-bold text-foreground leading-none">{totalCheckins}</div>
+                    <div className="text-xs text-muted-foreground mt-2">Total check-ins</div>
+                  </div>
+                  <div>
+                    <div className="text-[32px] font-bold text-foreground leading-none">{bestStreak}</div>
+                    <div className="text-xs text-muted-foreground mt-2">Best Streak</div>
+                  </div>
+                  <div>
+                    <div className="text-[32px] font-bold text-foreground leading-none">{streak}</div>
+                    <div className="text-xs text-muted-foreground mt-2">{isAvoid ? 'Clean Streak' : 'Streak'}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleShare}
+                  className="mt-4 w-full h-12 rounded-full text-white font-semibold text-[15px]"
+                  style={{ background: headerColor, opacity: 0.85 }}
+                >
+                  <Share2 className="inline-block h-4 w-4 mr-2 -mt-0.5" /> Share
+                </button>
+                <button
+                  onClick={toggleToday}
+                  className="mt-2 w-full text-[12px] text-muted-foreground underline"
+                >
+                  Undo today's check-in
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+
+        {/* Reflection / daily note button */}
+        <button
+          onClick={() => {
+            setReflectionDate(todayKey);
+            setReflectionReadOnly(false);
+            setReflectionOpen(true);
+          }}
+          className="mt-3 w-full flex items-center justify-center gap-2 text-white/90 text-[13px] font-medium py-2"
+        >
+          <NotebookPen className="h-4 w-4" />
+          {todayRecord?.note ? 'Edit reflection' : 'Add reflection'}
+        </button>
       </div>
+
 
       {/* Expand chevron */}
       <div className="relative z-10 flex justify-center pt-4">
