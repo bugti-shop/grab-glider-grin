@@ -2032,6 +2032,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           onClose={() => setShowScanNote(false)}
           onInsertHtml={handleAiInsertHtml}
         />
+      </SafeComponent>
+
+
 
       {/* Import an article from a public URL */}
       <SafeComponent fallback={null}>
