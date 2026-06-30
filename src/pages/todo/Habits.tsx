@@ -87,23 +87,76 @@ const Habits = () => {
     navigate(`/todo/habits/${active.habitId}`, { replace: true });
   }, [navigate]);
 
-  // Handle widget tap deep-link: /todo/habits?check=<id> → cycle that habit.
+  // Handle widget tap deep-link:
+  //  /todo/habits?check=<id>           → cycle that habit
+  //  /todo/habits?action=done&id=<id>  → mark done (idempotent)
+  //  /todo/habits?action=skip&id=<id>  → mark skipped (idempotent)
   useEffect(() => {
     if (habits.length === 0) return;
     const params = new URLSearchParams(window.location.search);
     const checkId = params.get('check');
-    if (!checkId) return;
-    const target = habits.find((h) => h.id === checkId);
-    if (target) {
-      cycleStatus(target);
-      toast.success(`${target.emoji || '✨'} ${target.name} — checked in`);
+    const action = params.get('action');
+    const actionId = params.get('id');
+    let consumed = false;
+
+    if (checkId) {
+      const target = habits.find((h) => h.id === checkId);
+      if (target) {
+        cycleStatus(target);
+        toast.success(`${target.emoji || '✨'} ${target.name} — checked in`);
+      }
+      consumed = true;
+    } else if (action && actionId && (action === 'done' || action === 'skip')) {
+      const target = habits.find((h) => h.id === actionId);
+      if (target) {
+        setHabitStatusFromWidget(target, action === 'done' ? 'done' : 'skipped');
+      }
+      consumed = true;
     }
-    // Clean the URL so a refresh doesn't re-trigger.
-    params.delete('check');
-    const next = window.location.pathname + (params.toString() ? `?${params}` : '');
-    window.history.replaceState({}, '', next);
+
+    if (consumed) {
+      params.delete('check');
+      params.delete('action');
+      params.delete('id');
+      const next = window.location.pathname + (params.toString() ? `?${params}` : '');
+      window.history.replaceState({}, '', next);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [habits.length]);
+
+  /** Apply a specific status (done|skipped) from a widget action. Idempotent. */
+  const setHabitStatusFromWidget = async (habit: Habit, status: HabitDayStatus) => {
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    const rec = habit.completions.find((c) => c.date === todayKey);
+    if (rec?.status === status) {
+      toast(`${habit.emoji || '✨'} ${habit.name} — already ${status}`);
+      return;
+    }
+    const others = habit.completions.filter((c) => c.date !== todayKey);
+    const updated: Habit = {
+      ...habit,
+      completions: [
+        ...others,
+        { date: todayKey, completed: status === 'done', status, note: rec?.note },
+      ],
+      updatedAt: new Date().toISOString(),
+    };
+    const withMilestones = fireMilestoneToasts(habit, updated);
+    const previous = habits;
+    setHabits((h) => h.map((x) => (x.id === habit.id ? withMilestones : x)));
+    try {
+      await saveHabit(withMilestones);
+      if (status === 'done') {
+        fireChainToast(withMilestones);
+        toast.success(`${habit.emoji || '✨'} ${habit.name} — done`);
+      } else {
+        toast(`${habit.emoji || '✨'} ${habit.name} — skipped`);
+      }
+    } catch {
+      setHabits(previous);
+      toast.error('Could not save check-in. Please try again.');
+    }
+  };
 
   // 7-day strip ending today
   const weekDays = useMemo(() => {
