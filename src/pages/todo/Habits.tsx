@@ -290,6 +290,14 @@ const Habits = () => {
                 {h.difficulty === 'easy' ? 'Easy' : h.difficulty === 'medium' ? 'Med' : 'Hard'}
               </span>
             )}
+            {isMakeUpDay(h, selectedDate) && (
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-300"
+                title="Rescheduled from a missed day"
+              >
+                Make-up
+              </span>
+            )}
           </div>
           {weeklyQuota && (
             <div className="text-[11px] text-muted-foreground">
