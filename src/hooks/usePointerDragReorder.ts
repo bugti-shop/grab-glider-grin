@@ -36,37 +36,39 @@ const PLACEHOLDER_HEIGHT_PX = 2;
 const PLACEHOLDER_COLOR = 'hsl(217 91% 60%)'; // blue accent — visual only
 
 export interface UsePointerDragReorderOptions {
-  /** Total reorderable items in the list. */
   itemCount: number;
-  /** Called when the user drops on a valid slot. `to` is the destination
-   *  index in the *original* (pre-move) array. */
   onReorder: (fromIndex: number, toIndex: number) => void;
-  /** Attribute used to discover slot elements. Must be a number. */
   itemAttr?: string;
-  /** Disable drag entirely (e.g. when selection mode is active). */
   disabled?: boolean;
+  /**
+   * Stable id resolver. When provided, the hook records the *id* of the
+   * source row at drag-start and re-resolves source/target indices at
+   * drop-time. Makes reorder immune to concurrent list reconciliation
+   * (e.g. a rapid completion queue shifting indices mid-gesture).
+   */
+  getItemId?: (index: number) => string | number | null | undefined;
+  resolveIndexById?: (id: string | number) => number;
+  onDragStart?: (fromIndex: number, fromId: string | number | null) => void;
+  onDragEnd?: () => void;
 }
 
 export interface PointerDragApi {
-  /** Spread onto each row container. Adds the data attribute used for
-   *  hit-testing and the `touch-action: none` style while active. */
   getItemProps: (index: number) => {
     'data-pdrag-index': number;
+    'data-pdrag-id'?: string | number;
     style: React.CSSProperties;
   };
-  /** Spread onto a drag handle (or the whole row to make it draggable). */
   getHandleProps: (index: number) => {
     onPointerDownCapture: (e: React.PointerEvent) => void;
+    onTouchStartCapture: (e: React.TouchEvent) => void;
     style: React.CSSProperties;
   };
-  /** True while the user is actively dragging an item. */
   isDragging: boolean;
-  /** Index of the currently-dragged item, or null. */
   draggingIndex: number | null;
 }
 
 export function usePointerDragReorder(opts: UsePointerDragReorderOptions): PointerDragApi {
-  const { onReorder, disabled = false, itemAttr = 'data-pdrag-index' } = opts;
+  const { onReorder, disabled = false, itemAttr = 'data-pdrag-index', getItemId, resolveIndexById, onDragStart, onDragEnd } = opts;
 
   const [isDragging, setIsDragging] = useState(false);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -77,14 +79,17 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     pointerId: number;
     pointerType: string;
     fromIndex: number;
+    fromId: string | number | null;
     sourceEl: HTMLElement | null;
     ghostEl: HTMLElement | null;
     placeholderEl: HTMLElement | null;
     longPressTimer: ReturnType<typeof setTimeout> | null;
-    armed: boolean;     // long-press fired (touch) OR distance threshold met (mouse)
-    active: boolean;    // ghost is in DOM, drag in progress
-    moved: boolean;     // pointer/finger actually moved after activation
+    armed: boolean;
+    active: boolean;
+    moved: boolean;
     lastToIndex: number;
+    lastToId: string | number | null;
+    lastToBefore: boolean;
   } | null>(null);
 
   const cleanup = useCallback(() => {
@@ -164,6 +169,9 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     s.placeholderEl.style.left = `${rect.left}px`;
     s.placeholderEl.style.width = `${rect.width}px`;
     s.lastToIndex = hit.before ? hit.index : hit.index + 1;
+    s.lastToBefore = hit.before;
+    const idAttr = slot.getAttribute('data-pdrag-id');
+    s.lastToId = idAttr ?? null;
   }, [itemAttr]);
 
   const handlePointerMove = useCallback((e: PointerEvent) => {
@@ -287,7 +295,8 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
 
     setIsDragging(true);
     setDraggingIndex(s.fromIndex);
-  }, []);
+    try { onDragStart?.(s.fromIndex, s.fromId); } catch {}
+  }, [onDragStart]);
 
   const handlePointerUp = useCallback((e: PointerEvent | { clientX: number; clientY: number }) => {
     const s = stateRef.current;
@@ -296,9 +305,25 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       const finalHit = hitTestIndex(e.clientX, e.clientY);
       if (finalHit) {
         s.lastToIndex = finalHit.before ? finalHit.index : finalHit.index + 1;
+        s.lastToBefore = finalHit.before;
+        const slot = document.querySelector<HTMLElement>(`[${itemAttr}="${finalHit.index}"]`);
+        s.lastToId = slot?.getAttribute('data-pdrag-id') ?? null;
       }
-      const from = s.fromIndex;
-      const insertionIndex = s.lastToIndex;
+      // Resolve indices against the *current* list at drop time using stable
+      // ids. This neutralizes any reconciliation (task completion, sync, etc.)
+      // that may have shifted indices while the gesture was in flight.
+      let from = s.fromIndex;
+      if (s.fromId != null && resolveIndexById) {
+        const resolved = resolveIndexById(s.fromId);
+        if (Number.isFinite(resolved) && resolved >= 0) from = resolved;
+      }
+      let insertionIndex = s.lastToIndex;
+      if (s.lastToId != null && resolveIndexById) {
+        const resolvedTarget = resolveIndexById(s.lastToId);
+        if (Number.isFinite(resolvedTarget) && resolvedTarget >= 0) {
+          insertionIndex = s.lastToBefore ? resolvedTarget : resolvedTarget + 1;
+        }
+      }
       let to = insertionIndex;
       if (to > from) to -= 1;
       try {
@@ -321,7 +346,8 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       }
     }
     cleanup();
-  }, [cleanup, hitTestIndex, onReorder]);
+    try { onDragEnd?.(); } catch {}
+  }, [cleanup, hitTestIndex, itemAttr, onDragEnd, onReorder, resolveIndexById]);
 
   // Touch-event fallback for synthetic TouchEvents (Playwright) and any
   // WebView that suppresses pointer-from-touch. Mirrors the pointer state.
@@ -340,12 +366,14 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
 
   const armAndMaybeActivate = useCallback((index: number, x: number, y: number, pointerType: string, sourceEl: HTMLElement) => {
     if (stateRef.current) cleanup();
+    const initialId = getItemId?.(index) ?? sourceEl.getAttribute('data-pdrag-id') ?? null;
     stateRef.current = {
       startX: x,
       startY: y,
       pointerId: -1,
       pointerType,
       fromIndex: index,
+      fromId: initialId,
       sourceEl,
       ghostEl: null,
       placeholderEl: null,
@@ -354,6 +382,8 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       active: false,
       moved: false,
       lastToIndex: index,
+      lastToId: null,
+      lastToBefore: true,
     };
     stateRef.current.longPressTimer = setTimeout(() => {
       const s = stateRef.current;
@@ -399,10 +429,15 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     window.addEventListener('touchcancel', handleTouchEnd);
   }, [armAndMaybeActivate, disabled, handleTouchEnd, handleTouchMove, itemAttr]);
 
-  const getItemProps = useCallback((index: number) => ({
-    'data-pdrag-index': index,
-    style: (isDragging ? { touchAction: 'none' as const } : {}) as React.CSSProperties,
-  }), [isDragging]);
+  const getItemProps = useCallback((index: number) => {
+    const id = getItemId?.(index);
+    const props: { 'data-pdrag-index': number; 'data-pdrag-id'?: string | number; style: React.CSSProperties } = {
+      'data-pdrag-index': index,
+      style: (isDragging ? { touchAction: 'none' as const } : {}) as React.CSSProperties,
+    };
+    if (id != null) props['data-pdrag-id'] = id;
+    return props;
+  }, [getItemId, isDragging]);
 
   const getHandleProps = useCallback((index: number) => ({
     onPointerDownCapture: onPointerDown(index),
