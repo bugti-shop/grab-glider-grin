@@ -85,6 +85,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding"));
 const Landing = lazy(() => import("./pages/Landing"));
 const PremiumUnlock = lazy(() => import("./pages/PremiumUnlock"));
+const Business = lazy(() => import("./pages/Business"));
 
 
 const queryClient = new QueryClient();
