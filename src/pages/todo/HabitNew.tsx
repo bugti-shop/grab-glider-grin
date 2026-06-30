@@ -130,6 +130,8 @@ const HabitNew = () => {
       setAutoPopup(!!h.autoPopupLog);
       setKind(h.kind ?? 'build');
       setChainAfterHabitId(h.chainAfterHabitId);
+      if (h.color) setColor(h.color);
+      setDifficulty(h.difficulty);
     })();
     return () => { cancelled = true; };
   }, [editId]);
