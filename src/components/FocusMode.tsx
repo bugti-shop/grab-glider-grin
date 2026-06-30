@@ -454,8 +454,10 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     try {
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
+        try { await (screen.orientation as any)?.lock?.('landscape'); } catch {}
         updatePrefs({ fullScreen: true });
       } else {
+        try { (screen.orientation as any)?.unlock?.(); } catch {}
         await document.exitFullscreen();
         updatePrefs({ fullScreen: false });
       }
@@ -465,10 +467,38 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   // Apply saved fullscreen preference on open
   useEffect(() => {
     if (open && prefs.fullScreen && !document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().then(() => {
+        try { (screen.orientation as any)?.lock?.('landscape'); } catch {}
+      }).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // ---- Background mode bridge: publish state, listen for bar commands ---
+  useEffect(() => {
+    if (!open) return;
+    const active = backgrounded && (running || !!sessionRef.current);
+    setFocusBgState({
+      active,
+      running,
+      taskTitle: sessionRef.current?.taskTitle,
+      endAt: sessionRef.current?.endAt,
+      remainingSec: sessionRef.current?.remainingSec ?? remaining,
+    });
+    if (!backgrounded) {
+      // visible: ensure bar is hidden
+      clearFocusBgState();
+    }
+  }, [open, backgrounded, running, remaining]);
+
+  useEffect(() => {
+    return onFocusBgCommand((cmd) => {
+      if (cmd === 'open') setBackgrounded(false);
+      else if (cmd === 'toggle') { if (running) pauseSession(); else resumeSession(); }
+      else if (cmd === 'stop') { discardSession(true); clearFocusBgState(); setBackgrounded(false); onClose(); }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
 
   if (!open) return null;
 
@@ -495,11 +525,28 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
 
   const attemptClose = () => {
     if (prefs.strict && running) { setConfirmExit(true); return; }
-    if (sessionRef.current) {
-      // log partial and clear
-      if (running) pauseSession();
+    // If a session is active, offer background-mode option
+    if (sessionRef.current && (running || (sessionRef.current.remainingSec ?? 0) > 0)) {
+      setShowBackgroundPrompt(true);
+      return;
     }
     noise.stop();
+    clearFocusBgState();
+    onClose();
+  };
+
+  const continueInBackground = () => {
+    setShowBackgroundPrompt(false);
+    setBackgrounded(true);
+    onClose(); // hides the host sheet/page wrapper; bar will keep showing
+  };
+
+  const exitFully = () => {
+    setShowBackgroundPrompt(false);
+    if (sessionRef.current && running) pauseSession();
+    noise.stop();
+    clearFocusBgState();
+    setBackgrounded(false);
     onClose();
   };
 
