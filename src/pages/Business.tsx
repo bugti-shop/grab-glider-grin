@@ -100,11 +100,16 @@ const Business = () => {
     setSubmitting(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
+      const d = parsed.data;
       const payload = {
-        ...parsed.data,
-        role: parsed.data.role || null,
-        use_case: parsed.data.use_case || null,
-        message: parsed.data.message || null,
+        company_name: d.company_name,
+        contact_name: d.contact_name,
+        work_email: d.work_email,
+        audience: d.audience,
+        team_size: d.team_size,
+        role: d.role ? d.role : null,
+        use_case: d.use_case ? d.use_case : null,
+        message: d.message ? d.message : null,
         user_id: userData?.user?.id ?? null,
         source: 'business-page',
       };
