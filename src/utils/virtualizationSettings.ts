@@ -14,13 +14,19 @@ export interface VirtualizationSettings {
   };
 }
 
-const STORAGE_KEY = 'flowist:virtualization-settings';
+// Bumped to v2 when the notes row-height default was tightened so existing
+// installs adopt the new compact spacing instead of inheriting the old 165px.
+const STORAGE_KEY = 'flowist:virtualization-settings:v2';
 const EVENT_NAME = 'flowist:virtualization-settings-changed';
 
 export const DEFAULT_VIRTUALIZATION_SETTINGS: VirtualizationSettings = {
   notes: {
     overscan: 6,
-    rowHeight: 165,
+    // Tuned to the natural NoteCard height (title + 2-line preview + footer
+    // chip + 16px internal padding ≈ 116-120px). Keeping the row tight
+    // eliminates the large white gap between cards while still leaving room
+    // for the 8px inter-row padding rendered inside the row container.
+    rowHeight: 124,
     windowing: true,
   },
   tasks: {
@@ -30,6 +36,7 @@ export const DEFAULT_VIRTUALIZATION_SETTINGS: VirtualizationSettings = {
     windowing: true,
   },
 };
+
 
 const clampNumber = (value: unknown, min: number, max: number, fallback: number) => {
   const n = typeof value === 'number' ? value : Number(value);
@@ -41,7 +48,7 @@ export function normalizeVirtualizationSettings(input: Partial<VirtualizationSet
   return {
     notes: {
       overscan: clampNumber(input?.notes?.overscan, 2, 24, DEFAULT_VIRTUALIZATION_SETTINGS.notes.overscan),
-      rowHeight: clampNumber(input?.notes?.rowHeight, 120, 260, DEFAULT_VIRTUALIZATION_SETTINGS.notes.rowHeight),
+      rowHeight: clampNumber(input?.notes?.rowHeight, 96, 260, DEFAULT_VIRTUALIZATION_SETTINGS.notes.rowHeight),
       windowing: input?.notes?.windowing !== false,
     },
     tasks: {
