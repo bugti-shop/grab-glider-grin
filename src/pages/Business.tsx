@@ -53,6 +53,7 @@ const Business = () => {
   usePageMeta({
     title: 'Flowist for Business — Managed licenses for classrooms & workplaces',
     description: 'Request managed Flowist licenses for your school, team, or organization. Bulk seats, centralized billing, and onboarding support.',
+    path: '/business',
   });
 
   const [form, setForm] = useState<LeadInput>({
