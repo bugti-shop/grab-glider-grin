@@ -66,7 +66,7 @@ import { Bell } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { MentionDescriptionEditor, descriptionToDisplayHtml } from './richtext/MentionDescriptionEditor';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
-import { PomodoroTimer } from './PomodoroTimer';
+import { FocusMode } from './FocusMode';
 import PdfViewer from './PdfViewer';
 import { getPomodoroStats, formatPomodoroDuration } from '@/utils/pomodoroStorage';
 import { Timer as TimerIcon } from 'lucide-react';
@@ -743,6 +743,11 @@ export const TaskDetailPage = ({
                 <Flag className="h-4 w-4 mr-2 text-muted-foreground" />{t('taskDetail.noPriority')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => { if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }} className="cursor-pointer">
+                <TimerIcon className="h-4 w-4 mr-2" />Focus Mode
+                {!isPro && <PremiumCrown size={12} className="ml-1" />}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleDuplicate} className="cursor-pointer">
                 <Copy className="h-4 w-4 mr-2" />{t('taskDetail.duplicateTask')}
               </DropdownMenuItem>
@@ -1021,11 +1026,11 @@ export const TaskDetailPage = ({
           )}
         </div>
 
-        {/* Pomodoro Timer */}
+        {/* Focus Mode */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <TimerIcon className="h-4 w-4" />
-            Pomodoro
+            Focus Mode
             {!isPro && <PremiumCrown size={14} />}
           </div>
           <button
@@ -1040,7 +1045,7 @@ export const TaskDetailPage = ({
               <div>
                 <div className="text-sm font-medium flex items-center gap-1">Start focus session {!isPro && <PremiumCrown size={12} />}</div>
                 <div className="text-xs text-muted-foreground">
-                  {pomodoroStats.taskPomodoros} pomodoros · {formatPomodoroDuration(pomodoroStats.taskFocusedSec)} on this task
+                  {pomodoroStats.taskPomodoros} sessions · {formatPomodoroDuration(pomodoroStats.taskFocusedSec)} on this task
                 </div>
               </div>
             </div>
@@ -1050,6 +1055,7 @@ export const TaskDetailPage = ({
             </div>
           </button>
         </div>
+
 
 
         {/* Time Tracking - Premium */}
@@ -1569,12 +1575,14 @@ export const TaskDetailPage = ({
         </div>
       )}
 
-      <PomodoroTimer
+      <FocusMode
         open={showPomodoro}
         onClose={() => setShowPomodoro(false)}
         taskId={task?.id}
         taskTitle={task?.text}
+        onComplete={() => { if (task && !task.completed) handleMarkAsDone(); }}
       />
+
     </div>
   );
 };
