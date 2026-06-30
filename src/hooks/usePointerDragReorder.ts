@@ -295,7 +295,8 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
 
     setIsDragging(true);
     setDraggingIndex(s.fromIndex);
-  }, []);
+    try { onDragStart?.(s.fromIndex, s.fromId); } catch {}
+  }, [onDragStart]);
 
   const handlePointerUp = useCallback((e: PointerEvent | { clientX: number; clientY: number }) => {
     const s = stateRef.current;
