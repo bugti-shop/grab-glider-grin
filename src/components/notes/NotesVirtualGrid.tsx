@@ -142,7 +142,6 @@ export function NotesVirtualGrid({
             <div
               key={vrow.key}
               data-index={vrow.index}
-              ref={virtualizer.measureElement}
               style={{
                 position: 'absolute',
                 top: 0,
