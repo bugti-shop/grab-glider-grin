@@ -586,7 +586,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           </button>
         </div>
 
-        {taskTitle && (
+        {taskTitle && !prefs.fullScreen && (
           <div className="px-4 mt-1">
             <div className="flex items-center gap-3 bg-white/95 text-foreground rounded-2xl px-3 py-2.5 shadow-lg">
               <div className="h-5 w-5 rounded-full border-2 border-muted-foreground/60 shrink-0" />
