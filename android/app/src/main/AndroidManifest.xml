@@ -173,6 +173,19 @@
             android:name=".widgets.TasksListRemoteViewsService"
             android:permission="android.permission.BIND_REMOTEVIEWS"
             android:exported="false" />
+
+        <!-- Habits list widget: today's progress + tap-to-check-in rows. -->
+        <receiver android:name=".widgets.HabitsListWidget" android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="nota.npd.com.widgets.HABITS_LIST_REFRESH" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_habits_list_info" />
+        </receiver>
+        <service
+            android:name=".widgets.HabitsListRemoteViewsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->
