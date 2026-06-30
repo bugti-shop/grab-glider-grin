@@ -2032,7 +2032,35 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           onClose={() => setShowScanNote(false)}
           onInsertHtml={handleAiInsertHtml}
         />
+
+      {/* Import an article from a public URL */}
+      <SafeComponent fallback={null}>
+        <ImportArticleDialog
+          open={showImportArticle}
+          onOpenChange={setShowImportArticle}
+          onImport={(article, mode) => {
+            const headerBits = [
+              `<h1>${article.title.replace(/[<>]/g, '')}</h1>`,
+              article.description
+                ? `<p><em>${article.description.replace(/[<>]/g, '')}</em></p>`
+                : '',
+              `<p><a href="${article.sourceUrl}" target="_blank" rel="noopener noreferrer">${article.sourceUrl}</a></p>`,
+              article.heroImage
+                ? `<p><img src="${article.heroImage}" alt="${article.title.replace(/"/g, '&quot;')}" loading="lazy" /></p>`
+                : '',
+            ].filter(Boolean).join('');
+            const block = `${headerBits}${article.html}`;
+            if (mode === 'replace') {
+              setTitle(article.title);
+              setContent(block);
+            } else {
+              setContent((prev) => (prev ? prev + '<hr />' : '') + block);
+              if (!title.trim()) setTitle(article.title);
+            }
+          }}
+        />
       </SafeComponent>
+
 
       {/* AI extract tasks from this note's content */}
       <SafeComponent fallback={null}>
