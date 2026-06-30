@@ -305,9 +305,25 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       const finalHit = hitTestIndex(e.clientX, e.clientY);
       if (finalHit) {
         s.lastToIndex = finalHit.before ? finalHit.index : finalHit.index + 1;
+        s.lastToBefore = finalHit.before;
+        const slot = document.querySelector<HTMLElement>(`[${itemAttr}="${finalHit.index}"]`);
+        s.lastToId = slot?.getAttribute('data-pdrag-id') ?? null;
       }
-      const from = s.fromIndex;
-      const insertionIndex = s.lastToIndex;
+      // Resolve indices against the *current* list at drop time using stable
+      // ids. This neutralizes any reconciliation (task completion, sync, etc.)
+      // that may have shifted indices while the gesture was in flight.
+      let from = s.fromIndex;
+      if (s.fromId != null && resolveIndexById) {
+        const resolved = resolveIndexById(s.fromId);
+        if (Number.isFinite(resolved) && resolved >= 0) from = resolved;
+      }
+      let insertionIndex = s.lastToIndex;
+      if (s.lastToId != null && resolveIndexById) {
+        const resolvedTarget = resolveIndexById(s.lastToId);
+        if (Number.isFinite(resolvedTarget) && resolvedTarget >= 0) {
+          insertionIndex = s.lastToBefore ? resolvedTarget : resolvedTarget + 1;
+        }
+      }
       let to = insertionIndex;
       if (to > from) to -= 1;
       try {
@@ -330,7 +346,8 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       }
     }
     cleanup();
-  }, [cleanup, hitTestIndex, onReorder]);
+    try { onDragEnd?.(); } catch {}
+  }, [cleanup, hitTestIndex, itemAttr, onDragEnd, onReorder, resolveIndexById]);
 
   // Touch-event fallback for synthetic TouchEvents (Playwright) and any
   // WebView that suppresses pointer-from-touch. Mirrors the pointer state.
