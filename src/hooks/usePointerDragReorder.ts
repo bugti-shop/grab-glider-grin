@@ -429,10 +429,15 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     window.addEventListener('touchcancel', handleTouchEnd);
   }, [armAndMaybeActivate, disabled, handleTouchEnd, handleTouchMove, itemAttr]);
 
-  const getItemProps = useCallback((index: number) => ({
-    'data-pdrag-index': index,
-    style: (isDragging ? { touchAction: 'none' as const } : {}) as React.CSSProperties,
-  }), [isDragging]);
+  const getItemProps = useCallback((index: number) => {
+    const id = getItemId?.(index);
+    const props: { 'data-pdrag-index': number; 'data-pdrag-id'?: string | number; style: React.CSSProperties } = {
+      'data-pdrag-index': index,
+      style: (isDragging ? { touchAction: 'none' as const } : {}) as React.CSSProperties,
+    };
+    if (id != null) props['data-pdrag-id'] = id;
+    return props;
+  }, [getItemId, isDragging]);
 
   const getHandleProps = useCallback((index: number) => ({
     onPointerDownCapture: onPointerDown(index),
