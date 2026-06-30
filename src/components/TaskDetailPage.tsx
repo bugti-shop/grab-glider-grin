@@ -66,7 +66,7 @@ import { Bell } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { MentionDescriptionEditor, descriptionToDisplayHtml } from './richtext/MentionDescriptionEditor';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
-import { PomodoroTimer } from './PomodoroTimer';
+import { FocusMode } from './FocusMode';
 import PdfViewer from './PdfViewer';
 import { getPomodoroStats, formatPomodoroDuration } from '@/utils/pomodoroStorage';
 import { Timer as TimerIcon } from 'lucide-react';
