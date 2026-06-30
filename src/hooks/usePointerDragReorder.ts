@@ -262,21 +262,22 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     setDraggingIndex(s.fromIndex);
   }, []);
 
-  const handlePointerUp = useCallback((e: PointerEvent) => {
+  const handlePointerUp = useCallback((e: PointerEvent | { clientX: number; clientY: number }) => {
     const s = stateRef.current;
     if (!s) return;
     if (s.active) {
-      // Final synchronous hit-test at the up coordinates — guarantees the
-      // drop position matches the last indicator the user saw, even if the
-      // last pointermove didn't fire exactly at the release point.
       const finalHit = hitTestIndex(e.clientX, e.clientY);
       if (finalHit) {
         s.lastToIndex = finalHit.before ? finalHit.index : finalHit.index + 1;
       }
       const from = s.fromIndex;
-      let to = s.lastToIndex;
-      // Adjust for removal of source slot when moving downward.
+      const insertionIndex = s.lastToIndex;
+      let to = insertionIndex;
       if (to > from) to -= 1;
+      try {
+        (window as any).__flowistLastTaskDrop = { from, insertionIndex, insert: { index: insertionIndex } };
+        (window as any).__flowistLastTaskInsert = { index: insertionIndex, from };
+      } catch {}
       if (to !== from && to >= 0) {
         try { onReorder(from, to); } catch (err) {
           // eslint-disable-next-line no-console
@@ -287,30 +288,28 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     cleanup();
   }, [cleanup, hitTestIndex, onReorder]);
 
-  // Keep latest move/up refs stable on the window listeners.
+  // Touch-event fallback for synthetic TouchEvents (Playwright) and any
+  // WebView that suppresses pointer-from-touch. Mirrors the pointer state.
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    const t = e.touches[0] ?? e.changedTouches[0];
+    if (!t) return;
+    handlePointerMove({ clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault() } as unknown as PointerEvent);
+  }, [handlePointerMove]);
+
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
+    const t = e.changedTouches[0] ?? e.touches[0];
+    handlePointerUp({ clientX: t?.clientX ?? 0, clientY: t?.clientY ?? 0 });
+  }, [handlePointerUp]);
+
   useEffect(() => () => cleanup(), [cleanup]);
 
-  const onPointerDown = useCallback((index: number) => (e: React.PointerEvent) => {
-    if (disabled) return;
-    if (e.button !== undefined && e.button !== 0) return;
-    // Ignore interactive controls so taps still work.
-    const target = e.target as HTMLElement | null;
-    if (target && target.closest('button, a, input, textarea, select, [role="button"], [role="checkbox"], [data-no-drag]')) {
-      return;
-    }
+  const armAndMaybeActivate = useCallback((index: number, x: number, y: number, pointerType: string, sourceEl: HTMLElement) => {
     if (stateRef.current) cleanup();
-
-    const sourceEl = (e.currentTarget as HTMLElement).closest<HTMLElement>(`[${itemAttr}]`);
-    if (!sourceEl) return;
-
-    // Capture pointer so virtualizer recycling doesn't drop our events.
-    try { (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); } catch {}
-
     stateRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      pointerId: e.pointerId,
-      pointerType: e.pointerType || 'mouse',
+      startX: x,
+      startY: y,
+      pointerId: -1,
+      pointerType,
       fromIndex: index,
       sourceEl,
       ghostEl: null,
@@ -320,21 +319,49 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       active: false,
       lastToIndex: index,
     };
-
     stateRef.current.longPressTimer = setTimeout(() => {
       const s = stateRef.current;
       if (!s) return;
       s.armed = true;
-      // Re-resolve sourceEl in case virtualizer recycled the DOM node.
+      try { (window as any).__flowistTaskDragArmed = { index: s.fromIndex, at: Date.now() }; } catch {}
       const fresh = document.querySelector<HTMLElement>(`[${itemAttr}="${s.fromIndex}"]`);
       if (fresh) s.sourceEl = fresh;
       activateDrag(s.startX, s.startY);
     }, LONG_PRESS_MS);
+  }, [activateDrag, cleanup, itemAttr]);
 
+  const onPointerDown = useCallback((index: number) => (e: React.PointerEvent) => {
+    if (disabled) return;
+    if (e.button !== undefined && e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    if (target && target.closest('button, a, input, textarea, select, [role="button"], [role="checkbox"], [data-no-drag]')) {
+      return;
+    }
+    const sourceEl = (e.currentTarget as HTMLElement).closest<HTMLElement>(`[${itemAttr}]`);
+    if (!sourceEl) return;
+    try { (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); } catch {}
+    armAndMaybeActivate(index, e.clientX, e.clientY, e.pointerType || 'mouse', sourceEl);
+    if (stateRef.current) stateRef.current.pointerId = e.pointerId;
     window.addEventListener('pointermove', handlePointerMove, { passive: false });
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerUp);
-  }, [activateDrag, cleanup, disabled, handlePointerMove, handlePointerUp, itemAttr]);
+  }, [armAndMaybeActivate, disabled, handlePointerMove, handlePointerUp, itemAttr]);
+
+  const onTouchStart = useCallback((index: number) => (e: React.TouchEvent) => {
+    if (disabled) return;
+    const target = e.target as HTMLElement | null;
+    if (target && target.closest('button, a, input, textarea, select, [role="button"], [role="checkbox"], [data-no-drag]')) {
+      return;
+    }
+    const t = e.touches[0];
+    if (!t) return;
+    const sourceEl = (e.currentTarget as HTMLElement).closest<HTMLElement>(`[${itemAttr}]`);
+    if (!sourceEl) return;
+    armAndMaybeActivate(index, t.clientX, t.clientY, 'touch', sourceEl);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
+  }, [armAndMaybeActivate, disabled, handleTouchEnd, handleTouchMove, itemAttr]);
 
   const getItemProps = useCallback((index: number) => ({
     'data-pdrag-index': index,
@@ -342,11 +369,10 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
   }), [isDragging]);
 
   const getHandleProps = useCallback((index: number) => ({
-    // Capture phase fires before child buttons / swipe handlers can
-    // stopPropagation or trigger remounts that would kill the drag.
     onPointerDownCapture: onPointerDown(index),
+    onTouchStartCapture: onTouchStart(index),
     style: {} as React.CSSProperties,
-  }), [onPointerDown]);
+  }), [onPointerDown, onTouchStart]);
 
   return { getItemProps, getHandleProps, isDragging, draggingIndex };
 }
