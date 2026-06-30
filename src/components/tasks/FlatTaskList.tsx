@@ -38,10 +38,7 @@ import { usePointerDragReorder } from '@/hooks/usePointerDragReorder';
  * virtualizer + the Capacitor-safe pointer drag hook, because
  * hello-pangea/dnd cannot reorder rows that are not mounted in the DOM.
  */
-// Use @hello-pangea/dnd for ALL list sizes so drag behavior is consistent
-// regardless of task count. Virtualization is disabled when dnd is active
-// because hello-pangea/dnd cannot reorder rows that are not mounted.
-const HELLO_PANGEA_CAP = Number.POSITIVE_INFINITY;
+const HELLO_PANGEA_CAP = 200;
 
 /**
  * Memoized row body. Skips re-rendering when the task reference, position,
