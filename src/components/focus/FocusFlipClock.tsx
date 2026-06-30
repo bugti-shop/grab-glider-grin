@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Flip-clock style digit panels. Smaller, with a visible gap between
-// the minutes group and the seconds group so users can tell them apart.
+// Flip-clock style digit panels. Scales by the smaller viewport axis so it
+// never looks "over-zoomed" in landscape OR portrait. A visible colon-gap
+// separates minutes from seconds (and hours from minutes) at all zoom levels.
 
 const Digit = ({ d }: { d: string }) => {
   const [shown, setShown] = useState(d);
@@ -20,11 +21,19 @@ const Digit = ({ d }: { d: string }) => {
   }, [d]);
 
   return (
-    <div className="relative bg-neutral-900/95 rounded-xl overflow-hidden shadow-2xl aspect-[3/4] h-[34vh] max-h-[220px] min-h-[120px]">
+    <div
+      className="relative bg-neutral-900/95 rounded-xl overflow-hidden shadow-2xl aspect-[3/4]"
+      // Scale by the smaller axis so layout is sane in any orientation.
+      style={{
+        height: 'min(38vh, 32vw)',
+        maxHeight: 240,
+        minHeight: 96,
+      }}
+    >
       <div
         className="absolute inset-0 flex items-center justify-center font-bold tabular-nums text-neutral-300 select-none"
         style={{
-          fontSize: 'min(14vw, 22vh)',
+          fontSize: 'min(26vh, 22vw)',
           lineHeight: 1,
           fontFamily: '"Helvetica Neue", Arial, sans-serif',
           letterSpacing: '-0.04em',
@@ -40,7 +49,24 @@ const Digit = ({ d }: { d: string }) => {
   );
 };
 
-const GroupGap = () => <div className="w-3 sm:w-5" aria-hidden />;
+// Visible colon-style separator between digit groups.
+const GroupGap = () => (
+  <div
+    className="flex flex-col items-center justify-center self-stretch select-none"
+    style={{ width: 'min(5vw, 36px)', minWidth: 14 }}
+    aria-hidden
+  >
+    <span
+      className="rounded-full bg-neutral-500"
+      style={{ width: 'min(1.4vw, 10px)', height: 'min(1.4vw, 10px)', minWidth: 5, minHeight: 5 }}
+    />
+    <span style={{ height: 'min(2vh, 16px)' }} />
+    <span
+      className="rounded-full bg-neutral-500"
+      style={{ width: 'min(1.4vw, 10px)', height: 'min(1.4vw, 10px)', minWidth: 5, minHeight: 5 }}
+    />
+  </div>
+);
 
 interface Props {
   hours: number;
