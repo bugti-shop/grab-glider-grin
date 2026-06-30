@@ -1,13 +1,63 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, MoreHorizontal, X, ShieldAlert, Timer as TimerIcon, Maximize2, Music2, Check, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, X, ShieldAlert, Timer as TimerIcon, Maximize2, Music2, Check, Volume2, VolumeX, Bell, BellOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { addPomodoroSession } from '@/utils/pomodoroStorage';
+import { addNotification } from '@/utils/notificationStore';
+import { sendWebNotification, requestNotificationPermission } from '@/utils/webNotifications';
 import bgMountain from '@/assets/focus/focus-mountain.jpg';
 import bgForest from '@/assets/focus/focus-forest.jpg';
 import bgOcean from '@/assets/focus/focus-ocean.jpg';
 import bgAlpine from '@/assets/focus/focus-alpine.jpg';
+
+const fmtMMSS = (sec: number) => {
+  const s = Math.max(0, Math.floor(sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  return h > 0
+    ? `${h}h ${m}m`
+    : m > 0
+    ? `${m}m ${r}s`
+    : `${r}s`;
+};
+
+const notifyFocus = (
+  enabled: boolean,
+  kind: 'start' | 'complete' | 'pause' | 'ended_away',
+  opts: { taskTitle?: string; durationMin?: number; remainingSec?: number; elapsedSec?: number } = {}
+) => {
+  if (!enabled) return;
+  const taskBit = opts.taskTitle ? ` · ${opts.taskTitle}` : '';
+  let title = '';
+  let body = '';
+  let type: 'reminder' | 'achievement' | 'system' = 'system';
+  switch (kind) {
+    case 'start':
+      title = '🎯 Focus started';
+      body = `${opts.durationMin ?? ''} min session in progress${taskBit}`;
+      type = 'reminder';
+      break;
+    case 'complete':
+      title = '✅ Focus complete';
+      body = `Great work! ${opts.durationMin ?? ''} min done${taskBit}`;
+      type = 'achievement';
+      break;
+    case 'pause':
+      title = '⏸ Focus paused';
+      body = `${fmtMMSS(opts.remainingSec ?? 0)} remaining${taskBit}`;
+      type = 'reminder';
+      break;
+    case 'ended_away':
+      title = '🏁 Focus ended';
+      body = `Session ended while you were away — ${fmtMMSS(opts.elapsedSec ?? 0)} focused${taskBit}`;
+      type = 'achievement';
+      break;
+  }
+  try { void addNotification({ type, title, message: body, icon: 'timer', actionPath: '/todo/today' }); } catch {}
+  try { sendWebNotification(title, { body, tag: `focus-${kind}` }); } catch {}
+};
 
 interface FocusModeProps {
   open: boolean;
