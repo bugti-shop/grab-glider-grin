@@ -68,7 +68,7 @@ export interface PointerDragApi {
 }
 
 export function usePointerDragReorder(opts: UsePointerDragReorderOptions): PointerDragApi {
-  const { onReorder, disabled = false, itemAttr = 'data-pdrag-index' } = opts;
+  const { onReorder, disabled = false, itemAttr = 'data-pdrag-index', getItemId, resolveIndexById, onDragStart, onDragEnd } = opts;
 
   const [isDragging, setIsDragging] = useState(false);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -79,14 +79,17 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     pointerId: number;
     pointerType: string;
     fromIndex: number;
+    fromId: string | number | null;
     sourceEl: HTMLElement | null;
     ghostEl: HTMLElement | null;
     placeholderEl: HTMLElement | null;
     longPressTimer: ReturnType<typeof setTimeout> | null;
-    armed: boolean;     // long-press fired (touch) OR distance threshold met (mouse)
-    active: boolean;    // ghost is in DOM, drag in progress
-    moved: boolean;     // pointer/finger actually moved after activation
+    armed: boolean;
+    active: boolean;
+    moved: boolean;
     lastToIndex: number;
+    lastToId: string | number | null;
+    lastToBefore: boolean;
   } | null>(null);
 
   const cleanup = useCallback(() => {
