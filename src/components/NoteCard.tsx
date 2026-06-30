@@ -344,7 +344,7 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
         onDragLeave={onDragLeave}
         className={cn(
           'group relative overflow-hidden cursor-pointer',
-          'w-full hover:shadow-md border border-border/50',
+          'w-full h-full hover:shadow-md border border-border/50',
           isSwiping ? '' : 'transition-transform duration-200',
           isSelected && 'ring-2 ring-primary ring-offset-2'
         )}
