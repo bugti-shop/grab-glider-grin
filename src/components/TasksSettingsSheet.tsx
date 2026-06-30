@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { toast } from 'sonner';
 import { useHardwareBackButton } from '@/hooks/useHardwareBackButton';
+import { OrganizeModeRow } from './OrganizeModeRow';
 import { CustomPriority, getPriorities, savePriorities, DEFAULT_PRIORITIES } from '@/utils/priorityStorage';
 import {
   Select,
@@ -244,6 +245,8 @@ export const TasksSettingsSheet = ({ isOpen, onClose }: TasksSettingsSheetProps)
       </SheetHeader>
       <ScrollArea className="flex-1">
         <div className="py-2">
+          <OrganizeModeRow scope="tasks" />
+
           <SettingsRow 
             icon={ListTodo}
             label={t('settings.defaultSettings', 'Default Settings')}

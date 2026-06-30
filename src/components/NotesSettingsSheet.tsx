@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { toast } from 'sonner';
 import { useHardwareBackButton } from '@/hooks/useHardwareBackButton';
+import { OrganizeModeRow } from './OrganizeModeRow';
 import {
   Select,
   SelectContent,
@@ -278,6 +279,7 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
       </SheetHeader>
       <ScrollArea className="flex-1">
         <div className="py-2">
+          <OrganizeModeRow scope="notes" />
           <SettingsRow 
             label={t('settings.defaultFontSettings', 'Default Font Settings')}
             subtitle={t('settings.defaultFontSettingsDesc', 'Customize fonts for text and headings')}
@@ -298,6 +300,7 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
             onClick={() => setShowDevPerf(true)}
           />
         </div>
+
       </ScrollArea>
     </>
   );
