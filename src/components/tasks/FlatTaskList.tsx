@@ -7,15 +7,22 @@
  * every surface (Today, Upcoming, History, Calendar, Folder, Smart lists)
  * can reuse this without losing its bespoke interactions.
  *
+ * Drag-and-drop:
+ *   • Lists with ≤ HELLO_PANGEA_CAP rows → rendered un-virtualized with
+ *     @hello-pangea/dnd for library-grade drop accuracy + a11y.
+ *   • Larger virtualized lists → use the Capacitor-safe pointer-event
+ *     reorder hook (usePointerDragReorder). Pointer events only — no HTML5
+ *     native drag API, which is unreliable inside Android/iOS WebViews.
+ *
  * Keyboard navigation:
- *   ↑ / k   → move highlight up
- *   ↓ / j   → move highlight down
- *   Enter   → fire `onActivate(row)` (open detail)
- *   Space   → fire `onToggleComplete(row)` (tasks only)
+ *   ↑ / k         → move highlight up
+ *   ↓ / j         → move highlight down
+ *   Enter         → fire `onActivate(row)` (open detail)
+ *   Space         → fire `onToggleComplete(row)` (tasks only)
+ *   Alt + ↑/↓     → reorder active row (fallback when DnD off-screen)
  * The active row gets `data-active="true"` so callers can style it.
  */
-import { useRef, useMemo, useState, useEffect, useCallback, memo, type ReactNode, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useMemo, useState, useEffect, useCallback, memo, type ReactNode } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
@@ -23,26 +30,15 @@ import type { TodoItem } from '@/types/note';
 import { flattenTasks, type FlatTaskRow, type FlatTaskIndex } from '@/utils/tasks/flattenTasks';
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
-
-const TOUCH_LONG_PRESS_MS = 320;
-const TOUCH_SCROLL_CANCEL_PX = 16;
-const TOUCH_DRAG_START_PX = 18;
-const TOUCH_AXIS_CANCEL_PX = 28;
-const TOUCH_CANCEL_PX = 42;
-const CLICK_SUPPRESS_MS = 350;
+import { usePointerDragReorder } from '@/hooks/usePointerDragReorder';
 
 /**
  * Maximum row count at which we render with @hello-pangea/dnd directly
  * (no virtualization). Beyond this cap we fall back to the windowed
- * virtualizer + custom touch/native drag path because hello-pangea/dnd
- * cannot reorder rows that are not mounted in the DOM.
- *
- * 500 rows keeps the user's requested 400-task regression path on the
- * library-driven DnD implementation while still avoiding full rendering for
- * truly huge imported lists.
- * so the overwhelming majority of users get the library-driven UX.
+ * virtualizer + the Capacitor-safe pointer drag hook, because
+ * hello-pangea/dnd cannot reorder rows that are not mounted in the DOM.
  */
-const HELLO_PANGEA_CAP = 500;
+const HELLO_PANGEA_CAP = 200;
 
 /**
  * Memoized row body. Skips re-rendering when the task reference, position,
@@ -93,11 +89,9 @@ export interface FlatTaskListProps {
   /** Space key on highlighted row — toggle task complete. */
   onToggleComplete?: (row: FlatTaskRow) => void;
   /**
-   * Alt + ↑/↓ on highlighted row — reorder. Receives current flat indices.
-   * Provided as a keyboard fallback because @hello-pangea/dnd is intentionally
-   * disabled in the virtualized path (it can't reorder off-screen rows on
-   * 24k+ lists). Long-press touch reorder is layered on top of this in the
-   * row renderer when implemented per-surface.
+   * Drag/keyboard reorder handler. Receives current flat indices. Required
+   * to enable drag-and-drop (either hello-pangea below the cap or the
+   * pointer-event hook above it).
    */
   onReorder?: (fromIndex: number, toIndex: number) => void;
   /** Disable keyboard navigation (default false). */
@@ -136,69 +130,7 @@ export function FlatTaskList({
   const resolvedUseWindow = useWindow ?? virtualizationSettings.tasks.windowing;
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const ghostRef = useRef<HTMLDivElement>(null);
   const [parentTop, setParentTop] = useState(0);
-  const dragFromRef = useRef<number | null>(null);
-  // Insert-line is driven by a DOM ref + cached top to avoid re-rendering the
-  // entire virtualized list on every touchmove. React re-renders mid-drag were
-  // shifting virtualizer geometry under the pointer, so the drop landed one
-  // slot away from the rendered blue line. We mutate the line's style directly
-  // and only commit React state at drop time.
-  const insertLineRef = useRef<HTMLDivElement>(null);
-  const insertLineTopRef = useRef<number | null>(null);
-  // Mirror of the most recently committed insertion index. The blue indicator
-  // line is driven by this value; on drop we must use the exact same value
-  // (NOT a recomputation from a possibly-shifted `touchend` clientY) so the
-  // drop lands precisely under the user-visible blue line.
-  const lastInsertionIndexRef = useRef<number | null>(null);
-
-  const paintInsertLine = useCallback((top: number) => {
-    const el = insertLineRef.current;
-    if (!el) return;
-    if (insertLineTopRef.current !== top) {
-      insertLineTopRef.current = top;
-      el.style.transform = `translate3d(0, ${top}px, 0)`;
-    }
-    if (el.style.display !== 'block') el.style.display = 'block';
-  }, []);
-
-  const hideInsertLine = useCallback(() => {
-    const el = insertLineRef.current;
-    if (el) el.style.display = 'none';
-    insertLineTopRef.current = null;
-  }, []);
-  const autoscrollRafRef = useRef<number | null>(null);
-  const dragGenerationRef = useRef(0);
-  const suppressClickUntilRef = useRef(0);
-  const ghostRafRef = useRef<number | null>(null);
-  const pointerDragRef = useRef<{
-    pointerId: number;
-    from: number;
-    over: number;
-    startX: number;
-    startY: number;
-    lastY: number;
-    startTime: number;
-    currentY: number;
-    dragging: boolean;
-    armed: boolean;
-    scrollMode: boolean;
-    title: string;
-    element: HTMLElement;
-    timer: number | null;
-  } | null>(null);
-  const [isCoarsePointer, setIsCoarsePointer] = useState(false);
-  const [pointerDrag, setPointerDrag] = useState<{ from: number; over: number; title: string; y: number } | null>(null);
-  const [pointerPreparingIndex, setPointerPreparingIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const query = window.matchMedia('(pointer: coarse)');
-    const update = () => setIsCoarsePointer(query.matches);
-    update();
-    query.addEventListener?.('change', update);
-    return () => query.removeEventListener?.('change', update);
-  }, []);
 
   useEffect(() => {
     if (!resolvedUseWindow) return;
@@ -212,7 +144,6 @@ export function FlatTaskList({
     window.addEventListener('resize', update);
     const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
     if (observer && parentRef.current) observer.observe(parentRef.current);
-    // Recompute once after layout settles (fonts, images).
     const t = window.setTimeout(update, 100);
     return () => {
       window.removeEventListener('resize', update);
@@ -239,14 +170,32 @@ export function FlatTaskList({
 
   const virtualizer = resolvedUseWindow ? windowVirtualizer : containerVirtualizer;
   const dndEnabled = !!onReorder;
-  const canUseNativeDrag = dndEnabled && !isCoarsePointer;
 
   const [activeIndex, setActiveIndex] = useState<number>(-1);
-
-  // Clamp active index whenever the list shrinks.
   useEffect(() => {
     if (activeIndex >= flat.length) setActiveIndex(flat.length - 1);
   }, [flat.length, activeIndex]);
+
+  // ----- Pointer-event drag (Capacitor-safe) for the virtualized path ------
+  const handlePointerReorder = useCallback((from: number, to: number) => {
+    if (!onReorder || from === to) return;
+    const started = performance.now();
+    try {
+      onReorder(from, to);
+      try { (window as any).__flowistLastTaskReorder = { ok: true, via: 'pointer-hook', from, to, count: flat.length, ms: Math.round(performance.now() - started), ts: Date.now() }; } catch {}
+      logPerfEvent('reorder', { list: 'tasks', via: 'pointer-hook', ok: true, from, to, count: flat.length, ms: Math.round(performance.now() - started) });
+      toast.success('Task moved', { id: 'task-reorder', duration: 900 });
+    } catch (error) {
+      logPerfEvent('reorder', { list: 'tasks', via: 'pointer-hook', ok: false, from, to, count: flat.length, error: String((error as Error)?.message ?? error) });
+      toast.error('Could not move task', { id: 'task-reorder' });
+    }
+  }, [flat.length, onReorder]);
+
+  const pointerDrag = usePointerDragReorder({
+    itemCount: flat.length,
+    onReorder: handlePointerReorder,
+    disabled: !dndEnabled,
+  });
 
   const move = useCallback(
     (delta: number) => {
@@ -263,7 +212,6 @@ export function FlatTaskList({
     if (disableKeyboard) return;
     const onKey = (e: KeyboardEvent) => {
       if (isTypingInForm(e.target)) return;
-      // Alt + ↑/↓ → reorder active row (fallback for virtualized lists where DnD is off).
       if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
         if (onReorder && activeIndex >= 0 && flat[activeIndex]) {
           const delta = e.key === 'ArrowDown' ? 1 : -1;
@@ -309,609 +257,6 @@ export function FlatTaskList({
     return () => window.removeEventListener('keydown', onKey);
   }, [disableKeyboard, move, activeIndex, flat, onActivate, onToggleComplete, onReorder, virtualizer]);
 
-  // Native HTML5 drag-reorder. Works with virtualization because the OS owns
-  // the drag image and we only listen on the live rows currently in the DOM.
-  // No thread-blocking measurement of off-screen nodes → safe at 24k+ rows.
-  const stopAutoscroll = useCallback(() => {
-    if (autoscrollRafRef.current != null) {
-      cancelAnimationFrame(autoscrollRafRef.current);
-      autoscrollRafRef.current = null;
-    }
-  }, []);
-
-  const stopGhostRaf = useCallback(() => {
-    if (ghostRafRef.current != null) {
-      cancelAnimationFrame(ghostRafRef.current);
-      ghostRafRef.current = null;
-    }
-  }, []);
-
-  const clearPointerDrag = useCallback(() => {
-    const active = pointerDragRef.current;
-    if (active?.timer != null) window.clearTimeout(active.timer);
-    pointerDragRef.current = null;
-    stopGhostRaf();
-    setPointerDrag(null);
-    setPointerPreparingIndex(null);
-    if (typeof document !== 'undefined') document.body.classList.remove('flowist-task-dragging');
-  }, [stopGhostRaf]);
-
-  const tickAutoscroll = useCallback((clientY: number) => {
-    const EDGE = 60;
-    const SPEED = 18;
-    const scrollerRect = resolvedUseWindow
-      ? { top: 0, bottom: window.innerHeight }
-      : parentRef.current?.getBoundingClientRect();
-    if (!scrollerRect) return;
-    let dy = 0;
-    if (clientY < scrollerRect.top + EDGE) dy = -SPEED * ((scrollerRect.top + EDGE - clientY) / EDGE);
-    else if (clientY > scrollerRect.bottom - EDGE) dy = SPEED * ((clientY - (scrollerRect.bottom - EDGE)) / EDGE);
-    if (dy !== 0) {
-      const scroller = resolvedUseWindow ? window : parentRef.current;
-      if (scroller && 'scrollBy' in scroller) (scroller as Window | HTMLElement).scrollBy({ top: dy });
-    }
-    autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(clientY));
-  }, [resolvedUseWindow]);
-
-  const cancelDrag = useCallback(() => {
-    dragGenerationRef.current += 1;
-    stopAutoscroll();
-    clearPointerDrag();
-    dragFromRef.current = null;
-    hideInsertLine();
-    lastInsertionIndexRef.current = null;
-  }, [clearPointerDrag, hideInsertLine, stopAutoscroll]);
-
-  const armPointerDrag = useCallback((pointerId: number) => {
-    const current = pointerDragRef.current;
-    if (!current || current.pointerId !== pointerId || current.dragging) return;
-    current.armed = true;
-    current.timer = null;
-    try {
-      (window as any).__flowistTaskDragArmed = {
-        from: current.from,
-        pointerId,
-        startY: Math.round(current.startY),
-        ts: Date.now(),
-      };
-    } catch {}
-  }, []);
-
-  const finishReorder = useCallback((from: number | null, insertionIndex: number, via: 'drop' | 'blank-drop' | 'pointer-drop') => {
-    cancelDrag();
-    if (from == null || from < 0 || from >= flat.length || insertionIndex < 0 || insertionIndex > flat.length) {
-      try { (window as any).__flowistLastTaskReorder = { ok: false, reason: 'invalid-target', via, from, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
-      toast.error('Could not move task', { id: 'task-reorder' });
-      logPerfEvent('reorder', { list: 'tasks', via, ok: false, reason: 'invalid-target', from, to: insertionIndex, count: flat.length });
-      return;
-    }
-    if (!onReorder) {
-      try { (window as any).__flowistLastTaskReorder = { ok: false, reason: 'missing-handler', via, from, insertionIndex, count: flat.length, ts: Date.now() }; } catch {}
-      return;
-    }
-    // The insertion index is the exact visual slot painted by the blue line in
-    // the original list. The order store receives the index after the dragged
-    // row is removed, so downward moves must shift by one. This keeps the final
-    // order matching the visible blue line for both upward and downward drops.
-    const normalizedInsertionIndex = insertionIndex > from ? insertionIndex - 1 : insertionIndex;
-    const to = Math.max(0, Math.min(flat.length - 1, normalizedInsertionIndex));
-    if (from === to) {
-      try { (window as any).__flowistLastTaskReorder = { ok: true, skipped: true, reason: 'same-index', via, from, to, insertionIndex, normalizedInsertionIndex, count: flat.length, ts: Date.now() }; } catch {}
-      return;
-    }
-    const start = performance.now();
-    try {
-      onReorder(from, to);
-      try { (window as any).__flowistLastTaskReorder = { ok: true, via, from, to, insertionIndex, normalizedInsertionIndex, count: flat.length, ms: Math.round(performance.now() - start), ts: Date.now() }; } catch {}
-      logPerfEvent('reorder', { list: 'tasks', via, ok: true, from, to, count: flat.length, ms: Math.round(performance.now() - start) });
-      toast.success('Task moved', { id: 'task-reorder', duration: 900 });
-    } catch (error) {
-      try { (window as any).__flowistLastTaskReorder = { ok: false, reason: 'exception', via, from, to, insertionIndex, normalizedInsertionIndex, count: flat.length, error: String((error as Error)?.message ?? error), ts: Date.now() }; } catch {}
-      logPerfEvent('reorder', { list: 'tasks', via, ok: false, from, to, count: flat.length, error: String((error as Error)?.message ?? error) });
-      toast.error('Could not move task', { id: 'task-reorder' });
-    }
-  }, [cancelDrag, flat.length, onReorder]);
-
-  const getVirtualInsertionFromClientY = useCallback((clientY: number) => {
-    const rows = virtualizer.getVirtualItems();
-    if (rows.length === 0) return { insertionIndex: 0, top: 0 };
-
-    const parentRect = parentRef.current?.getBoundingClientRect();
-    const scrollTop = resolvedUseWindow ? window.scrollY : (parentRef.current?.scrollTop ?? 0);
-
-    for (const item of rows) {
-      const top = resolvedUseWindow
-        ? item.start - window.scrollY
-        : (parentRect?.top ?? 0) + item.start - scrollTop;
-      const center = top + item.size / 2;
-      if (clientY < center) {
-        return { insertionIndex: item.index, top: resolvedUseWindow ? item.start - parentTop : item.start };
-      }
-    }
-
-    const last = rows[rows.length - 1];
-    return {
-      insertionIndex: Math.min(flat.length, (last?.index ?? flat.length - 1) + 1),
-      top: (resolvedUseWindow ? (last?.start ?? 0) - parentTop : (last?.start ?? 0)) + (last?.size ?? resolvedRowHeight),
-    };
-  }, [flat.length, parentTop, resolvedRowHeight, resolvedUseWindow, virtualizer]);
-
-  const getRowTopRelativeToList = useCallback((rowEl: HTMLElement) => {
-    const rect = rowEl.getBoundingClientRect();
-    const parentRect = parentRef.current?.getBoundingClientRect();
-    return rect.top - (parentRect?.top ?? 0) + (resolvedUseWindow ? 0 : (parentRef.current?.scrollTop ?? 0));
-  }, [resolvedUseWindow]);
-
-  const commitSyntheticDragOver = useCallback((target: EventTarget | Element | null, insertionIndex: number) => {
-    try {
-      (window as any).__flowistLastTaskDragOverPrevented = {
-        target: target instanceof Element ? (target.closest('[data-index]') ? 'row' : 'list-gap') : 'document',
-        insertionIndex,
-        ts: Date.now(),
-      };
-    } catch {}
-  }, []);
-
-  const getInsertionPlacement = useCallback((clientY: number, target: EventTarget | Element | null) => {
-    const targetEl = target instanceof Element ? target.closest('[data-index]') as HTMLElement | null : null;
-    // Exclude the row currently being dragged from geometry. With visibility:hidden
-    // the source still occupies space, which shifts every midpoint by one row
-    // and makes drops land one slot earlier than the user expects.
-    const sourceIndex = dragFromRef.current;
-    const rows = Array.from(parentRef.current?.querySelectorAll<HTMLElement>('[data-index]') ?? [])
-      .map((rowEl) => ({ rowEl, index: Number(rowEl.dataset.index), rect: rowEl.getBoundingClientRect() }))
-      .filter((row) => Number.isFinite(row.index) && row.index !== sourceIndex)
-      .sort((a, b) => a.index - b.index);
-
-    const buildDebug = (
-      source: string,
-      row: (typeof rows)[number],
-      insertionIndex: number,
-      extra: Record<string, unknown> = {},
-    ) => ({
-      source,
-      targetIndex: row.index,
-      insertionIndex,
-      pointerY: Math.round(clientY),
-      targetTop: Math.round(row.rect.top),
-      targetBottom: Math.round(row.rect.bottom),
-      midpoint: Math.round(row.rect.top + row.rect.height / 2),
-      ...extra,
-    });
-
-    const placeBefore = (row: (typeof rows)[number], source = targetEl ? 'target-row' : 'gap-before-row', extra?: Record<string, unknown>) => {
-      const insertionIndex = Math.max(0, Math.min(flat.length, row.index));
-      return {
-        insertionIndex,
-        top: getRowTopRelativeToList(row.rowEl),
-        debug: buildDebug(source, row, insertionIndex, extra),
-      };
-    };
-
-    const placeAfter = (row: (typeof rows)[number], source = targetEl ? 'target-row' : 'gap-after-row', extra?: Record<string, unknown>) => {
-      const insertionIndex = Math.max(0, Math.min(flat.length, row.index + 1));
-      return {
-        insertionIndex,
-        top: getRowTopRelativeToList(row.rowEl) + row.rect.height,
-        debug: buildDebug(source, row, insertionIndex, extra),
-      };
-    };
-
-    for (let i = 0; i < rows.length; i += 1) {
-      const row = rows[i];
-      const next = rows[i + 1];
-      if (clientY < row.rect.top) return placeBefore(row);
-      if (clientY <= row.rect.bottom) {
-        return clientY < row.rect.top + row.rect.height / 2 ? placeBefore(row) : placeAfter(row);
-      }
-      if (next && clientY > row.rect.bottom && clientY < next.rect.top) {
-        // Correct drops in the blank virtualized gap between two rendered rows
-        // using getBoundingClientRect midpoints, Todoist-style.
-        const prevMid = row.rect.top + row.rect.height / 2;
-        const nextMid = next.rect.top + next.rect.height / 2;
-        const split = (prevMid + nextMid) / 2;
-        return clientY < split
-          ? placeAfter(row, 'gap-midpoint-prev', { nextIndex: next.index, split: Math.round(split) })
-          : placeBefore(next, 'gap-midpoint-next', { previousIndex: row.index, split: Math.round(split) });
-      }
-    }
-
-    if (rows.length > 0) {
-      let nearest = rows[0];
-      let nearestDistance = Math.abs(clientY - (nearest.rect.top + nearest.rect.height / 2));
-      for (const row of rows.slice(1)) {
-        const distance = Math.abs(clientY - (row.rect.top + row.rect.height / 2));
-        if (distance < nearestDistance) {
-          nearest = row;
-          nearestDistance = distance;
-        }
-      }
-      return clientY < nearest.rect.top + nearest.rect.height / 2
-        ? placeBefore(nearest, 'nearest-midpoint-gap', { distance: Math.round(nearestDistance) })
-        : placeAfter(nearest, 'nearest-midpoint-gap', { distance: Math.round(nearestDistance) });
-    }
-
-    const virtualPlacement = getVirtualInsertionFromClientY(clientY);
-    return { ...virtualPlacement, debug: { source: 'virtual-fallback', pointerY: Math.round(clientY) } };
-  }, [flat.length, getRowTopRelativeToList, getVirtualInsertionFromClientY]);
-
-  const updateInsertionIndicator = useCallback((clientY: number, target: EventTarget | Element | null) => {
-    const placement = getInsertionPlacement(clientY, target);
-    const instrumentation = {
-      insertionIndex: placement.insertionIndex,
-      top: Math.round(placement.top),
-      clientY: Math.round(clientY),
-      ...('debug' in placement ? placement.debug : {}),
-    };
-    try {
-      (window as any).__flowistLastTaskInsert = instrumentation;
-    } catch {}
-    commitSyntheticDragOver(target, placement.insertionIndex);
-    // Imperative DOM update — no React re-render mid-drag. Prevents the
-    // virtualized list from reshuffling under the pointer and keeps the
-    // blue line aligned with the exact drop slot.
-    paintInsertLine(placement.top);
-    lastInsertionIndexRef.current = placement.insertionIndex;
-    return placement.insertionIndex;
-  }, [commitSyntheticDragOver, getInsertionPlacement, paintInsertLine]);
-
-  const finishPointerDropAt = useCallback((active: NonNullable<typeof pointerDragRef.current>, clientY: number, target: EventTarget | Element | null) => {
-    // Prefer the LAST indicator value the user actually saw. touchend's
-    // clientY can drift across a midpoint vs. the last touchmove, which
-    // would otherwise drop one slot away from the rendered blue line.
-    const cached = lastInsertionIndexRef.current;
-    const insertionIndex = cached != null ? cached : updateInsertionIndicator(clientY, target);
-    active.over = insertionIndex;
-    try {
-      (window as any).__flowistLastTaskDrop = {
-        from: active.from,
-        insertionIndex,
-        clientY: Math.round(clientY),
-        via: 'touch',
-        insert: (window as any).__flowistLastTaskInsert,
-        ts: Date.now(),
-      };
-    } catch {}
-    logPerfEvent('reorder', {
-      list: 'tasks',
-      via: 'touch-drop-computed',
-      from: active.from,
-      insertionIndex,
-      count: flat.length,
-      insert: (window as any).__flowistLastTaskInsert,
-    });
-    finishReorder(active.from, insertionIndex, 'pointer-drop');
-  }, [finishReorder, flat.length, updateInsertionIndicator]);
-
-  const paintGhostAt = useCallback((clientY: number) => {
-    if (ghostRafRef.current != null) return;
-    ghostRafRef.current = requestAnimationFrame(() => {
-      ghostRafRef.current = null;
-      if (ghostRef.current) {
-        ghostRef.current.style.transform = `translate3d(0, ${clientY}px, 0) translateY(-50%)`;
-      }
-    });
-  }, []);
-
-  const isInteractiveDragTarget = (target: EventTarget | null): boolean => {
-    if (!(target instanceof HTMLElement)) return false;
-    return !!target.closest('button, input, textarea, select, a, [role="button"], [contenteditable="true"], [data-no-dnd="true"]');
-  };
-
-  const activatePointerDrag = useCallback((active: NonNullable<typeof pointerDragRef.current>) => {
-    if (active.dragging) return;
-    active.dragging = true;
-    if (active.timer != null) {
-      window.clearTimeout(active.timer);
-      active.timer = null;
-    }
-    dragGenerationRef.current += 1;
-    dragFromRef.current = active.from;
-    const placement = getInsertionPlacement(active.currentY, active.element);
-    active.over = placement.insertionIndex;
-    paintInsertLine(placement.top);
-    lastInsertionIndexRef.current = placement.insertionIndex;
-    setPointerDrag({ from: active.from, over: active.over, title: active.title, y: active.currentY });
-    try { active.element.setPointerCapture(active.pointerId); } catch {}
-    if (typeof document !== 'undefined') document.body.classList.add('flowist-task-dragging');
-    paintGhostAt(active.currentY);
-    if ('vibrate' in navigator) navigator.vibrate?.(8);
-  }, [getInsertionPlacement, paintGhostAt, paintInsertLine]);
-
-  const startPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
-    if (!dndEnabled || event.pointerType === 'mouse' || isInteractiveDragTarget(event.target)) return;
-    if (pointerDragRef.current) return;
-    if (event.pointerType === 'pen' && event.buttons !== 1) return;
-
-    const element = event.currentTarget;
-    const pointerId = event.pointerId;
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const title = row.task.text || 'Task';
-
-    const active = {
-      pointerId,
-      from: index,
-      over: index,
-      startX,
-      startY,
-      lastY: startY,
-      startTime: performance.now(),
-      currentY: startY,
-      dragging: false,
-      armed: false,
-      scrollMode: false,
-      title,
-      element,
-      timer: null as number | null,
-    };
-    pointerDragRef.current = active;
-    setPointerPreparingIndex(index);
-
-    active.timer = window.setTimeout(() => armPointerDrag(pointerId), TOUCH_LONG_PRESS_MS);
-  }, [armPointerDrag, dndEnabled]);
-
-  const startTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>, index: number, row: FlatTaskRow) => {
-    // A real TouchEvent is already proof of a coarse input path. Do not gate on
-    // matchMedia('(pointer: coarse)') here: Chromium/Playwright and a few
-    // Android WebViews can report it late/false, which allowed drag initiation
-    // visuals to work but prevented the actual drop lifecycle from starting.
-    if (!dndEnabled || pointerDragRef.current || isInteractiveDragTarget(event.target)) return;
-    const touch = event.touches[0];
-    if (!touch) return;
-
-    const element = event.currentTarget;
-    const pointerId = touch.identifier || -1;
-    const startX = touch.clientX;
-    const startY = touch.clientY;
-    const active = {
-      pointerId,
-      from: index,
-      over: index,
-      startX,
-      startY,
-      lastY: startY,
-      startTime: performance.now(),
-      currentY: startY,
-      dragging: false,
-      armed: false,
-      scrollMode: false,
-      title: row.task.text || 'Task',
-      element,
-      timer: null as number | null,
-    };
-    pointerDragRef.current = active;
-    setPointerPreparingIndex(index);
-    active.timer = window.setTimeout(() => armPointerDrag(pointerId), TOUCH_LONG_PRESS_MS);
-  }, [armPointerDrag, dndEnabled]);
-
-  const moveTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>) => {
-    const active = pointerDragRef.current;
-    const touch = event.touches[0];
-    if (!active || !touch || active.pointerId !== (touch.identifier || -1)) return;
-
-    const dx = touch.clientX - active.startX;
-    const dy = touch.clientY - active.startY;
-    active.currentY = touch.clientY;
-
-    if (!active.dragging) {
-      if (!active.armed && Math.abs(dy) > TOUCH_SCROLL_CANCEL_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
-        if (active.timer != null) window.clearTimeout(active.timer);
-        active.timer = null;
-        pointerDragRef.current = null;
-        setPointerPreparingIndex(null);
-        return;
-      }
-      if (active.armed && Math.abs(dy) >= TOUCH_DRAG_START_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
-        event.preventDefault();
-        activatePointerDrag(active);
-      } else if (Math.abs(dx) > TOUCH_AXIS_CANCEL_PX || (!active.armed && Math.abs(dy) > TOUCH_CANCEL_PX)) {
-        if (active.timer != null) window.clearTimeout(active.timer);
-        pointerDragRef.current = null;
-        setPointerPreparingIndex(null);
-        return;
-      } else {
-        return;
-      }
-    }
-
-    event.preventDefault();
-    const over = updateInsertionIndicator(touch.clientY, document.elementFromPoint(touch.clientX, touch.clientY));
-    if (over !== active.over) {
-      active.over = over;
-      // Skip mid-drag setState — keeps virtualizer geometry stable so the drop lands on the blue line.
-    }
-    paintGhostAt(touch.clientY);
-    stopAutoscroll();
-    autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(touch.clientY));
-  }, [activatePointerDrag, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
-
-  const endTouchDrag = useCallback((event: ReactTouchEvent<HTMLElement>) => {
-    const active = pointerDragRef.current;
-    if (!active) return;
-    if (active.timer != null) window.clearTimeout(active.timer);
-    if (active.dragging) {
-      event.preventDefault();
-      event.stopPropagation();
-      suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
-      const touch = event.changedTouches[0];
-      const clientY = touch?.clientY ?? active.currentY;
-      const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : event.target;
-      finishPointerDropAt(active, clientY, target);
-    } else {
-      if (active.armed) suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
-      clearPointerDrag();
-    }
-  }, [clearPointerDrag, finishPointerDropAt]);
-
-  useEffect(() => {
-    const root = parentRef.current;
-    if (!root || !dndEnabled) return;
-
-    const onTouchStart = (event: TouchEvent) => {
-      if (pointerDragRef.current || isInteractiveDragTarget(event.target)) return;
-      const touch = event.touches[0];
-      const element = event.target instanceof Element ? event.target.closest('[data-index]') as HTMLElement | null : null;
-      if (!touch || !element) return;
-      const index = Number(element.dataset.index);
-      const row = Number.isFinite(index) ? flat[index] : undefined;
-      if (!row) return;
-
-      const pointerId = touch.identifier || -1;
-      const active = {
-        pointerId,
-        from: index,
-        over: index,
-        startX: touch.clientX,
-        startY: touch.clientY,
-        lastY: touch.clientY,
-        startTime: performance.now(),
-        currentY: touch.clientY,
-        dragging: false,
-        armed: false,
-        scrollMode: false,
-        title: row.task.text || 'Task',
-        element,
-        timer: null as number | null,
-      };
-      pointerDragRef.current = active;
-      setPointerPreparingIndex(index);
-      active.timer = window.setTimeout(() => armPointerDrag(pointerId), TOUCH_LONG_PRESS_MS);
-    };
-
-    const onTouchMove = (event: TouchEvent) => {
-      const active = pointerDragRef.current;
-      const touch = event.touches[0];
-      if (!active || !touch || active.pointerId !== (touch.identifier || -1)) return;
-
-      const dx = touch.clientX - active.startX;
-      const dy = touch.clientY - active.startY;
-      active.currentY = touch.clientY;
-
-      if (!active.dragging) {
-        if (!active.armed && Math.abs(dy) > TOUCH_SCROLL_CANCEL_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
-          if (active.timer != null) window.clearTimeout(active.timer);
-          pointerDragRef.current = null;
-          setPointerPreparingIndex(null);
-          return;
-        }
-        if (active.armed && Math.abs(dy) >= TOUCH_DRAG_START_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
-          event.preventDefault();
-          activatePointerDrag(active);
-        } else if (Math.abs(dx) > TOUCH_AXIS_CANCEL_PX || (!active.armed && Math.abs(dy) > TOUCH_CANCEL_PX)) {
-          if (active.timer != null) window.clearTimeout(active.timer);
-          pointerDragRef.current = null;
-          setPointerPreparingIndex(null);
-          return;
-        } else {
-          return;
-        }
-      }
-
-      event.preventDefault();
-      const over = updateInsertionIndicator(touch.clientY, document.elementFromPoint(touch.clientX, touch.clientY));
-      if (over !== active.over) {
-        active.over = over;
-        // Skip mid-drag setState — keeps virtualizer geometry stable so the drop lands on the blue line.
-      }
-      paintGhostAt(touch.clientY);
-      stopAutoscroll();
-      autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(touch.clientY));
-    };
-
-    const onTouchEnd = (event: TouchEvent) => {
-      const active = pointerDragRef.current;
-      if (!active) return;
-      if (active.timer != null) window.clearTimeout(active.timer);
-      if (active.dragging) {
-        event.preventDefault();
-        suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
-        const touch = event.changedTouches[0];
-        const clientY = touch?.clientY ?? active.currentY;
-        const target = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : event.target;
-        finishPointerDropAt(active, clientY, target);
-      } else {
-        if (active.armed) suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
-        clearPointerDrag();
-      }
-    };
-
-    root.addEventListener('touchstart', onTouchStart, { passive: true });
-    root.addEventListener('touchmove', onTouchMove, { passive: false });
-    root.addEventListener('touchend', onTouchEnd, { passive: false });
-    root.addEventListener('touchcancel', onTouchEnd, { passive: false });
-    document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
-    document.addEventListener('touchend', onTouchEnd, { passive: false, capture: true });
-    document.addEventListener('touchcancel', onTouchEnd, { passive: false, capture: true });
-    return () => {
-      root.removeEventListener('touchstart', onTouchStart);
-      root.removeEventListener('touchmove', onTouchMove);
-      root.removeEventListener('touchend', onTouchEnd);
-      root.removeEventListener('touchcancel', onTouchEnd);
-      document.removeEventListener('touchmove', onTouchMove, { capture: true });
-      document.removeEventListener('touchend', onTouchEnd, { capture: true });
-      document.removeEventListener('touchcancel', onTouchEnd, { capture: true });
-    };
-  }, [activatePointerDrag, armPointerDrag, clearPointerDrag, dndEnabled, finishPointerDropAt, flat, paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
-
-  const movePointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    const active = pointerDragRef.current;
-    if (!active || active.pointerId !== event.pointerId) return;
-
-    const dx = event.clientX - active.startX;
-    const dy = event.clientY - active.startY;
-    active.currentY = event.clientY;
-
-    if (!active.dragging) {
-      // Quick movement means the user is scrolling, so cancel DnD and let the
-      // browser's native pan-y scroll continue uninterrupted.
-      if (!active.armed && Math.abs(dy) > TOUCH_SCROLL_CANCEL_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
-        if (active.timer != null) window.clearTimeout(active.timer);
-        active.timer = null;
-        pointerDragRef.current = null;
-        setPointerPreparingIndex(null);
-        return;
-      }
-      if (active.armed && Math.abs(dy) >= TOUCH_DRAG_START_PX && Math.abs(dx) < TOUCH_AXIS_CANCEL_PX) {
-        event.preventDefault();
-        activatePointerDrag(active);
-      } else if (Math.abs(dx) > TOUCH_AXIS_CANCEL_PX || (!active.armed && Math.abs(dy) > TOUCH_CANCEL_PX)) {
-        if (active.timer != null) window.clearTimeout(active.timer);
-        pointerDragRef.current = null;
-        setPointerPreparingIndex(null);
-        return;
-      } else {
-        return;
-      }
-    }
-
-    event.preventDefault();
-    const over = updateInsertionIndicator(event.clientY, event.target);
-    if (over !== active.over) {
-      active.over = over;
-      // Skip mid-drag setState — keeps virtualizer geometry stable so the drop lands on the blue line.
-    }
-    paintGhostAt(event.clientY);
-    stopAutoscroll();
-    autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(event.clientY));
-  }, [paintGhostAt, stopAutoscroll, tickAutoscroll, updateInsertionIndicator]);
-
-  const endPointerDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    const active = pointerDragRef.current;
-    if (!active || active.pointerId !== event.pointerId) return;
-
-    if (active.timer != null) window.clearTimeout(active.timer);
-    if (active.dragging) {
-      event.preventDefault();
-      event.stopPropagation();
-      suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
-      finishPointerDropAt(active, event.clientY, event.target);
-    } else {
-      if (active.armed) suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
-      clearPointerDrag();
-    }
-  }, [clearPointerDrag, finishPointerDropAt]);
-
   useEffect(() => {
     const target = resolvedUseWindow ? window : parentRef.current;
     if (!target) return;
@@ -925,11 +270,10 @@ export function FlatTaskList({
 
   if (flat.length === 0 && emptyState) return <>{emptyState}</>;
 
-  // -------- @hello-pangea/dnd path (capped, non-virtualized) ---------------
-  // When the list fits under HELLO_PANGEA_CAP, render every row directly so
-  // hello-pangea/dnd owns the drag lifecycle. This gives users library-grade
-  // drop accuracy, native keyboard reorder (Space → ↑/↓ → Space), and
-  // accessibility announcements — none of which work in the windowed path.
+  // -------- @hello-pangea/dnd path (≤ HELLO_PANGEA_CAP, non-virtualized) ---
+  // When the list fits under the cap, render every row directly so
+  // hello-pangea/dnd owns the drag lifecycle. Library-grade drop accuracy,
+  // native keyboard reorder (Space → ↑/↓ → Space), and a11y announcements.
   if (dndEnabled && flat.length > 0 && flat.length <= HELLO_PANGEA_CAP) {
     const onDragEnd = (result: DropResult) => {
       const from = result.source.index;
@@ -995,7 +339,7 @@ export function FlatTaskList({
   }
   // -------- end @hello-pangea/dnd path -------------------------------------
 
-
+  // -------- Virtualized + usePointerDragReorder path -----------------------
   const virtualItems = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
   const scrollOffset = resolvedUseWindow ? parentTop : 0;
@@ -1008,33 +352,6 @@ export function FlatTaskList({
       data-virt-overscan={resolvedOverscan}
       data-virt-row-height={resolvedRowHeight}
       data-virt-windowing={resolvedUseWindow ? 'window' : 'container'}
-      onClickCapture={dndEnabled ? (e) => {
-        if (Date.now() < suppressClickUntilRef.current) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      } : undefined}
-      onDragOver={dndEnabled ? (e) => {
-        if (dragFromRef.current == null) return;
-        e.preventDefault();
-        try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'list', ts: Date.now() }; } catch {}
-        try { e.dataTransfer.dropEffect = 'move'; } catch {}
-        updateInsertionIndicator(e.clientY, e.target);
-        stopAutoscroll();
-        autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(e.clientY));
-      } : undefined}
-      onDrop={dndEnabled ? (e) => {
-        if (dragFromRef.current == null) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const to = updateInsertionIndicator(e.clientY, e.target);
-        try { (window as any).__flowistLastTaskNativeDrop = { target: 'list', from: dragFromRef.current, insertionIndex: to, ts: Date.now() }; } catch {}
-        finishReorder(dragFromRef.current, to, 'blank-drop');
-      } : undefined}
-      onDragLeave={dndEnabled ? () => {
-        // Keep the active drag alive while the cursor passes over virtual gaps;
-        // `dragend`/`drop` owns cleanup so valid drops are never cancelled early.
-      } : undefined}
       style={
         resolvedUseWindow
           ? { position: 'relative', width: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }
@@ -1052,64 +369,17 @@ export function FlatTaskList({
           const row = flat[vi.index];
           if (!row) return null;
           const isActive = vi.index === activeIndex;
-          const isDragOver = false;
-          const isTouchDragCandidate = isCoarsePointer && (pointerPreparingIndex === vi.index || dragFromRef.current === vi.index);
+          const isBeingDragged = pointerDrag.draggingIndex === vi.index;
+          const itemProps = dndEnabled ? pointerDrag.getItemProps(vi.index) : null;
+          const handleProps = dndEnabled ? pointerDrag.getHandleProps(vi.index) : null;
           return (
             <div
               key={vi.key}
               data-index={vi.index}
               data-active={isActive ? 'true' : 'false'}
+              {...(itemProps ?? {})}
+              {...(handleProps ?? {})}
               ref={virtualizer.measureElement}
-              draggable={canUseNativeDrag}
-              onPointerDown={dndEnabled ? (e) => startPointerDrag(e, vi.index, row) : undefined}
-              onPointerMove={dndEnabled ? movePointerDrag : undefined}
-              onPointerUp={dndEnabled ? endPointerDrag : undefined}
-              onPointerCancel={dndEnabled ? endPointerDrag : undefined}
-              onDragStart={canUseNativeDrag ? (e) => {
-                dragGenerationRef.current += 1;
-                dragFromRef.current = vi.index;
-                const placement = getInsertionPlacement(e.clientY, e.currentTarget);
-                paintInsertLine(placement.top);
-                lastInsertionIndexRef.current = placement.insertionIndex;
-                try {
-                  e.dataTransfer.effectAllowed = 'move';
-                  e.dataTransfer.setData('text/plain', String(vi.index));
-                  e.dataTransfer.setData('application/x-flowist-task-index', String(vi.index));
-                  const ghost = document.createElement('div');
-                  ghost.textContent = row.task.text || 'Task';
-                  ghost.style.cssText = 'position:fixed;top:-1000px;left:-1000px;z-index:2147483647;max-width:320px;padding:10px 14px;border:2px solid hsl(var(--primary));border-radius:6px;background:hsl(var(--background));color:hsl(var(--foreground));font:600 14px system-ui;box-shadow:0 18px 40px hsl(var(--foreground) / 0.18);pointer-events:none;';
-                  document.body.appendChild(ghost);
-                  e.dataTransfer.setDragImage(ghost, 16, 20);
-                  window.setTimeout(() => ghost.remove(), 0);
-                } catch {}
-              } : undefined}
-              onDragEnter={canUseNativeDrag ? (e) => {
-                if (dragFromRef.current == null) return;
-                e.preventDefault();
-                try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'row-enter', index: vi.index, ts: Date.now() }; } catch {}
-                try { e.dataTransfer.dropEffect = 'move'; } catch {}
-                updateInsertionIndicator(e.clientY, e.currentTarget);
-              } : undefined}
-              onDragOver={canUseNativeDrag ? (e) => {
-                if (dragFromRef.current == null) return;
-                e.preventDefault();
-                try { (window as any).__flowistLastTaskDragOverPrevented = { target: 'row-over', index: vi.index, ts: Date.now() }; } catch {}
-                try { e.dataTransfer.dropEffect = 'move'; } catch {}
-                updateInsertionIndicator(e.clientY, e.currentTarget);
-                stopAutoscroll();
-                autoscrollRafRef.current = requestAnimationFrame(() => tickAutoscroll(e.clientY));
-              } : undefined}
-              onDragLeave={canUseNativeDrag ? () => {} : undefined}
-              onDrop={canUseNativeDrag ? (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const payload = Number(e.dataTransfer.getData('application/x-flowist-task-index') || e.dataTransfer.getData('text/plain'));
-                const from = Number.isFinite(payload) ? payload : dragFromRef.current;
-                const to = updateInsertionIndicator(e.clientY, e.currentTarget);
-                try { (window as any).__flowistLastTaskNativeDrop = { target: 'row', from, insertionIndex: to, index: vi.index, ts: Date.now() }; } catch {}
-                finishReorder(from, to, 'drop');
-              } : undefined}
-              onDragEnd={canUseNativeDrag ? cancelDrag : undefined}
               style={{
                 position: 'absolute',
                 top: 0,
@@ -1117,72 +387,27 @@ export function FlatTaskList({
                 width: '100%',
                 contain: 'layout paint style',
                 transform: `translateY(${vi.start - scrollOffset}px)`,
-                // While a pointer/touch drag is active, hide the source row's
-                // contents so the floating ghost is the ONLY visible copy of
-                // the task. This kills the "ghost looks transparent / two
-                // tasks showing" effect the user reported. Keep the row's
-                // layout (visibility:hidden, not display:none) so the
-                // virtualizer's measured height stays stable.
-                visibility: pointerDrag && dragFromRef.current === vi.index ? 'hidden' : 'visible',
+                // Source row is dimmed by the hook (opacity) while dragged;
+                // we additionally hide its hit area via the hook's pointer-
+                // events override. Visual styles below stay untouched.
                 backgroundColor: 'hsl(var(--background))',
-                boxShadow: isDragOver
-                  ? undefined
-                  : dragFromRef.current === vi.index && !pointerDrag
-                    ? '0 8px 24px hsl(var(--foreground) / 0.18), inset 0 0 0 2px hsl(var(--primary))'
-                    : isTouchDragCandidate
-                      ? 'inset 0 0 0 2px hsl(var(--primary) / 0.7)'
-                      : undefined,
+                boxShadow: isBeingDragged
+                  ? '0 8px 24px hsl(var(--foreground) / 0.18), inset 0 0 0 2px hsl(var(--primary))'
+                  : undefined,
                 opacity: 1,
-                cursor: dragFromRef.current === vi.index ? 'grabbing' : dndEnabled ? 'grab' : undefined,
-                touchAction: dndEnabled ? 'pan-y' : undefined,
-                willChange: dragFromRef.current === vi.index ? 'transform, box-shadow' : undefined,
+                cursor: dndEnabled ? (isBeingDragged ? 'grabbing' : 'grab') : undefined,
+                // pan-y keeps vertical list scroll working; the pointer hook
+                // arms via long-press and aborts cleanly on scroll-like motion.
+                touchAction: dndEnabled ? (pointerDrag.isDragging ? 'none' : 'pan-y') : undefined,
+                ...((itemProps?.style ?? {}) as React.CSSProperties),
+                ...((handleProps?.style ?? {}) as React.CSSProperties),
               }}
             >
               <MemoRowBody row={row} index={vi.index} isActive={isActive} render={renderRow} />
             </div>
           );
         })}
-        {/* Imperatively-positioned insert line. Mounted once; hidden until
-            a drag begins. Position is driven by paintInsertLine() via a ref
-            so touchmove never triggers a React re-render of the list. */}
-        <div
-          ref={insertLineRef}
-          data-flowist-insert-line="true"
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            top: 0,
-            height: 2,
-            display: 'none',
-            backgroundColor: 'hsl(var(--primary))',
-            boxShadow: '0 0 0 1px hsl(var(--primary) / 0.35)',
-            pointerEvents: 'none',
-            zIndex: 60,
-            willChange: 'transform',
-          }}
-        />
       </div>
-      {pointerDrag && typeof document !== 'undefined' && createPortal((
-        <div
-          ref={ghostRef}
-          className="pointer-events-none fixed left-3 right-3 z-[70] rounded-md border-2 border-primary px-4 py-3 text-sm font-semibold shadow-2xl"
-          style={{
-            top: 0,
-            // Fully opaque solid background — no transparency, no scale, no
-            // transition. The ghost must read as the real task being moved.
-            backgroundColor: 'hsl(var(--background))',
-            color: 'hsl(var(--foreground))',
-            transform: `translate3d(0, ${pointerDrag.y}px, 0) translateY(-50%)`,
-            willChange: 'transform',
-            backfaceVisibility: 'hidden',
-            transition: 'none',
-          }}
-        >
-          <div className="truncate">{pointerDrag.title}</div>
-        </div>
-      ), document.body)}
     </div>
   );
 }
