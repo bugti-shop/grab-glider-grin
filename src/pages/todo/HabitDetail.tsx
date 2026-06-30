@@ -537,8 +537,21 @@ const HabitDetail = () => {
                     const status = statusFor(d);
                     const inMonth = isSameMonth(d, month);
                     const isToday = isSameDay(d, new Date());
+                    const dateKey = format(d, 'yyyy-MM-dd');
+                    const rec = habit.completions.find((c) => c.date === dateKey);
+                    const hasNote = !!rec?.note;
                     return (
-                      <div key={d.toISOString()} className="flex items-center justify-center py-1">
+                      <button
+                        key={d.toISOString()}
+                        type="button"
+                        onClick={() => {
+                          if (!inMonth) return;
+                          setReflectionDate(dateKey);
+                          setReflectionReadOnly(dateKey !== todayKey);
+                          setReflectionOpen(true);
+                        }}
+                        className="flex items-center justify-center py-1 relative"
+                      >
                         <div className={cn(
                           'h-9 w-9 rounded-full flex items-center justify-center text-base',
                           !inMonth && 'text-muted-foreground/40',
@@ -550,7 +563,10 @@ const HabitDetail = () => {
                         )}>
                           {format(d, 'd')}
                         </div>
-                      </div>
+                        {hasNote && (
+                          <span className="absolute bottom-0.5 h-1 w-1 rounded-full bg-amber-500" aria-hidden />
+                        )}
+                      </button>
                     );
                   })}
                 </div>
