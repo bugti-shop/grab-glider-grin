@@ -115,16 +115,34 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
 
   const hitTestIndex = useCallback((x: number, y: number): { index: number; before: boolean } | null => {
     const el = document.elementFromPoint(x, y) as HTMLElement | null;
-    if (!el) return null;
-    const slot = el.closest<HTMLElement>(`[${itemAttr}]`);
-    if (!slot) return null;
-    const raw = slot.getAttribute(itemAttr);
-    if (raw == null) return null;
-    const idx = Number(raw);
-    if (!Number.isFinite(idx)) return null;
-    const rect = slot.getBoundingClientRect();
-    const before = y < rect.top + rect.height / 2;
-    return { index: idx, before };
+    const slot = el?.closest<HTMLElement>(`[${itemAttr}]`) ?? null;
+    if (slot) {
+      const raw = slot.getAttribute(itemAttr);
+      if (raw != null) {
+        const idx = Number(raw);
+        if (Number.isFinite(idx)) {
+          const rect = slot.getBoundingClientRect();
+          const before = y < rect.top + rect.height / 2;
+          return { index: idx, before };
+        }
+      }
+    }
+    // Fallback: ghost / placeholder / overlay swallowed elementFromPoint.
+    // Scan all rendered slots and find the one whose vertical band contains y.
+    const slots = document.querySelectorAll<HTMLElement>(`[${itemAttr}]`);
+    for (const s of slots) {
+      if (s.hasAttribute('data-pdrag-ghost')) continue;
+      const r = s.getBoundingClientRect();
+      if (r.height <= 0) continue;
+      if (y >= r.top && y <= r.bottom) {
+        const raw = s.getAttribute(itemAttr);
+        const idx = raw != null ? Number(raw) : NaN;
+        if (!Number.isFinite(idx)) continue;
+        const before = y < r.top + r.height / 2;
+        return { index: idx, before };
+      }
+    }
+    return null;
   }, [itemAttr]);
 
   const updatePlaceholder = useCallback((hit: { index: number; before: boolean } | null) => {
