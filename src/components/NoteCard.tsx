@@ -353,7 +353,7 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
           transform: `translateX(${swipeOffset}px)`,
         }}
       >
-        <div className="p-4">
+        <div className="p-4 h-full flex flex-col">
           <div className="flex items-start justify-between gap-2">
             {/* Selection checkbox */}
             {isSelectionMode && (
