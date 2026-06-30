@@ -256,7 +256,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           updatePrefs({ durationMin: dur });
           // restart noise if it was on
           if (prefs.whiteNoise && !prefs.whiteNoiseMuted) {
-            noise.start(prefs.whiteNoiseVolume);
+            noise.start(currentTrack, prefs.whiteNoiseVolume);
           }
           toast.message('Resumed your focus session');
           return;
