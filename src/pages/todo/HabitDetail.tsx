@@ -159,30 +159,88 @@ const HabitDetail = () => {
   const todayKey = format(new Date(), 'yyyy-MM-dd');
   const todayDone = habit.completions.some((c) => c.date === todayKey && c.completed);
 
-  const toggleToday = async () => {
-    if (saving) return;
-    triggerHaptic('medium').catch(() => {});
+  const isAmount = habit.goalType === 'amount' && (habit.goalAmount ?? 0) > 0;
+  const isAvoid = habit.kind === 'avoid';
+  const todayRecord = habit.completions.find((c) => c.date === todayKey);
+  const todayAmount = todayRecord?.amount ?? 0;
+
+  const persistHabit = async (updated: Habit, openReflection = false) => {
     const previous = habit;
-    const others = habit.completions.filter((c) => c.date !== todayKey);
-    const updated: Habit = {
-      ...habit,
-      completions: todayDone
-        ? others
-        : [...others, { date: todayKey, completed: true, status: 'done' }],
-      updatedAt: new Date().toISOString(),
-    };
-    // Optimistic — update UI immediately.
     setHabit(updated);
     setSaving(true);
     try {
       await saveHabit(updated);
-    } catch (err) {
-      // Roll back on failure.
+      if (openReflection && updated.autoPopupLog) {
+        setReflectionDate(todayKey);
+        setReflectionReadOnly(false);
+        setReflectionOpen(true);
+      }
+    } catch {
       setHabit(previous);
       toast.error('Could not save check-in. Please try again.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const toggleToday = async () => {
+    if (saving) return;
+    triggerHaptic('medium').catch(() => {});
+    const others = habit.completions.filter((c) => c.date !== todayKey);
+    const updated: Habit = {
+      ...habit,
+      completions: todayDone
+        ? others
+        : [...others, { date: todayKey, completed: true, status: 'done', note: todayRecord?.note }],
+      updatedAt: new Date().toISOString(),
+    };
+    await persistHabit(updated, !todayDone);
+  };
+
+  const setTodayAmount = async (next: number) => {
+    triggerHaptic('light').catch(() => {});
+    const others = habit.completions.filter((c) => c.date !== todayKey);
+    const completed = next >= (habit.goalAmount ?? 1);
+    const wasCompleted = todayRecord?.completed ?? false;
+    const updated: Habit = {
+      ...habit,
+      completions:
+        next <= 0
+          ? others
+          : [
+              ...others,
+              {
+                date: todayKey,
+                amount: next,
+                completed,
+                status: completed ? 'done' : undefined,
+                note: todayRecord?.note,
+              },
+            ],
+      updatedAt: new Date().toISOString(),
+    };
+    // Auto-popup only when goal newly reached.
+    await persistHabit(updated, completed && !wasCompleted);
+  };
+
+  const saveTodayNote = async (note: string) => {
+    const others = habit.completions.filter((c) => c.date !== todayKey);
+    const updated: Habit = {
+      ...habit,
+      completions: [
+        ...others,
+        {
+          date: todayKey,
+          completed: todayRecord?.completed ?? false,
+          status: todayRecord?.status,
+          amount: todayRecord?.amount,
+          note: note || undefined,
+        },
+      ],
+      updatedAt: new Date().toISOString(),
+    };
+    setHabit(updated);
+    try { await saveHabit(updated); } catch { toast.error('Could not save note.'); }
   };
 
 
