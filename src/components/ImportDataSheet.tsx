@@ -21,8 +21,7 @@ import { loadNotesFromDB, saveNotesToDB, bulkPutNotesInDB } from '@/utils/noteSt
 import { loadTodoItems, saveTodoItems } from '@/utils/todoItemsStorage';
 import { bulkPutTasksInWorker } from '@/utils/taskStorage';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
-import { loadFolders as loadTaskFolders, saveFolders as saveTaskFolders, type Folder as TaskFolder } from '@/utils/folderStorage';
-import type { Folder as NotesFolder } from '@/types/note';
+import type { Folder as NotesFolder, TaskSection } from '@/types/note';
 import { cn } from '@/lib/utils';
 
 interface ImportDataSheetProps {
@@ -226,45 +225,97 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       // Resolve a dedicated destination folder so imported items never land in Inbox.
       const sourceLabel = sources.find(s => s.id === selectedSource)?.name || 'Import';
       const importFolderName = `Imported from ${sourceLabel}`;
-      const nowIso = new Date();
+      const now = new Date();
+      const withFolderDefaults = (folder: Partial<NotesFolder>, fallbackName = importFolderName): NotesFolder => ({
+        id: folder.id || ((crypto as any).randomUUID ? crypto.randomUUID() : `imp-folder-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
+        name: folder.name || fallbackName,
+        color: folder.color || '#3b82f6',
+        icon: folder.icon || 'Folder',
+        isDefault: false,
+        createdAt: folder.createdAt ? new Date(folder.createdAt) : now,
+        parentId: folder.parentId,
+      });
 
       // ── Notes folders (Index.tsx reads from setting 'folders') ──
       const existingNoteFolders = (await getSetting<NotesFolder[]>('folders', [])) || [];
       let noteFolders = [...existingNoteFolders];
       let noteImportFolderId: string | undefined;
-      if (importResult.folders && importResult.folders.length > 0) {
-        noteFolders = [...noteFolders, ...importResult.folders];
-      } else if (importResult.notes.length > 0) {
-        const id = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-notes-${Date.now()}`;
-        noteImportFolderId = id;
-        noteFolders.push({
-          id, name: importFolderName, color: '#3b82f6', icon: 'Folder',
-        } as NotesFolder);
+      if (importResult.notes.length > 0) {
+        if (importResult.folders && importResult.folders.length > 0) {
+          const existingIds = new Set(noteFolders.map(f => f.id));
+          const imported = importResult.folders.map(f => withFolderDefaults(f));
+          imported.forEach(f => { if (!existingIds.has(f.id)) noteFolders.push(f); });
+        } else {
+          const id = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-notes-${Date.now()}`;
+          noteImportFolderId = id;
+          noteFolders.push(withFolderDefaults({ id, name: importFolderName }));
+        }
       }
       if (noteFolders.length !== existingNoteFolders.length) {
         await setSetting('folders', noteFolders);
+        window.dispatchEvent(new Event('foldersRestored'));
         window.dispatchEvent(new Event('foldersUpdated'));
       }
 
-      // ── Task folders (folderStorage 'nota_folders') ──
+      // ── Task folders/sections (Today reads from settings: 'todoFolders' / 'todoSections') ──
       let taskImportFolderId: string | undefined;
+      let defaultImportSectionId: string | undefined;
       if (importResult.tasks.length > 0) {
-        const existingTaskFolders = await loadTaskFolders();
-        const id = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-tasks-${Date.now()}`;
-        taskImportFolderId = id;
-        await saveTaskFolders([
-          ...existingTaskFolders,
-          { id, name: importFolderName, color: '#3b82f6', icon: 'Folder', type: 'tasks', createdAt: nowIso, updatedAt: nowIso } as TaskFolder,
-        ]);
+        const existingTaskFolders = (await getSetting<NotesFolder[]>('todoFolders', [])) || [];
+        const taskFolders = [...existingTaskFolders];
+        const existingIds = new Set(taskFolders.map(f => f.id));
+
+        if (importResult.folders && importResult.folders.length > 0) {
+          const imported = importResult.folders.map(f => withFolderDefaults(f));
+          imported.forEach(f => { if (!existingIds.has(f.id)) taskFolders.push(f); });
+          taskImportFolderId = imported[0]?.id;
+        } else {
+          const id = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-tasks-${Date.now()}`;
+          taskImportFolderId = id;
+          taskFolders.push(withFolderDefaults({ id, name: importFolderName }));
+        }
+
+        await setSetting('todoFolders', taskFolders);
+        window.dispatchEvent(new Event('foldersRestored'));
+        window.dispatchEvent(new Event('foldersUpdated'));
+
+        const existingSections = (await getSetting<TaskSection[]>('todoSections', [])) || [];
+        const importedSections = importResult.sections && importResult.sections.length > 0
+          ? importResult.sections.map((section, index) => ({
+              ...section,
+              color: section.color || '#3b82f6',
+              isCollapsed: false,
+              order: existingSections.length + index,
+              folderId: section.folderId || taskImportFolderId,
+            }))
+          : [];
+        if (importedSections.length === 0) {
+          defaultImportSectionId = (crypto as any).randomUUID ? crypto.randomUUID() : `imp-section-${Date.now()}`;
+          importedSections.push({
+            id: defaultImportSectionId,
+            name: importFolderName,
+            color: '#3b82f6',
+            isCollapsed: false,
+            order: existingSections.length,
+            folderId: taskImportFolderId,
+          });
+        }
+        await setSetting('todoSections', [...existingSections, ...importedSections]);
+        window.dispatchEvent(new Event('sectionsRestored'));
+        window.dispatchEvent(new Event('sectionsUpdated'));
       }
 
       if (importResult.tasks.length > 0) {
         const tagged = importResult.tasks.map(t => ({
           ...t,
           folderId: t.folderId || taskImportFolderId,
+          sectionId: t.sectionId || defaultImportSectionId,
         }));
         // Worker-backed chunked insert — keeps the UI alive at 10k+ items.
-        await bulkPutTasksInWorker(tagged);
+        await bulkPutTasksInWorker(tagged, false, (p) => {
+          setProgress({ phase: 'saving', current: p.written, total: p.total, message: 'Saving tasks…' });
+        });
+        window.dispatchEvent(new Event('tasksRestored'));
         window.dispatchEvent(new Event('tasksUpdated'));
       }
       if (importResult.notes.length > 0) {
