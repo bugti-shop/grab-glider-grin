@@ -319,6 +319,10 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     writeSession(s);
     setRemaining(dur);
     setRunning(true);
+    if (prefs.notifications) {
+      void requestNotificationPermission();
+      notifyFocus(true, 'start', { taskTitle, durationMin: prefs.durationMin });
+    }
   };
 
   const resumeSession = () => {
