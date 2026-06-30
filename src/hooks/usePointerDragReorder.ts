@@ -71,12 +71,13 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     startX: number;
     startY: number;
     pointerId: number;
+    pointerType: string;
     fromIndex: number;
     sourceEl: HTMLElement | null;
     ghostEl: HTMLElement | null;
     placeholderEl: HTMLElement | null;
     longPressTimer: ReturnType<typeof setTimeout> | null;
-    armed: boolean;     // long-press fired, awaiting motion confirmation
+    armed: boolean;     // long-press fired (touch) OR distance threshold met (mouse)
     active: boolean;    // ghost is in DOM, drag in progress
     lastToIndex: number;
   } | null>(null);
@@ -142,17 +143,34 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     const s = stateRef.current;
     if (!s) return;
 
-    // Pre-activation: cancel on horizontal scroll-like motion.
+    // Pre-activation behaviour depends on pointer type:
+    //  - Mouse / pen: activate as soon as motion exceeds threshold (no wait).
+    //    This matches @dnd-kit's PointerSensor { distance } activation so
+    //    click-and-drag feels instant on desktop.
+    //  - Touch: require long-press first so vertical list scroll still works.
     if (!s.active) {
       const dx = Math.abs(e.clientX - s.startX);
       const dy = Math.abs(e.clientY - s.startY);
-      if (!s.armed && (dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX)) {
-        // User moved before long-press fired → treat as scroll/tap, abort.
-        cleanup();
-        return;
-      }
-      if (s.armed && (dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX)) {
-        activateDrag(e.clientX, e.clientY);
+      const moved = dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX;
+      const isPointerLikeMouse = s.pointerType === 'mouse' || s.pointerType === 'pen';
+
+      if (moved) {
+        if (isPointerLikeMouse) {
+          // Cancel the (unused) long-press timer and activate now.
+          if (s.longPressTimer) {
+            clearTimeout(s.longPressTimer);
+            s.longPressTimer = null;
+          }
+          s.armed = true;
+          activateDrag(e.clientX, e.clientY);
+        } else if (!s.armed) {
+          // Touch moved before long-press fired → treat as scroll, abort.
+          cleanup();
+          return;
+        } else {
+          // Touch already armed by long-press, motion confirms drag.
+          activateDrag(e.clientX, e.clientY);
+        }
       }
     }
 
@@ -259,6 +277,7 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       startX: e.clientX,
       startY: e.clientY,
       pointerId: e.pointerId,
+      pointerType: e.pointerType || 'mouse',
       fromIndex: index,
       sourceEl,
       ghostEl: null,
