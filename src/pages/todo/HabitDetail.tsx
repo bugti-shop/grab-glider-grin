@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Habit, HabitDayStatus } from '@/types/habit';
 import { loadHabits, saveHabit, deleteHabit } from '@/utils/habitStorage';
+import { checkMilestones, milestoneEmoji } from '@/utils/habitMilestones';
 import { triggerHaptic } from '@/utils/haptics';
 import { cn } from '@/lib/utils';
 import {
@@ -166,11 +167,20 @@ const HabitDetail = () => {
 
   const persistHabit = async (updated: Habit, openReflection = false) => {
     const previous = habit;
-    setHabit(updated);
+    // Detect milestone crossings and persist `unlockedMilestones`.
+    const { events, unlocked } = checkMilestones(previous, updated);
+    const withMilestones: Habit =
+      events.length > 0 ? { ...updated, unlockedMilestones: unlocked } : updated;
+    setHabit(withMilestones);
     setSaving(true);
     try {
-      await saveHabit(updated);
-      if (openReflection && updated.autoPopupLog) {
+      await saveHabit(withMilestones);
+      for (const e of events) {
+        toast(`${milestoneEmoji(e.threshold)} ${e.threshold}-day milestone unlocked!`, {
+          description: `${withMilestones.emoji || '✨'} ${withMilestones.name} — ${e.source === 'streak' ? 'streak' : 'total check-ins'}`,
+        });
+      }
+      if (openReflection && withMilestones.autoPopupLog) {
         setReflectionDate(todayKey);
         setReflectionReadOnly(false);
         setReflectionOpen(true);

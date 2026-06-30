@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
-import { Habit, HabitFrequencyType, HabitGoalType, HabitKind, HabitReminder } from '@/types/habit';
+import { Habit, HabitDifficulty, HabitFrequencyType, HabitGoalType, HabitKind, HabitReminder } from '@/types/habit';
 import { saveHabit, loadHabits } from '@/utils/habitStorage';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { loadHabitSections, DEFAULT_HABIT_SECTION_ID, getHabitSectionTree } from '@/utils/habitSectionsStorage';
@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/utils/haptics';
 import { scheduleHabitReminder, testHabitReminder } from '@/utils/habitReminders';
 import { RemindersList } from '@/components/habits/RemindersList';
+import { HABIT_COLOR_SWATCHES, DEFAULT_HABIT_COLOR } from '@/utils/habitColors';
 import { toast } from 'sonner';
 
 const ICON_GRID = [
@@ -63,6 +64,8 @@ const HabitNew = () => {
   const [emoji, setEmoji] = useState(prefill?.emoji ?? '🍌');
   const [quote, setQuote] = useState(prefill?.quote ?? QUOTES[0]);
   const [kind, setKind] = useState<HabitKind>('build');
+  const [color, setColor] = useState<string>(DEFAULT_HABIT_COLOR);
+  const [difficulty, setDifficulty] = useState<HabitDifficulty | undefined>(undefined);
 
   // Details
   const [frequency, setFrequency] = useState<HabitFrequencyType>('daily');
@@ -127,6 +130,8 @@ const HabitNew = () => {
       setAutoPopup(!!h.autoPopupLog);
       setKind(h.kind ?? 'build');
       setChainAfterHabitId(h.chainAfterHabitId);
+      if (h.color) setColor(h.color);
+      setDifficulty(h.difficulty);
     })();
     return () => { cancelled = true; };
   }, [editId]);
@@ -164,8 +169,10 @@ const HabitNew = () => {
       id: editingExisting?.id ?? genId(),
       name: name.trim(),
       emoji,
-      color: editingExisting?.color ?? 'hsl(220, 85%, 59%)',
+      color: color || editingExisting?.color || DEFAULT_HABIT_COLOR,
       quote,
+      difficulty,
+      unlockedMilestones: editingExisting?.unlockedMilestones,
       frequency,
       weeklyDays: frequency === 'weekly' || frequency === 'daily' ? weeklyDays : undefined,
       weeklyCount: frequency === 'weekly' ? weeklyCount : undefined,
@@ -309,6 +316,62 @@ const HabitNew = () => {
                 className="mt-3 h-12 bg-muted/60 border-0 text-base"
               />
             </section>
+
+            {/* Color */}
+            <section className="bg-background rounded-2xl p-4">
+              <Label className="text-base text-foreground">Color</Label>
+              <div className="mt-3 grid grid-cols-7 gap-3">
+                {HABIT_COLOR_SWATCHES.map((c) => {
+                  const sel = c === color;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      aria-label={`Use color ${c}`}
+                      className={cn(
+                        'aspect-square rounded-full relative',
+                        sel && 'ring-2 ring-offset-2 ring-offset-background ring-primary'
+                      )}
+                      style={{ backgroundColor: c }}
+                    >
+                      {sel && (
+                        <Check className="absolute inset-0 m-auto h-4 w-4 text-white" strokeWidth={3} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Difficulty */}
+            <section className="bg-background rounded-2xl p-4">
+              <Label className="text-base text-foreground">Difficulty</Label>
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {([
+                  { id: undefined, label: 'None' },
+                  { id: 'easy', label: '🟢 Easy' },
+                  { id: 'medium', label: '🟡 Medium' },
+                  { id: 'hard', label: '🔴 Hard' },
+                ] as { id: HabitDifficulty | undefined; label: string }[]).map((d) => {
+                  const sel = difficulty === d.id;
+                  return (
+                    <button
+                      key={d.label}
+                      type="button"
+                      onClick={() => setDifficulty(d.id)}
+                      className={cn(
+                        'h-10 rounded-lg text-sm font-medium',
+                        sel ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                      )}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
 
             <Button
               onClick={() => setStep(STEP_DETAILS)}

@@ -7,8 +7,14 @@ import {
   isSameDay,
   parseISO,
 } from 'date-fns';
-import { Plus, PieChart, LayoutGrid, SlidersHorizontal, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, PieChart, LayoutGrid, SlidersHorizontal, Check, X, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
 import { Habit, HabitDayStatus, HabitSection } from '@/types/habit';
 import { loadHabits, saveHabit } from '@/utils/habitStorage';
@@ -18,6 +24,8 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { toast } from 'sonner';
 import { readActiveFocus, cleanupStaleFocusKeys, clearActiveFocus } from '@/utils/focusSession';
+import { checkMilestones, milestoneEmoji } from '@/utils/habitMilestones';
+import { HabitImportSheet } from '@/components/habits/HabitImportSheet';
 
 const Habits = () => {
   const navigate = useNavigate();
@@ -27,6 +35,7 @@ const Habits = () => {
   const [sections, setSections] = useState(() => loadHabitSections());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [importOpen, setImportOpen] = useState(false);
 
   const load = useCallback(async () => {
     const loaded = await loadHabits();
@@ -126,6 +135,19 @@ const Habits = () => {
     }
   };
 
+  /** Fire celebration toast(s) for milestones newly crossed by `updated`. */
+  const fireMilestoneToasts = (prev: Habit, updated: Habit): Habit => {
+    const { events, unlocked } = checkMilestones(prev, updated);
+    if (events.length === 0) return updated;
+    for (const e of events) {
+      toast(`${milestoneEmoji(e.threshold)} ${e.threshold}-day milestone unlocked!`, {
+        description: `${updated.emoji || '✨'} ${updated.name} — ${e.source === 'streak' ? 'streak' : 'total check-ins'}`,
+      });
+    }
+    return { ...updated, unlockedMilestones: unlocked };
+  };
+
+
   const cycleStatus = async (habit: Habit) => {
     triggerHaptic('medium').catch(() => {});
     const isAmount = habit.goalType === 'amount' && (habit.goalAmount ?? 0) > 0;
@@ -151,11 +173,12 @@ const Habits = () => {
         ],
         updatedAt: new Date().toISOString(),
       };
+      const withMilestones = fireMilestoneToasts(habit, updated);
       const previous = habits;
-      setHabits((h) => h.map((x) => (x.id === habit.id ? updated : x)));
+      setHabits((h) => h.map((x) => (x.id === habit.id ? withMilestones : x)));
       try {
-        await saveHabit(updated);
-        if (completed && !wasCompleted) fireChainToast(updated);
+        await saveHabit(withMilestones);
+        if (completed && !wasCompleted) fireChainToast(withMilestones);
       } catch {
         setHabits(previous);
         toast.error('Could not save check-in. Please try again.');
@@ -177,11 +200,12 @@ const Habits = () => {
           : [...others, { date: dateKey, completed: next === 'done', status: next, note: rec?.note }],
       updatedAt: new Date().toISOString(),
     };
+    const withMilestones = fireMilestoneToasts(habit, updated);
     const previous = habits;
-    setHabits((h) => h.map((x) => (x.id === habit.id ? updated : x)));
+    setHabits((h) => h.map((x) => (x.id === habit.id ? withMilestones : x)));
     try {
-      await saveHabit(updated);
-      if (next === 'done' && current !== 'done') fireChainToast(updated);
+      await saveHabit(withMilestones);
+      if (next === 'done' && current !== 'done') fireChainToast(withMilestones);
     } catch {
       setHabits(previous);
       toast.error('Could not save check-in. Please try again.');
@@ -260,6 +284,18 @@ const Habits = () => {
           <div className="text-base text-foreground truncate flex items-center gap-1.5">
             {isAvoid && <span className="text-[10px] font-semibold uppercase tracking-wide text-rose-500">Avoid</span>}
             <span className="truncate">{h.name}</span>
+            {h.difficulty && (
+              <span
+                className={cn(
+                  'text-[10px] font-semibold px-1.5 py-0.5 rounded-md',
+                  h.difficulty === 'easy' && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
+                  h.difficulty === 'medium' && 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+                  h.difficulty === 'hard' && 'bg-rose-500/15 text-rose-600 dark:text-rose-300'
+                )}
+              >
+                {h.difficulty === 'easy' ? 'Easy' : h.difficulty === 'medium' ? 'Med' : 'Hard'}
+              </span>
+            )}
           </div>
           {weeklyQuota && (
             <div className="text-[11px] text-muted-foreground">
@@ -336,9 +372,19 @@ const Habits = () => {
           <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => navigate('/todo/habits/stats')}>
             <PieChart className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-10 w-10">
-            <LayoutGrid className="h-5 w-5" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10" aria-label="More options">
+                <LayoutGrid className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                <Download className="h-4 w-4 mr-2" />
+                Import Habits
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => navigate('/todo/habits/sections')}>
             <SlidersHorizontal className="h-5 w-5" />
           </Button>
@@ -393,8 +439,11 @@ const Habits = () => {
       </Button>
 
       <TodoBottomNavigation />
+
+      <HabitImportSheet open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 };
 
 export default Habits;
+
