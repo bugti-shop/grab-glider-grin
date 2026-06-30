@@ -317,6 +317,62 @@ const HabitNew = () => {
               />
             </section>
 
+            {/* Color */}
+            <section className="bg-background rounded-2xl p-4">
+              <Label className="text-base text-foreground">Color</Label>
+              <div className="mt-3 grid grid-cols-7 gap-3">
+                {HABIT_COLOR_SWATCHES.map((c) => {
+                  const sel = c === color;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setColor(c)}
+                      aria-label={`Use color ${c}`}
+                      className={cn(
+                        'aspect-square rounded-full relative',
+                        sel && 'ring-2 ring-offset-2 ring-offset-background ring-primary'
+                      )}
+                      style={{ backgroundColor: c }}
+                    >
+                      {sel && (
+                        <Check className="absolute inset-0 m-auto h-4 w-4 text-white" strokeWidth={3} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Difficulty */}
+            <section className="bg-background rounded-2xl p-4">
+              <Label className="text-base text-foreground">Difficulty</Label>
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {([
+                  { id: undefined, label: 'None' },
+                  { id: 'easy', label: '🟢 Easy' },
+                  { id: 'medium', label: '🟡 Medium' },
+                  { id: 'hard', label: '🔴 Hard' },
+                ] as { id: HabitDifficulty | undefined; label: string }[]).map((d) => {
+                  const sel = difficulty === d.id;
+                  return (
+                    <button
+                      key={d.label}
+                      type="button"
+                      onClick={() => setDifficulty(d.id)}
+                      className={cn(
+                        'h-10 rounded-lg text-sm font-medium',
+                        sel ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                      )}
+                    >
+                      {d.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+
             <Button
               onClick={() => setStep(STEP_DETAILS)}
               disabled={!canContinue}
