@@ -83,6 +83,7 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     longPressTimer: ReturnType<typeof setTimeout> | null;
     armed: boolean;     // long-press fired (touch) OR distance threshold met (mouse)
     active: boolean;    // ghost is in DOM, drag in progress
+    moved: boolean;     // pointer/finger actually moved after activation
     lastToIndex: number;
   } | null>(null);
 
@@ -114,16 +115,34 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
 
   const hitTestIndex = useCallback((x: number, y: number): { index: number; before: boolean } | null => {
     const el = document.elementFromPoint(x, y) as HTMLElement | null;
-    if (!el) return null;
-    const slot = el.closest<HTMLElement>(`[${itemAttr}]`);
-    if (!slot) return null;
-    const raw = slot.getAttribute(itemAttr);
-    if (raw == null) return null;
-    const idx = Number(raw);
-    if (!Number.isFinite(idx)) return null;
-    const rect = slot.getBoundingClientRect();
-    const before = y < rect.top + rect.height / 2;
-    return { index: idx, before };
+    const slot = el?.closest<HTMLElement>(`[${itemAttr}]`) ?? null;
+    if (slot) {
+      const raw = slot.getAttribute(itemAttr);
+      if (raw != null) {
+        const idx = Number(raw);
+        if (Number.isFinite(idx)) {
+          const rect = slot.getBoundingClientRect();
+          const before = y < rect.top + rect.height / 2;
+          return { index: idx, before };
+        }
+      }
+    }
+    // Fallback: ghost / placeholder / overlay swallowed elementFromPoint.
+    // Scan all rendered slots and find the one whose vertical band contains y.
+    const slots = document.querySelectorAll<HTMLElement>(`[${itemAttr}]`);
+    for (const s of slots) {
+      if (s.hasAttribute('data-pdrag-ghost')) continue;
+      const r = s.getBoundingClientRect();
+      if (r.height <= 0) continue;
+      if (y >= r.top && y <= r.bottom) {
+        const raw = s.getAttribute(itemAttr);
+        const idx = raw != null ? Number(raw) : NaN;
+        if (!Number.isFinite(idx)) continue;
+        const before = y < r.top + r.height / 2;
+        return { index: idx, before };
+      }
+    }
+    return null;
   }, [itemAttr]);
 
   const updatePlaceholder = useCallback((hit: { index: number; before: boolean } | null) => {
@@ -193,6 +212,14 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       s.ghostEl.style.left = `${e.clientX - offX}px`;
       s.ghostEl.style.top = `${e.clientY - offY}px`;
       void rect;
+      // Only count as "moved" once the finger/pointer actually travels past
+      // a small threshold after activation — guarantees that a stationary
+      // long-press release never registers as a drop.
+      const movedDx = Math.abs(e.clientX - s.startX);
+      const movedDy = Math.abs(e.clientY - s.startY);
+      if (!s.moved && (movedDx > TOUCH_HOLD_TOLERANCE_PX || movedDy > TOUCH_HOLD_TOLERANCE_PX)) {
+        s.moved = true;
+      }
       const hit = hitTestIndex(e.clientX, e.clientY);
       updatePlaceholder(hit);
     }
@@ -265,7 +292,7 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
   const handlePointerUp = useCallback((e: PointerEvent | { clientX: number; clientY: number }) => {
     const s = stateRef.current;
     if (!s) return;
-    if (s.active) {
+    if (s.active && s.moved) {
       const finalHit = hitTestIndex(e.clientX, e.clientY);
       if (finalHit) {
         s.lastToIndex = finalHit.before ? finalHit.index : finalHit.index + 1;
@@ -279,7 +306,15 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
         (window as any).__flowistLastTaskInsert = { index: insertionIndex, from };
       } catch {}
       if (to !== from && to >= 0) {
-        try { onReorder(from, to); } catch (err) {
+        try {
+          onReorder(from, to);
+          try {
+            (window as any).__flowistLastTaskReorder = { ok: true, from, to, insertionIndex };
+          } catch {}
+        } catch (err) {
+          try {
+            (window as any).__flowistLastTaskReorder = { ok: false, from, to, insertionIndex, error: String(err) };
+          } catch {}
           // eslint-disable-next-line no-console
           console.error('[usePointerDragReorder] onReorder threw', err);
         }
@@ -317,6 +352,7 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       longPressTimer: null,
       armed: false,
       active: false,
+      moved: false,
       lastToIndex: index,
     };
     stateRef.current.longPressTimer = setTimeout(() => {

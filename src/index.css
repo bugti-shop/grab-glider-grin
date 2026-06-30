@@ -114,15 +114,17 @@ body.flowist-task-dragging [data-flowist-virtual-list="tasks"] {
      Let real safe-area-inset-top work so headers get proper padding.
      Bottom safe area stays 0 — we handle nav bar via native styles. */
   body.android-app {
-    --safe-top: 28px;
+    /* Prefer the real inset reported by WebView; fall back to a generous
+       default so headers never collide with the status bar on devices that
+       don't expose env(safe-area-inset-top). Extra 8px cushion. */
+    --safe-top: calc(max(env(safe-area-inset-top, 24px), 24px) + 14px);
     --safe-bottom: 0px;
   }
 
-  /* iOS: nudge headers slightly up so the logo + title don't feel pushed
-     down into the notch padding. We subtract a few px from the safe area
-     inset but never go negative. */
+  /* iOS: respect the full notch inset and add a small cushion so the title
+     row sits clearly below the status bar / Dynamic Island. */
   body.ios-app {
-    --safe-top: max(env(safe-area-inset-top, 0px) - 6px, 0px);
+    --safe-top: calc(env(safe-area-inset-top, 20px) + 6px);
   }
 
   /* Android edge-to-edge fix: WebView extends behind system nav bar but
