@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { readActiveFocus, cleanupStaleFocusKeys, clearActiveFocus } from '@/utils/focusSession';
 import { checkMilestones, milestoneEmoji } from '@/utils/habitMilestones';
 import { HabitImportSheet } from '@/components/habits/HabitImportSheet';
+import { isHabitDueOnDate as smartIsHabitDueOnDate, isMakeUpDay } from '@/utils/habitScheduler';
 
 const Habits = () => {
   const navigate = useNavigate();
