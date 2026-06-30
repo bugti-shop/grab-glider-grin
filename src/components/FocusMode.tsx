@@ -360,11 +360,8 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     writeSession(s);
     setRemaining(remain);
     setRunning(false);
+    notifyFocus(prefs.notifications, 'pause', { taskTitle: s.taskTitle, remainingSec: remain });
   };
-
-  const completeSession = useCallback(() => {
-    const s = sessionRef.current;
-    if (s) {
       const now = Date.now();
       const totalSec = prefs.durationMin * 60;
       const elapsed = Math.max(0, totalSec - s.accumulatedSec);
