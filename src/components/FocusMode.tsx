@@ -225,10 +225,13 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   const [showDurations, setShowDurations] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [showSoundLib, setShowSoundLib] = useState(false);
+  const [showBackgroundPrompt, setShowBackgroundPrompt] = useState(false);
 
   const sessionRef = useRef<ActiveSession | null>(null);
   const bg = useMemo(() => BACKGROUNDS[Math.floor(Math.random() * BACKGROUNDS.length)], [open]);
-  const noise = useWhiteNoise();
+  const noise = useFocusAudio();
+  const currentTrack = prefs.soundTrackId ? findTrack(prefs.soundTrackId) ?? null : null;
 
   const updatePrefs = useCallback((patch: Partial<FocusPrefs>) => {
     setPrefs(prev => {
