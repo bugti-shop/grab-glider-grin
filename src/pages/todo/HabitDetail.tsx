@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Habit, HabitDayStatus } from '@/types/habit';
 import { loadHabits, saveHabit, deleteHabit } from '@/utils/habitStorage';
+import { checkMilestones, milestoneEmoji } from '@/utils/habitMilestones';
 import { triggerHaptic } from '@/utils/haptics';
 import { cn } from '@/lib/utils';
 import {
