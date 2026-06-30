@@ -7,6 +7,9 @@ import { getSetting, setSetting } from './settingsStorage';
 import { Note, NoteType, TodoItem, Folder } from '@/types/note';
 import { loadFolders } from './folderStorage';
 import { loadStreakData } from './streakStorage';
+import { loadHabits } from './habitStorage';
+import { isHabitDueOnDate } from './habitScheduler';
+import { format } from 'date-fns';
 
 // Widget configuration types
 export interface WidgetConfig {
@@ -69,6 +72,7 @@ const WIDGET_CONFIG_KEY = `${WIDGET_PREFS_PREFIX}config`;
 const WIDGET_NOTES_BY_TYPE_KEY = `${WIDGET_PREFS_PREFIX}notes_by_type`;
 const WIDGET_FOLDERS_KEY = `${WIDGET_PREFS_PREFIX}folders`;
 const WIDGET_STREAK_KEY = `streak_data`;
+const WIDGET_HABITS_KEY = `${WIDGET_PREFS_PREFIX}habits`;
 
 /**
  * Widget Data Sync Manager
