@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, MoreHorizontal, X, ShieldAlert, Timer as TimerIcon, Maximize2, Music2, Check } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, X, ShieldAlert, Timer as TimerIcon, Maximize2, Music2, Check, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { addPomodoroSession } from '@/utils/pomodoroStorage';
@@ -18,21 +18,85 @@ interface FocusModeProps {
 }
 
 const BACKGROUNDS = [bgMountain, bgAlpine, bgForest, bgOcean];
-
 const DURATION_OPTIONS = [15, 25, 30, 45, 60, 90, 120];
 
-// Soft white-noise generator (looped)
+// ---- Persistence -----------------------------------------------------------
+const PREFS_KEY = 'focus:prefs:v1';
+const SESSION_KEY = 'focus:session:v1';
+
+interface FocusPrefs {
+  durationMin: number;
+  strict: boolean;
+  whiteNoise: boolean;
+  whiteNoiseVolume: number; // 0..1
+  whiteNoiseMuted: boolean;
+  fullScreen: boolean;
+}
+
+const DEFAULT_PREFS: FocusPrefs = {
+  durationMin: 25,
+  strict: false,
+  whiteNoise: false,
+  whiteNoiseVolume: 0.4,
+  whiteNoiseMuted: false,
+  fullScreen: false,
+};
+
+const loadPrefs = (): FocusPrefs => {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (!raw) return DEFAULT_PREFS;
+    return { ...DEFAULT_PREFS, ...JSON.parse(raw) };
+  } catch { return DEFAULT_PREFS; }
+};
+const savePrefs = (p: FocusPrefs) => {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch {}
+};
+
+interface ActiveSession {
+  taskId?: string;
+  taskTitle?: string;
+  durationMin: number;
+  startedAt: number;       // first start of the session
+  endAt?: number;          // when running, epoch ms it will hit zero
+  remainingSec?: number;   // when paused
+  accumulatedSec: number;  // total focused time across run/pause cycles
+  lastEventAt: number;
+}
+
+const loadSession = (): ActiveSession | null => {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as ActiveSession;
+    // expire if older than 24h with no progress
+    if (Date.now() - s.lastEventAt > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return s;
+  } catch { return null; }
+};
+const writeSession = (s: ActiveSession | null) => {
+  try {
+    if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    else localStorage.removeItem(SESSION_KEY);
+  } catch {}
+};
+
+// ---- White noise -----------------------------------------------------------
 const useWhiteNoise = () => {
   const ctxRef = useRef<AudioContext | null>(null);
   const srcRef = useRef<AudioBufferSourceNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
 
-  const start = useCallback(() => {
+  const start = useCallback((volume: number) => {
     try {
       const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (!AC) return;
       if (!ctxRef.current) ctxRef.current = new AC();
       const ctx = ctxRef.current!;
+      if (srcRef.current) return; // already running
       const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
       const data = buffer.getChannelData(0);
       let lastOut = 0;
@@ -46,7 +110,7 @@ const useWhiteNoise = () => {
       src.buffer = buffer;
       src.loop = true;
       const gain = ctx.createGain();
-      gain.gain.value = 0.15;
+      gain.gain.value = Math.max(0, Math.min(1, volume));
       src.connect(gain).connect(ctx.destination);
       src.start();
       srcRef.current = src;
@@ -64,86 +128,257 @@ const useWhiteNoise = () => {
     } catch {}
   }, []);
 
+  const setVolume = useCallback((v: number) => {
+    if (gainRef.current) {
+      try { gainRef.current.gain.value = Math.max(0, Math.min(1, v)); } catch {}
+    }
+  }, []);
+
+  const isRunning = useCallback(() => !!srcRef.current, []);
+
   useEffect(() => () => { stop(); try { ctxRef.current?.close(); } catch {} }, [stop]);
 
-  return { start, stop };
+  return { start, stop, setVolume, isRunning };
 };
 
+// ---- Component -------------------------------------------------------------
 export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: FocusModeProps) => {
-  const [durationMin, setDurationMin] = useState(25);
-  const [remaining, setRemaining] = useState(25 * 60);
+  const [prefs, setPrefs] = useState<FocusPrefs>(() => loadPrefs());
+  const [remaining, setRemaining] = useState(prefs.durationMin * 60);
   const [running, setRunning] = useState(false);
-  const [strict, setStrict] = useState(false);
-  const [whiteNoise, setWhiteNoise] = useState(false);
   const [showDurations, setShowDurations] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
-  const startRef = useRef<number | null>(null);
+
+  const sessionRef = useRef<ActiveSession | null>(null);
   const bg = useMemo(() => BACKGROUNDS[Math.floor(Math.random() * BACKGROUNDS.length)], [open]);
   const noise = useWhiteNoise();
 
-  // Reset when opening
+  const updatePrefs = useCallback((patch: Partial<FocusPrefs>) => {
+    setPrefs(prev => {
+      const next = { ...prev, ...patch };
+      savePrefs(next);
+      return next;
+    });
+  }, []);
+
+  // ---- Restore on open ----------------------------------------------------
   useEffect(() => {
-    if (open) {
-      setRemaining(durationMin * 60);
+    if (!open) return;
+    const existing = loadSession();
+    if (existing) {
+      sessionRef.current = existing;
+      const dur = existing.durationMin;
+      if (existing.endAt) {
+        const remain = Math.max(0, Math.floor((existing.endAt - Date.now()) / 1000));
+        if (remain > 0) {
+          setRemaining(remain);
+          setRunning(true);
+          updatePrefs({ durationMin: dur });
+          // restart noise if it was on
+          if (prefs.whiteNoise && !prefs.whiteNoiseMuted) {
+            noise.start(prefs.whiteNoiseVolume);
+          }
+          toast.message('Resumed your focus session');
+          return;
+        }
+        // Session would have completed while we were away — log it
+        const completed = dur * 60 - (existing.accumulatedSec ?? 0);
+        try {
+          addPomodoroSession({
+            taskId: existing.taskId, type: 'focus',
+            startedAt: existing.startedAt,
+            completedAt: existing.endAt,
+            durationSec: dur * 60,
+          });
+        } catch {}
+        writeSession(null);
+        sessionRef.current = null;
+        setRemaining(dur * 60);
+        setRunning(false);
+        void completed;
+      } else if (typeof existing.remainingSec === 'number') {
+        setRemaining(existing.remainingSec);
+        setRunning(false);
+        updatePrefs({ durationMin: dur });
+      } else {
+        setRemaining(dur * 60);
+        setRunning(false);
+      }
+    } else {
+      setRemaining(prefs.durationMin * 60);
       setRunning(false);
-      setStrict(false);
-      setWhiteNoise(false);
-      startRef.current = null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Apply duration changes when not running
+  // Update remaining when duration changes (only when not running and no session in progress)
   useEffect(() => {
-    if (!running) setRemaining(durationMin * 60);
-  }, [durationMin, running]);
+    if (!running && !sessionRef.current) setRemaining(prefs.durationMin * 60);
+  }, [prefs.durationMin, running]);
 
-  // Tick
+  // ---- Tick ---------------------------------------------------------------
   useEffect(() => {
     if (!open || !running) return;
     const id = setInterval(() => {
-      setRemaining(prev => {
-        if (prev <= 1) {
-          clearInterval(id);
-          setRunning(false);
+      const s = sessionRef.current;
+      if (!s || !s.endAt) return;
+      const remain = Math.max(0, Math.floor((s.endAt - Date.now()) / 1000));
+      setRemaining(remain);
+      if (remain <= 0) {
+        clearInterval(id);
+        completeSession();
+      }
+    }, 250);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, running]);
+
+  // ---- White noise side effects ------------------------------------------
+  useEffect(() => {
+    if (prefs.whiteNoise && running && !prefs.whiteNoiseMuted) {
+      noise.start(prefs.whiteNoiseVolume);
+    } else {
+      noise.stop();
+    }
+  }, [prefs.whiteNoise, prefs.whiteNoiseMuted, running, noise, prefs.whiteNoiseVolume]);
+
+  useEffect(() => {
+    if (noise.isRunning()) noise.setVolume(prefs.whiteNoiseMuted ? 0 : prefs.whiteNoiseVolume);
+  }, [prefs.whiteNoiseVolume, prefs.whiteNoiseMuted, noise]);
+
+  // ---- Lifecycle: start / pause / resume / complete -----------------------
+  const startSession = () => {
+    const now = Date.now();
+    const dur = prefs.durationMin * 60;
+    const s: ActiveSession = {
+      taskId, taskTitle,
+      durationMin: prefs.durationMin,
+      startedAt: now,
+      endAt: now + dur * 1000,
+      accumulatedSec: 0,
+      lastEventAt: now,
+    };
+    sessionRef.current = s;
+    writeSession(s);
+    setRemaining(dur);
+    setRunning(true);
+  };
+
+  const resumeSession = () => {
+    const s = sessionRef.current;
+    if (!s) { startSession(); return; }
+    const now = Date.now();
+    s.endAt = now + (s.remainingSec ?? remaining) * 1000;
+    s.remainingSec = undefined;
+    s.lastEventAt = now;
+    writeSession(s);
+    setRunning(true);
+  };
+
+  const pauseSession = () => {
+    const s = sessionRef.current;
+    if (!s || !s.endAt) return;
+    const now = Date.now();
+    const remain = Math.max(0, Math.floor((s.endAt - now) / 1000));
+    const elapsed = (prefs.durationMin * 60) - remain - s.accumulatedSec;
+    if (elapsed > 0) {
+      // log a partial-focus segment so stats reflect real time spent
+      try {
+        addPomodoroSession({
+          taskId: s.taskId, type: 'focus',
+          startedAt: now - elapsed * 1000,
+          completedAt: now,
+          durationSec: elapsed,
+        });
+      } catch {}
+      s.accumulatedSec += elapsed;
+    }
+    s.remainingSec = remain;
+    s.endAt = undefined;
+    s.lastEventAt = now;
+    writeSession(s);
+    setRemaining(remain);
+    setRunning(false);
+  };
+
+  const completeSession = useCallback(() => {
+    const s = sessionRef.current;
+    if (s) {
+      const now = Date.now();
+      const totalSec = prefs.durationMin * 60;
+      const elapsed = Math.max(0, totalSec - s.accumulatedSec);
+      if (elapsed > 0) {
+        try {
+          addPomodoroSession({
+            taskId: s.taskId, type: 'focus',
+            startedAt: now - elapsed * 1000,
+            completedAt: now,
+            durationSec: elapsed,
+          });
+        } catch {}
+      }
+    }
+    sessionRef.current = null;
+    writeSession(null);
+    setRunning(false);
+    setRemaining(0);
+    noise.stop();
+    toast.success('Focus session complete 🎯');
+    onComplete?.();
+  }, [prefs.durationMin, noise, onComplete]);
+
+  const discardSession = (logPartial: boolean) => {
+    if (logPartial) {
+      const s = sessionRef.current;
+      if (s && s.endAt) {
+        const now = Date.now();
+        const remain = Math.max(0, Math.floor((s.endAt - now) / 1000));
+        const elapsed = (prefs.durationMin * 60) - remain - s.accumulatedSec;
+        if (elapsed > 0) {
           try {
             addPomodoroSession({
-              taskId, type: 'focus',
-              startedAt: startRef.current ?? Date.now() - durationMin * 60 * 1000,
-              completedAt: Date.now(),
-              durationSec: durationMin * 60,
+              taskId: s.taskId, type: 'focus',
+              startedAt: now - elapsed * 1000,
+              completedAt: now,
+              durationSec: elapsed,
             });
           } catch {}
-          noise.stop();
-          toast.success('Focus session complete 🎯');
-          onComplete?.();
-          return 0;
         }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [open, running, durationMin, taskId, onComplete, noise]);
+      }
+    }
+    sessionRef.current = null;
+    writeSession(null);
+    setRunning(false);
+    setRemaining(prefs.durationMin * 60);
+    noise.stop();
+  };
 
-  // White noise toggle
-  useEffect(() => {
-    if (whiteNoise && running) noise.start();
-    else noise.stop();
-  }, [whiteNoise, running, noise]);
-
-  // Fullscreen toggle helper
+  // ---- Fullscreen ---------------------------------------------------------
   const toggleFullscreen = useCallback(async () => {
     try {
-      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
-      else await document.exitFullscreen();
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        updatePrefs({ fullScreen: true });
+      } else {
+        await document.exitFullscreen();
+        updatePrefs({ fullScreen: false });
+      }
     } catch {}
-  }, []);
+  }, [updatePrefs]);
+
+  // Apply saved fullscreen preference on open
+  useEffect(() => {
+    if (open && prefs.fullScreen && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 
-  const total = durationMin * 60;
-  const progress = 1 - remaining / total; // 0..1
+  const total = prefs.durationMin * 60;
+  const progress = 1 - remaining / total;
   const hh = Math.floor(remaining / 3600);
   const mm = Math.floor((remaining % 3600) / 60);
   const ss = remaining % 60;
@@ -153,21 +388,22 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
 
   const handleAction = () => {
     if (remaining === 0) {
-      setRemaining(durationMin * 60);
+      discardSession(false);
       return;
     }
-    if (running) {
-      setRunning(false);
-    } else {
-      if (startRef.current == null) startRef.current = Date.now();
-      setRunning(true);
-    }
+    if (running) pauseSession();
+    else if (sessionRef.current) resumeSession();
+    else startSession();
   };
 
-  const actionLabel = remaining === 0 ? 'Restart' : running ? 'Pause' : (startRef.current ? 'Resume' : 'Start');
+  const actionLabel = remaining === 0 ? 'Restart' : running ? 'Pause' : (sessionRef.current ? 'Resume' : 'Start');
 
   const attemptClose = () => {
-    if (strict && running) { setConfirmExit(true); return; }
+    if (prefs.strict && running) { setConfirmExit(true); return; }
+    if (sessionRef.current) {
+      // log partial and clear
+      if (running) pauseSession();
+    }
     noise.stop();
     onClose();
   };
@@ -183,34 +419,19 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
 
   const content = (
     <div className="fixed inset-0 z-[100] text-white" role="dialog" aria-modal="true">
-      {/* Background */}
-      <div
-        className="absolute inset-0 bg-center bg-cover"
-        style={{ backgroundImage: `url(${bg})` }}
-      />
+      <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${bg})` }} />
       <div className="absolute inset-0 bg-black/35" />
 
-      {/* Content */}
       <div className="relative h-full w-full flex flex-col" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)', paddingBottom: 'max(env(safe-area-inset-bottom), 16px)' }}>
-        {/* Top bar */}
         <div className="flex items-center justify-between px-4">
-          <button
-            onClick={attemptClose}
-            className="h-10 w-10 grid place-items-center rounded-full hover:bg-white/10"
-            aria-label="Close"
-          >
+          <button onClick={attemptClose} className="h-10 w-10 grid place-items-center rounded-full hover:bg-white/10" aria-label="Close">
             <ChevronDown className="h-6 w-6" />
           </button>
-          <button
-            onClick={() => setShowMenu(v => !v)}
-            className="h-10 w-10 grid place-items-center rounded-full hover:bg-white/10"
-            aria-label="More"
-          >
+          <button onClick={() => setShowMenu(v => !v)} className="h-10 w-10 grid place-items-center rounded-full hover:bg-white/10" aria-label="More">
             <MoreHorizontal className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Task chip */}
         {taskTitle && (
           <div className="px-4 mt-1">
             <div className="flex items-center gap-3 bg-white/95 text-foreground rounded-2xl px-3 py-2.5 shadow-lg">
@@ -218,18 +439,13 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium">{taskTitle}</div>
               </div>
-              <button
-                onClick={attemptClose}
-                className="h-7 w-7 grid place-items-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 shrink-0"
-                aria-label="Dismiss"
-              >
+              <button onClick={attemptClose} className="h-7 w-7 grid place-items-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 shrink-0" aria-label="Dismiss">
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
         )}
 
-        {/* Timer */}
         <div className="flex-1 flex flex-col items-center justify-center select-none">
           <div className="relative" style={{ width: size, height: size }}>
             <svg width={size} height={size} className="-rotate-90 absolute inset-0">
@@ -242,9 +458,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
                 const isActive = i < filled;
                 const isHead = i === filled - 1 || (filled === 0 && i === 0);
                 return (
-                  <line
-                    key={i}
-                    x1={x1} y1={y1} x2={x2} y2={y2}
+                  <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
                     stroke={isHead && progress > 0 ? '#ff4d4f' : 'rgba(255,255,255,0.55)'}
                     strokeWidth={isHead && progress > 0 ? 4 : 2}
                     strokeLinecap="round"
@@ -254,42 +468,55 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
               })}
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <button
-                onClick={() => !running && setShowDurations(true)}
-                className="font-light tabular-nums text-white"
-                style={{ fontSize: hh > 0 ? 56 : 68, letterSpacing: 1 }}
-              >
+              <button onClick={() => !running && setShowDurations(true)} className="font-light tabular-nums text-white" style={{ fontSize: hh > 0 ? 56 : 68, letterSpacing: 1 }}>
                 {timeStr}
               </button>
             </div>
           </div>
-          {!running && remaining === durationMin * 60 && (
-            <button
-              onClick={() => setShowDurations(true)}
-              className="mt-3 text-xs uppercase tracking-widest text-white/70 hover:text-white"
-            >
-              {durationMin} min · tap to change
+          {!running && remaining === total && (
+            <button onClick={() => setShowDurations(true)} className="mt-3 text-xs uppercase tracking-widest text-white/70 hover:text-white">
+              {prefs.durationMin} min · tap to change
             </button>
+          )}
+
+          {/* White noise volume bar — visible only when white noise is on */}
+          {prefs.whiteNoise && (
+            <div className="mt-6 w-full max-w-xs px-6 flex items-center gap-3">
+              <button
+                onClick={() => updatePrefs({ whiteNoiseMuted: !prefs.whiteNoiseMuted })}
+                className="h-9 w-9 grid place-items-center rounded-full bg-white/15 hover:bg-white/25"
+                aria-label={prefs.whiteNoiseMuted ? 'Unmute' : 'Mute'}
+              >
+                {prefs.whiteNoiseMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round(prefs.whiteNoiseVolume * 100)}
+                onChange={(e) => updatePrefs({ whiteNoiseVolume: Number(e.target.value) / 100, whiteNoiseMuted: false })}
+                className="flex-1 accent-white"
+                aria-label="White noise volume"
+              />
+              <span className="text-xs tabular-nums w-8 text-right text-white/80">
+                {prefs.whiteNoiseMuted ? 0 : Math.round(prefs.whiteNoiseVolume * 100)}
+              </span>
+            </div>
           )}
         </div>
 
-        {/* Action button */}
         <div className="flex items-center justify-center mb-8">
-          <button
-            onClick={handleAction}
-            className="px-12 py-3 rounded-full border border-white/80 text-white text-lg font-medium hover:bg-white/10 transition active:scale-95"
-          >
+          <button onClick={handleAction} className="px-12 py-3 rounded-full border border-white/80 text-white text-lg font-medium hover:bg-white/10 transition active:scale-95">
             {actionLabel}
           </button>
         </div>
 
-        {/* Bottom options */}
         <div className="grid grid-cols-4 gap-1 px-4">
           <OptionButton
             icon={<ShieldAlert className="h-6 w-6" />}
             label="Strict Mode"
-            active={strict}
-            onClick={() => { setStrict(v => !v); toast.message(strict ? 'Strict mode off' : 'Strict mode on — exiting requires confirmation'); }}
+            active={prefs.strict}
+            onClick={() => { const next = !prefs.strict; updatePrefs({ strict: next }); toast.message(next ? 'Strict mode on — exiting requires confirmation' : 'Strict mode off'); }}
           />
           <OptionButton
             icon={<TimerIcon className="h-6 w-6" />}
@@ -299,24 +526,21 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           <OptionButton
             icon={<Maximize2 className="h-6 w-6" />}
             label="Full Screen"
+            active={prefs.fullScreen}
             onClick={toggleFullscreen}
           />
           <OptionButton
             icon={<Music2 className="h-6 w-6" />}
             label="White Noise"
-            active={whiteNoise}
-            onClick={() => setWhiteNoise(v => !v)}
+            active={prefs.whiteNoise}
+            onClick={() => updatePrefs({ whiteNoise: !prefs.whiteNoise })}
           />
         </div>
       </div>
 
-      {/* Duration picker */}
       {showDurations && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-end z-10" onClick={() => setShowDurations(false)}>
-          <div
-            className="w-full bg-background text-foreground rounded-t-3xl p-5 space-y-2 max-h-[70vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="w-full bg-background text-foreground rounded-t-3xl p-5 space-y-2 max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-semibold">Set duration</h3>
               <button onClick={() => setShowDurations(false)} className="text-muted-foreground"><X className="h-5 w-5" /></button>
@@ -325,10 +549,10 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
               {DURATION_OPTIONS.map(m => (
                 <button
                   key={m}
-                  onClick={() => { setDurationMin(m); setShowDurations(false); }}
+                  onClick={() => { updatePrefs({ durationMin: m }); if (!sessionRef.current) setRemaining(m * 60); setShowDurations(false); }}
                   className={cn(
                     'rounded-xl py-3 text-sm font-medium border transition-colors',
-                    durationMin === m
+                    prefs.durationMin === m
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-muted border-transparent hover:bg-muted/70'
                   )}
@@ -343,8 +567,8 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
                 type="number"
                 min={1}
                 max={480}
-                value={durationMin}
-                onChange={e => setDurationMin(Math.max(1, Math.min(480, Number(e.target.value) || 1)))}
+                value={prefs.durationMin}
+                onChange={e => { const v = Math.max(1, Math.min(480, Number(e.target.value) || 1)); updatePrefs({ durationMin: v }); if (!sessionRef.current) setRemaining(v * 60); }}
                 className="mt-1 w-full rounded-xl bg-muted px-3 py-3 text-base outline-none"
               />
             </div>
@@ -352,28 +576,29 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
         </div>
       )}
 
-      {/* More menu */}
       {showMenu && (
-        <div className="absolute top-14 right-4 z-10 min-w-[180px] rounded-xl bg-background text-foreground border shadow-lg overflow-hidden">
-          <MenuRow label={strict ? 'Disable Strict Mode' : 'Enable Strict Mode'} icon={<ShieldAlert className="h-4 w-4" />} onClick={() => { setStrict(v => !v); setShowMenu(false); }} />
+        <div className="absolute top-14 right-4 z-10 min-w-[200px] rounded-xl bg-background text-foreground border shadow-lg overflow-hidden">
+          <MenuRow label={prefs.strict ? 'Disable Strict Mode' : 'Enable Strict Mode'} icon={<ShieldAlert className="h-4 w-4" />} onClick={() => { updatePrefs({ strict: !prefs.strict }); setShowMenu(false); }} />
           <MenuRow label="Change Duration" icon={<TimerIcon className="h-4 w-4" />} onClick={() => { setShowDurations(true); setShowMenu(false); }} />
           <MenuRow label="Toggle Full Screen" icon={<Maximize2 className="h-4 w-4" />} onClick={() => { toggleFullscreen(); setShowMenu(false); }} />
-          <MenuRow label={whiteNoise ? 'Stop White Noise' : 'Play White Noise'} icon={<Music2 className="h-4 w-4" />} onClick={() => { setWhiteNoise(v => !v); setShowMenu(false); }} />
+          <MenuRow label={prefs.whiteNoise ? 'Stop White Noise' : 'Play White Noise'} icon={<Music2 className="h-4 w-4" />} onClick={() => { updatePrefs({ whiteNoise: !prefs.whiteNoise }); setShowMenu(false); }} />
+          {prefs.whiteNoise && (
+            <MenuRow label={prefs.whiteNoiseMuted ? 'Unmute Noise' : 'Mute Noise'} icon={prefs.whiteNoiseMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />} onClick={() => { updatePrefs({ whiteNoiseMuted: !prefs.whiteNoiseMuted }); setShowMenu(false); }} />
+          )}
           {onComplete && (
             <MenuRow label="Mark Task Done" icon={<Check className="h-4 w-4" />} onClick={() => { onComplete(); setShowMenu(false); }} />
           )}
         </div>
       )}
 
-      {/* Strict mode exit confirm */}
       {confirmExit && (
         <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-20 px-6">
           <div className="bg-background text-foreground rounded-2xl p-5 w-full max-w-sm space-y-3">
             <h3 className="text-base font-semibold">Exit Strict Focus?</h3>
-            <p className="text-sm text-muted-foreground">You enabled Strict Mode. Exiting now will end your focus session early.</p>
+            <p className="text-sm text-muted-foreground">You enabled Strict Mode. Exiting now will end your focus session early. Time spent so far will still be counted.</p>
             <div className="flex gap-2 justify-end pt-2">
               <button onClick={() => setConfirmExit(false)} className="px-4 py-2 rounded-lg text-sm hover:bg-muted">Stay</button>
-              <button onClick={() => { setConfirmExit(false); noise.stop(); onClose(); }} className="px-4 py-2 rounded-lg text-sm bg-destructive text-destructive-foreground">Exit anyway</button>
+              <button onClick={() => { setConfirmExit(false); discardSession(true); onClose(); }} className="px-4 py-2 rounded-lg text-sm bg-destructive text-destructive-foreground">Exit anyway</button>
             </div>
           </div>
         </div>
