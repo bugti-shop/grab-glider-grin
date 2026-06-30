@@ -756,6 +756,8 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           <MenuRow label="Change Duration" icon={<TimerIcon className="h-4 w-4" />} onClick={() => { setShowDurations(true); setShowMenu(false); }} />
           <MenuRow label="Toggle Full Screen" icon={<Maximize2 className="h-4 w-4" />} onClick={() => { toggleFullscreen(); setShowMenu(false); }} />
           <MenuRow label={prefs.whiteNoise ? 'Stop White Noise' : 'Play White Noise'} icon={<Music2 className="h-4 w-4" />} onClick={() => { updatePrefs({ whiteNoise: !prefs.whiteNoise }); setShowMenu(false); }} />
+          <MenuRow label="Browse Sounds & Music" icon={<Music2 className="h-4 w-4" />} onClick={() => { setShowSoundLib(true); setShowMenu(false); }} />
+          <MenuRow label="Run in Background" icon={<ArrowDownToLine className="h-4 w-4" />} onClick={() => { setShowMenu(false); continueInBackground(); }} />
           <MenuRow
             label={prefs.notifications ? 'Disable Notifications' : 'Enable Notifications'}
             icon={prefs.notifications ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
