@@ -99,6 +99,10 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     document.body.style.removeProperty('user-select');
     document.body.style.removeProperty('-webkit-user-select');
     document.body.style.removeProperty('cursor');
+    // Immediately restore scroll on drop / cancel — no delay.
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('touch-action');
+    document.documentElement.style.removeProperty('overflow');
     window.removeEventListener('pointermove', handlePointerMove);
     window.removeEventListener('pointerup', handlePointerUp);
     window.removeEventListener('pointercancel', handlePointerUp);
