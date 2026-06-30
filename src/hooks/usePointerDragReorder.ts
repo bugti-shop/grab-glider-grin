@@ -25,8 +25,12 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const LONG_PRESS_MS = 220;
-const MOVE_THRESHOLD_PX = 6;
+const LONG_PRESS_MS = 200;
+// Mouse / pen: activate immediately on small motion (click-and-drag).
+const MOUSE_MOVE_THRESHOLD_PX = 6;
+// Touch: tolerate finger wobble during the long-press hold so a straight
+// vertical press still arms the drag. Only obvious scroll motion aborts.
+const TOUCH_HOLD_TOLERANCE_PX = 10;
 const GHOST_OPACITY = 0.92;
 const PLACEHOLDER_HEIGHT_PX = 2;
 const PLACEHOLDER_COLOR = 'hsl(217 91% 60%)'; // blue accent — visual only
@@ -151,26 +155,29 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     if (!s.active) {
       const dx = Math.abs(e.clientX - s.startX);
       const dy = Math.abs(e.clientY - s.startY);
-      const moved = dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX;
       const isPointerLikeMouse = s.pointerType === 'mouse' || s.pointerType === 'pen';
 
-      if (moved) {
-        if (isPointerLikeMouse) {
-          // Cancel the (unused) long-press timer and activate now.
+      if (isPointerLikeMouse) {
+        // Distance-based activation — drag starts the moment the mouse moves.
+        if (dx > MOUSE_MOVE_THRESHOLD_PX || dy > MOUSE_MOVE_THRESHOLD_PX) {
           if (s.longPressTimer) {
             clearTimeout(s.longPressTimer);
             s.longPressTimer = null;
           }
           s.armed = true;
           activateDrag(e.clientX, e.clientY);
-        } else if (!s.armed) {
-          // Touch moved before long-press fired → treat as scroll, abort.
+        }
+      } else {
+        // Touch: pure delay-based activation. Tolerate small wobble while the
+        // long-press timer is counting down so a straight vertical press
+        // still arms the drag. Only meaningful motion (likely a scroll
+        // gesture) aborts.
+        if (!s.armed && (dx > TOUCH_HOLD_TOLERANCE_PX || dy > TOUCH_HOLD_TOLERANCE_PX)) {
           cleanup();
           return;
-        } else {
-          // Touch already armed by long-press, motion confirms drag.
-          activateDrag(e.clientX, e.clientY);
         }
+        // If armed by long-press, any motion confirms drag.
+        if (s.armed) activateDrag(e.clientX, e.clientY);
       }
     }
 
@@ -243,10 +250,17 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     setDraggingIndex(s.fromIndex);
   }, []);
 
-  const handlePointerUp = useCallback((_e: PointerEvent) => {
+  const handlePointerUp = useCallback((e: PointerEvent) => {
     const s = stateRef.current;
     if (!s) return;
     if (s.active) {
+      // Final synchronous hit-test at the up coordinates — guarantees the
+      // drop position matches the last indicator the user saw, even if the
+      // last pointermove didn't fire exactly at the release point.
+      const finalHit = hitTestIndex(e.clientX, e.clientY);
+      if (finalHit) {
+        s.lastToIndex = finalHit.before ? finalHit.index : finalHit.index + 1;
+      }
       const from = s.fromIndex;
       let to = s.lastToIndex;
       // Adjust for removal of source slot when moving downward.
@@ -259,7 +273,7 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       }
     }
     cleanup();
-  }, [cleanup, onReorder]);
+  }, [cleanup, hitTestIndex, onReorder]);
 
   // Keep latest move/up refs stable on the window listeners.
   useEffect(() => () => cleanup(), [cleanup]);
