@@ -145,6 +145,25 @@ export const TodoOptionsDropdown = ({
               <DropdownMenuItem onClick={() => handleAddSection('below')} className="cursor-pointer"><PlusIcon className="h-4 w-4 mr-2" />{t('menu.sections')}</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsFolderManageOpen(true)} className="cursor-pointer"><FolderIcon className="h-4 w-4 mr-2" />{t('menu.folders')}</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsImportOpen(true)} className="cursor-pointer"><Upload className="h-4 w-4 mr-2" />Import Tasks</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    const tasks = await loadTasksFromDB();
+                    if (!tasks || tasks.length === 0) {
+                      toast.info('No tasks to export');
+                      return;
+                    }
+                    const { filename, count } = exportTasksCsv(tasks);
+                    toast.success(`Exported ${count} tasks → ${filename}`);
+                  } catch (err) {
+                    console.error('[ExportTasks] failed', err);
+                    toast.error('Export failed');
+                  }
+                }}
+                className="cursor-pointer"
+              >
+                <Download className="h-4 w-4 mr-2" />Export Tasks (CSV)
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => { setIsSelectionMode(true); setIsSelectActionsOpen(true); }} className="cursor-pointer"><MousePointer2 className="h-4 w-4 mr-2" />{t('menu.select')}</DropdownMenuItem>
               <DropdownMenuSeparator />
