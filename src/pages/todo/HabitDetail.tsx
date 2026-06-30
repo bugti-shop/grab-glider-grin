@@ -62,7 +62,13 @@ const HabitDetail = () => {
 
   const load = useCallback(async () => {
     const all = await loadHabits();
-    setHabit(all.find((h) => h.id === id) || null);
+    const found = all.find((h) => h.id === id) || null;
+    setHabit(found);
+    if (found?.chainAfterHabitId) {
+      setParentHabit(all.find((h) => h.id === found.chainAfterHabitId) || null);
+    } else {
+      setParentHabit(null);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
