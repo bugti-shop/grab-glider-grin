@@ -1,4 +1,4 @@
-import { Habit } from '@/types/habit';
+import { Habit, normalizeHabit } from '@/types/habit';
 import { format, subDays, parseISO, isAfter, isBefore, startOfDay } from 'date-fns';
 
 const DB_NAME = 'nota-habits-db';
