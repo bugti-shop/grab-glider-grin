@@ -413,6 +413,10 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       lastToIndex: index,
       lastToId: null,
       lastToBefore: true,
+      lastX: x,
+      lastY: y,
+      scrollEl: null,
+      rafId: null,
     };
     stateRef.current.longPressTimer = setTimeout(() => {
       const s = stateRef.current;
