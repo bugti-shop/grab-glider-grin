@@ -279,7 +279,8 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
         } else {
           fallbackFolderId = parserFolders[0].id;
         }
-        taskImportFolderId = fallbackFolderId;
+        // (taskImportFolderId is reserved for downstream use if needed.)
+        void fallbackFolderId;
 
         await setSetting('todoFolders', taskFolders);
         window.dispatchEvent(new Event('foldersRestored'));
