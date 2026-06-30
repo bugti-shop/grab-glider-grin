@@ -354,20 +354,38 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           ...allNewSections.map(s => s.id),
         ]);
 
-        // Validate every task ends up with a real folderId + sectionId; count unmapped.
+        // Validate every task ends up with a real folderId + sectionId; collect per-row diagnostics.
+        const collectedUnmapped: UnmappedRow[] = [];
         const tagged = importResult.tasks.map(t => {
           let folderId = t.folderId;
-          if (!folderId || !allTaskFolderIds.has(folderId)) {
-            unmappedFolderCount++;
-            folderId = fallbackFolderId;
-          }
+          const origFolderId = t.folderId;
+          const origSectionId = t.sectionId;
+          let folderReason: string | null = null;
+          if (!folderId) { folderReason = 'no folderId on row'; folderId = fallbackFolderId; }
+          else if (!allTaskFolderIds.has(folderId)) { folderReason = `unknown folderId "${folderId}"`; folderId = fallbackFolderId; }
+          if (folderReason) unmappedFolderCount++;
+
           let sectionId = t.sectionId;
-          if (!sectionId || !allSectionIds.has(sectionId)) {
-            unmappedSectionCount++;
-            sectionId = folderDefaultSectionId.get(folderId);
+          let sectionReason: string | null = null;
+          if (!sectionId) { sectionReason = 'no sectionId on row'; sectionId = folderDefaultSectionId.get(folderId); }
+          else if (!allSectionIds.has(sectionId)) { sectionReason = `unknown sectionId "${sectionId}"`; sectionId = folderDefaultSectionId.get(folderId); }
+          if (sectionReason) unmappedSectionCount++;
+
+          if (folderReason || sectionReason) {
+            const fallbackFolderName = taskFolders.find(f => f.id === folderId)?.name || importFolderName;
+            const fallbackSectionName = [...parserSections, ...autoSections, ...existingSections].find(s => s.id === sectionId)?.name || '(default)';
+            collectedUnmapped.push({
+              title: (t as any).text || (t as any).title || '(untitled)',
+              originalFolderId: origFolderId,
+              originalSectionId: origSectionId,
+              reason: [folderReason, sectionReason].filter(Boolean).join(' · '),
+              fallbackFolder: fallbackFolderName,
+              fallbackSection: fallbackSectionName,
+            });
           }
           return { ...t, folderId, sectionId };
         });
+        setUnmappedRows(collectedUnmapped);
 
         await bulkPutTasksInWorker(tagged, false, (p) => {
           setProgress({ phase: 'saving', current: p.written, total: p.total, message: 'Saving tasks…' });
@@ -375,15 +393,15 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
 
         window.dispatchEvent(new Event('tasksRestored'));
         window.dispatchEvent(new Event('tasksUpdated'));
-        // Switch the Today view to the first imported folder AFTER folders/tasks
-        // have been picked up by state listeners, so the selection isn't clobbered
-        // by the "default to first folder" effect.
+        // Force the Today view to the imported folder, retrying a few times so the
+        // selection wins the race against the foldersRestored / default-folder effects.
         if (firstImportedFolderId) {
           await setSetting('todoSelectedFolder', firstImportedFolderId);
-          setTimeout(() => {
-            window.dispatchEvent(new Event('selectedFolderChanged'));
-          }, 150);
+          [0, 100, 300, 700, 1400].forEach(delay => {
+            setTimeout(() => window.dispatchEvent(new Event('selectedFolderChanged')), delay);
+          });
         }
+
 
       }
       if (importResult.notes.length > 0) {
