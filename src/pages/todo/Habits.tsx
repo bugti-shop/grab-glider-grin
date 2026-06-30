@@ -317,6 +317,14 @@ const Habits = () => {
                 Make-up
               </span>
             )}
+            {(getFreezeState(h).frozenDates?.length ?? 0) > 0 && (
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-sky-500/15 text-sky-600 dark:text-sky-300"
+                title={`Streak protected • ${freezesRemaining(h)} freeze${freezesRemaining(h) === 1 ? '' : 's'} left this month`}
+              >
+                ❄ {freezesRemaining(h)}
+              </span>
+            )}
           </div>
           {weeklyQuota && (
             <div className="text-[11px] text-muted-foreground">
