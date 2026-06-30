@@ -147,9 +147,12 @@ export function NotesVirtualGrid({
                 top: 0,
                 left: 0,
                 width: '100%',
+                height: `${resolvedRowHeight}px`,
                 transform: `translateY(${vrow.start - (resolvedWindowing ? scrollMargin : 0)}px)`,
                 display: 'grid',
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                gridAutoRows: '1fr',
+                alignItems: 'stretch',
                 gap: '0.75rem',
                 paddingBottom: '0.75rem',
                 contain: 'layout paint style',
@@ -157,7 +160,7 @@ export function NotesVirtualGrid({
               } as React.CSSProperties}
             >
               {row.map((note) => (
-                <div key={note.id} style={{ minWidth: 0 }}>
+                <div key={note.id} style={{ minWidth: 0, height: '100%', display: 'flex' }}>
                   {renderCard(note)}
                 </div>
               ))}
