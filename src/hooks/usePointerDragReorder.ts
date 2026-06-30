@@ -36,32 +36,34 @@ const PLACEHOLDER_HEIGHT_PX = 2;
 const PLACEHOLDER_COLOR = 'hsl(217 91% 60%)'; // blue accent — visual only
 
 export interface UsePointerDragReorderOptions {
-  /** Total reorderable items in the list. */
   itemCount: number;
-  /** Called when the user drops on a valid slot. `to` is the destination
-   *  index in the *original* (pre-move) array. */
   onReorder: (fromIndex: number, toIndex: number) => void;
-  /** Attribute used to discover slot elements. Must be a number. */
   itemAttr?: string;
-  /** Disable drag entirely (e.g. when selection mode is active). */
   disabled?: boolean;
+  /**
+   * Stable id resolver. When provided, the hook records the *id* of the
+   * source row at drag-start and re-resolves source/target indices at
+   * drop-time. Makes reorder immune to concurrent list reconciliation
+   * (e.g. a rapid completion queue shifting indices mid-gesture).
+   */
+  getItemId?: (index: number) => string | number | null | undefined;
+  resolveIndexById?: (id: string | number) => number;
+  onDragStart?: (fromIndex: number, fromId: string | number | null) => void;
+  onDragEnd?: () => void;
 }
 
 export interface PointerDragApi {
-  /** Spread onto each row container. Adds the data attribute used for
-   *  hit-testing and the `touch-action: none` style while active. */
   getItemProps: (index: number) => {
     'data-pdrag-index': number;
+    'data-pdrag-id'?: string | number;
     style: React.CSSProperties;
   };
-  /** Spread onto a drag handle (or the whole row to make it draggable). */
   getHandleProps: (index: number) => {
     onPointerDownCapture: (e: React.PointerEvent) => void;
+    onTouchStartCapture: (e: React.TouchEvent) => void;
     style: React.CSSProperties;
   };
-  /** True while the user is actively dragging an item. */
   isDragging: boolean;
-  /** Index of the currently-dragged item, or null. */
   draggingIndex: number | null;
 }
 
