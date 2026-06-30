@@ -277,6 +277,7 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
       startX: e.clientX,
       startY: e.clientY,
       pointerId: e.pointerId,
+      pointerType: e.pointerType || 'mouse',
       fromIndex: index,
       sourceEl,
       ghostEl: null,
