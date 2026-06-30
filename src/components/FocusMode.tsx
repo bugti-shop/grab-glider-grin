@@ -81,6 +81,7 @@ interface FocusPrefs {
   whiteNoiseVolume: number; // 0..1
   whiteNoiseMuted: boolean;
   fullScreen: boolean;
+  notifications: boolean;
 }
 
 const DEFAULT_PREFS: FocusPrefs = {
@@ -90,6 +91,7 @@ const DEFAULT_PREFS: FocusPrefs = {
   whiteNoiseVolume: 0.4,
   whiteNoiseMuted: false,
   fullScreen: false,
+  notifications: true,
 };
 
 const loadPrefs = (): FocusPrefs => {
