@@ -20,28 +20,154 @@ export interface FetchedArticle {
   sourceUrl: string;
 }
 
-const PROXIES = [
-  // Returns raw HTML, no JSON wrapper. Stable and CORS-enabled.
-  (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  // Fallback: returns the page body as plain text.
-  (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+/** Ordered list of public CORS-friendly fetch proxies. Tried sequentially
+ *  with a per-proxy timeout and one transient-error retry before moving on. */
+const PROXIES: Array<{ name: string; build: (u: string) => string }> = [
+  { name: 'allorigins', build: (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` },
+  { name: 'corsproxy.io', build: (u) => `https://corsproxy.io/?${encodeURIComponent(u)}` },
+  { name: 'isomorphic-git', build: (u) => `https://cors.isomorphic-git.org/${u}` },
+  { name: 'codetabs', build: (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}` },
 ];
 
-const fetchHtml = async (url: string, signal?: AbortSignal): Promise<string> => {
+const PROXY_TIMEOUT_MS = 12_000;
+const TRANSIENT_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504, 522, 524]);
+
+export class ArticleFetchError extends Error {
+  /** Stable code so the UI can render a tailored message + recovery hint. */
+  code:
+    | 'invalid_url'
+    | 'unsupported_protocol'
+    | 'timeout'
+    | 'blocked'
+    | 'not_found'
+    | 'rate_limited'
+    | 'server_error'
+    | 'empty_response'
+    | 'unreadable'
+    | 'network'
+    | 'unknown';
+  /** Last proxy attempted, if any — helpful for diagnostics in the dialog. */
+  attemptedProxy?: string;
+  /** Last HTTP status observed across attempts. */
+  lastStatus?: number;
+
+  constructor(
+    message: string,
+    code: ArticleFetchError['code'],
+    extras: { attemptedProxy?: string; lastStatus?: number } = {},
+  ) {
+    super(message);
+    this.name = 'ArticleFetchError';
+    this.code = code;
+    this.attemptedProxy = extras.attemptedProxy;
+    this.lastStatus = extras.lastStatus;
+  }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const fetchWithTimeout = async (
+  url: string,
+  external: AbortSignal | undefined,
+  timeoutMs: number,
+): Promise<Response> => {
+  const ctrl = new AbortController();
+  const onAbort = () => ctrl.abort(external?.reason);
+  if (external) {
+    if (external.aborted) ctrl.abort(external.reason);
+    else external.addEventListener('abort', onAbort, { once: true });
+  }
+  const timer = setTimeout(() => ctrl.abort(new DOMException('Timeout', 'TimeoutError')), timeoutMs);
+  try {
+    return await fetch(url, { signal: ctrl.signal, redirect: 'follow' });
+  } finally {
+    clearTimeout(timer);
+    if (external) external.removeEventListener('abort', onAbort);
+  }
+};
+
+const fetchHtml = async (
+  url: string,
+  signal?: AbortSignal,
+): Promise<string> => {
+  let lastStatus: number | undefined;
+  let lastProxy: string | undefined;
   let lastErr: unknown;
-  for (const make of PROXIES) {
-    try {
-      const res = await fetch(make(url), { signal });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      if (text && text.length > 200) return text;
-      lastErr = new Error('Empty response');
-    } catch (e) {
-      lastErr = e;
+
+  for (const proxy of PROXIES) {
+    lastProxy = proxy.name;
+    // One retry per proxy on transient failures, then move on.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (signal?.aborted) {
+        throw new ArticleFetchError('Cancelled.', 'unknown', { attemptedProxy: lastProxy });
+      }
+      try {
+        const res = await fetchWithTimeout(proxy.build(url), signal, PROXY_TIMEOUT_MS);
+        lastStatus = res.status;
+        if (!res.ok) {
+          if (TRANSIENT_STATUSES.has(res.status) && attempt === 0) {
+            await sleep(400);
+            continue;
+          }
+          // Non-transient (404/403/etc.) — skip retry, try next proxy.
+          lastErr = new Error(`HTTP ${res.status}`);
+          break;
+        }
+        const text = await res.text();
+        if (text && text.length > 200 && /<\w/.test(text)) return text;
+        lastErr = new Error('Empty response');
+        break;
+      } catch (e) {
+        lastErr = e;
+        // Honor explicit user cancellation immediately.
+        if (signal?.aborted) {
+          throw new ArticleFetchError('Cancelled.', 'unknown', { attemptedProxy: lastProxy });
+        }
+        // On timeout / network failure, retry once on the same proxy.
+        if (attempt === 0) {
+          await sleep(300);
+          continue;
+        }
+      }
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error('All proxies failed');
+
+  // Map the last failure to a stable error code.
+  const isTimeout =
+    lastErr instanceof DOMException && lastErr.name === 'TimeoutError';
+  const isAbort = lastErr instanceof DOMException && lastErr.name === 'AbortError';
+  let code: ArticleFetchError['code'] = 'unknown';
+  let msg = 'Could not reach this page through any of our fetch proxies.';
+
+  if (isTimeout || isAbort) {
+    code = 'timeout';
+    msg = 'The page took too long to respond. It may be slow or blocking automated fetches.';
+  } else if (lastStatus === 404) {
+    code = 'not_found';
+    msg = 'That page returned 404 — check the URL is still live.';
+  } else if (lastStatus === 401 || lastStatus === 403) {
+    code = 'blocked';
+    msg = 'The site refused the request (login wall, paywall, or anti-bot block).';
+  } else if (lastStatus === 429) {
+    code = 'rate_limited';
+    msg = 'Our fetch proxies are rate-limited right now. Wait a minute and try again.';
+  } else if (lastStatus && lastStatus >= 500) {
+    code = 'server_error';
+    msg = 'The source site or proxy returned a server error. Try again shortly.';
+  } else if (lastErr instanceof Error && /Empty response/.test(lastErr.message)) {
+    code = 'empty_response';
+    msg = 'The page loaded but returned no usable HTML — likely a JavaScript-only app.';
+  } else if (lastErr instanceof TypeError) {
+    code = 'network';
+    msg = 'Network error while contacting fetch proxies. Check your connection and retry.';
+  }
+
+  throw new ArticleFetchError(msg, code, {
+    attemptedProxy: lastProxy,
+    lastStatus,
+  });
 };
+
 
 const absolutize = (raw: string | null | undefined, base: string): string | undefined => {
   if (!raw) return undefined;
@@ -175,11 +301,12 @@ export const fetchArticleFromUrl = async (
   try {
     url = new URL(rawUrl.trim());
   } catch {
-    throw new Error('Please enter a valid URL (https://…)');
+    throw new ArticleFetchError('Please enter a valid URL (https://…)', 'invalid_url');
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new Error('Only http/https URLs are supported.');
+    throw new ArticleFetchError('Only http/https URLs are supported.', 'unsupported_protocol');
   }
+
 
   const raw = await fetchHtml(url.toString(), opts.signal);
   const doc = new DOMParser().parseFromString(raw, 'text/html');
@@ -215,8 +342,12 @@ export const fetchArticleFromUrl = async (
   cleanNode(clone, baseHref || base);
 
   if ((clone.textContent || '').trim().length < 120) {
-    throw new Error('Could not find readable article content on this page.');
+    throw new ArticleFetchError(
+      'We reached the page but couldn\'t find readable article text — it may be a JS-only app, paywalled, or mostly media.',
+      'unreadable',
+    );
   }
+
 
   const headings = collectHeadings(clone);
   const html = sanitizeHtml(clone.innerHTML);
