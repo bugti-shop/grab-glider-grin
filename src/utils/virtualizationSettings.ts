@@ -20,7 +20,11 @@ const EVENT_NAME = 'flowist:virtualization-settings-changed';
 export const DEFAULT_VIRTUALIZATION_SETTINGS: VirtualizationSettings = {
   notes: {
     overscan: 6,
-    rowHeight: 165,
+    // Tuned to the natural NoteCard height (title + 2-line preview + footer
+    // chip + 16px internal padding ≈ 116-120px). Keeping the row tight
+    // eliminates the large white gap between cards while still leaving room
+    // for the 8px inter-row padding rendered inside the row container.
+    rowHeight: 124,
     windowing: true,
   },
   tasks: {
@@ -30,6 +34,7 @@ export const DEFAULT_VIRTUALIZATION_SETTINGS: VirtualizationSettings = {
     windowing: true,
   },
 };
+
 
 const clampNumber = (value: unknown, min: number, max: number, fallback: number) => {
   const n = typeof value === 'number' ? value : Number(value);
