@@ -135,6 +135,19 @@ const Habits = () => {
     }
   };
 
+  /** Fire celebration toast(s) for milestones newly crossed by `updated`. */
+  const fireMilestoneToasts = (prev: Habit, updated: Habit): Habit => {
+    const { events, unlocked } = checkMilestones(prev, updated);
+    if (events.length === 0) return updated;
+    for (const e of events) {
+      toast(`${milestoneEmoji(e.threshold)} ${e.threshold}-day milestone unlocked!`, {
+        description: `${updated.emoji || '✨'} ${updated.name} — ${e.source === 'streak' ? 'streak' : 'total check-ins'}`,
+      });
+    }
+    return { ...updated, unlockedMilestones: unlocked };
+  };
+
+
   const cycleStatus = async (habit: Habit) => {
     triggerHaptic('medium').catch(() => {});
     const isAmount = habit.goalType === 'amount' && (habit.goalAmount ?? 0) > 0;
