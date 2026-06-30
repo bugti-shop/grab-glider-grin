@@ -623,9 +623,43 @@ const HabitDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <HabitReflectionSheet
+        open={reflectionOpen}
+        onOpenChange={setReflectionOpen}
+        date={reflectionDate}
+        initialNote={habit.completions.find((c) => c.date === reflectionDate)?.note}
+        readOnly={reflectionReadOnly}
+        onSave={(note) => {
+          if (reflectionDate === todayKey) {
+            saveTodayNote(note);
+          } else {
+            // Save note on past day — preserve existing fields.
+            const others = habit.completions.filter((c) => c.date !== reflectionDate);
+            const rec = habit.completions.find((c) => c.date === reflectionDate);
+            const updated: Habit = {
+              ...habit,
+              completions: [
+                ...others,
+                {
+                  date: reflectionDate,
+                  completed: rec?.completed ?? false,
+                  status: rec?.status,
+                  amount: rec?.amount,
+                  note: note || undefined,
+                },
+              ],
+              updatedAt: new Date().toISOString(),
+            };
+            setHabit(updated);
+            saveHabit(updated).catch(() => toast.error('Could not save note.'));
+          }
+        }}
+      />
     </div>
   );
 };
+
 
 
 const StatCard = ({ icon, label, value, unit }: { icon: React.ReactNode; label: string; value: string; unit: string }) => (
