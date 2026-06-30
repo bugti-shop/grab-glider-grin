@@ -278,6 +278,7 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
       </SheetHeader>
       <ScrollArea className="flex-1">
         <div className="py-2">
+          <OrganizeModeRow scope="notes" />
           <SettingsRow 
             label={t('settings.defaultFontSettings', 'Default Font Settings')}
             subtitle={t('settings.defaultFontSettingsDesc', 'Customize fonts for text and headings')}
@@ -298,6 +299,7 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
             onClick={() => setShowDevPerf(true)}
           />
         </div>
+
       </ScrollArea>
     </>
   );
