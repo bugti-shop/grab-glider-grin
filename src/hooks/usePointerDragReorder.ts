@@ -100,6 +100,7 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     const s = stateRef.current;
     if (!s) return;
     if (s.longPressTimer) clearTimeout(s.longPressTimer);
+    if (s.rafId != null) cancelAnimationFrame(s.rafId);
     if (s.ghostEl?.parentNode) s.ghostEl.parentNode.removeChild(s.ghostEl);
     if (s.placeholderEl?.parentNode) s.placeholderEl.parentNode.removeChild(s.placeholderEl);
     if (s.sourceEl) {
@@ -109,10 +110,8 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     document.body.style.removeProperty('user-select');
     document.body.style.removeProperty('-webkit-user-select');
     document.body.style.removeProperty('cursor');
-    // Immediately restore scroll on drop / cancel — no delay.
-    document.body.style.removeProperty('overflow');
+    // Release the touch-action lock so the page scrolls normally again.
     document.body.style.removeProperty('touch-action');
-    document.documentElement.style.removeProperty('overflow');
     window.removeEventListener('pointermove', handlePointerMove);
     window.removeEventListener('pointerup', handlePointerUp);
     window.removeEventListener('pointercancel', handlePointerUp);
