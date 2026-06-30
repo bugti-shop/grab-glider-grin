@@ -142,19 +142,30 @@ const writeSession = (s: ActiveSession | null) => {
   } catch {}
 };
 
-// ---- White noise -----------------------------------------------------------
-const useWhiteNoise = () => {
+// ---- Focus audio: either an HTML <audio> URL or synthesized white noise ----
+const useFocusAudio = () => {
   const ctxRef = useRef<AudioContext | null>(null);
   const srcRef = useRef<AudioBufferSourceNode | null>(null);
   const gainRef = useRef<GainNode | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const start = useCallback((volume: number) => {
+  const stop = useCallback(() => {
+    try { srcRef.current?.stop(); srcRef.current?.disconnect(); gainRef.current?.disconnect(); } catch {}
+    srcRef.current = null;
+    gainRef.current = null;
+    if (audioRef.current) {
+      try { audioRef.current.pause(); audioRef.current.src = ''; } catch {}
+      audioRef.current = null;
+    }
+  }, []);
+
+  const startSynth = useCallback((volume: number) => {
     try {
       const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
       if (!AC) return;
       if (!ctxRef.current) ctxRef.current = new AC();
       const ctx = ctxRef.current!;
-      if (srcRef.current) return; // already running
+      if (srcRef.current) return;
       const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
       const data = buffer.getChannelData(0);
       let lastOut = 0;
@@ -176,23 +187,30 @@ const useWhiteNoise = () => {
     } catch {}
   }, []);
 
-  const stop = useCallback(() => {
+  const startUrl = useCallback((url: string, volume: number) => {
     try {
-      srcRef.current?.stop();
-      srcRef.current?.disconnect();
-      gainRef.current?.disconnect();
-      srcRef.current = null;
-      gainRef.current = null;
+      const a = new Audio(url);
+      a.loop = true;
+      a.crossOrigin = 'anonymous';
+      a.volume = Math.max(0, Math.min(1, volume));
+      a.play().catch(() => { toast.message('Audio blocked — tap Play again'); });
+      audioRef.current = a;
     } catch {}
   }, []);
 
+  const start = useCallback((track: FocusTrack | null, volume: number) => {
+    stop();
+    if (track) startUrl(track.url, volume);
+    else startSynth(volume);
+  }, [stop, startSynth, startUrl]);
+
   const setVolume = useCallback((v: number) => {
-    if (gainRef.current) {
-      try { gainRef.current.gain.value = Math.max(0, Math.min(1, v)); } catch {}
-    }
+    const clamped = Math.max(0, Math.min(1, v));
+    if (gainRef.current) { try { gainRef.current.gain.value = clamped; } catch {} }
+    if (audioRef.current) { try { audioRef.current.volume = clamped; } catch {} }
   }, []);
 
-  const isRunning = useCallback(() => !!srcRef.current, []);
+  const isRunning = useCallback(() => !!srcRef.current || !!audioRef.current, []);
 
   useEffect(() => () => { stop(); try { ctxRef.current?.close(); } catch {} }, [stop]);
 
