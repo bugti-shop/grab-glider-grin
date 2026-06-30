@@ -1021,11 +1021,11 @@ export const TaskDetailPage = ({
           )}
         </div>
 
-        {/* Pomodoro Timer */}
+        {/* Focus Mode */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <TimerIcon className="h-4 w-4" />
-            Pomodoro
+            Focus Mode
             {!isPro && <PremiumCrown size={14} />}
           </div>
           <button
@@ -1040,7 +1040,7 @@ export const TaskDetailPage = ({
               <div>
                 <div className="text-sm font-medium flex items-center gap-1">Start focus session {!isPro && <PremiumCrown size={12} />}</div>
                 <div className="text-xs text-muted-foreground">
-                  {pomodoroStats.taskPomodoros} pomodoros · {formatPomodoroDuration(pomodoroStats.taskFocusedSec)} on this task
+                  {pomodoroStats.taskPomodoros} sessions · {formatPomodoroDuration(pomodoroStats.taskFocusedSec)} on this task
                 </div>
               </div>
             </div>
@@ -1050,6 +1050,7 @@ export const TaskDetailPage = ({
             </div>
           </button>
         </div>
+
 
 
         {/* Time Tracking - Premium */}
