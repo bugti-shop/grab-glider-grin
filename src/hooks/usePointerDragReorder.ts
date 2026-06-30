@@ -236,15 +236,12 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
 
     if (s.active && s.ghostEl) {
       e.preventDefault();
-      const rect = (s.ghostEl as any)._pdragRect as DOMRect;
       const offX = (s.ghostEl as any)._pdragOffX as number;
       const offY = (s.ghostEl as any)._pdragOffY as number;
       s.ghostEl.style.left = `${e.clientX - offX}px`;
       s.ghostEl.style.top = `${e.clientY - offY}px`;
-      void rect;
-      // Only count as "moved" once the finger/pointer actually travels past
-      // a small threshold after activation — guarantees that a stationary
-      // long-press release never registers as a drop.
+      s.lastX = e.clientX;
+      s.lastY = e.clientY;
       const movedDx = Math.abs(e.clientX - s.startX);
       const movedDy = Math.abs(e.clientY - s.startY);
       if (!s.moved && (movedDx > TOUCH_HOLD_TOLERANCE_PX || movedDy > TOUCH_HOLD_TOLERANCE_PX)) {
