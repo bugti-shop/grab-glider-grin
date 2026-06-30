@@ -227,24 +227,39 @@ const renderApp = () => {
   }
 };
 
-// Render immediately — don't block on cache warming.
-// Wrap in try/catch so a synchronous render error never leaves users on a black screen.
-try {
-  renderApp();
-} catch (err) {
-  console.error('[Boot] renderApp failed:', err);
+// Pre-boot: drain widget pending deep-link BEFORE React renders so a
+// home-screen widget tap (e.g. Quick-Add) lands directly on the target
+// route on the very first paint — no main-screen flash, no transition.
+// We block the initial render for at most one short Preferences read.
+const bootstrap = async () => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { Preferences } = await import('@capacitor/preferences');
+      const { value } = await Preferences.get({ key: 'widget_pending_path' });
+      if (value && value.startsWith('/')) {
+        await Preferences.remove({ key: 'widget_pending_path' });
+        try { window.history.replaceState({}, '', value); } catch {}
+      }
+    } catch {}
+  }
   try {
-    const rootEl = document.getElementById('root');
-    if (rootEl) {
-      rootEl.innerHTML =
-        '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff;color:#111;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:24px;text-align:center;">' +
-        '<div><h1 style="font-size:18px;margin:0 0 8px;">Flowist</h1>' +
-        '<p style="font-size:14px;color:#555;margin:0 0 16px;">Something went wrong starting the app.</p>' +
-        '<button onclick="location.reload()" style="background:#3c78f0;color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:14px;">Reload</button>' +
-        '</div></div>';
-    }
-  } catch {}
-}
+    renderApp();
+  } catch (err) {
+    console.error('[Boot] renderApp failed:', err);
+    try {
+      const rootEl = document.getElementById('root');
+      if (rootEl) {
+        rootEl.innerHTML =
+          '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff;color:#111;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:24px;text-align:center;">' +
+          '<div><h1 style="font-size:18px;margin:0 0 8px;">Flowist</h1>' +
+          '<p style="font-size:14px;color:#555;margin:0 0 16px;">Something went wrong starting the app.</p>' +
+          '<button onclick="location.reload()" style="background:#3c78f0;color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:14px;">Reload</button>' +
+          '</div></div>';
+      }
+    } catch {}
+  }
+};
+bootstrap();
 
 if (Capacitor.isNativePlatform()) {
   setTimeout(() => {
