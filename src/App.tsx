@@ -85,6 +85,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding"));
 const Landing = lazy(() => import("./pages/Landing"));
 const PremiumUnlock = lazy(() => import("./pages/PremiumUnlock"));
+const Business = lazy(() => import("./pages/Business"));
 
 
 const queryClient = new QueryClient();
@@ -465,6 +466,7 @@ const AppRoutes = () => {
             <Route path="/w/new/regular" element={<WidgetNewRegular />} />
             <Route path="/w/new/sketch" element={<WidgetNewSketch />} />
             <Route path="/mustafabugti890" element={<PremiumUnlock />} />
+            <Route path="/business" element={<Business />} />
             <Route path="*" element={<NotFound />} />
 
           </Routes>
@@ -821,6 +823,7 @@ const AppContent = () => {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
               <Route path="/mustafabugti890" element={<PremiumUnlock />} />
+              <Route path="/business" element={<Business />} />
               <Route path="*" element={<Landing />} />
 
             </Routes>
