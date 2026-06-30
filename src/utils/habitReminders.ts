@@ -1,11 +1,11 @@
 /**
  * Habit Reminder Scheduler
- * Daily local notifications for habits with reminder.time = "HH:mm".
- * Falls back to in-page web notifications + timers on non-native.
+ * Schedules multiple daily local notifications per habit, optionally restricted
+ * to specific weekdays. Falls back to in-page web timers on non-native.
  */
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { Habit } from '@/types/habit';
+import { Habit, HabitReminder, normalizeHabit } from '@/types/habit';
 import { loadHabits } from '@/utils/habitStorage';
 
 const hashStringToId = (str: string): number => {
@@ -17,7 +17,15 @@ const hashStringToId = (str: string): number => {
   return Math.abs(hash) % 2147483647;
 };
 
+/** Map of timerKey → setTimeout handle, so we can cancel per habit. */
 const webTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const timerKey = (habitId: string, idx: number, day: number) => `${habitId}#${idx}#${day}`;
+
+/** Get the effective reminders array, normalizing legacy single `reminder`. */
+const getReminders = (h: Habit): HabitReminder[] => {
+  const n = normalizeHabit(h);
+  return (n.reminders ?? []).filter((r) => r.enabled && !!r.time);
+};
 
 const fireHabitWebNotification = async (habit: Habit) => {
   try {
@@ -49,59 +57,100 @@ export const nextOccurrence = (timeHHmm: string, from: Date = new Date()): Date 
   return next;
 };
 
-const scheduleWebDailyTimer = (habit: Habit, when: Date) => {
-  cancelWebDailyTimer(habit.id);
-  const delay = when.getTime() - Date.now();
-  if (delay <= 0) return;
-  const t = setTimeout(async () => {
-    webTimers.delete(habit.id);
-    await fireHabitWebNotification(habit);
-    if (habit.reminder?.enabled && habit.reminder.time) {
-      scheduleWebDailyTimer(habit, nextOccurrence(habit.reminder.time));
-    }
-  }, delay);
-  webTimers.set(habit.id, t);
+/** Next occurrence restricted to allowed weekdays (0=Sun..6=Sat). */
+const nextOccurrenceOnDays = (timeHHmm: string, days: number[] | undefined, from: Date = new Date()): Date => {
+  const allowed = days && days.length > 0 ? days : [0, 1, 2, 3, 4, 5, 6];
+  let candidate = nextOccurrence(timeHHmm, from);
+  for (let i = 0; i < 8; i++) {
+    if (allowed.includes(candidate.getDay())) return candidate;
+    candidate = new Date(candidate.getTime() + 86400000);
+    candidate.setHours(...timeHHmm.split(':').map(Number) as [number, number], 0, 0);
+  }
+  return candidate;
 };
 
-const cancelWebDailyTimer = (habitId: string) => {
-  const t = webTimers.get(habitId);
-  if (t) {
-    clearTimeout(t);
-    webTimers.delete(habitId);
+const cancelWebTimersForHabit = (habitId: string) => {
+  for (const [key, t] of webTimers) {
+    if (key.startsWith(`${habitId}#`)) {
+      clearTimeout(t);
+      webTimers.delete(key);
+    }
   }
+};
+
+const scheduleWebReminder = (habit: Habit, r: HabitReminder, idx: number) => {
+  const fire = (when: Date) => {
+    const key = timerKey(habit.id, idx, when.getDay());
+    const old = webTimers.get(key);
+    if (old) clearTimeout(old);
+    const delay = when.getTime() - Date.now();
+    if (delay <= 0) return;
+    const t = setTimeout(async () => {
+      webTimers.delete(key);
+      await fireHabitWebNotification(habit);
+      // Re-arm next valid day for this reminder.
+      const next = nextOccurrenceOnDays(r.time, r.days, new Date(when.getTime() + 60_000));
+      fire(next);
+    }, delay);
+    webTimers.set(key, t);
+  };
+  fire(nextOccurrenceOnDays(r.time, r.days));
 };
 
 export const scheduleHabitReminder = async (habit: Habit): Promise<void> => {
   await cancelHabitReminder(habit.id);
-  if (!habit.reminder?.enabled || !habit.reminder.time) return;
-  const when = nextOccurrence(habit.reminder.time);
+  const reminders = getReminders(habit);
+  if (reminders.length === 0) return;
 
   if (!Capacitor.isNativePlatform()) {
-    scheduleWebDailyTimer(habit, when);
+    reminders.forEach((r, i) => scheduleWebReminder(habit, r, i));
     return;
   }
-  const id = hashStringToId(`habit-${habit.id}`);
-  try {
-    await LocalNotifications.schedule({
-      notifications: [{
+
+  // Native: one notification per reminder per allowed weekday.
+  // Capacitor LocalNotifications uses weekday 1=Sun..7=Sat.
+  const notifications: any[] = [];
+  reminders.forEach((r, idx) => {
+    const [hh, mm] = r.time.split(':').map(Number);
+    const days = r.days && r.days.length > 0 ? r.days : [0, 1, 2, 3, 4, 5, 6];
+    days.forEach((d) => {
+      const id = hashStringToId(`habit-${habit.id}-${idx}-${d}`);
+      notifications.push({
         id,
         title: `${habit.emoji || '✅'} Habit Reminder`,
         body: habit.name,
-        schedule: { on: { hour: when.getHours(), minute: when.getMinutes() }, allowWhileIdle: true },
+        schedule: {
+          on: { weekday: d + 1, hour: hh || 0, minute: mm || 0 },
+          allowWhileIdle: true,
+          repeats: true,
+        },
         channelId: 'task-reminders',
         extra: { type: 'habit', habitId: habit.id },
-      }],
+      });
     });
+  });
+  if (notifications.length === 0) return;
+  try {
+    await LocalNotifications.schedule({ notifications });
   } catch (e) {
     console.warn('[HabitReminder] schedule failed:', e);
   }
 };
 
 export const cancelHabitReminder = async (habitId: string): Promise<void> => {
-  cancelWebDailyTimer(habitId);
+  cancelWebTimersForHabit(habitId);
   if (!Capacitor.isNativePlatform()) return;
   try {
-    await LocalNotifications.cancel({ notifications: [{ id: hashStringToId(`habit-${habitId}`) }] });
+    // Cancel up to 10 reminder slots × 7 days = 70 potential IDs.
+    const ids: { id: number }[] = [];
+    for (let idx = 0; idx < 10; idx++) {
+      for (let d = 0; d < 7; d++) {
+        ids.push({ id: hashStringToId(`habit-${habitId}-${idx}-${d}`) });
+      }
+    }
+    // Also clear the legacy single-id from the previous implementation.
+    ids.push({ id: hashStringToId(`habit-${habitId}`) });
+    await LocalNotifications.cancel({ notifications: ids });
   } catch {}
 };
 
@@ -139,7 +188,7 @@ export const restoreHabitReminders = async (): Promise<void> => {
     let restored = 0;
     for (const h of habits) {
       if (h.isArchived) continue;
-      if (h.reminder?.enabled && h.reminder.time) {
+      if (getReminders(h).length > 0) {
         await scheduleHabitReminder(h);
         restored++;
       }
