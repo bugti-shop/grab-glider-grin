@@ -155,26 +155,29 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     if (!s.active) {
       const dx = Math.abs(e.clientX - s.startX);
       const dy = Math.abs(e.clientY - s.startY);
-      const moved = dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX;
       const isPointerLikeMouse = s.pointerType === 'mouse' || s.pointerType === 'pen';
 
-      if (moved) {
-        if (isPointerLikeMouse) {
-          // Cancel the (unused) long-press timer and activate now.
+      if (isPointerLikeMouse) {
+        // Distance-based activation — drag starts the moment the mouse moves.
+        if (dx > MOUSE_MOVE_THRESHOLD_PX || dy > MOUSE_MOVE_THRESHOLD_PX) {
           if (s.longPressTimer) {
             clearTimeout(s.longPressTimer);
             s.longPressTimer = null;
           }
           s.armed = true;
           activateDrag(e.clientX, e.clientY);
-        } else if (!s.armed) {
-          // Touch moved before long-press fired → treat as scroll, abort.
+        }
+      } else {
+        // Touch: pure delay-based activation. Tolerate small wobble while the
+        // long-press timer is counting down so a straight vertical press
+        // still arms the drag. Only meaningful motion (likely a scroll
+        // gesture) aborts.
+        if (!s.armed && (dx > TOUCH_HOLD_TOLERANCE_PX || dy > TOUCH_HOLD_TOLERANCE_PX)) {
           cleanup();
           return;
-        } else {
-          // Touch already armed by long-press, motion confirms drag.
-          activateDrag(e.clientX, e.clientY);
         }
+        // If armed by long-press, any motion confirms drag.
+        if (s.armed) activateDrag(e.clientX, e.clientY);
       }
     }
 
