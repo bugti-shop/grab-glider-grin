@@ -112,6 +112,18 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
   const [pendingFileName, setPendingFileName] = useState<string>('');
   const [pendingColumnMap, setPendingColumnMap] = useState<CsvColumnMap | undefined>(undefined);
 
+  // Per-row mapping diagnostics surfaced in the result view.
+  type UnmappedRow = {
+    title: string;
+    originalFolderId?: string;
+    originalSectionId?: string;
+    reason: string;
+    fallbackFolder: string;
+    fallbackSection: string;
+  };
+  const [unmappedRows, setUnmappedRows] = useState<UnmappedRow[]>([]);
+
+
   const reset = () => {
     setSelectedSource(null);
     setResult(null);
@@ -124,6 +136,8 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
     setPendingText('');
     setPendingFileName('');
     setPendingColumnMap(undefined);
+    setUnmappedRows([]);
+
   };
 
   const handleSourceSelect = (source: ImportSource) => {
@@ -340,20 +354,38 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           ...allNewSections.map(s => s.id),
         ]);
 
-        // Validate every task ends up with a real folderId + sectionId; count unmapped.
+        // Validate every task ends up with a real folderId + sectionId; collect per-row diagnostics.
+        const collectedUnmapped: UnmappedRow[] = [];
         const tagged = importResult.tasks.map(t => {
           let folderId = t.folderId;
-          if (!folderId || !allTaskFolderIds.has(folderId)) {
-            unmappedFolderCount++;
-            folderId = fallbackFolderId;
-          }
+          const origFolderId = t.folderId;
+          const origSectionId = t.sectionId;
+          let folderReason: string | null = null;
+          if (!folderId) { folderReason = 'no folderId on row'; folderId = fallbackFolderId; }
+          else if (!allTaskFolderIds.has(folderId)) { folderReason = `unknown folderId "${folderId}"`; folderId = fallbackFolderId; }
+          if (folderReason) unmappedFolderCount++;
+
           let sectionId = t.sectionId;
-          if (!sectionId || !allSectionIds.has(sectionId)) {
-            unmappedSectionCount++;
-            sectionId = folderDefaultSectionId.get(folderId);
+          let sectionReason: string | null = null;
+          if (!sectionId) { sectionReason = 'no sectionId on row'; sectionId = folderDefaultSectionId.get(folderId); }
+          else if (!allSectionIds.has(sectionId)) { sectionReason = `unknown sectionId "${sectionId}"`; sectionId = folderDefaultSectionId.get(folderId); }
+          if (sectionReason) unmappedSectionCount++;
+
+          if (folderReason || sectionReason) {
+            const fallbackFolderName = taskFolders.find(f => f.id === folderId)?.name || importFolderName;
+            const fallbackSectionName = [...parserSections, ...autoSections, ...existingSections].find(s => s.id === sectionId)?.name || '(default)';
+            collectedUnmapped.push({
+              title: (t as any).text || (t as any).title || '(untitled)',
+              originalFolderId: origFolderId,
+              originalSectionId: origSectionId,
+              reason: [folderReason, sectionReason].filter(Boolean).join(' · '),
+              fallbackFolder: fallbackFolderName,
+              fallbackSection: fallbackSectionName,
+            });
           }
           return { ...t, folderId, sectionId };
         });
+        setUnmappedRows(collectedUnmapped);
 
         await bulkPutTasksInWorker(tagged, false, (p) => {
           setProgress({ phase: 'saving', current: p.written, total: p.total, message: 'Saving tasks…' });
@@ -361,15 +393,15 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
 
         window.dispatchEvent(new Event('tasksRestored'));
         window.dispatchEvent(new Event('tasksUpdated'));
-        // Switch the Today view to the first imported folder AFTER folders/tasks
-        // have been picked up by state listeners, so the selection isn't clobbered
-        // by the "default to first folder" effect.
+        // Force the Today view to the imported folder, retrying a few times so the
+        // selection wins the race against the foldersRestored / default-folder effects.
         if (firstImportedFolderId) {
           await setSetting('todoSelectedFolder', firstImportedFolderId);
-          setTimeout(() => {
-            window.dispatchEvent(new Event('selectedFolderChanged'));
-          }, 150);
+          [0, 100, 300, 700, 1400].forEach(delay => {
+            setTimeout(() => window.dispatchEvent(new Event('selectedFolderChanged')), delay);
+          });
         }
+
 
       }
       if (importResult.notes.length > 0) {
@@ -501,6 +533,42 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
                 </div>
               )}
             </div>
+
+            {unmappedRows.length > 0 && (
+              <details className="w-full mt-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3" open>
+                <summary className="cursor-pointer text-xs font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {unmappedRows.length} row{unmappedRows.length === 1 ? '' : 's'} fell back to default mapping
+                </summary>
+                <div className="mt-2 max-h-64 overflow-auto rounded border border-amber-500/30 bg-background/60">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/60 text-muted-foreground">
+                      <tr>
+                        <th className="text-left px-2 py-1.5 font-medium">Title</th>
+                        <th className="text-left px-2 py-1.5 font-medium">Reason</th>
+                        <th className="text-left px-2 py-1.5 font-medium">→ Folder</th>
+                        <th className="text-left px-2 py-1.5 font-medium">→ Section</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {unmappedRows.slice(0, 200).map((r, i) => (
+                        <tr key={i} className="align-top">
+                          <td className="px-2 py-1.5 text-foreground truncate max-w-[10rem]" title={r.title}>{r.title}</td>
+                          <td className="px-2 py-1.5 text-muted-foreground font-mono">{r.reason}</td>
+                          <td className="px-2 py-1.5 text-muted-foreground">{r.fallbackFolder}</td>
+                          <td className="px-2 py-1.5 text-muted-foreground">{r.fallbackSection}</td>
+                        </tr>
+                      ))}
+                      {unmappedRows.length > 200 && (
+                        <tr><td colSpan={4} className="px-2 py-1.5 italic text-muted-foreground">…and {unmappedRows.length - 200} more</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            )}
+
+
 
             {result.errors && result.errors.length > 0 && (
               <details className="w-full mt-2 rounded-lg border border-border bg-muted/30 p-3">
