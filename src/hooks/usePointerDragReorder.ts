@@ -295,6 +295,21 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     s.placeholderEl = placeholder;
     s.active = true;
     s.lastToIndex = s.fromIndex;
+    s.lastX = x;
+    s.lastY = y;
+
+    // Resolve the nearest scrollable ancestor so edge auto-scroll can run
+    // even when the list lives inside a custom scroll container.
+    let scrollAncestor: HTMLElement | null = s.sourceEl.parentElement;
+    while (scrollAncestor) {
+      const cs = getComputedStyle(scrollAncestor);
+      const oy = cs.overflowY;
+      if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && scrollAncestor.scrollHeight > scrollAncestor.clientHeight) {
+        break;
+      }
+      scrollAncestor = scrollAncestor.parentElement;
+    }
+    s.scrollEl = scrollAncestor;
 
     // Dim source without removing it from layout (preserves UI).
     s.sourceEl.style.opacity = '0.35';
@@ -303,19 +318,56 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     document.body.style.userSelect = 'none';
     (document.body.style as any).webkitUserSelect = 'none';
     document.body.style.cursor = 'grabbing';
-
-    document.body.style.userSelect = 'none';
-    (document.body.style as any).webkitUserSelect = 'none';
-    document.body.style.cursor = 'grabbing';
-    // Hard-lock page scroll the instant the drag activates. Restored in cleanup().
-    document.body.style.overflow = 'hidden';
+    // Block user-driven scroll gestures, but DO NOT lock body overflow —
+    // programmatic auto-scroll (and the inner virtual list) must still run.
     document.body.style.touchAction = 'none';
-    document.documentElement.style.overflow = 'hidden';
 
     setIsDragging(true);
     setDraggingIndex(s.fromIndex);
     try { onDragStart?.(s.fromIndex, s.fromId); } catch {}
-  }, [onDragStart]);
+
+    // Edge auto-scroll RAF. Scrolls the resolved container (or window) when
+    // the pointer sits within EDGE_PX of the top/bottom edge, then refreshes
+    // the hit-test using the *latest* pointer position so the blue line keeps
+    // snapping to the row currently under the finger as content moves.
+    const EDGE_PX = 60;
+    const MAX_SPEED = 18; // px per frame
+    const tick = () => {
+      const st = stateRef.current;
+      if (!st || !st.active) return;
+      const target = st.scrollEl;
+      let scrolled = false;
+      const scrollBy = (el: HTMLElement | null, dy: number) => {
+        if (!el) {
+          window.scrollBy(0, dy);
+        } else {
+          el.scrollTop += dy;
+        }
+      };
+      // Use the container's viewport rect when present, otherwise the window.
+      const top = target ? target.getBoundingClientRect().top : 0;
+      const bottom = target ? target.getBoundingClientRect().bottom : window.innerHeight;
+      const distTop = st.lastY - top;
+      const distBottom = bottom - st.lastY;
+      if (distTop < EDGE_PX && distTop > -EDGE_PX) {
+        const speed = Math.max(2, Math.round(MAX_SPEED * (1 - Math.max(0, distTop) / EDGE_PX)));
+        scrollBy(target, -speed);
+        scrolled = true;
+      } else if (distBottom < EDGE_PX && distBottom > -EDGE_PX) {
+        const speed = Math.max(2, Math.round(MAX_SPEED * (1 - Math.max(0, distBottom) / EDGE_PX)));
+        scrollBy(target, speed);
+        scrolled = true;
+      }
+      // Always re-hit-test against the latest coords. Whether we auto-scrolled
+      // OR the user scrolled the inner list manually, this keeps the
+      // placeholder pinned to the row currently beneath the pointer.
+      const hit = hitTestIndex(st.lastX, st.lastY);
+      updatePlaceholder(hit);
+      void scrolled;
+      st.rafId = requestAnimationFrame(tick);
+    };
+    s.rafId = requestAnimationFrame(tick);
+  }, [hitTestIndex, onDragStart, updatePlaceholder]);
 
   const handlePointerUp = useCallback((e: PointerEvent | { clientX: number; clientY: number }) => {
     const s = stateRef.current;
