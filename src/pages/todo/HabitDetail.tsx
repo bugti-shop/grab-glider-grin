@@ -15,11 +15,12 @@ import {
 import {
   ArrowLeft, MoreVertical, ChevronLeft, ChevronRight,
   CheckCircle2, CalendarCheck, Percent, Activity, Trash2, Check, Share2, ChevronUp,
-  Pencil, Target, Archive,
+  Pencil, Target, Archive, NotebookPen,
 } from 'lucide-react';
 
 import { m as motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { Habit, HabitDayStatus } from '@/types/habit';
 import { loadHabits, saveHabit, deleteHabit } from '@/utils/habitStorage';
 import { triggerHaptic } from '@/utils/haptics';
@@ -32,6 +33,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { HabitAmountCounter } from '@/components/habits/HabitAmountCounter';
+import { HabitReflectionSheet } from '@/components/habits/HabitReflectionSheet';
 import {
   readFocus, writeFocus, clearFocus,
   setActiveFocus, clearActiveFocus, cleanupStaleFocusKeys,
