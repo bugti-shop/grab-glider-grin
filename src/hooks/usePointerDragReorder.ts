@@ -90,6 +90,10 @@ export function usePointerDragReorder(opts: UsePointerDragReorderOptions): Point
     lastToIndex: number;
     lastToId: string | number | null;
     lastToBefore: boolean;
+    lastX: number;
+    lastY: number;
+    scrollEl: HTMLElement | null;
+    rafId: number | null;
   } | null>(null);
 
   const cleanup = useCallback(() => {
