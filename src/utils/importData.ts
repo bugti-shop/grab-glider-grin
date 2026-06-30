@@ -241,9 +241,9 @@ const parseTodoistCSV = (text: string): ImportResult => {
 // TickTick status: 0 = incomplete, 1/2 = completed (2 = won't do)
 const parseTickTickCSV = (text: string): ImportResult => {
   try {
-    // TickTick exports sometimes prefix with metadata lines starting with "Date:" / "Version:"; skip until header.
+    // TickTick exports prefix with metadata lines ("Date:", "Version:", "Status:"); skip until header row.
     const cleanedLines = text.split('\n');
-    const headerIdx = cleanedLines.findIndex(l => /["']?(List|Title)["']?\s*,/.test(l));
+    const headerIdx = cleanedLines.findIndex(l => /["']?(Folder Name|List Name|List|Title)["']?\s*,/.test(l));
     const cleaned = headerIdx > 0 ? cleanedLines.slice(headerIdx).join('\n') : text;
 
     const rows = parseCSV(cleaned);
@@ -251,8 +251,11 @@ const parseTickTickCSV = (text: string): ImportResult => {
 
     const tasks: TodoItem[] = [];
     const folderMap = new Map<string, Folder>();
+    const sectionMap = new Map<string, TaskSection>();
     let failed = 0;
     const errors: string[] = [];
+    const warnings: string[] = [];
+    let unmappedFolder = 0;
 
     const priorityMap: Record<string, Priority> = { '0': 'none', '1': 'low', '3': 'medium', '5': 'high' };
 
@@ -261,21 +264,41 @@ const parseTickTickCSV = (text: string): ImportResult => {
         const title = row['Title'] || row['title'] || '';
         if (!title) continue;
 
-        const listName = (row['List'] || row['list'] || '').trim();
+        const folderName = (row['Folder Name'] || row['folder name'] || '').trim();
+        const listName = (row['List Name'] || row['list name'] || row['List'] || row['list'] || '').trim();
+        const displayName = [folderName, listName].filter(Boolean).join(' / ') || listName || folderName;
+
         let folderId: string | undefined;
-        if (listName) {
-          let folder = folderMap.get(listName);
+        if (displayName) {
+          let folder = folderMap.get(displayName);
           if (!folder) {
-            folder = { id: generateId(), name: listName, createdAt: new Date() } as Folder;
-            folderMap.set(listName, folder);
+            folder = { id: generateId(), name: displayName, createdAt: new Date() } as Folder;
+            folderMap.set(displayName, folder);
           }
           folderId = folder.id;
+        } else {
+          unmappedFolder++;
+        }
+
+        const colName = (row['Column Name'] || row['column name'] || '').trim();
+        let sectionId: string | undefined;
+        if (folderId && colName && colName.toLowerCase() !== 'not sectioned') {
+          const key = `${folderId}::${colName}`;
+          let section = sectionMap.get(key);
+          if (!section) {
+            section = {
+              id: generateId(), name: colName, color: '#3b82f6', isCollapsed: false,
+              order: sectionMap.size, folderId,
+            } as TaskSection;
+            sectionMap.set(key, section);
+          }
+          sectionId = section.id;
         }
 
         const statusRaw = (row['Status'] || row['status'] || '0').trim();
         const completed = statusRaw !== '0' && statusRaw !== '';
         const priorityRaw = (row['Priority'] || row['priority'] || '0').trim();
-        const dueStr = row['Due Time'] || row['due time'] || '';
+        const dueStr = row['Due Date'] || row['due date'] || row['Due Time'] || row['due time'] || '';
         const createdStr = row['Created Time'] || row['created time'] || '';
         const completedStr = row['Completed Time'] || row['completed time'] || '';
 
@@ -287,6 +310,7 @@ const parseTickTickCSV = (text: string): ImportResult => {
           description: row['Content'] || row['content'] || undefined,
           dueDate: dueStr ? new Date(dueStr.replace(' ', 'T')) : undefined,
           folderId,
+          sectionId,
           createdAt: createdStr ? new Date(createdStr.replace(' ', 'T')) : new Date(),
           modifiedAt: completedStr ? new Date(completedStr.replace(' ', 'T')) : new Date(),
         } as TodoItem);
@@ -297,7 +321,14 @@ const parseTickTickCSV = (text: string): ImportResult => {
     }
 
     const folders = Array.from(folderMap.values());
-    return { success: true, tasks, notes: [], folders, stats: { tasks: tasks.length, notes: 0, folders: folders.length, failed }, errors: errors.length ? errors : undefined };
+    const sections = Array.from(sectionMap.values());
+    if (unmappedFolder > 0) warnings.push(`${unmappedFolder} task(s) had no Folder/List — placed in fallback folder`);
+    return {
+      success: true, tasks, notes: [], folders, sections,
+      stats: { tasks: tasks.length, notes: 0, folders: folders.length, failed },
+      errors: errors.length ? errors : undefined,
+      warnings: warnings.length ? warnings : undefined,
+    };
   } catch (e) {
     return { success: false, tasks: [], notes: [], error: `TickTick parse error: ${e instanceof Error ? e.message : 'Unknown'}`, stats: { tasks: 0, notes: 0 } };
   }
