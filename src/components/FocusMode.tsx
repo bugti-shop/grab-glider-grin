@@ -1,13 +1,63 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, MoreHorizontal, X, ShieldAlert, Timer as TimerIcon, Maximize2, Music2, Check, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, X, ShieldAlert, Timer as TimerIcon, Maximize2, Music2, Check, Volume2, VolumeX, Bell, BellOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { addPomodoroSession } from '@/utils/pomodoroStorage';
+import { addNotification } from '@/utils/notificationStore';
+import { sendWebNotification, requestNotificationPermission } from '@/utils/webNotifications';
 import bgMountain from '@/assets/focus/focus-mountain.jpg';
 import bgForest from '@/assets/focus/focus-forest.jpg';
 import bgOcean from '@/assets/focus/focus-ocean.jpg';
 import bgAlpine from '@/assets/focus/focus-alpine.jpg';
+
+const fmtMMSS = (sec: number) => {
+  const s = Math.max(0, Math.floor(sec));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  return h > 0
+    ? `${h}h ${m}m`
+    : m > 0
+    ? `${m}m ${r}s`
+    : `${r}s`;
+};
+
+const notifyFocus = (
+  enabled: boolean,
+  kind: 'start' | 'complete' | 'pause' | 'ended_away',
+  opts: { taskTitle?: string; durationMin?: number; remainingSec?: number; elapsedSec?: number } = {}
+) => {
+  if (!enabled) return;
+  const taskBit = opts.taskTitle ? ` · ${opts.taskTitle}` : '';
+  let title = '';
+  let body = '';
+  let type: 'reminder' | 'achievement' | 'system' = 'system';
+  switch (kind) {
+    case 'start':
+      title = '🎯 Focus started';
+      body = `${opts.durationMin ?? ''} min session in progress${taskBit}`;
+      type = 'reminder';
+      break;
+    case 'complete':
+      title = '✅ Focus complete';
+      body = `Great work! ${opts.durationMin ?? ''} min done${taskBit}`;
+      type = 'achievement';
+      break;
+    case 'pause':
+      title = '⏸ Focus paused';
+      body = `${fmtMMSS(opts.remainingSec ?? 0)} remaining${taskBit}`;
+      type = 'reminder';
+      break;
+    case 'ended_away':
+      title = '🏁 Focus ended';
+      body = `Session ended while you were away — ${fmtMMSS(opts.elapsedSec ?? 0)} focused${taskBit}`;
+      type = 'achievement';
+      break;
+  }
+  try { void addNotification({ type, title, message: body, icon: 'timer', actionPath: '/todo/today' }); } catch {}
+  try { sendWebNotification(title, { body, tag: `focus-${kind}` }); } catch {}
+};
 
 interface FocusModeProps {
   open: boolean;
@@ -31,6 +81,7 @@ interface FocusPrefs {
   whiteNoiseVolume: number; // 0..1
   whiteNoiseMuted: boolean;
   fullScreen: boolean;
+  notifications: boolean;
 }
 
 const DEFAULT_PREFS: FocusPrefs = {
@@ -40,6 +91,7 @@ const DEFAULT_PREFS: FocusPrefs = {
   whiteNoiseVolume: 0.4,
   whiteNoiseMuted: false,
   fullScreen: false,
+  notifications: true,
 };
 
 const loadPrefs = (): FocusPrefs => {
@@ -183,7 +235,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           return;
         }
         // Session would have completed while we were away — log it
-        const completed = dur * 60 - (existing.accumulatedSec ?? 0);
+        const elapsedAway = Math.max(0, dur * 60 - (existing.accumulatedSec ?? 0));
         try {
           addPomodoroSession({
             taskId: existing.taskId, type: 'focus',
@@ -192,11 +244,15 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
             durationSec: dur * 60,
           });
         } catch {}
+        notifyFocus(prefs.notifications, 'ended_away', {
+          taskTitle: existing.taskTitle,
+          elapsedSec: dur * 60,
+        });
+        void elapsedAway;
         writeSession(null);
         sessionRef.current = null;
         setRemaining(dur * 60);
         setRunning(false);
-        void completed;
       } else if (typeof existing.remainingSec === 'number') {
         setRemaining(existing.remainingSec);
         setRunning(false);
@@ -263,6 +319,10 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     writeSession(s);
     setRemaining(dur);
     setRunning(true);
+    if (prefs.notifications) {
+      void requestNotificationPermission();
+      notifyFocus(true, 'start', { taskTitle, durationMin: prefs.durationMin });
+    }
   };
 
   const resumeSession = () => {
@@ -300,10 +360,13 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     writeSession(s);
     setRemaining(remain);
     setRunning(false);
+    notifyFocus(prefs.notifications, 'pause', { taskTitle: s.taskTitle, remainingSec: remain });
   };
 
   const completeSession = useCallback(() => {
     const s = sessionRef.current;
+    const completedTaskTitle = s?.taskTitle;
+    const completedDurationMin = s?.durationMin ?? prefs.durationMin;
     if (s) {
       const now = Date.now();
       const totalSec = prefs.durationMin * 60;
@@ -325,8 +388,9 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     setRemaining(0);
     noise.stop();
     toast.success('Focus session complete 🎯');
+    notifyFocus(prefs.notifications, 'complete', { taskTitle: completedTaskTitle, durationMin: completedDurationMin });
     onComplete?.();
-  }, [prefs.durationMin, noise, onComplete]);
+  }, [prefs.durationMin, prefs.notifications, noise, onComplete]);
 
   const discardSession = (logPartial: boolean) => {
     if (logPartial) {
@@ -582,6 +646,17 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           <MenuRow label="Change Duration" icon={<TimerIcon className="h-4 w-4" />} onClick={() => { setShowDurations(true); setShowMenu(false); }} />
           <MenuRow label="Toggle Full Screen" icon={<Maximize2 className="h-4 w-4" />} onClick={() => { toggleFullscreen(); setShowMenu(false); }} />
           <MenuRow label={prefs.whiteNoise ? 'Stop White Noise' : 'Play White Noise'} icon={<Music2 className="h-4 w-4" />} onClick={() => { updatePrefs({ whiteNoise: !prefs.whiteNoise }); setShowMenu(false); }} />
+          <MenuRow
+            label={prefs.notifications ? 'Disable Notifications' : 'Enable Notifications'}
+            icon={prefs.notifications ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+            onClick={() => {
+              const next = !prefs.notifications;
+              updatePrefs({ notifications: next });
+              if (next) void requestNotificationPermission();
+              toast.message(next ? 'Focus notifications on' : 'Focus notifications off');
+              setShowMenu(false);
+            }}
+          />
           {prefs.whiteNoise && (
             <MenuRow label={prefs.whiteNoiseMuted ? 'Unmute Noise' : 'Mute Noise'} icon={prefs.whiteNoiseMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />} onClick={() => { updatePrefs({ whiteNoiseMuted: !prefs.whiteNoiseMuted }); setShowMenu(false); }} />
           )}
