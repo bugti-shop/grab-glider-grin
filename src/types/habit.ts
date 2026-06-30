@@ -4,10 +4,18 @@ export type HabitGoalType = 'all' | 'amount';
 
 export type HabitDayStatus = 'done' | 'skipped' | 'failed';
 
+/** 'build' = positive habit (default). 'avoid' = bad habit you're trying to quit. */
+export type HabitKind = 'build' | 'avoid';
+
 export interface HabitReminder {
   enabled: boolean;
   /** Time of day in HH:mm format */
   time: string;
+  /**
+   * Weekdays this reminder fires on (0=Sun..6=Sat).
+   * Empty / undefined = every day.
+   */
+  days?: number[];
   /** Notification IDs for cancellation */
   notificationIds?: number[];
 }
@@ -27,6 +35,8 @@ export interface HabitSection {
   id: string;
   name: string;
   order: number;
+  /** Optional parent section id — one level of nesting. */
+  parentSectionId?: string;
 }
 
 export interface Habit {
@@ -38,6 +48,9 @@ export interface Habit {
   color: string;
   /** Motivational quote shown on detail */
   quote?: string;
+
+  /** 'build' (default) or 'avoid' (bad habit). */
+  kind?: HabitKind;
 
   /** Frequency configuration */
   frequency: HabitFrequencyType;
@@ -61,11 +74,19 @@ export interface Habit {
   /** Section/category id */
   sectionId?: string;
 
-  /** Daily reminder */
+  /**
+   * Multiple daily reminders. New code should use this array.
+   * Legacy single `reminder` is migrated into here on load.
+   */
+  reminders?: HabitReminder[];
+  /** @deprecated kept for backward compatibility — migrated into `reminders` on load. */
   reminder?: HabitReminder;
 
   /** Auto pop-up habit log dialog after completion */
   autoPopupLog?: boolean;
+
+  /** "Stack after": parent habit whose completion triggers this one. */
+  chainAfterHabitId?: string;
 
   /** Target streak to aim for (legacy display) */
   targetStreak?: number;
@@ -81,3 +102,16 @@ export interface Habit {
   createdAt: string; // ISO
   updatedAt: string; // ISO
 }
+
+/**
+ * Normalize a habit loaded from storage — promotes the legacy single
+ * `reminder` into the `reminders[]` array if needed. Idempotent.
+ */
+export const normalizeHabit = (h: Habit): Habit => {
+  if (!h) return h;
+  if (h.reminders && h.reminders.length > 0) return h;
+  if (h.reminder && h.reminder.enabled && h.reminder.time) {
+    return { ...h, reminders: [{ ...h.reminder }] };
+  }
+  return h;
+};
