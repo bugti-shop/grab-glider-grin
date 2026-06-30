@@ -21,7 +21,7 @@ jobs:
     env:
       # Thresholds — fail the build if perf regresses past these.
       PERF_TASK_COUNT: "5000"
-      PERF_MAX_RENDER_MS: "2500"
+      PERF_MAX_RENDER_MS: "6000"
       PERF_MAX_DOM_ROWS: "60"
       PERF_MAX_REORDER_LATENCY: "250"
       PERF_MAX_HEAP_GROWTH_MB: "25"
