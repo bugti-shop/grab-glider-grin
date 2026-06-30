@@ -227,6 +227,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   const [confirmExit, setConfirmExit] = useState(false);
   const [showSoundLib, setShowSoundLib] = useState(false);
   const [showBackgroundPrompt, setShowBackgroundPrompt] = useState(false);
+  const [backgrounded, setBackgrounded] = useState(false);
 
   const sessionRef = useRef<ActiveSession | null>(null);
   const bg = useMemo(() => BACKGROUNDS[Math.floor(Math.random() * BACKGROUNDS.length)], [open]);
