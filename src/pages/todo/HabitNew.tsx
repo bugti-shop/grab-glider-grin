@@ -176,7 +176,10 @@ const HabitNew = () => {
       startDate: format(startDate, 'yyyy-MM-dd'),
       goalDays,
       sectionId,
-      reminder: reminderTime ? { enabled: true, time: reminderTime } : undefined,
+      kind,
+      chainAfterHabitId: chainAfterHabitId || undefined,
+      reminders: reminders.length > 0 ? reminders : undefined,
+      reminder: undefined, // legacy field cleared on save
       autoPopupLog: autoPopup,
       completions: editingExisting?.completions ?? [],
       currentStreak: editingExisting?.currentStreak ?? 0,
@@ -186,7 +189,7 @@ const HabitNew = () => {
       updatedAt: now,
     };
     await saveHabit(habit);
-    if (habit.reminder?.enabled) {
+    if (habit.reminders && habit.reminders.length > 0) {
       await scheduleHabitReminder(habit);
     }
     navigate('/todo/habits', { replace: true });
