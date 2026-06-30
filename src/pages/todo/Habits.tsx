@@ -7,8 +7,14 @@ import {
   isSameDay,
   parseISO,
 } from 'date-fns';
-import { Plus, PieChart, LayoutGrid, SlidersHorizontal, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, PieChart, LayoutGrid, SlidersHorizontal, Check, X, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
 import { Habit, HabitDayStatus, HabitSection } from '@/types/habit';
 import { loadHabits, saveHabit } from '@/utils/habitStorage';
@@ -18,6 +24,8 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { toast } from 'sonner';
 import { readActiveFocus, cleanupStaleFocusKeys, clearActiveFocus } from '@/utils/focusSession';
+import { checkMilestones, milestoneEmoji } from '@/utils/habitMilestones';
+import { HabitImportSheet } from '@/components/habits/HabitImportSheet';
 
 const Habits = () => {
   const navigate = useNavigate();
