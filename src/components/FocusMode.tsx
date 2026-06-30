@@ -362,6 +362,12 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     setRunning(false);
     notifyFocus(prefs.notifications, 'pause', { taskTitle: s.taskTitle, remainingSec: remain });
   };
+
+  const completeSession = useCallback(() => {
+    const s = sessionRef.current;
+    const completedTaskTitle = s?.taskTitle;
+    const completedDurationMin = s?.durationMin ?? prefs.durationMin;
+    if (s) {
       const now = Date.now();
       const totalSec = prefs.durationMin * 60;
       const elapsed = Math.max(0, totalSec - s.accumulatedSec);
@@ -382,8 +388,9 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     setRemaining(0);
     noise.stop();
     toast.success('Focus session complete 🎯');
+    notifyFocus(prefs.notifications, 'complete', { taskTitle: completedTaskTitle, durationMin: completedDurationMin });
     onComplete?.();
-  }, [prefs.durationMin, noise, onComplete]);
+  }, [prefs.durationMin, prefs.notifications, noise, onComplete]);
 
   const discardSession = (logPartial: boolean) => {
     if (logPartial) {
