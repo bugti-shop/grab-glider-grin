@@ -136,6 +136,7 @@ class WidgetDataSyncManager {
     window.addEventListener('sectionsUpdated', () => this.syncSections());
     window.addEventListener('foldersUpdated', () => this.syncFolders());
     window.addEventListener('streakUpdated', () => this.syncStreak());
+    window.addEventListener('habitsUpdated', () => this.syncHabits());
 
     console.log('[WidgetSync] Initialized successfully');
   }
@@ -181,6 +182,7 @@ class WidgetDataSyncManager {
         this.syncSections(),
         this.syncFolders(),
         this.syncStreak(),
+        this.syncHabits(),
       ]);
       console.log('[WidgetSync] All data synced');
     } catch (error) {
