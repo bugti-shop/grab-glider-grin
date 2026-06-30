@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.flowist.app"],
+        "components": [
+          { "/": "/webclipper*", "comment": "Deep-link clipper into the app" },
+          { "/": "/r/*", "comment": "Affiliate / referral links" },
+          { "/": "/clip*" }
+        ]
+      }
+    ]
+  }
+}
