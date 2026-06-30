@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 
 /**
  * Radix Dialog/Sheet/Popover sometimes leaves `pointer-events: none` on
@@ -8,16 +7,9 @@ import { useLocation } from 'react-router-dom';
  * appear "unclickable" until a manual refresh.
  *
  * This mounts a MutationObserver that clears the lock whenever no Radix
- * overlay is actually open, and also clears it on every route change.
+ * overlay is actually open. Also listens for navigation/visibility changes.
  */
 export const RadixPointerEventsRescue = () => {
-  const location = useLocation();
-
-  // Clear on every route change — covers the "navigate while a sheet was open" case.
-  useEffect(() => {
-    document.body.style.pointerEvents = '';
-    document.body.removeAttribute('inert');
-  }, [location.pathname, location.search]);
 
   useEffect(() => {
     const hasOpenOverlay = () =>
