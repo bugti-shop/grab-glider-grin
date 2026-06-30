@@ -70,6 +70,9 @@ export function pushTasks(tasks: TodoItem[]): void {
 export function pushTaskDelete(id: string): void {
   enqueueWrite('tasks', 'delete', { id });
 }
+export function pushTaskDeletes(ids: string[]): void {
+  enqueueWrites(ids.map((id) => ({ table: 'tasks', op: 'delete', row: { id } })) as any);
+}
 
 export function pushHabits(habits: Habit[]): void {
   for (const h of habits) {

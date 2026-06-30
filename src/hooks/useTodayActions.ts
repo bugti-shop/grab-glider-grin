@@ -754,10 +754,35 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
         return;
       case 'move': setIsMoveToFolderOpen(true); break;
       case 'delete':
-        setItems(prev => prev.filter(i => !selectedTaskIds.has(i.id)));
-        import('@/utils/cloudSync/storeBridge').then(({ pushTaskDelete }) => {
-          selectedItems.forEach(item => pushTaskDelete(item.id));
-        }).catch(() => {});
+        if (selectedItems.length === 0) return;
+        {
+          const ids = selectedItems.map(item => item.id);
+          const idSet = new Set(ids);
+          const total = ids.length;
+          const toastId = total >= 500 ? `bulk-delete-${Date.now()}` : undefined;
+          markSingleTaskPersisted(true);
+          startTransition(() => {
+            setItems(prev => {
+              const next = prev.filter(i => !idSet.has(i.id));
+              itemsRef.current = next;
+              rebuildItemLookups(next);
+              return next;
+            });
+          });
+          if (toastId) toast.loading(`Deleting 0 / ${total.toLocaleString()}…`, { id: toastId });
+          void import('@/utils/taskStorage').then(({ bulkDeleteTasksFromDB }) =>
+            bulkDeleteTasksFromDB(
+              ids,
+              false,
+              toastId ? ({ processed }) => {
+                toast.loading(`Deleting ${processed.toLocaleString()} / ${total.toLocaleString()}…`, { id: toastId });
+              } : undefined,
+            ).then((persisted) => {
+              if (toastId) toast.dismiss(toastId);
+              if (!persisted) toast.error(t('todayPage.storageFull'), { id: 'storage-full' });
+            }),
+          );
+        }
         setSelectedTaskIds(new Set()); setIsSelectionMode(false);
         toast.success(t('todayPage.deletedTasks', { count: selectedItems.length }));
         break;

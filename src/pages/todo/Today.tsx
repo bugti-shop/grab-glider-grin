@@ -760,7 +760,7 @@ const Today = () => {
               <p className="text-sm mb-3 font-medium">{t('bulk.tasksSelected', { count: selectedTaskIds.size })}</p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setIsSelectActionsOpen(true)}>{t('common.actions', 'Actions')}</Button>
-                <Button variant="outline" size="sm" onClick={() => { setItems(items.filter(i => !selectedTaskIds.has(i.id))); setSelectedTaskIds(new Set()); setIsSelectionMode(false); }}>
+                <Button variant="outline" size="sm" onClick={() => handleSelectAction('delete')}>
                   <Trash2 className="h-4 w-4 mr-2" />{t('common.delete')}
                 </Button>
               </div>

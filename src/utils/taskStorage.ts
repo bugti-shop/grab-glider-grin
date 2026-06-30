@@ -819,8 +819,8 @@ export const bulkDeleteTasksFromDB = async (
   // 2. Single tracker write + cloud deletes (batched).
   if (!skipSyncEvent) {
     try {
-      const { trackDeletion, loadDeletions } = await import('@/utils/deletionTracker');
-      taskIds.forEach(id => trackDeletion(id, 'tasks'));
+      const { trackDeletions, loadDeletions } = await import('@/utils/deletionTracker');
+      trackDeletions(taskIds, 'tasks');
       import('@/utils/googleDriveSync').then(({ uploadCategory }) => {
         uploadCategory('flowist_deletions.json', loadDeletions()).catch(() => {});
       }).catch(() => {});
