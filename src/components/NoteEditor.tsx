@@ -210,7 +210,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showScanNote, setShowScanNote] = useState(false);
   const [showExtractTasks, setShowExtractTasks] = useState(false);
-  const [showImportArticle, setShowImportArticle] = useState(false);
+  
   
   const [showSketchLibrary, setShowSketchLibrary] = useState(false);
   
