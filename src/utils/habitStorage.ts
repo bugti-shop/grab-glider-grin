@@ -32,7 +32,7 @@ export const loadHabits = async (): Promise<Habit[]> => {
     const tx = database.transaction([STORE_NAME], 'readonly');
     const store = tx.objectStore(STORE_NAME);
     const req = store.getAll();
-    req.onsuccess = () => resolve(req.result || []);
+    req.onsuccess = () => resolve(((req.result as Habit[]) || []).map(normalizeHabit));
     req.onerror = () => resolve([]);
   });
 };
