@@ -372,9 +372,19 @@ const Habits = () => {
           <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => navigate('/todo/habits/stats')}>
             <PieChart className="h-5 w-5" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-10 w-10">
-            <LayoutGrid className="h-5 w-5" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10" aria-label="More options">
+                <LayoutGrid className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                <Download className="h-4 w-4 mr-2" />
+                Import Habits
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => navigate('/todo/habits/sections')}>
             <SlidersHorizontal className="h-5 w-5" />
           </Button>
