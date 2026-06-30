@@ -643,28 +643,35 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
             </button>
           )}
 
-          {/* White noise volume bar — visible only when white noise is on */}
+          {/* Sound selection + volume — visible only when sound is on */}
           {prefs.whiteNoise && (
-            <div className="mt-6 w-full max-w-xs px-6 flex items-center gap-3">
+            <div className="mt-6 w-full max-w-xs px-6 space-y-2">
               <button
-                onClick={() => updatePrefs({ whiteNoiseMuted: !prefs.whiteNoiseMuted })}
-                className="h-9 w-9 grid place-items-center rounded-full bg-white/15 hover:bg-white/25"
-                aria-label={prefs.whiteNoiseMuted ? 'Unmute' : 'Mute'}
+                onClick={() => setShowSoundLib(true)}
+                className="w-full text-xs text-white/80 hover:text-white flex items-center justify-center gap-1.5"
               >
-                {prefs.whiteNoiseMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                <Music2 className="h-3.5 w-3.5" />
+                {currentTrack ? `${currentTrack.emoji} ${currentTrack.name}` : 'White Noise (synth)'} · change
               </button>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(prefs.whiteNoiseVolume * 100)}
-                onChange={(e) => updatePrefs({ whiteNoiseVolume: Number(e.target.value) / 100, whiteNoiseMuted: false })}
-                className="flex-1 accent-white"
-                aria-label="White noise volume"
-              />
-              <span className="text-xs tabular-nums w-8 text-right text-white/80">
-                {prefs.whiteNoiseMuted ? 0 : Math.round(prefs.whiteNoiseVolume * 100)}
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => updatePrefs({ whiteNoiseMuted: !prefs.whiteNoiseMuted })}
+                  className="h-9 w-9 grid place-items-center rounded-full bg-white/15 hover:bg-white/25"
+                  aria-label={prefs.whiteNoiseMuted ? 'Unmute' : 'Mute'}
+                >
+                  {prefs.whiteNoiseMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                </button>
+                <input
+                  type="range" min={0} max={100}
+                  value={Math.round(prefs.whiteNoiseVolume * 100)}
+                  onChange={(e) => updatePrefs({ whiteNoiseVolume: Number(e.target.value) / 100, whiteNoiseMuted: false })}
+                  className="flex-1 accent-white"
+                  aria-label="Volume"
+                />
+                <span className="text-xs tabular-nums w-8 text-right text-white/80">
+                  {prefs.whiteNoiseMuted ? 0 : Math.round(prefs.whiteNoiseVolume * 100)}
+                </span>
+              </div>
             </div>
           )}
         </div>
