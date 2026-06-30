@@ -200,11 +200,12 @@ const Habits = () => {
           : [...others, { date: dateKey, completed: next === 'done', status: next, note: rec?.note }],
       updatedAt: new Date().toISOString(),
     };
+    const withMilestones = fireMilestoneToasts(habit, updated);
     const previous = habits;
-    setHabits((h) => h.map((x) => (x.id === habit.id ? updated : x)));
+    setHabits((h) => h.map((x) => (x.id === habit.id ? withMilestones : x)));
     try {
-      await saveHabit(updated);
-      if (next === 'done' && current !== 'done') fireChainToast(updated);
+      await saveHabit(withMilestones);
+      if (next === 'done' && current !== 'done') fireChainToast(withMilestones);
     } catch {
       setHabits(previous);
       toast.error('Could not save check-in. Please try again.');
