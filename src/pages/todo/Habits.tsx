@@ -87,6 +87,24 @@ const Habits = () => {
     navigate(`/todo/habits/${active.habitId}`, { replace: true });
   }, [navigate]);
 
+  // Handle widget tap deep-link: /todo/habits?check=<id> → cycle that habit.
+  useEffect(() => {
+    if (habits.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const checkId = params.get('check');
+    if (!checkId) return;
+    const target = habits.find((h) => h.id === checkId);
+    if (target) {
+      cycleStatus(target);
+      toast.success(`${target.emoji || '✨'} ${target.name} — checked in`);
+    }
+    // Clean the URL so a refresh doesn't re-trigger.
+    params.delete('check');
+    const next = window.location.pathname + (params.toString() ? `?${params}` : '');
+    window.history.replaceState({}, '', next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habits.length]);
+
   // 7-day strip ending today
   const weekDays = useMemo(() => {
     const today = new Date();
