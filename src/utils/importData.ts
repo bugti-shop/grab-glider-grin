@@ -529,6 +529,7 @@ const parseTodoistJSON = (text: string): ImportResult => {
           color: '#3b82f6',
           isCollapsed: false,
           order: sectionMap.size,
+          folderId: s?.project_id != null ? projectFolders.get(String(s.project_id))?.id : undefined,
         });
       }
     }
