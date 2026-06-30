@@ -1570,12 +1570,14 @@ export const TaskDetailPage = ({
         </div>
       )}
 
-      <PomodoroTimer
+      <FocusMode
         open={showPomodoro}
         onClose={() => setShowPomodoro(false)}
         taskId={task?.id}
         taskTitle={task?.text}
+        onComplete={() => { if (task && !task.completed) handleMarkAsDone(); }}
       />
+
     </div>
   );
 };
