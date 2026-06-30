@@ -266,15 +266,24 @@ export const useTodayState = () => {
       await origHandleTasksFromSync();
     };
 
+    // External selection change (e.g. after import) — read setting & sync React state.
+    const handleSelectedFolderChanged = async () => {
+      const savedFolderId = await getSetting<string | null>('todoSelectedFolder', null);
+      setSelectedFolderId(savedFolderId === 'null' ? null : savedFolderId);
+    };
+
     window.addEventListener('tasksRestored', wrappedHandleTasksFromSync);
     window.addEventListener('sectionsRestored', handleSectionsFromSync);
     window.addEventListener('foldersRestored', handleFoldersFromSync);
+    window.addEventListener('selectedFolderChanged', handleSelectedFolderChanged);
     return () => {
       window.removeEventListener('tasksRestored', wrappedHandleTasksFromSync);
       window.removeEventListener('sectionsRestored', handleSectionsFromSync);
       window.removeEventListener('foldersRestored', handleFoldersFromSync);
+      window.removeEventListener('selectedFolderChanged', handleSelectedFolderChanged);
     };
   }, []);
+
 
   // Debounced save — reduced to 300ms so IndexedDB cache stays fresh for sync
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
