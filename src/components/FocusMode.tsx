@@ -357,10 +357,12 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     const s = sessionRef.current;
     if (!s) { startSession(); return; }
     const now = Date.now();
-    s.endAt = now + (s.remainingSec ?? remaining) * 1000;
+    const remainAtResume = (s.remainingSec ?? remaining);
+    s.endAt = now + remainAtResume * 1000;
     s.remainingSec = undefined;
     s.lastEventAt = now;
     writeSession(s);
+    setRemaining(remainAtResume);
     setRunning(true);
   };
 
