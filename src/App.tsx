@@ -466,6 +466,7 @@ const AppRoutes = () => {
             <Route path="/w/new/regular" element={<WidgetNewRegular />} />
             <Route path="/w/new/sketch" element={<WidgetNewSketch />} />
             <Route path="/mustafabugti890" element={<PremiumUnlock />} />
+            <Route path="/business" element={<Business />} />
             <Route path="*" element={<NotFound />} />
 
           </Routes>
