@@ -1,7 +1,10 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Folder as FolderIcon, Plus, Edit2, Trash2, FolderOpen, FolderPlus, FolderMinus, MoreVertical, Star, ArrowUpDown, Clock, FileText, StickyNote, CheckSquare, Filter, Code, Palette, Receipt, Archive, LayoutGrid, List, PenTool, Upload } from 'lucide-react';
+import { Folder as FolderIcon, Plus, Edit2, Trash2, FolderOpen, FolderPlus, FolderMinus, MoreVertical, Star, ArrowUpDown, Clock, FileText, StickyNote, CheckSquare, Filter, Code, Palette, Receipt, Archive, LayoutGrid, List, PenTool, Upload, Download } from 'lucide-react';
 import { ImportDataSheet } from '@/components/ImportDataSheet';
+import { toast } from 'sonner';
+import { loadNotesFromDB } from '@/utils/noteStorage';
+import { exportNotesCsv } from '@/utils/csvExport';
 import { cn } from '@/lib/utils';
 import { Folder, Note, NoteType } from '@/types/note';
 import { Button } from '@/components/ui/button';
