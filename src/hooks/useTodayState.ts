@@ -41,6 +41,12 @@ const shouldIncludeUnfiledInFolder = (folders: Folder[], selectedFolderId: strin
   return folders.find((folder) => folder.id === selectedFolderId)?.isDefault === true;
 };
 
+const getFallbackFolderId = (folders: Folder[]): string | null => {
+  if (folders.length === 0) return null;
+  const sorted = [...folders].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  return sorted[0]?.id ?? null;
+};
+
 const getDefaultSections = (t: (key: string) => string): TaskSection[] => [
   { id: 'default', name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 }
 ];
@@ -137,6 +143,7 @@ export const useTodayState = () => {
   const { data: streakData, weekData: streakWeekData } = useStreak({ autoCheck: false });
 
   const smartListData = useSmartLists(items);
+  const effectiveSelectedFolderId = selectedFolderId ?? getFallbackFolderId(folders);
 
   // Sync showCompleted with tasks settings
   useEffect(() => {
@@ -380,6 +387,7 @@ export const useTodayState = () => {
 
   // Offload filtering + sorting to Web Worker
   useEffect(() => {
+    if (!settingsLoaded || !effectiveSelectedFolderId) return;
     // For a single checkbox/delete tap, the existing worker result is still
     // usable because we map it back onto the latest task objects below. Avoid
     // re-serializing 100k+ tasks immediately after every tap.
@@ -389,13 +397,13 @@ export const useTodayState = () => {
       return;
     }
 
-    const allowedFolderIds = getStrictAllowedFolderIds(folders, selectedFolderId);
-    const includeUnfiledInSelectedFolder = shouldIncludeUnfiledInFolder(folders, selectedFolderId);
+    const allowedFolderIds = getStrictAllowedFolderIds(folders, effectiveSelectedFolderId);
+    const includeUnfiledInSelectedFolder = shouldIncludeUnfiledInFolder(folders, effectiveSelectedFolderId);
 
     const payload = {
       items,
       smartList,
-      selectedFolderId,
+      selectedFolderId: effectiveSelectedFolderId,
       allowedFolderIds,
       includeUnfiledInSelectedFolder,
       priorityFilter,
@@ -414,7 +422,7 @@ export const useTodayState = () => {
       workerItemsVersionRef.current += 1;
     }
     const allowedKey = allowedFolderIds ? allowedFolderIds.join('.') : '';
-    const key = `${smartList}|${selectedFolderId}|${allowedKey}|${includeUnfiledInSelectedFolder ? 1 : 0}|${priorityFilter}|${statusFilter}|${dateFilter}|${tagFilter.join(',')}|${sortBy}|${deferredSearch}|${items.length}|${workerItemsVersionRef.current}|${cacheVer}`;
+    const key = `${smartList}|${effectiveSelectedFolderId}|${allowedKey}|${includeUnfiledInSelectedFolder ? 1 : 0}|${priorityFilter}|${statusFilter}|${dateFilter}|${tagFilter.join(',')}|${sortBy}|${deferredSearch}|${items.length}|${workerItemsVersionRef.current}|${cacheVer}`;
     if (key === workerPayloadRef.current && workerResult) return;
     workerPayloadRef.current = key;
 
@@ -423,11 +431,12 @@ export const useTodayState = () => {
         if (result) setWorkerResult(result);
       });
     }
-  }, [items, folders, smartList, selectedFolderId, priorityFilter, statusFilter, dateFilter, tagFilter, sortBy, deferredSearch]);
+  }, [items, folders, smartList, effectiveSelectedFolderId, priorityFilter, statusFilter, dateFilter, tagFilter, sortBy, deferredSearch, settingsLoaded]);
 
   // Main-thread fallback (used when worker hasn't returned yet or is unavailable)
   const processedItemsFallback = useMemo(() => {
     // If worker result is available, skip main-thread computation
+    if (!settingsLoaded || !effectiveSelectedFolderId) return [];
     if (workerResult && worker.isAvailable) return null;
 
     let filtered = items.filter(item => {
@@ -435,8 +444,8 @@ export const useTodayState = () => {
         const smartListFilter = getSmartListFilter(smartList);
         if (!smartListFilter(item)) return false;
       }
-      const allowedFolderIds = selectedFolderId ? new Set(getStrictAllowedFolderIds(folders, selectedFolderId) ?? []) : null;
-      const includeUnfiled = shouldIncludeUnfiledInFolder(folders, selectedFolderId);
+      const allowedFolderIds = effectiveSelectedFolderId ? new Set(getStrictAllowedFolderIds(folders, effectiveSelectedFolderId) ?? []) : null;
+      const includeUnfiled = shouldIncludeUnfiledInFolder(folders, effectiveSelectedFolderId);
       const folderMatch = allowedFolderIds ? (item.folderId ? allowedFolderIds.has(item.folderId) : includeUnfiled) : true;
       const priorityMatch = priorityFilter === 'all' ? true : item.priority === priorityFilter;
       let statusMatch = true;
@@ -481,11 +490,12 @@ export const useTodayState = () => {
       }
     });
     return filtered;
-  }, [workerResult, worker.isAvailable, items, folders, selectedFolderId, priorityFilter, statusFilter, dateFilter, tagFilter, smartList, sortBy]);
+  }, [workerResult, worker.isAvailable, items, folders, effectiveSelectedFolderId, priorityFilter, statusFilter, dateFilter, tagFilter, smartList, sortBy, settingsLoaded]);
 
   // Use worker result when available, fallback otherwise
   const processedItems = useMemo(() => {
     if (workerResult && worker.isAvailable) {
+      if (!settingsLoaded || !effectiveSelectedFolderId) return [];
       // Preserve worker ordering without sorting the full local array again.
       // Sorting / serializing 100k tasks after every checkbox tap or bulk
       // duplicate made the whole app feel stuck.  If we intentionally skipped a
@@ -494,8 +504,8 @@ export const useTodayState = () => {
       const byId = new Map(items.map(i => [i.id, i]));
       const workerOrdered = [...workerResult.uncompleted, ...workerResult.completed];
       const workerIds = new Set(workerOrdered.map((t: any) => t.id));
-      const allowedFolderIds = selectedFolderId ? new Set(getStrictAllowedFolderIds(folders, selectedFolderId) ?? []) : null;
-      const includeUnfiled = shouldIncludeUnfiledInFolder(folders, selectedFolderId);
+      const allowedFolderIds = effectiveSelectedFolderId ? new Set(getStrictAllowedFolderIds(folders, effectiveSelectedFolderId) ?? []) : null;
+      const includeUnfiled = shouldIncludeUnfiledInFolder(folders, effectiveSelectedFolderId);
       const today = startOfDay(new Date());
       const matchesCurrentFilters = (item: TodoItem) => {
         if (smartList !== 'all' && !getSmartListFilter(smartList)(item)) return false;
@@ -527,7 +537,7 @@ export const useTodayState = () => {
       return [...optimisticExtras, ...ordered];
     }
     return processedItemsFallback || [];
-  }, [workerResult, worker.isAvailable, items, processedItemsFallback, folders, selectedFolderId, smartList, priorityFilter, statusFilter, dateFilter, tagFilter, deferredSearch]);
+  }, [workerResult, worker.isAvailable, items, processedItemsFallback, folders, effectiveSelectedFolderId, smartList, priorityFilter, statusFilter, dateFilter, tagFilter, deferredSearch, settingsLoaded]);
 
   const searchFilteredItems = useMemo(() => {
     // If worker already handled search, skip client-side search
@@ -552,13 +562,13 @@ export const useTodayState = () => {
   const sortedSections = useMemo(() => {
     const visibleTaskSectionIds = new Set(searchFilteredItems.map(item => item.sectionId).filter(Boolean) as string[]);
     const defaultSectionId = sections[0]?.id;
-    const allowedFolderIds = selectedFolderId ? new Set(getStrictAllowedFolderIds(folders, selectedFolderId) ?? []) : null;
+    const allowedFolderIds = effectiveSelectedFolderId ? new Set(getStrictAllowedFolderIds(folders, effectiveSelectedFolderId) ?? []) : null;
     const filtered = sections.filter(s => {
-      if (!selectedFolderId) return !s.folderId;
+      if (!effectiveSelectedFolderId) return false;
       return s.id === defaultSectionId || visibleTaskSectionIds.has(s.id) || (s.folderId ? allowedFolderIds?.has(s.folderId) : false);
     });
     return filtered.sort((a, b) => a.order - b.order);
-  }, [sections, folders, selectedFolderId, searchFilteredItems]);
+  }, [sections, folders, effectiveSelectedFolderId, searchFilteredItems]);
 
   const toggleSubtasks = useCallback((taskId: string) => {
     setExpandedTasks(prev => {

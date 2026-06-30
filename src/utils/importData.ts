@@ -3,7 +3,7 @@
 // Evernote ENEX imports preserve notebook structure as folders and migrate
 // inline image / PDF resources into IndexedDB-backed attachments.
 
-import { TodoItem, Note, Priority, Folder, TaskAttachment } from '@/types/note';
+import { TodoItem, Note, Priority, Folder, TaskAttachment, TaskSection } from '@/types/note';
 import { saveTaskMedia } from '@/utils/taskMediaStorage';
 
 export type ImportSource = 'todoist' | 'ticktick' | 'notion' | 'evernote' | 'csv-tasks' | 'csv-notes' | 'json';
@@ -21,6 +21,8 @@ export interface ImportResult {
   notes: Note[];
   /** Folders detected in the import (e.g. Evernote notebooks). Optional. */
   folders?: Folder[];
+  /** Task sections detected in the import (e.g. Todoist sections). Optional. */
+  sections?: TaskSection[];
   error?: string;
   stats: {
     tasks: number;
@@ -138,8 +140,8 @@ const parseTodoistCSV = (text: string): ImportResult => {
     if (rows.length === 0) return { success: false, tasks: [], notes: [], error: 'No data found in CSV', stats: { tasks: 0, notes: 0 } };
 
     const rootTasks: TodoItem[] = [];
-    const folders: Folder[] = [];
-    let currentFolderId: string | undefined;
+    const sections: TaskSection[] = [];
+    let currentSectionId: string | undefined;
     let failed = 0;
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -161,9 +163,15 @@ const parseTodoistCSV = (text: string): ImportResult => {
         if (!content) continue;
 
         if (type === 'section') {
-          const folder: Folder = { id: generateId(), name: content, createdAt: new Date() } as Folder;
-          folders.push(folder);
-          currentFolderId = folder.id;
+          const section: TaskSection = {
+            id: generateId(),
+            name: content,
+            color: '#3b82f6',
+            isCollapsed: false,
+            order: sections.length,
+          };
+          sections.push(section);
+          currentSectionId = section.id;
           stack.length = 0; // sections reset nesting
           continue;
         }
@@ -188,7 +196,7 @@ const parseTodoistCSV = (text: string): ImportResult => {
           priority: priorityMap[rawPriority] || 'none',
           description: row['DESCRIPTION'] || row['description'] || undefined,
           dueDate: dateStr ? new Date(dateStr) : undefined,
-          folderId: currentFolderId,
+          sectionId: currentSectionId,
           createdAt: new Date(),
           modifiedAt: new Date(),
         } as TodoItem;
@@ -217,8 +225,8 @@ const parseTodoistCSV = (text: string): ImportResult => {
       success: true,
       tasks: rootTasks,
       notes: [],
-      folders,
-      stats: { tasks: countAll(rootTasks), notes: 0, folders: folders.length, failed },
+      sections,
+      stats: { tasks: countAll(rootTasks), notes: 0, folders: 0, failed },
       errors: errors.length ? errors : undefined,
       warnings: warnings.length ? warnings : undefined,
     };
@@ -510,6 +518,22 @@ const parseTodoistJSON = (text: string): ImportResult => {
       }
     }
 
+    const sectionMap = new Map<string, TaskSection>();
+    if (raw && typeof raw === 'object' && Array.isArray((raw as any).sections)) {
+      for (const s of (raw as any).sections) {
+        const sid = s?.id != null ? String(s.id) : '';
+        if (!sid) continue;
+        sectionMap.set(sid, {
+          id: generateId(),
+          name: String(s.name || `Section ${sid}`),
+          color: '#3b82f6',
+          isCollapsed: false,
+          order: sectionMap.size,
+          folderId: s?.project_id != null ? projectFolders.get(String(s.project_id))?.id : undefined,
+        });
+      }
+    }
+
     const tasks: TodoItem[] = [];
     const errors: string[] = [];
     let failed = 0;
@@ -546,6 +570,23 @@ const parseTodoistJSON = (text: string): ImportResult => {
           folderId = folder.id;
         }
 
+        const sourceSectionId = t.section_id != null ? String(t.section_id) : '';
+        let sectionId: string | undefined;
+        if (sourceSectionId) {
+          let section = sectionMap.get(sourceSectionId);
+          if (!section) {
+            section = {
+              id: generateId(),
+              name: `Section ${sourceSectionId}`,
+              color: '#3b82f6',
+              isCollapsed: false,
+              order: sectionMap.size,
+            };
+            sectionMap.set(sourceSectionId, section);
+          }
+          sectionId = section.id;
+        }
+
         const pNum = Number(t.priority);
         const priority = priorityMap[Number.isFinite(pNum) && pNum >= 1 && pNum <= 4 ? pNum : 1] || 'none';
 
@@ -558,6 +599,7 @@ const parseTodoistJSON = (text: string): ImportResult => {
           dueDate: resolveDue(t),
           tags: Array.isArray(t.labels) ? t.labels.map(String) : undefined,
           folderId,
+          sectionId,
           createdAt: t.created_at ? new Date(t.created_at) : new Date(),
           modifiedAt: new Date(),
         } as TodoItem);
@@ -572,8 +614,9 @@ const parseTodoistJSON = (text: string): ImportResult => {
     }
 
     const folders = Array.from(projectFolders.values());
+    const sections = Array.from(sectionMap.values());
     return {
-      success: true, tasks, notes: [], folders: folders.length ? folders : undefined,
+      success: true, tasks, notes: [], folders: folders.length ? folders : undefined, sections: sections.length ? sections : undefined,
       stats: { tasks: tasks.length, notes: 0, folders: folders.length || undefined, failed },
       errors: errors.length ? errors : undefined,
       warnings: warnings.length ? warnings : undefined,
@@ -966,6 +1009,7 @@ const parseGenericJSON = (
   const tasks: TodoItem[] = [];
   const notes: Note[] = [];
   const folders: Folder[] = [];
+  const sections: TaskSection[] = [];
   const errors: string[] = [];
   let failed = 0;
 
@@ -997,7 +1041,10 @@ const parseGenericJSON = (
           priority: (item.priority as Priority) || 'none',
           dueDate: item.dueDate ? new Date(String(item.dueDate)) : undefined,
           tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
-          createdAt: Number(item.createdAt ?? Date.now()),
+          folderId: typeof item.folderId === 'string' ? item.folderId : undefined,
+          sectionId: typeof item.sectionId === 'string' ? item.sectionId : undefined,
+          createdAt: item.createdAt ? new Date(String(item.createdAt)) : new Date(),
+          modifiedAt: item.modifiedAt ? new Date(String(item.modifiedAt)) : new Date(),
         } as unknown as TodoItem);
       }
     } catch (e) {
@@ -1014,6 +1061,8 @@ const parseGenericJSON = (
     if (Array.isArray(obj.tasks)) (obj.tasks as Record<string, unknown>[]).forEach((t, i) => pushItem({ ...t, type: 'task' }, i));
     if (Array.isArray(obj.notes)) (obj.notes as Record<string, unknown>[]).forEach((n, i) => pushItem({ ...n, type: 'note' }, i));
     if (Array.isArray(obj.folders)) (obj.folders as Folder[]).forEach(f => { if (f && f.id && f.name) folders.push(f); });
+    if (Array.isArray(obj.sections)) (obj.sections as unknown as TaskSection[]).forEach(s => { if (s && s.id && s.name) sections.push(s); });
+    if (Array.isArray(obj.todoSections)) (obj.todoSections as unknown as TaskSection[]).forEach(s => { if (s && s.id && s.name) sections.push(s); });
     if (Array.isArray(obj.items)) items = obj.items as Record<string, unknown>[];
   } else {
     return { success: false, tasks: [], notes: [], error: 'JSON must be an array or an object with tasks/notes/items', stats: { tasks: 0, notes: 0 } };
@@ -1032,6 +1081,7 @@ const parseGenericJSON = (
     tasks,
     notes,
     folders: folders.length ? folders : undefined,
+    sections: sections.length ? sections : undefined,
     stats: { tasks: tasks.length, notes: notes.length, folders: folders.length || undefined, failed },
     errors: errors.length ? errors : undefined,
   };

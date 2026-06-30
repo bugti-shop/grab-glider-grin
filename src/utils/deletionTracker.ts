@@ -46,6 +46,24 @@ export const trackDeletion = (id: string, category: DeletionRecord['category']):
   saveDeletions(records);
 };
 
+export const trackDeletions = (ids: string[], category: DeletionRecord['category']): void => {
+  if (ids.length === 0) return;
+  const records = loadDeletions();
+  const existing = new Set(records.map((r) => `${r.category}::${r.id}`));
+  const deletedAt = Date.now();
+  let changed = false;
+
+  for (const id of ids) {
+    const key = `${category}::${id}`;
+    if (existing.has(key)) continue;
+    existing.add(key);
+    records.push({ id, category, deletedAt });
+    changed = true;
+  }
+
+  if (changed) saveDeletions(records);
+};
+
 /**
  * Merge local and remote deletion records (union, dedupe by id+category).
  */
