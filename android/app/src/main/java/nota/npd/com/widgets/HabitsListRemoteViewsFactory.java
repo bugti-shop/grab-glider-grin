@@ -111,12 +111,26 @@ public class HabitsListRemoteViewsFactory implements RemoteViewsService.RemoteVi
             rv.setTextViewText(R.id.h_meta, meta);
         }
 
-        // Per-row fill-in intent: tap row to check-in for this habit.
+        // Per-row fill-in intent: tap the row body to cycle status.
         Intent fill = new Intent();
         String path = "/todo/habits?check=" + Uri.encode(r.id);
         fill.setData(Uri.parse("codaib://widget" + path));
         fill.putExtra("widget_path", path);
         rv.setOnClickFillInIntent(R.id.h_root, fill);
+
+        // Done button: explicit "mark done" without opening UI flows.
+        Intent doneFill = new Intent();
+        String donePath = "/todo/habits?action=done&id=" + Uri.encode(r.id);
+        doneFill.setData(Uri.parse("codaib://widget" + donePath + "&t=" + System.currentTimeMillis()));
+        doneFill.putExtra("widget_path", donePath);
+        rv.setOnClickFillInIntent(R.id.h_action_done, doneFill);
+
+        // Skip button: explicit "skip today" (preserves streak via skipped status).
+        Intent skipFill = new Intent();
+        String skipPath = "/todo/habits?action=skip&id=" + Uri.encode(r.id);
+        skipFill.setData(Uri.parse("codaib://widget" + skipPath + "&t=" + System.currentTimeMillis()));
+        skipFill.putExtra("widget_path", skipPath);
+        rv.setOnClickFillInIntent(R.id.h_action_skip, skipFill);
         return rv;
     }
 }

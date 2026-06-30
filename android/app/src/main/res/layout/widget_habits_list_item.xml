@@ -59,6 +59,44 @@
         android:textStyle="bold"
         android:textSize="20sp"
         android:visibility="gone"
-        android:paddingStart="8dp"
-        android:paddingEnd="4dp" />
+        android:paddingStart="6dp"
+        android:paddingEnd="2dp" />
+
+    <!-- Quick Done button: marks the habit done for today without opening the app. -->
+    <TextView
+        android:id="@+id/h_action_done"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="34dp"
+        android:gravity="center"
+        android:text="✓"
+        android:textColor="#10B981"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:layout_marginStart="4dp"
+        android:background="@drawable/widget_icon_btn_bg"
+        android:contentDescription="Mark done" />
+
+    <!-- Quick Skip button: marks today as skipped (preserves streak protections). -->
+    <TextView
+        android:id="@+id/h_action_skip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="34dp"
+        android:gravity="center"
+        android:text="↷"
+        android:textColor="#6B7280"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:layout_marginStart="4dp"
+        android:background="@drawable/widget_icon_btn_bg"
+        android:contentDescription="Skip today" />
 </LinearLayout>
