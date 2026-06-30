@@ -62,6 +62,7 @@ const HabitNew = () => {
   const [name, setName] = useState(prefill?.name ?? '');
   const [emoji, setEmoji] = useState(prefill?.emoji ?? '🍌');
   const [quote, setQuote] = useState(prefill?.quote ?? QUOTES[0]);
+  const [kind, setKind] = useState<HabitKind>('build');
 
   // Details
   const [frequency, setFrequency] = useState<HabitFrequencyType>('daily');
@@ -83,8 +84,15 @@ const HabitNew = () => {
   const [sections, setSections] = useState(() => loadHabitSections());
   const [sectionId, setSectionId] = useState<string>(DEFAULT_HABIT_SECTION_ID);
 
-  const [reminderTime, setReminderTime] = useState<string | null>(null);
+  const [reminders, setReminders] = useState<HabitReminder[]>([]);
   const [autoPopup, setAutoPopup] = useState(false);
+
+  // "Stack after" — id of the parent habit whose completion triggers this one.
+  const [chainAfterHabitId, setChainAfterHabitId] = useState<string | undefined>(undefined);
+  const [allHabits, setAllHabits] = useState<Habit[]>([]);
+  useEffect(() => {
+    loadHabits().then((list) => setAllHabits(list.filter((h) => !h.isArchived)));
+  }, []);
 
   useEffect(() => {
     const onSec = () => setSections(loadHabitSections());
