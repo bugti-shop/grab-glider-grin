@@ -92,6 +92,7 @@ const Settings = () => {
             <SettingsRow label={t('settings.notesSettings', 'Notes Settings')} showCrown onClick={() => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); }} />
             <SettingsRow label={t('settings.tasksSettings', 'Tasks Settings')} showCrown onClick={() => { if (requireFeature('tasks_settings')) state.setShowTasksSettingsSheet(true); }} />
             <SettingsRow label={t('settings.customizeNavigation', 'Customize Navigation')} showCrown onClick={() => state.setShowCustomizeNavigationSheet(true)} />
+            <SettingsRow label={t('settings.headerOffset', 'Header Offset (Status Bar)')} onClick={() => setShowHeaderOffsetSheet(true)} />
           </div>
 
           {/* Security Section */}
