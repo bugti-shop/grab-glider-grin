@@ -84,6 +84,12 @@ interface Props {
     html: string; title: string;
   }) => void;
   /**
+   * Called when the user finishes a multi-page batch scan in Note mode.
+   * Receives every captured page in order. Parent should OCR each page
+   * and combine them into a single note with page separators.
+   */
+  onBatchNote?: (dataUrls: string[]) => Promise<void> | void;
+  /**
    * Called when a barcode is decoded in `barcode` mode. If omitted, decoded
    * barcodes are surfaced as a toast and the raw frame is still sent via
    * onCapture so the caller can decide how to handle it.
