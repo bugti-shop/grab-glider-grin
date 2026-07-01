@@ -117,9 +117,23 @@ const Notes = () => {
     } catch {}
     const params = new URLSearchParams(window.location.search);
     const openId = params.get('openNote');
+    const focusText = params.get('focusText');
     if (openId && openById(openId)) {
-      // Only strip the param once the note actually opened — otherwise wait for notes to load.
+      // If the caller (e.g. the Home NoteBlocksWidget) asked us to focus a
+      // specific block, hand it off to NoteEditor once the editor has mounted
+      // and rendered its content. We rely on a small retry window because the
+      // rich-text DOM is not immediately available on first paint.
+      if (focusText) {
+        const start = Date.now();
+        const tryFocus = () => {
+          window.dispatchEvent(new CustomEvent('lovable:focusNoteBlock', { detail: { text: focusText } }));
+          if (Date.now() - start < 3000) window.setTimeout(tryFocus, 250);
+        };
+        window.setTimeout(tryFocus, 300);
+      }
+      // Only strip the params once the note actually opened — otherwise wait for notes to load.
       params.delete('openNote');
+      params.delete('focusText');
       const qs = params.toString();
       window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
