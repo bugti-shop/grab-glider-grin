@@ -416,7 +416,9 @@ export const scheduleWithTimeBlocks = (
   };
 };
 
-/** Merge scheduler updates into a TodoItem[]. */
+/** Merge scheduler updates into a TodoItem[]. Writes `scheduledDate` (when the
+ *  user plans to work on the task) and keeps `deadline` untouched. Also mirrors
+ *  the start to `dueDate` for backward compatibility with older list views. */
 export const applyTimeBlockUpdates = (
   tasks: TodoItem[],
   updates: TimeBlockResult['updates'],
@@ -425,6 +427,11 @@ export const applyTimeBlockUpdates = (
   return tasks.map(t => {
     const u = byId.get(t.id);
     if (!u) return t;
-    return { ...t, dueDate: u.startDate, reminderTime: u.startDate };
+    return {
+      ...t,
+      scheduledDate: u.startDate,
+      dueDate: t.dueDate ?? u.startDate,
+      reminderTime: u.startDate,
+    };
   });
 };
