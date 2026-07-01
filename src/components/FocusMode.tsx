@@ -576,7 +576,18 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   const continueInBackground = () => {
     setShowBackgroundPrompt(false);
     setBackgrounded(true);
-    onClose(); // hides the host sheet/page wrapper; bar will keep showing
+    // Post the native foreground-service notification immediately BEFORE the
+    // React sheet unmounts, otherwise closing TaskDetail can kill the JS timer
+    // before the effect gets a chance to publish it.
+    void showFocusOngoing({
+      taskTitle: sessionRef.current?.taskTitle,
+      remainingSec: sessionRef.current?.endAt
+        ? Math.max(0, Math.floor((sessionRef.current.endAt - Date.now()) / 1000))
+        : remaining,
+      endAtMs: sessionRef.current?.endAt,
+      running,
+    });
+    onClose(); // hides the host sheet/page wrapper; native service keeps running
   };
 
   const exitFully = () => {
