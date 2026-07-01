@@ -22,7 +22,6 @@ import {
   validateAttachment,
   formatBytes,
   ATTACHMENT_LIMITS,
-  escapeMarkdown,
 } from '@/utils/webClipper';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
