@@ -959,14 +959,17 @@ const Today = () => {
       {/* All sheets/dialogs extracted to TodaySheets */}
       <Suspense fallback={null}><TodaySheets
         isInputOpen={isInputOpen}
+        preventInputBackdropClose={widgetMode}
         onCloseInput={() => {
           setIsInputOpen(false); setInputSectionId(null);
           if (widgetModeRef.current) {
             widgetModeRef.current = false;
+            setWidgetMode(false);
             // Return user to the launcher — the widget-quick-add flow
             // should feel like a launcher overlay, not a full app trip.
+            // Only fires on EXPLICIT close (X / back / Save & close),
+            // never after individual task adds (sheet stays sticky).
             import('@capacitor/app').then(({ App }) => {
-              // minimizeApp is Android-only; fall back to exitApp otherwise.
               const anyApp: any = App;
               if (typeof anyApp.minimizeApp === 'function') anyApp.minimizeApp().catch(() => {});
               else App.exitApp().catch(() => {});
