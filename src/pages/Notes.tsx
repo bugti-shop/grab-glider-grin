@@ -375,6 +375,39 @@ const Notes = () => {
   // Filter notes using lightweight metadata for instant performance
   const notesMetaById = useMemo(() => new Map(notesMeta.map(meta => [meta.id, meta])), [notesMeta]);
 
+  // Debounced semantic search when semanticMode is enabled
+  useEffect(() => {
+    if (!semanticMode) { setSemanticHits(null); return; }
+    const q = deferredSearchQuery.trim();
+    if (!q) { setSemanticHits(null); return; }
+    let cancelled = false;
+    setSemanticLoading(true);
+    const handle = window.setTimeout(async () => {
+      try {
+        const hits = await semanticSearchNotes(q, 20);
+        if (!cancelled) setSemanticHits(hits);
+      } catch (e: any) {
+        if (!cancelled) {
+          setSemanticHits([]);
+          toast.error(e?.message || 'Semantic search failed');
+        }
+      } finally {
+        if (!cancelled) setSemanticLoading(false);
+      }
+    }, 350);
+    return () => { cancelled = true; window.clearTimeout(handle); };
+  }, [semanticMode, deferredSearchQuery]);
+
+  const semanticNoteIds = useMemo(
+    () => semanticHits ? new Set(semanticHits.map(h => h.note_id)) : null,
+    [semanticHits],
+  );
+  const semanticRank = useMemo(() => {
+    const m = new Map<string, number>();
+    (semanticHits ?? []).forEach((h, i) => m.set(h.note_id, i));
+    return m;
+  }, [semanticHits]);
+
   const filteredNotes = useMemo(() => notes.filter(note => {
     const meta = notesMetaById.get(note.id);
 
@@ -392,6 +425,9 @@ const Notes = () => {
     }
 
     if (deferredSearchQuery.trim()) {
+      if (semanticMode) {
+        return semanticNoteIds ? semanticNoteIds.has(note.id) : false;
+      }
       const search = deferredSearchQuery.toLowerCase();
       const titleMatch = note.title.toLowerCase().includes(search);
       const contentMatch = meta?.contentPreview?.toLowerCase().includes(search) ?? false;
@@ -399,9 +435,15 @@ const Notes = () => {
     }
 
     return true;
-  }), [notes, notesMetaById, viewMode, deferredFilterTagIds, deferredSearchQuery]);
+  }), [notes, notesMetaById, viewMode, deferredFilterTagIds, deferredSearchQuery, semanticMode, semanticNoteIds]);
 
   const sortedNotes = useMemo(() => [...filteredNotes].sort((a, b) => {
+    // In semantic mode with an active query, order by relevance
+    if (semanticMode && deferredSearchQuery.trim() && semanticRank.size > 0) {
+      const ra = semanticRank.get(a.id) ?? 999;
+      const rb = semanticRank.get(b.id) ?? 999;
+      if (ra !== rb) return ra - rb;
+    }
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return 1;
     if (a.isPinned && b.isPinned) {
