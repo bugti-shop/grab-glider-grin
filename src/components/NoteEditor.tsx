@@ -79,6 +79,8 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { TagManagementSheet } from './TagManagementSheet';
+import PublishNoteSheet from './PublishNoteSheet';
+import { syncNoteChecklistToTasks } from '@/utils/syncNoteTasks';
 
 interface NoteEditorProps {
   note: Note | null;
@@ -194,6 +196,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   // Tag state
   const [noteTagIds, setNoteTagIds] = useState<string[]>([]);
   const [showTagSheet, setShowTagSheet] = useState(false);
+  const [showPublishSheet, setShowPublishSheet] = useState(false);
   const [newFolderColor, setNewFolderColor] = useState('#3B82F6');
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [isNoteLinkingOpen, setIsNoteLinkingOpen] = useState(false);
@@ -605,6 +608,15 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
       // Save version history (only on "full" save)
       saveNoteVersion(savedNote, note ? 'edit' : 'create');
+
+      // Bridge checklist items inside the note to the global task list
+      syncNoteChecklistToTasks(savedNote)
+        .then((rewritten) => {
+          if (rewritten && rewritten !== savedNote.content) {
+            setContentState(rewritten);
+          }
+        })
+        .catch((e) => console.warn('[NoteEditor] task sync failed', e));
     }
 
     persistNoteToIndexedDB(savedNote);
@@ -1177,6 +1189,18 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 <DropdownMenuItem onClick={() => setIsMetaDescInputOpen(true)}>
                   <FileText className="h-4 w-4 mr-2" />
                   {metaDescription ? t('editor.editMetaDescription') : t('editor.addMetaDescription')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    // Ensure latest content is saved before opening publish sheet
+                    await handleSaveRef.current?.();
+                    setShowPublishSheet(true);
+                  }}
+                >
+                  <Globe className="h-4 w-4 mr-2 text-primary" />
+                  <span className="font-medium">
+                    {t('editor.publishToWeb', 'Publish to web')}
+                  </span>
                 </DropdownMenuItem>
 
 
@@ -2266,6 +2290,14 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           setTimeout(() => handleSaveRef.current?.(), 100);
         }}
       />
+
+      {/* Publish to Web Sheet */}
+      <PublishNoteSheet
+        open={showPublishSheet}
+        onOpenChange={setShowPublishSheet}
+        note={buildCurrentNote()}
+      />
+
 
       {/* Sketch Note Title + Meta Description Dialog */}
       {showSketchMetaDialog && (

@@ -687,6 +687,48 @@ export type Database = {
         }
         Relationships: []
       }
+      public_notes: {
+        Row: {
+          content: string
+          cover_image: string | null
+          created_at: string
+          id: string
+          note_id: string
+          published_at: string
+          slug: string
+          title: string
+          updated_at: string
+          user_id: string
+          view_count: number
+        }
+        Insert: {
+          content?: string
+          cover_image?: string | null
+          created_at?: string
+          id?: string
+          note_id: string
+          published_at?: string
+          slug: string
+          title?: string
+          updated_at?: string
+          user_id: string
+          view_count?: number
+        }
+        Update: {
+          content?: string
+          cover_image?: string | null
+          created_at?: string
+          id?: string
+          note_id?: string
+          published_at?: string
+          slug?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
       sections: {
         Row: {
           created_at: string
