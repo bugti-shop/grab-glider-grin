@@ -86,20 +86,28 @@ public class QuickAddActivity extends Activity {
         input.postDelayed(() -> ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showSoftInput(input, 0), 180);
     }
 
+    // Single monitor for the whole process — prevents two widget-triggered
+    // instances from racing on read-modify-write of the shared queue.
+    private static final Object QUEUE_LOCK = new Object();
+
     private void addTask(boolean close) {
         String text = input.getText().toString().trim();
         if (text.length() == 0) return;
         try {
-            SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
-            String raw = sp.getString(QUEUE_KEY, "[]");
-            JSONArray arr = new JSONArray(raw == null ? "[]" : raw);
-            JSONObject obj = new JSONObject();
-            obj.put("text", text);
-            obj.put("createdAt", System.currentTimeMillis());
-            arr.put(obj);
-            sp.edit().putString(QUEUE_KEY, arr.toString()).commit();
+            synchronized (QUEUE_LOCK) {
+                SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
+                String raw = sp.getString(QUEUE_KEY, "[]");
+                JSONArray arr = new JSONArray(raw == null ? "[]" : raw);
+                JSONObject obj = new JSONObject();
+                obj.put("text", text);
+                obj.put("createdAt", System.currentTimeMillis());
+                arr.put(obj);
+                // .commit() is synchronous — guarantees the write lands before
+                // the activity can be killed by the system.
+                sp.edit().putString(QUEUE_KEY, arr.toString()).commit();
+            }
             input.setText("");
-            status.setText("Added. Type another task, or tap Done.");
+            status.setText("Queued. Type another task, or tap Done.");
             refreshWidgets();
             if (close) finish();
         } catch (Exception e) {
