@@ -455,6 +455,11 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           setPhase('done');
           toast.success(`Receipt saved · ${result.merchant || 'expense'}`);
         }}
+        hasPro={hasPaidAi}
+        onRequestUpgrade={() => {
+          setShowCamera(false);
+          requireFeature('ai_dictation');
+        }}
         status={
           isExtracting
             ? {
