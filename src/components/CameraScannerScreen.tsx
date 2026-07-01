@@ -207,8 +207,8 @@ export const CameraScannerScreen = ({
       stopStream();
       return;
     }
-    // Pause camera stream while reviewing an object-count result.
-    if (objReviewFrame) return;
+    // Pause camera stream while reviewing an object-count or receipt result.
+    if (objReviewFrame || receiptReviewFrame) return;
     let cancelled = false;
     setError(null);
     setReady(false);
