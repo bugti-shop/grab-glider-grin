@@ -28,8 +28,8 @@ const useWidgetRedirect = (target: string) => {
   );
 };
 
-export const WidgetAddTask = () => useWidgetRedirect("/todo/today?add=1");
-export const WidgetNewSticky = () => useWidgetRedirect("/notesdashboard?newNote=sticky");
-export const WidgetNewLined = () => useWidgetRedirect("/notesdashboard?newNote=lined");
-export const WidgetNewRegular = () => useWidgetRedirect("/notesdashboard?newNote=regular");
-export const WidgetNewSketch = () => useWidgetRedirect("/notesdashboard?newNote=sketch");
+export const WidgetAddTask = () => useWidgetRedirect("/todo/today?add=1&widget=1");
+export const WidgetNewSticky = () => useWidgetRedirect("/notesdashboard?newNote=sticky&widget=1");
+export const WidgetNewLined = () => useWidgetRedirect("/notesdashboard?newNote=lined&widget=1");
+export const WidgetNewRegular = () => useWidgetRedirect("/notesdashboard?newNote=regular&widget=1");
+export const WidgetNewSketch = () => useWidgetRedirect("/notesdashboard?newNote=sketch&widget=1");
