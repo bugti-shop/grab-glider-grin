@@ -36,18 +36,24 @@ interface Props {
   onClose: () => void;
   /** Called with a JPEG data URL when the user captures a frame. */
   onCapture: (dataUrl: string) => void;
+  /**
+   * Called when a barcode is decoded in `barcode` mode. If omitted, decoded
+   * barcodes are surfaced as a toast and the raw frame is still sent via
+   * onCapture so the caller can decide how to handle it.
+   */
+  onBarcode?: (value: string, format: string) => void;
   /** Screen title shown at the top. Defaults to "Scan". */
   title?: string;
   /** Which mode chip should be highlighted first. */
   initialMode?: ScannerMode;
+  /**
+   * Parent-controlled status overlay. Renders a full-screen blocking layer
+   * with a spinner + label. Use to show "Uploading…" / "Processing…" while
+   * the camera view is still mounted so the user always sees progress.
+   */
+  status?: { label: string; sublabel?: string } | null;
 }
 
-const MODES: Array<{ id: ScannerMode; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-  { id: 'note', label: 'Scan Note', icon: ScanLine },
-  { id: 'barcode', label: 'Barcode', icon: Barcode },
-  { id: 'image', label: 'Image', icon: ImagePlus },
-  { id: 'gallery', label: 'Gallery', icon: ImageIcon },
-];
 
 export const CameraScannerScreen = ({
   isOpen,
