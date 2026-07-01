@@ -53,6 +53,8 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       setIsExtracting(false);
       setHasRun(false);
       setShowCamera(false);
+      setPhase('idle');
+      setErrorLabel(null);
       captureLockRef.current = false;
       releaseAllAiLocks();
     }
@@ -62,13 +64,29 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     if (captureLockRef.current) return;
     captureLockRef.current = true;
     try {
+      setPhase('capturing');
       const dataUrl = await captureImageForAI('gallery');
-      if (!dataUrl) return;
+      if (!dataUrl) {
+        setPhase('idle');
+        return;
+      }
       setImageDataUrl(dataUrl);
       await runExtraction(dataUrl);
     } finally {
       captureLockRef.current = false;
     }
+  };
+
+  const handleBarcode = (value: string, format: string) => {
+    if (!value) return;
+    const safe = value.trim();
+    const html =
+      `<h2>Scanned ${format.replace(/_/g, ' ')}</h2>` +
+      `<p><code>${safe.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]!))}</code></p>`;
+    onInsertHtml(html, `Scanned code · ${safe.slice(0, 32)}`);
+    toast.success(t('scanNote.barcodeInserted', 'Barcode inserted'));
+    setShowCamera(false);
+    onClose();
   };
 
   const runExtraction = async (dataUrl: string) => {
@@ -90,9 +108,11 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     setHasRun(false);
     setHtml('');
     setSuggestedTitle('');
+    setErrorLabel(null);
     try {
       await yieldToPaint();
-      const { data, error } = await supabase.functions.invoke(
+      setPhase('uploading');
+      const invokePromise = supabase.functions.invoke(
         'ai-extract-note-from-image',
         {
           body: {
@@ -104,6 +124,9 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           timeout: AI_SCAN_TIMEOUT_MS,
         },
       );
+      // Once the upload has flushed, we're really waiting on the model.
+      setTimeout(() => setPhase((p) => (p === 'uploading' ? 'processing' : p)), 800);
+      const { data, error } = await invokePromise;
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
 
@@ -112,6 +135,9 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       setHtml(rawHtml);
       setSuggestedTitle(title);
       setHasRun(true);
+      setPhase('done');
+
+
 
       if (!rawHtml) {
         toast.info(t('scanNote.noText', 'No readable text found in this image'));
