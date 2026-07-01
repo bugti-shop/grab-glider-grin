@@ -344,6 +344,68 @@ function pickMeta(doc: Document, names: string[]): string {
   return "";
 }
 
+function escapeHtml(s: string): string {
+  return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function mdInline(s: string): string {
+  return escapeHtml(s)
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" />')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+}
+
+function markdownToHtml(md: string): string {
+  const blocks: string[] = [];
+  let para: string[] = [];
+  const flush = () => { if (para.length) { blocks.push(`<p>${mdInline(para.join(" "))}</p>`); para = []; } };
+  for (const raw of md.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) { flush(); continue; }
+    if (/^#{1,6}\s+/.test(line)) {
+      flush();
+      const level = Math.min(3, line.match(/^#+/)?.[0].length || 2);
+      blocks.push(`<h${level}>${mdInline(line.replace(/^#{1,6}\s+/, ""))}</h${level}>`);
+    } else if (/^!\[[^\]]*\]\([^)]+\)/.test(line)) {
+      flush(); blocks.push(`<p>${mdInline(line)}</p>`);
+    } else if (/^[-*]\s+/.test(line)) {
+      flush(); blocks.push(`<ul><li>${mdInline(line.replace(/^[-*]\s+/, ""))}</li></ul>`);
+    } else {
+      para.push(line);
+    }
+  }
+  flush();
+  return blocks.join("\n").replace(/<\/ul>\n<ul>/g, "");
+}
+
+async function fetchJinaFallback(target: URL): Promise<any | null> {
+  try {
+    // Jina Reader often succeeds where direct server fetches are blocked by
+    // paywalls/bot checks, and returns images + headings + article markdown.
+    const jinaUrl = `https://r.jina.ai/http://r.jina.ai/http://${target.toString()}`;
+    const res = await fetch(jinaUrl, { headers: { "accept": "text/plain" } });
+    if (!res.ok) return null;
+    const text = await res.text();
+    if (!text || text.length < 500) return null;
+    const title = text.match(/^Title:\s*(.+)$/m)?.[1]?.trim() || target.hostname;
+    const publishedTime = text.match(/^Published Time:\s*(.+)$/m)?.[1]?.trim() || "";
+    let md = text.split(/Markdown Content:\s*/)[1] || text;
+    const titleIdx = md.indexOf(`# ${title}`);
+    if (titleIdx > 0) md = md.slice(titleIdx);
+    const byline =
+      md.match(/(?:Essay by|By)\s+\[?([^\]\n]+)\]?/i)?.[1]?.replace(/\(.+$/, "").trim() || "";
+    const leadImage = md.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/)?.[1] || "";
+    const content = markdownToHtml(md.slice(0, 120_000));
+    return {
+      url: target.toString(), title, byline, siteName: target.hostname,
+      excerpt: "", leadImage, publishedTime, content,
+      textContent: md.replace(/[#*_\[\]()`>!-]/g, " ").replace(/\s+/g, " ").trim(),
+      length: md.length, embeds: [], importantLinks: [], source: "jina-reader",
+    };
+  } catch { return null; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -383,6 +445,13 @@ Deno.serve(async (req) => {
       });
       status = res.status;
       if (!res.ok) {
+        const fallback = await fetchJinaFallback(target);
+        if (fallback) {
+          return new Response(JSON.stringify(fallback), {
+            status: 200,
+            headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "public, max-age=300" },
+          });
+        }
         const code =
           status === 401 || status === 403 ? "paywall" :
           status === 404 ? "not_found" :
@@ -469,6 +538,16 @@ Deno.serve(async (req) => {
     const textContent = (article?.textContent || "").trim();
     const leadImage = metaImage ? absolutize(metaImage, base) : "";
     const length = article?.length || textContent.length;
+
+    if (length < 800 || !content || content.trim().length < 1200) {
+      const fallback = await fetchJinaFallback(target);
+      if (fallback && fallback.length > length) {
+        return new Response(JSON.stringify(fallback), {
+          status: 200,
+          headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "public, max-age=300" },
+        });
+      }
+    }
 
     const importantLinks = extractImportantLinks(document as any, base, content);
 
