@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image as ImageIcon, Loader2, Sparkles, X, RotateCcw, Check } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Sparkles, X, RotateCcw, Check, Camera } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ import { sanitizeForDisplay } from '@/lib/sanitize';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { acquireAiLock, getAiBusyMessage, releaseAllAiLocks } from '@/utils/aiConcurrencyLock';
 import { ensureSignedInForAi } from '@/utils/aiAccessGuard';
+import { CameraScannerScreen } from './CameraScannerScreen';
 
 const AI_SCAN_TIMEOUT_MS = 45_000;
 const yieldToPaint = () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
@@ -36,6 +37,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const [html, setHtml] = useState('');
   const [suggestedTitle, setSuggestedTitle] = useState('');
   const [hasRun, setHasRun] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const captureLockRef = useRef(false);
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       setSuggestedTitle('');
       setIsExtracting(false);
       setHasRun(false);
+      setShowCamera(false);
       captureLockRef.current = false;
       releaseAllAiLocks();
     }
@@ -157,11 +160,15 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             <div className="space-y-3 pt-2">
               <p className="text-sm text-muted-foreground">
                 {t(
-                  'scanNote.helperGallery',
-                  'Pick a photo of a handwritten or printed page from your gallery. AI will transcribe it and keep the headings and lists.',
+                  'scanNote.helperCamera',
+                  'Point your camera at a handwritten sticky note or page. AI will transcribe it and keep the headings and lists.',
                 )}
               </p>
-              <Button onClick={runCapture} className="h-14 w-full gap-2">
+              <Button onClick={() => setShowCamera(true)} className="h-14 w-full gap-2">
+                <Camera className="h-5 w-5" />
+                <span className="text-sm">{t('scanNote.openCamera', 'Open camera scanner')}</span>
+              </Button>
+              <Button onClick={runCapture} variant="outline" className="h-12 w-full gap-2">
                 <ImageIcon className="h-5 w-5" />
                 <span className="text-sm">{t('imageExtract.fromGallery', 'From gallery')}</span>
               </Button>
@@ -232,6 +239,17 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           )}
         </div>
       </SheetContent>
+      <CameraScannerScreen
+        isOpen={showCamera}
+        onClose={() => setShowCamera(false)}
+        title={t('scanNote.title', 'Scan page to note')}
+        initialMode="note"
+        onCapture={async (dataUrl) => {
+          setShowCamera(false);
+          setImageDataUrl(dataUrl);
+          await runExtraction(dataUrl);
+        }}
+      />
     </Sheet>
   );
 };

@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image as ImageIcon, Loader2, Sparkles, X, Check, Trash2, RotateCcw, Minus, Plus, Maximize2 } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Sparkles, X, Check, Trash2, RotateCcw, Minus, Plus, Maximize2, Camera } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Sheet, SheetDescription, SheetHeader, SheetTitle, SheetPortal } from '@/components/ui/sheet';
 import * as SheetPrimitive from '@radix-ui/react-dialog';
@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { acquireAiLock, getAiBusyMessage, releaseAllAiLocks } from '@/utils/aiConcurrencyLock';
 import { ensureSignedInForAi } from '@/utils/aiAccessGuard';
+import { CameraScannerScreen } from './CameraScannerScreen';
 
 const AI_SCAN_TIMEOUT_MS = 45_000;
 const yieldToPaint = () => new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
@@ -77,6 +78,7 @@ export const ImageTaskExtractorSheet = ({
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [hasRun, setHasRun] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const captureLockRef = useRef(false);
 
   // Reset on close
@@ -86,6 +88,7 @@ export const ImageTaskExtractorSheet = ({
       setItems([]);
       setIsExtracting(false);
       setHasRun(false);
+      setShowCamera(false);
       captureLockRef.current = false;
       releaseAllAiLocks();
     }
@@ -297,8 +300,18 @@ export const ImageTaskExtractorSheet = ({
                 )}
               </p>
               <Button
-                onClick={runCapture}
+                onClick={() => setShowCamera(true)}
                 className="h-14 w-full gap-2"
+              >
+                <Camera className="h-5 w-5" />
+                <span className="text-sm">
+                  {t('imageExtract.openCamera', 'Open camera scanner')}
+                </span>
+              </Button>
+              <Button
+                onClick={runCapture}
+                variant="outline"
+                className="h-12 w-full gap-2"
               >
                 <ImageIcon className="h-5 w-5" />
                 <span className="text-sm">
@@ -559,6 +572,17 @@ export const ImageTaskExtractorSheet = ({
         </DialogContent>
       </Dialog>
 
+      <CameraScannerScreen
+        isOpen={showCamera}
+        onClose={() => setShowCamera(false)}
+        title={t('imageExtract.title', 'Scan tasks from paper')}
+        initialMode="note"
+        onCapture={async (dataUrl) => {
+          setShowCamera(false);
+          setImageDataUrl(dataUrl);
+          await runExtraction(dataUrl);
+        }}
+      />
     </Sheet>
   );
 };
