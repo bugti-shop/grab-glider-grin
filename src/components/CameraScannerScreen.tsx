@@ -160,6 +160,72 @@ export const CameraScannerScreen = ({
     }
   }, [torchOn]);
 
+  // Reset barcode-handled guard whenever mode toggles or scanner reopens.
+  useEffect(() => {
+    barcodeHandledRef.current = false;
+    setLastBarcode(null);
+  }, [mode, isOpen]);
+
+  // Continuous barcode scanning loop when mode === 'barcode' + camera ready.
+  useEffect(() => {
+    if (!isOpen || mode !== 'barcode' || !ready) return;
+    const AnyBarcodeDetector = (window as any).BarcodeDetector;
+    if (!AnyBarcodeDetector) {
+      setBarcodeSupported(false);
+      return;
+    }
+    setBarcodeSupported(true);
+    let detector: any;
+    try {
+      detector = new AnyBarcodeDetector({
+        formats: [
+          'qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'code_93',
+          'upc_a', 'upc_e', 'itf', 'pdf417', 'aztec', 'data_matrix',
+        ],
+      });
+    } catch (e) {
+      console.warn('[CameraScannerScreen] BarcodeDetector init failed', e);
+      setBarcodeSupported(false);
+      return;
+    }
+
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      const video = videoRef.current;
+      if (video && video.readyState >= 2 && !barcodeHandledRef.current) {
+        try {
+          const results = await detector.detect(video);
+          if (results && results.length > 0 && !barcodeHandledRef.current) {
+            barcodeHandledRef.current = true;
+            const value = String(results[0].rawValue ?? '').trim();
+            const format = String(results[0].format ?? 'unknown');
+            setLastBarcode(value);
+            try { navigator.vibrate?.(80); } catch { /* ignore */ }
+            if (value && onBarcode) {
+              onBarcode(value, format);
+              onClose();
+              return;
+            }
+          }
+        } catch (e) {
+          // Detection errors are transient — keep looping.
+        }
+      }
+      barcodeLoopRef.current = window.setTimeout(tick, 300) as unknown as number;
+    };
+    tick();
+    return () => {
+      cancelled = true;
+      if (barcodeLoopRef.current) {
+        clearTimeout(barcodeLoopRef.current);
+        barcodeLoopRef.current = null;
+      }
+    };
+  }, [isOpen, mode, ready, onBarcode, onClose]);
+
+
+
   const handleShutter = useCallback(async () => {
     if (capturing) return;
     setCapturing(true);
