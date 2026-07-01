@@ -20,6 +20,7 @@
  *                       to the original startDate offset.
  */
 import { Habit } from '@/types/habit';
+import { isHabitPausedOn } from '@/utils/habitPause';
 import { addDays, differenceInCalendarDays, format, parseISO, startOfDay, subDays } from 'date-fns';
 
 const toKey = (d: Date) => format(d, 'yyyy-MM-dd');
@@ -82,6 +83,9 @@ export const getNextDueDate = (habit: Habit, ref: Date = new Date()): Date => {
  */
 export const isHabitDueOnDate = (habit: Habit, d: Date): boolean => {
   const day = startOfDay(d);
+
+  // Paused / vacation / sick day → not due (streak stays intact).
+  if (isHabitPausedOn(habit, day)) return false;
 
   if (habit.frequency === 'daily') return true;
 

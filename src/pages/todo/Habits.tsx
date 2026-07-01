@@ -28,6 +28,7 @@ import { checkMilestones, milestoneEmoji } from '@/utils/habitMilestones';
 import { HabitImportSheet } from '@/components/habits/HabitImportSheet';
 import { isHabitDueOnDate as smartIsHabitDueOnDate, isMakeUpDay } from '@/utils/habitScheduler';
 import { applyStreakFreezes, freezesRemaining, getFreezeState } from '@/utils/habitFreezes';
+import { isHabitPausedOn } from '@/utils/habitPause';
 
 const Habits = () => {
   const navigate = useNavigate();
@@ -185,6 +186,8 @@ const Habits = () => {
   };
 
   const isHabitDueOn = (habit: Habit, d: Date): boolean => {
+    // Paused / vacation / sick day always wins — hide from today list.
+    if (isHabitPausedOn(habit, d)) return false;
     if (
       habit.frequency === 'weekly' &&
       !habit.weeklyDays?.length &&

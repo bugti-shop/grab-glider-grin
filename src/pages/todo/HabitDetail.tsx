@@ -15,7 +15,7 @@ import {
 import {
   ArrowLeft, MoreVertical, ChevronLeft, ChevronRight,
   CheckCircle2, CalendarCheck, Percent, Activity, Trash2, Check, Share2, ChevronUp,
-  Pencil, Target, Archive, NotebookPen,
+  Pencil, Target, Archive, NotebookPen, Palmtree, X as XIcon,
 } from 'lucide-react';
 
 import { m as motion, AnimatePresence } from 'framer-motion';
@@ -36,6 +36,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from 'sonner';
 import { HabitAmountCounter } from '@/components/habits/HabitAmountCounter';
 import { HabitReflectionSheet } from '@/components/habits/HabitReflectionSheet';
+import { getActivePause, pauseHabit, endActivePause, pauseLabel } from '@/utils/habitPause';
+import { HabitPauseReason } from '@/types/habit';
 import {
   readFocus, writeFocus, clearFocus,
   setActiveFocus, clearActiveFocus, cleanupStaleFocusKeys,
@@ -56,6 +58,10 @@ const HabitDetail = () => {
   const [reflectionDate, setReflectionDate] = useState<string>('');
   const [reflectionReadOnly, setReflectionReadOnly] = useState(false);
   const [parentHabit, setParentHabit] = useState<Habit | null>(null);
+  const [pauseOpen, setPauseOpen] = useState(false);
+  const [pauseDays, setPauseDays] = useState(7);
+  const [pauseReason, setPauseReason] = useState<HabitPauseReason>('vacation');
+  const [pauseNote, setPauseNote] = useState('');
   // Sweep finished/stale focus entries from prior sessions once per mount.
   useEffect(() => { cleanupStaleFocusKeys(); }, []);
 
@@ -323,6 +329,48 @@ const HabitDetail = () => {
     setFocusOpen(true);
   };
 
+  const activePause = habit ? getActivePause(habit) : null;
+
+  const openPauseDialog = () => {
+    setPauseDays(7);
+    setPauseReason('vacation');
+    setPauseNote('');
+    setPauseOpen(true);
+  };
+
+  const applyPause = async () => {
+    if (!habit) return;
+    const updated = pauseHabit(habit, {
+      days: pauseDays,
+      reason: pauseReason,
+      note: pauseNote.trim() || undefined,
+    });
+    setHabit(updated);
+    setPauseOpen(false);
+    try {
+      await saveHabit(updated);
+      toast.success(
+        `${pauseReason === 'sick' ? 'Sick day' : pauseReason === 'other' ? 'Paused' : 'Vacation'} set for ${pauseDays} day${pauseDays === 1 ? '' : 's'}`
+      );
+    } catch {
+      toast.error('Could not save. Please try again.');
+    }
+  };
+
+  const resumeNow = async () => {
+    if (!habit) return;
+    const updated = endActivePause(habit);
+    setHabit(updated);
+    try {
+      await saveHabit(updated);
+      toast.success('Back on track — pause ended');
+    } catch {
+      toast.error('Could not save. Please try again.');
+    }
+  };
+
+
+
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: headerColor }}>
@@ -374,6 +422,15 @@ const HabitDetail = () => {
             <DropdownMenuItem onClick={handleShare}>
               <Share2 className="h-4 w-4 mr-2" /> Share
             </DropdownMenuItem>
+            {activePause ? (
+              <DropdownMenuItem onClick={resumeNow}>
+                <XIcon className="h-4 w-4 mr-2" /> End vacation / resume
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={openPauseDialog}>
+                <Palmtree className="h-4 w-4 mr-2" /> Vacation / Sick day
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={handleArchive}>
               <Archive className="h-4 w-4 mr-2" /> {habit.isArchived ? 'Unarchive' : 'Archive'}
             </DropdownMenuItem>
@@ -401,6 +458,18 @@ const HabitDetail = () => {
           <p className="mt-2 text-white/75 text-[12px]">
             After: {parentHabit.emoji || '✨'} {parentHabit.name}
           </p>
+        )}
+        {activePause && (
+          <div className="mt-3 mx-auto max-w-sm rounded-full bg-white/20 backdrop-blur px-4 py-2 flex items-center justify-center gap-2 text-white text-[13px] font-medium">
+            <Palmtree className="h-4 w-4" />
+            <span>{pauseLabel(activePause)}</span>
+            <button
+              onClick={resumeNow}
+              className="ml-1 underline text-white/90 hover:text-white"
+            >
+              End
+            </button>
+          </div>
         )}
         {(habit.goalDays ?? 0) > 0 && (
           <div className="mt-4 max-w-sm mx-auto">
@@ -633,6 +702,81 @@ const HabitDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Vacation / Sick-day dialog */}
+      <Dialog open={pauseOpen} onOpenChange={setPauseOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Take a break</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm font-medium mb-2">Reason</div>
+              <div className="grid grid-cols-3 gap-2">
+                {(['vacation', 'sick', 'other'] as HabitPauseReason[]).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setPauseReason(r)}
+                    className={cn(
+                      'py-2 rounded-lg border text-sm font-medium capitalize',
+                      pauseReason === r ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-foreground border-border'
+                    )}
+                  >
+                    {r === 'sick' ? '🤒 Sick' : r === 'other' ? 'Paused' : '🌴 Vacation'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium mb-2">How many days?</div>
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 3, 7, 14].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setPauseDays(n)}
+                    className={cn(
+                      'py-2 rounded-lg border text-sm font-medium',
+                      pauseDays === n ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-foreground border-border'
+                    )}
+                  >
+                    {n === 1 ? 'Today' : `${n} days`}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <label className="text-xs text-muted-foreground">Custom</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={90}
+                  value={pauseDays}
+                  onChange={(e) => setPauseDays(Math.max(1, Math.min(90, Number(e.target.value) || 1)))}
+                  className="flex-1 h-9 rounded-md border border-border bg-background px-2 text-sm"
+                />
+                <span className="text-xs text-muted-foreground">days</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium mb-2">Note (optional)</div>
+              <input
+                type="text"
+                value={pauseNote}
+                onChange={(e) => setPauseNote(e.target.value)}
+                placeholder="e.g. Trip to Kyoto"
+                className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Your streak stays safe. Skipped days won't count as missed and this habit will hide from Today's list until the pause ends.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPauseOpen(false)}>Cancel</Button>
+            <Button onClick={applyPause}>Start pause</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <HabitReflectionSheet
         open={reflectionOpen}
