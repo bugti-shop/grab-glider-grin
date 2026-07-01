@@ -57,7 +57,15 @@ const preloadNotesDashboardPage = () => import("./pages/Index");
 const Today = lazy(preloadTodayPage);
 
 const Index = lazy(preloadNotesDashboardPage);
-void preloadTodayPage();
+// Skip preloading the Today page chunk when we're cold-booting the /quick-add
+// overlay — the widget flow never navigates there and every extra chunk fetch
+// pushes the sheet's first paint back.
+const __IS_QUICK_ADD_BOOT__ =
+  typeof window !== 'undefined' && window.location.pathname === '/quick-add';
+if (!__IS_QUICK_ADD_BOOT__) {
+  void preloadTodayPage();
+}
+
 
 // Lazy load everything else - they load in background after first paint
 const Notes = lazy(() => import("./pages/Notes"));
