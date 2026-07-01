@@ -44,7 +44,7 @@ import { toast } from 'sonner';
 import { captureImageForAI } from '@/utils/imageCaptureForAI';
 import { compressImage } from '@/utils/imageCompression';
 
-export type ScannerMode = 'note' | 'barcode' | 'object' | 'image' | 'receipt' | 'gallery';
+export type ScannerMode = 'note' | 'image' | 'receipt' | 'gallery';
 
 export interface ObjectDetection {
   label: string;
@@ -315,75 +315,6 @@ export const CameraScannerScreen = ({
     setLastBarcode(null);
   }, [mode, isOpen]);
 
-  // Continuous barcode scanning loop when mode === 'barcode' + camera ready.
-  useEffect(() => {
-    if (!isOpen || mode !== 'barcode' || !ready) return;
-    const AnyBarcodeDetector = (window as any).BarcodeDetector;
-    let nativeDetector: any = null;
-    let detector: any;
-    if (AnyBarcodeDetector) {
-      try {
-        nativeDetector = new AnyBarcodeDetector({
-          formats: [
-            'qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'code_93',
-            'upc_a', 'upc_e', 'itf', 'pdf417', 'aztec', 'data_matrix',
-          ],
-        });
-      } catch (e) {
-        console.warn('[CameraScannerScreen] BarcodeDetector init failed', e);
-      }
-    }
-    if (!zxingReaderRef.current) zxingReaderRef.current = createZxingReader();
-    detector = nativeDetector || zxingReaderRef.current;
-    setBarcodeSupported(Boolean(detector));
-    if (!detector) return;
-
-    let cancelled = false;
-    const tick = async () => {
-      if (cancelled) return;
-      const video = videoRef.current;
-      if (video && video.readyState >= 2 && !barcodeHandledRef.current) {
-        try {
-          let decoded: { rawValue: string; format: string } | null = null;
-          if (nativeDetector) {
-            const results = await nativeDetector.detect(video);
-            if (results && results.length > 0) {
-              decoded = {
-                rawValue: String(results[0].rawValue ?? '').trim(),
-                format: String(results[0].format ?? 'unknown'),
-              };
-            }
-          }
-          if (!decoded) {
-            decoded = await decodeBarcodeWithZxing(video, zxingReaderRef.current).catch(() => null);
-          }
-          if (decoded && decoded.rawValue && !barcodeHandledRef.current) {
-            barcodeHandledRef.current = true;
-            const value = decoded.rawValue.trim();
-            const format = decoded.format || 'unknown';
-            setLastBarcode(value);
-            try { navigator.vibrate?.(80); } catch { /* ignore */ }
-            if (value && onBarcode) {
-              onBarcode(value, format);
-              onClose();
-              return;
-            }
-          }
-        } catch (e) {
-          // Detection errors are transient — keep looping.
-        }
-      }
-      barcodeLoopRef.current = window.setTimeout(tick, nativeDetector ? 300 : 550) as unknown as number;
-    };
-    tick();
-    return () => {
-      cancelled = true;
-      if (barcodeLoopRef.current) {
-        clearTimeout(barcodeLoopRef.current);
-        barcodeLoopRef.current = null;
-      }
-    };
-  }, [isOpen, mode, ready, onBarcode, onClose]);
 
 
 
@@ -406,8 +337,6 @@ export const CameraScannerScreen = ({
       }
 
       const modeLabel =
-        mode === 'barcode' ? 'Barcode' :
-        mode === 'object'  ? 'Objects' :
         mode === 'receipt' ? 'Receipt' :
         mode === 'image'   ? 'Image'   : 'Scan Note';
       toast(
@@ -433,35 +362,6 @@ export const CameraScannerScreen = ({
       }).catch(() => raw);
       console.log('[Scanner] frame captured', { mode, bytes: compressed.length, burst: burstOn });
 
-      if (mode === 'barcode') {
-        const decoded = await decodeBarcodeFromCanvas(canvas).catch(() => null);
-        const fallbackDecoded = decoded || await decodeBarcodeWithZxing(canvas, zxingReaderRef.current || createZxingReader()).catch(() => null);
-        if (fallbackDecoded && onBarcode) {
-          setLastBarcode(fallbackDecoded.rawValue);
-          toast.success(`Barcode: ${fallbackDecoded.rawValue.slice(0, 32)}`);
-          onBarcode(fallbackDecoded.rawValue, fallbackDecoded.format);
-          onClose();
-          return;
-        }
-        toast.error('No barcode detected. Hold it inside the frame and try again.');
-        return;
-      }
-
-      if (mode === 'object' && onObjectCount) {
-        setObjReviewFrame(compressed);
-        setObjReviewResult(null);
-        setObjReviewError(null);
-        setObjReviewLoading(true);
-        try {
-          const result = await onObjectCount(compressed);
-          setObjReviewResult(result);
-        } catch (err: any) {
-          setObjReviewError(err?.message || 'Could not count objects');
-        } finally {
-          setObjReviewLoading(false);
-        }
-        return;
-      }
 
       if (mode === 'receipt' && onReceipt) {
         setReceiptReviewFrame(compressed);
@@ -758,19 +658,8 @@ export const CameraScannerScreen = ({
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Starting camera…
               </span>
-            ) : mode === 'barcode' && !barcodeSupported ? (
-              <span className="text-white/90">
-                Barcode scanning not supported here — tap shutter to try one frame
-              </span>
-            ) : mode === 'barcode' ? (
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Scanning for barcode…
-                {lastBarcode ? ` · ${lastBarcode.slice(0, 24)}` : ''}
-              </span>
-            ) : mode === 'object' ? (
-              <span>Frame the objects clearly · tap capture to count</span>
             ) : (
+
               <span>Point at a sticky note or handwritten page · {activeModeLabel}</span>
             )}
           </div>
