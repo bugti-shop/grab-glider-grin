@@ -841,7 +841,13 @@ export const CameraScannerScreen = ({
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >
         {/* Mode chips — Gallery moved out so it can't compete with the shutter */}
+        {tapTrace && (
+          <div className="mb-1 px-2 py-1 rounded-md bg-black/60 border border-white/10 text-[10px] font-mono text-white/80 self-start max-w-full truncate">
+            {tapTrace}
+          </div>
+        )}
         <ChipStrip>
+
           {MODES.filter((m) => m.id !== 'gallery').map(({ id, label, icon: Icon }) => {
             const active = mode === id;
             const locked = !hasPro && id === 'receipt';
