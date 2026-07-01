@@ -124,7 +124,7 @@ interface Props {
 
 const MODES: Array<{ id: ScannerMode; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'note', label: 'Scan Note', icon: ScanLine },
-  { id: 'receipt', label: 'Receipt', icon: Receipt },
+  
   { id: 'image', label: 'Image', icon: ImagePlus },
   { id: 'gallery', label: 'Gallery', icon: ImageIcon },
 ];
