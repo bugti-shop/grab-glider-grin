@@ -278,28 +278,33 @@ const WebClipper = () => {
         // inside the note (Evernote-style). data-* attributes let downstream
         // consumers detect + treat this region specially.
         const safeUrl = url ? url.replace(/"/g, '&quot;') : '';
+        let host = '';
+        try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+        const favicon = host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64` : '';
+        const siteLabel = sanitizeForDisplay(articleSiteName || host || 'Web');
         parts.push(
           `<section class="flowist-web-clip" data-block-type="webClip" ` +
           `data-source-url="${safeUrl}" data-captured-at="${capturedAt}" ` +
           `data-site-name="${(articleSiteName || '').replace(/"/g, '&quot;')}" ` +
           `data-author="${(articleByline || '').replace(/"/g, '&quot;')}">`,
         );
-        // Header chip so users can visually see this is a Web Clip.
+        // Card source strip with favicon + site + captured date + open-original pill.
         parts.push(
-          `<div class="flowist-web-clip-header" style="display:flex;align-items:center;gap:8px;font-size:12px;opacity:0.7;margin:0 0 8px 0">` +
-          `<span style="padding:2px 8px;border:1px solid currentColor;border-radius:999px;font-weight:600;letter-spacing:0.02em">WEB CLIP</span>` +
-          (articleSiteName ? `<span>${sanitizeForDisplay(articleSiteName)}</span>` : '') +
-          `<span>· ${new Date(capturedAt).toLocaleDateString()}</span>` +
-          `</div>`,
+          `<header class="flowist-web-clip-header" contenteditable="false">` +
+            (favicon ? `<img class="flowist-web-clip-favicon" src="${favicon}" alt="" referrerpolicy="no-referrer" />` : '') +
+            `<span class="flowist-web-clip-badge">WEB CLIP</span>` +
+            `<span class="flowist-web-clip-site">${siteLabel}</span>` +
+            `<span class="flowist-web-clip-dot">·</span>` +
+            `<time class="flowist-web-clip-date">${new Date(capturedAt).toLocaleDateString()}</time>` +
+            (url ? `<a class="flowist-web-clip-open" href="${url}" target="_blank" rel="noopener noreferrer" title="Open original">↗ Open</a>` : '') +
+          `</header>`,
         );
         if (articleIsFallback) {
           parts.push(
-            `<div class="flowist-web-clip-fallback-banner" style="padding:10px 12px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;background:rgba(0,0,0,0.03);font-size:13px;margin:0 0 12px 0">` +
-            `⚠️ ${sanitizeForDisplay(t('webClipper.fallbackNotice', 'Full content unavailable — this page may require a login, be paywalled, or render with JavaScript.'))}` +
-            `</div>`,
+            `<div class="flowist-web-clip-fallback-banner">⚠️ ${sanitizeForDisplay(t('webClipper.fallbackNotice', 'Full content unavailable — this page may require a login, be paywalled, or render with JavaScript.'))}</div>`,
           );
         }
-        parts.push(`<h1>${sanitizeForDisplay(finalTitle)}</h1>`);
+        parts.push(`<h1 class="flowist-web-clip-title">${sanitizeForDisplay(finalTitle)}</h1>`);
         const metaBits: string[] = [];
         if (articleByline) metaBits.push(sanitizeForDisplay(articleByline));
         if (articleSiteName) metaBits.push(sanitizeForDisplay(articleSiteName));
@@ -308,25 +313,20 @@ const WebClipper = () => {
           if (!isNaN(d.getTime())) metaBits.push(d.toLocaleDateString());
         }
         if (metaBits.length) {
-          parts.push(`<p><em>${metaBits.join(' · ')}</em></p>`);
+          parts.push(`<p class="flowist-web-clip-meta">${metaBits.join(' · ')}</p>`);
         }
-        parts.push(
-          `<p><a href="${url}" target="_blank" rel="noopener noreferrer">${sanitizeForDisplay(url)}</a></p>`,
-        );
         if (articleLeadImage && !articleHtml.includes(articleLeadImage)) {
-          parts.push(`<p><img src="${articleLeadImage}" alt="" /></p>`);
+          parts.push(`<figure class="flowist-web-clip-hero"><img src="${articleLeadImage}" alt="" /></figure>`);
         }
         if (articleExcerpt) {
-          parts.push(`<blockquote>${sanitizeForDisplay(articleExcerpt)}</blockquote>`);
+          parts.push(`<blockquote class="flowist-web-clip-excerpt">${sanitizeForDisplay(articleExcerpt)}</blockquote>`);
         }
         if (selection) {
-          parts.push(`<blockquote>${sanitizeForDisplay(selection)}</blockquote>`);
+          parts.push(`<blockquote class="flowist-web-clip-selection">${sanitizeForDisplay(selection)}</blockquote>`);
         }
+        // Body wrapper — hydrator wires expand/collapse when word count is high.
+        parts.push(`<div class="flowist-web-clip-body" data-role="body">`);
         parts.push(articleHtml);
-        // Embeds are inlined into `articleHtml` at their original DOM position
-        // so their order relative to headings/images is preserved. Only fall
-        // back to an appended section for legacy payloads that still send
-        // embeds separately.
         if (articleEmbeds.length && !articleEmbeds.every((e) => articleHtml.includes(e))) {
           parts.push(`<h3>${sanitizeForDisplay(t('webClipper.embedsHeading', 'Embedded media'))}</h3>`);
           parts.push(articleEmbeds.join('\n'));
@@ -334,30 +334,27 @@ const WebClipper = () => {
         if (articleLinks.length) {
           const items = articleLinks
             .map((l) => {
-              let host = '';
-              try { host = new URL(l.href).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
-              const favicon = host
-                ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
-                : '';
+              let lhost = '';
+              try { lhost = new URL(l.href).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+              const fav = lhost ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(lhost)}&sz=64` : '';
               return (
-                `<li style="list-style:none;margin:0 0 8px 0">` +
-                `<a href="${l.href}" target="_blank" rel="noopener noreferrer" ` +
-                `style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;text-decoration:none;color:inherit">` +
-                (favicon
-                  ? `<img src="${favicon}" alt="" referrerpolicy="no-referrer" style="width:20px;height:20px;flex-shrink:0" />`
-                  : '') +
-                `<span style="display:flex;flex-direction:column;min-width:0">` +
-                `<strong style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sanitizeForDisplay(l.text)}</strong>` +
-                `<span style="font-size:12px;opacity:0.7">${host} ↗</span>` +
-                `</span></a></li>`
+                `<li class="flowist-web-clip-link">` +
+                `<a href="${l.href}" target="_blank" rel="noopener noreferrer">` +
+                (fav ? `<img src="${fav}" alt="" referrerpolicy="no-referrer" />` : '') +
+                `<span><strong>${sanitizeForDisplay(l.text)}</strong><em>${lhost} ↗</em></span>` +
+                `</a></li>`
               );
             })
             .join('');
-          parts.push(
-            `<h3>${sanitizeForDisplay(t('webClipper.linksHeading', 'Important links'))}</h3>` +
-            `<ul style="padding:0;margin:0">${items}</ul>`,
-          );
+          parts.push(`<h3>${sanitizeForDisplay(t('webClipper.linksHeading', 'Important links'))}</h3>`);
+          parts.push(`<ul class="flowist-web-clip-links">${items}</ul>`);
         }
+        parts.push(`</div>`); // /body
+        parts.push(
+          `<footer class="flowist-web-clip-footer" contenteditable="false">` +
+            (url ? `<a class="flowist-web-clip-source" href="${url}" target="_blank" rel="noopener noreferrer">${sanitizeForDisplay(url)}</a>` : '') +
+          `</footer>`,
+        );
         parts.push(`</section>`);
         // Single sanitize pass over the full assembled document (allows iframe/video for embeds).
         noteContent = sanitizeClippedArticle(parts.join('\n'));
