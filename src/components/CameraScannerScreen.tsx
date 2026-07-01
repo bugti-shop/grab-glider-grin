@@ -1131,7 +1131,8 @@ const ChipButton = ({
   active,
   onSelect,
   children,
-}: {
+  ...buttonProps
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   active: boolean;
   onSelect: () => void;
   children: React.ReactNode;
@@ -1149,14 +1150,17 @@ const ChipButton = ({
   };
   return (
     <button
+      {...buttonProps}
       type="button"
       onPointerDown={(e) => {
+        buttonProps.onPointerDown?.(e);
         e.stopPropagation();
         startRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
         cancelledRef.current = false;
         firedRef.current = false;
       }}
       onPointerMove={(e) => {
+        buttonProps.onPointerMove?.(e);
         const s = startRef.current;
         if (!s) return;
         const dx = Math.abs(e.clientX - s.x);
@@ -1165,6 +1169,7 @@ const ChipButton = ({
         if (dx > 18 && dx > dy * 1.5) cancelledRef.current = true;
       }}
       onPointerUp={(e) => {
+        buttonProps.onPointerUp?.(e);
         // Fire on pointerup regardless of whether the browser later dispatches
         // click — some Android WebViews swallow click inside scroll containers.
         const s = startRef.current;
@@ -1175,6 +1180,7 @@ const ChipButton = ({
         fire(e);
       }}
       onClick={(e) => {
+        buttonProps.onClick?.(e);
         // Fallback for mouse / desktop; guarded by firedRef to avoid double-trigger.
         fire(e);
       }}
