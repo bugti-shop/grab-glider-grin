@@ -118,4 +118,71 @@
             android:background="@drawable/widget_chip_unselected"
             android:text="Priority" />
     </LinearLayout>
+
+    <!-- Chips row 2 - additional action items -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:gravity="center"
+            android:textColor="#374151"
+            android:textSize="12sp"
+            android:background="@drawable/widget_chip_unselected"
+            android:text="Reminder" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:gravity="center"
+            android:textColor="#374151"
+            android:textSize="12sp"
+            android:background="@drawable/widget_chip_unselected"
+            android:text="Tags" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:gravity="center"
+            android:textColor="#374151"
+            android:textSize="12sp"
+            android:background="@drawable/widget_chip_unselected"
+            android:text="Location" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:gravity="center"
+            android:textColor="#374151"
+            android:textSize="12sp"
+            android:background="@drawable/widget_chip_unselected"
+            android:text="Repeat" />
+    </LinearLayout>
 </LinearLayout>
