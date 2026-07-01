@@ -290,12 +290,30 @@ const WebClipper = () => {
         }
         if (articleLinks.length) {
           const items = articleLinks
-            .map(
-              (l) =>
-                `<li><a href="${l.href}" target="_blank" rel="noopener noreferrer">${sanitizeForDisplay(l.text)}</a></li>`,
-            )
+            .map((l) => {
+              let host = '';
+              try { host = new URL(l.href).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+              const favicon = host
+                ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
+                : '';
+              return (
+                `<li style="list-style:none;margin:0 0 8px 0">` +
+                `<a href="${l.href}" target="_blank" rel="noopener noreferrer" ` +
+                `style="display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;text-decoration:none;color:inherit">` +
+                (favicon
+                  ? `<img src="${favicon}" alt="" referrerpolicy="no-referrer" style="width:20px;height:20px;flex-shrink:0" />`
+                  : '') +
+                `<span style="display:flex;flex-direction:column;min-width:0">` +
+                `<strong style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sanitizeForDisplay(l.text)}</strong>` +
+                `<span style="font-size:12px;opacity:0.7">${host} ↗</span>` +
+                `</span></a></li>`
+              );
+            })
             .join('');
-          parts.push(`<h3>${sanitizeForDisplay(t('webClipper.linksHeading', 'Related links'))}</h3><ul>${items}</ul>`);
+          parts.push(
+            `<h3>${sanitizeForDisplay(t('webClipper.linksHeading', 'Important links'))}</h3>` +
+            `<ul style="padding:0;margin:0">${items}</ul>`,
+          );
         }
         // Single sanitize pass over the full assembled document (allows iframe/video for embeds).
         noteContent = sanitizeClippedArticle(parts.join('\n'));
