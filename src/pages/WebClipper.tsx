@@ -31,7 +31,7 @@ const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: strin
   { id: 'fullpage',  icon: Globe,    titleKey: 'webClipper.modeFullPage',  descKey: 'webClipper.modeFullPageDesc',  fallbackTitle: 'Full page',   fallbackDesc: 'Save the entire page content' },
 ];
 
-type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'embedding' | 'saving';
+type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
 
 const WebClipper = () => {
   const [searchParams] = useSearchParams();
