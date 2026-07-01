@@ -383,8 +383,8 @@ export const scheduleWithTimeBlocks = (
         startDate,
         endDate,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        repeat: 'none',
-        reminder: 'atTime',
+        repeat: 'never',
+        reminder: 'at_time',
         createdAt: new Date(),
         updatedAt: new Date(),
       });
