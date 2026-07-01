@@ -447,7 +447,7 @@ const WebClipper = () => {
             </div>
           )}
 
-          {/* Live progress for download / extract / embed / save stages. */}
+          {/* Live progress for download / extract / fetch / embed / save stages. */}
           {saving && stage !== 'idle' && !error && (
             <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
               <div className="flex items-center gap-2 text-sm">
@@ -458,12 +458,22 @@ const WebClipper = () => {
                 )}
               </div>
               <Progress value={typeof progress === 'number' ? progress : undefined} className="h-1.5" />
+              {stage === 'fetching' && (
+                <p className="text-[11px] text-muted-foreground">
+                  {t('webClipper.fetchingHint', 'Downloading the page, extracting images, embeds, and article text…')}
+                </p>
+              )}
               {stage === 'extracting' && (
                 <p className="text-[11px] text-muted-foreground">
                   {t('webClipper.extractingHint', 'Reading PDF text — your note body will populate shortly.')}
                 </p>
               )}
-              {(stage === 'validating' || stage === 'downloading' || stage === 'extracting') && (
+              {stage === 'embedding' && (
+                <p className="text-[11px] text-muted-foreground">
+                  {t('webClipper.embeddingHint', 'Assembling images, videos, and links into your note…')}
+                </p>
+              )}
+              {(stage === 'validating' || stage === 'downloading' || stage === 'extracting' || stage === 'fetching') && (
                 <Button
                   type="button"
                   variant="outline"
@@ -482,9 +492,36 @@ const WebClipper = () => {
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>{error.title}</AlertTitle>
-              <AlertDescription>{error.description}</AlertDescription>
+              <AlertDescription className="space-y-2">
+                <p>{error.description}</p>
+                {(url || attachment) && !saved && (
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => { setError(null); void handleSaveClip(mode); }}
+                    >
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5" />
+                      {t('webClipper.retry', 'Try again')}
+                    </Button>
+                    {url && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                        {t('webClipper.openSource', 'Open source')}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </AlertDescription>
             </Alert>
           )}
+
 
           {selection && (
             <div className="space-y-2">
