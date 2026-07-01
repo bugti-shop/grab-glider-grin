@@ -477,8 +477,8 @@ export const CameraScannerScreen = ({
       onMouseDownCapture={(e) => e.stopPropagation()}
       onTouchStartCapture={(e) => e.stopPropagation()}
     >
-      {/* Live camera feed (hidden while reviewing an object-count result) */}
-      {!objReviewFrame && (
+      {/* Live camera feed (hidden while reviewing a frozen result) */}
+      {!objReviewFrame && !receiptReviewFrame && (
         <video
           ref={videoRef}
           autoPlay
@@ -509,8 +509,27 @@ export const CameraScannerScreen = ({
           }}
         />
       )}
+      {/* Receipt review overlay */}
+      {receiptReviewFrame && (
+        <ReceiptReviewOverlay
+          frame={receiptReviewFrame}
+          result={receiptReviewResult}
+          loading={receiptReviewLoading}
+          error={receiptReviewError}
+          onRetake={() => {
+            setReceiptReviewFrame(null);
+            setReceiptReviewResult(null);
+            setReceiptReviewError(null);
+          }}
+          onConfirm={() => {
+            if (!receiptReviewResult || !receiptReviewFrame) return;
+            onConfirmReceipt?.(receiptReviewFrame, receiptReviewResult);
+            onClose();
+          }}
+        />
+      )}
       {/* Vignette / darken outside the frame */}
-      {!objReviewFrame && (
+      {!objReviewFrame && !receiptReviewFrame && (
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70 pointer-events-none" />
       )}
 
