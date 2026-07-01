@@ -117,14 +117,14 @@ body.flowist-task-dragging [data-flowist-virtual-list="tasks"] {
     /* Prefer the real inset reported by WebView; fall back to a generous
        default so headers never collide with the status bar on devices that
        don't expose env(safe-area-inset-top). Extra 8px cushion. */
-    --safe-top: calc(max(env(safe-area-inset-top, 24px), 24px) + 14px);
+    --safe-top: calc(max(env(safe-area-inset-top, 24px), 24px) + 4px);
     --safe-bottom: 0px;
   }
 
   /* iOS: respect the full notch inset and add a small cushion so the title
      row sits clearly below the status bar / Dynamic Island. */
   body.ios-app {
-    --safe-top: calc(env(safe-area-inset-top, 20px) + 6px);
+    --safe-top: calc(env(safe-area-inset-top, 20px) + 0px);
   }
 
   /* Android edge-to-edge fix: WebView extends behind system nav bar but
