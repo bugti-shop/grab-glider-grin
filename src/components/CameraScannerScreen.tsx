@@ -464,7 +464,39 @@ export const CameraScannerScreen = ({
     } finally {
       setCapturing(false);
     }
-  }, [burstOn, capturing, mode, onBarcode, onCapture, onClose, onObjectCount, onReceipt, ready]);
+  }, [batchOn, burstOn, capturing, mode, onBarcode, onBatchNote, onCapture, onClose, onObjectCount, onReceipt, ready]);
+
+  // Reset batch when the scanner closes.
+  useEffect(() => {
+    if (!isOpen) {
+      setBatchPages([]);
+      setBatchOn(false);
+      setBatchProcessing(false);
+    }
+  }, [isOpen]);
+
+  const finishBatch = useCallback(async () => {
+    if (!onBatchNote || batchPages.length === 0 || batchProcessing) return;
+    setBatchProcessing(true);
+    try {
+      await onBatchNote(batchPages);
+      setBatchPages([]);
+      // Parent typically closes the scanner after saving; if not, we stay open.
+    } catch (e: any) {
+      console.error('[Scanner] batch finish error', e);
+      toast.error(e?.message || 'Could not combine pages');
+    } finally {
+      setBatchProcessing(false);
+    }
+  }, [batchPages, batchProcessing, onBatchNote]);
+
+  const undoLastBatchPage = useCallback(() => {
+    setBatchPages((prev) => {
+      if (prev.length === 0) return prev;
+      toast(`Removed page ${prev.length}`, { duration: 900 });
+      return prev.slice(0, -1);
+    });
+  }, []);
 
   const openGallery = useCallback(async () => {
     console.log('[Scanner] gallery opened via explicit gallery button');
