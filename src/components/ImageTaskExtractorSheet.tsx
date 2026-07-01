@@ -572,6 +572,17 @@ export const ImageTaskExtractorSheet = ({
         </DialogContent>
       </Dialog>
 
+      <CameraScannerScreen
+        isOpen={showCamera}
+        onClose={() => setShowCamera(false)}
+        title={t('imageExtract.title', 'Scan tasks from paper')}
+        initialMode="note"
+        onCapture={async (dataUrl) => {
+          setShowCamera(false);
+          setImageDataUrl(dataUrl);
+          await runExtraction(dataUrl);
+        }}
+      />
     </Sheet>
   );
 };
