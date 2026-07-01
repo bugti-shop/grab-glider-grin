@@ -722,10 +722,68 @@ Deno.serve(async (req) => {
     if (length < 800 || !content || content.trim().length < 1200) {
       const fallback = await fetchJinaFallback(target);
       if (fallback && fallback.length > length) {
-        return new Response(JSON.stringify(fallback), {
+        const capped = capHtml(String(fallback.content || ""), MAX_CONTENT_HTML_BYTES);
+        const images = extractImageUrls(capped.html);
+        const enriched = {
+          ...fallback,
+          contentHtml: capped.html,
+          author: fallback.byline || "",
+          images,
+          truncated: capped.truncated,
+          fallback: false,
+        };
+        return new Response(JSON.stringify(enriched), {
           status: 200,
           headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "public, max-age=300" },
         });
+      }
+    }
+
+    const importantLinks = extractImportantLinks(document as any, base, content);
+    const capped = capHtml(String(content || ""), MAX_CONTENT_HTML_BYTES);
+
+    // Graceful fallback for paywalled / JS-heavy pages: no real body extracted.
+    const hasBody = capped.html && capped.html.replace(/<[^>]+>/g, "").trim().length > 200;
+    let responseContent = capped.html;
+    let isFallback = false;
+    if (!hasBody) {
+      isFallback = true;
+      const safeTitle = escapeHtml(title);
+      const safeExcerpt = excerpt ? escapeHtml(excerpt) : "";
+      const hero = leadImage
+        ? `<p><img src="${leadImage}" alt="" referrerpolicy="no-referrer" style="max-width:100%;height:auto;border-radius:8px" /></p>`
+        : "";
+      responseContent =
+        `<section class="flowist-web-clip-fallback">` +
+        `<h1>${safeTitle}</h1>` +
+        hero +
+        (safeExcerpt ? `<blockquote>${safeExcerpt}</blockquote>` : "") +
+        `<p><em>Full content unavailable — this page may require a login, be paywalled, or render content with JavaScript. Tap the link below to open it.</em></p>` +
+        `<p><a href="${base}" target="_blank" rel="noopener noreferrer">${escapeHtml(base)}</a></p>` +
+        `</section>`;
+    }
+    const images = extractImageUrls(responseContent);
+
+    return new Response(
+      JSON.stringify({
+        url: base,
+        title,
+        byline,
+        author: byline,           // spec alias
+        siteName,
+        excerpt,
+        leadImage,
+        publishedTime: metaPublished,
+        content: responseContent,
+        contentHtml: responseContent, // spec alias
+        images,
+        textContent,
+        length,
+        truncated: capped.truncated,
+        fallback: isFallback,
+        embeds: [] as string[], // embeds are now inlined into `content` at their original position
+        importantLinks,  // [{ href, text }]
+      }),
       }
     }
 
