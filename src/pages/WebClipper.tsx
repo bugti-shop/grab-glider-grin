@@ -10,6 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIcon, FileType2, AlertTriangle, Download, X } from 'lucide-react';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { sanitizeForDisplay } from '@/lib/sanitize';
 import {
   MAX_LENGTHS,
   type ClipMode,
@@ -28,7 +30,7 @@ const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: strin
   { id: 'fullpage',  icon: Globe,    titleKey: 'webClipper.modeFullPage',  descKey: 'webClipper.modeFullPageDesc',  fallbackTitle: 'Full page',   fallbackDesc: 'Save the entire page content' },
 ];
 
-type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'embedding' | 'saving';
+type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
 
 const WebClipper = () => {
   const [searchParams] = useSearchParams();
@@ -172,29 +174,109 @@ const WebClipper = () => {
       // Image attachments: wait briefly for preview load (handled by <img onLoad>).
       // No blocking — we proceed but UI reflects loading state.
 
+      // ── Full-page fetch (Evernote-style) ──────────────────────────────
+      // If the caller sent only a URL (typical browser-extension / share
+      // sheet case), pull the whole article server-side via Readability so
+      // the saved note has title, byline, hero image, images inline, and
+      // the complete body — not just the 10 % summary the extension sent.
+      let articleTitle = '';
+      let articleByline = '';
+      let articleSiteName = '';
+      let articleLeadImage = '';
+      let articleExcerpt = '';
+      let articlePublished = '';
+      let articleHtml = '';
+      const shouldFetchFull =
+        !attachment &&
+        !!url &&
+        (clipMode === 'article' || clipMode === 'fullpage') &&
+        // Only skip if the caller already sent a big body (the extension
+        // captured full content itself). 2 KB threshold — anything less
+        // is treated as a snippet and we re-fetch.
+        (content || '').length < 2048;
+
+      if (shouldFetchFull) {
+        try {
+          setStage('fetching');
+          setProgress(null);
+          setProgressLabel(t('webClipper.stageFetching', 'Fetching full article…'));
+          const { data, error } = await supabase.functions.invoke('fetch-article', {
+            body: { url },
+          });
+          if (!error && data && !controller.signal.aborted) {
+            articleTitle = String(data.title || '').trim();
+            articleByline = String(data.byline || '').trim();
+            articleSiteName = String(data.siteName || '').trim();
+            articleLeadImage = String(data.leadImage || '').trim();
+            articleExcerpt = String(data.excerpt || '').trim();
+            articlePublished = String(data.publishedTime || '').trim();
+            articleHtml = String(data.content || '').trim();
+          }
+        } catch (err) {
+          console.warn('[webClipper] full-article fetch failed', err);
+          // Soft-fail: fall back to whatever content was passed in.
+        }
+      }
+
       setStage('embedding');
       setProgress(null);
       setProgressLabel(t('webClipper.stageEmbedding', 'Building note…'));
 
-      const mergedContent = extractedPdfText
-        ? [content, extractedPdfText, pdfTruncated ? '_(PDF text truncated)_' : '']
-            .filter(Boolean)
-            .join('\n\n')
-        : content;
+      let noteContent: string;
+      let finalTitle = title;
 
-      const noteContent = buildClipNoteBody({
-        url,
-        selection,
-        content: mergedContent,
-        mode: clipMode,
-        attachment: attachment || undefined,
-        attachmentType,
-      });
+      if (articleHtml) {
+        // Rich HTML note (renders via dangerouslySetInnerHTML in NoteEditor).
+        if (articleTitle && (title === 'Untitled Clip' || !searchParams.get('title'))) {
+          finalTitle = articleTitle.substring(0, MAX_LENGTHS.title);
+        }
+        const parts: string[] = [];
+        parts.push(`<h1>${sanitizeForDisplay(finalTitle)}</h1>`);
+        const metaBits: string[] = [];
+        if (articleByline) metaBits.push(sanitizeForDisplay(articleByline));
+        if (articleSiteName) metaBits.push(sanitizeForDisplay(articleSiteName));
+        if (articlePublished) {
+          const d = new Date(articlePublished);
+          if (!isNaN(d.getTime())) metaBits.push(d.toLocaleDateString());
+        }
+        if (metaBits.length) {
+          parts.push(`<p><em>${metaBits.join(' · ')}</em></p>`);
+        }
+        parts.push(
+          `<p><a href="${url}" target="_blank" rel="noopener noreferrer">${sanitizeForDisplay(url)}</a></p>`,
+        );
+        if (articleLeadImage && !articleHtml.includes(articleLeadImage)) {
+          parts.push(`<p><img src="${articleLeadImage}" alt="" /></p>`);
+        }
+        if (articleExcerpt) {
+          parts.push(`<blockquote>${sanitizeForDisplay(articleExcerpt)}</blockquote>`);
+        }
+        if (selection) {
+          parts.push(`<blockquote>${sanitizeForDisplay(selection)}</blockquote>`);
+        }
+        parts.push(sanitizeForDisplay(articleHtml));
+        noteContent = parts.join('\n');
+      } else {
+        const mergedContent = extractedPdfText
+          ? [content, extractedPdfText, pdfTruncated ? '_(PDF text truncated)_' : '']
+              .filter(Boolean)
+              .join('\n\n')
+          : content;
+
+        noteContent = buildClipNoteBody({
+          url,
+          selection,
+          content: mergedContent,
+          mode: clipMode,
+          attachment: attachment || undefined,
+          attachmentType,
+        });
+      }
 
       const newNote: Note = {
         id: crypto.randomUUID(),
         type: 'regular',
-        title,
+        title: finalTitle,
         content: noteContent,
         voiceRecordings: [],
         createdAt: new Date(),
