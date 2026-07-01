@@ -55,6 +55,8 @@ import {
   tryMarkdownBlockShortcut,
   tryMarkdownEnterShortcut,
   tryMarkdownInlineShortcut,
+  markdownPasteToHtml,
+  isInsideCode,
 } from './richtext/markdownShortcuts';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
 import {
@@ -72,6 +74,7 @@ import {
   mentionHTML, getCaretRect, getCaretLI, indentListItem, outdentListItem,
   replaceTriggerAndInsert, columnsHTML, mathHTML, renderMathIn, wrapSelectionAsComment,
   syncedHTML, hydrateSyncedIn, persistSyncedFrom, removeAdjacentMention, hydrateWebClipsIn,
+  hydrateCodeBlocksIn, hydrateImageMediaIn,
 } from './richtext/richTextBlocks';
 import { SyncedBlockPicker } from './richtext/SyncedBlockPicker';
 import 'katex/dist/katex.min.css';
@@ -210,6 +213,8 @@ export const RichTextEditor = ({
     if (syncedUnsubRef.current) { syncedUnsubRef.current(); syncedUnsubRef.current = null; }
     syncedUnsubRef.current = hydrateSyncedIn(editorRef.current, { editable: true });
     hydrateWebClipsIn(editorRef.current);
+    hydrateCodeBlocksIn(editorRef.current);
+    hydrateImageMediaIn(editorRef.current);
   }, []);
   useEffect(() => () => { syncedUnsubRef.current?.(); }, []);
 
@@ -1527,6 +1532,27 @@ export const RichTextEditor = ({
     }
   }, []);
 
+  // Paste handler: convert Markdown → HTML when the clipboard is plain text
+  // and Markdown shortcuts are enabled. Falls back to default paste otherwise.
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    if (notesSettings.markdownShortcuts === false) return;
+    if (isInsideCode(editorRef.current)) return; // preserve raw paste inside code blocks
+    const cd = e.clipboardData;
+    if (!cd) return;
+    const html = cd.getData('text/html');
+    // Only intercept plain-text pastes so we don't mangle real HTML from other editors.
+    if (html && html.trim()) return;
+    const text = cd.getData('text/plain');
+    if (!text) return;
+    const converted = markdownPasteToHtml(text);
+    if (!converted) return;
+    e.preventDefault();
+    document.execCommand('insertHTML', false, converted);
+    // Hydrate any freshly-inserted code blocks / web-clips.
+    hydrateSynced();
+    handleInput();
+  }, [notesSettings.markdownShortcuts, hydrateSynced]);
+
   // Handle keydown - checklist Enter key and other keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.key === 'Backspace' || e.key === 'Delete') && removeAdjacentMention(e.key === 'Backspace' ? 'backward' : 'forward', editorRef.current)) {
@@ -1545,7 +1571,8 @@ export const RichTextEditor = ({
     // when the closing marker is typed.
     // Skip while slash / mention menus are showing so their own handling wins.
     // ─────────────────────────────────────────────────────────────
-    if (!slashMenu.open && !mentionMenu.open) {
+    const mdEnabled = notesSettings.markdownShortcuts !== false;
+    if (mdEnabled && !slashMenu.open && !mentionMenu.open && !isInsideCode(editorRef.current)) {
       if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (tryMarkdownBlockShortcut(editorRef.current)) {
           e.preventDefault();
@@ -2195,6 +2222,7 @@ export const RichTextEditor = ({
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         onCopy={handleCopy}
         data-gramm="false"
         data-gramm_editor="false"

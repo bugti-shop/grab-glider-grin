@@ -12,6 +12,9 @@
  *   [x]     → todo item (checked)
  *   >       → blockquote
  *
+ * When the caret is inside an existing <li>, the same tokens create a *nested*
+ * sub-list rather than replacing the block, giving smart Tab-less indentation.
+ *
  * Divider: typing `---` on an empty line and pressing Enter turns the block
  * into an <hr>.
  *
@@ -24,8 +27,9 @@
  *   `X`     → inline code
  *   ~~X~~   → strikethrough
  *
- * Each helper returns `true` when it handled the event so the caller can
- * `preventDefault()` and skip its own logic.
+ * All shortcuts (block, inline, enter, paste) are silently skipped when the
+ * caret sits inside a fenced code block (`<pre>` / `<code>`) or inside a text
+ * region that has an unclosed ``` fence.
  */
 
 type BlockEl = HTMLElement;
@@ -33,6 +37,27 @@ type BlockEl = HTMLElement;
 const BLOCK_TAGS = new Set([
   'P', 'DIV', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE',
 ]);
+
+/** True if caret is inside <pre>/<code> or an unclosed ``` fence in current block text. */
+export function isInsideCode(root: HTMLElement | null): boolean {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return false;
+  let node: Node | null = sel.getRangeAt(0).startContainer;
+  while (node && node !== root) {
+    if (node.nodeType === 1) {
+      const el = node as HTMLElement;
+      if (el.tagName === 'PRE' || el.tagName === 'CODE') return true;
+      if (el.classList?.contains('rt-codeblock')) return true;
+    }
+    node = node.parentNode;
+  }
+  // Partial fence: count ``` occurrences from block start up to caret.
+  const block = getCaretBlock(root!);
+  if (!block) return false;
+  const text = textBeforeCaretInBlock(block);
+  const fences = (text.match(/```/g) || []).length;
+  return fences % 2 === 1;
+}
 
 function getCaretBlock(root: HTMLElement): BlockEl | null {
   const sel = window.getSelection();
@@ -62,7 +87,6 @@ function moveCaretIntoStart(el: HTMLElement) {
   const sel = window.getSelection();
   if (!sel) return;
   const range = document.createRange();
-  // Deepest first descendant so the caret sits inside any inner span/text.
   let target: Node = el;
   while (target.firstChild) target = target.firstChild;
   if (target.nodeType === 3) range.setStart(target, 0);
@@ -83,19 +107,65 @@ function replaceBlockWith(oldBlock: BlockEl, newBlock: HTMLElement) {
  */
 export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
   if (!root) return false;
+  if (isInsideCode(root)) return false;
   const block = getCaretBlock(root);
   if (!block) return false;
-  // Don't rewrite lines that already live inside a list, table, code block etc.
-  if (block.closest('pre, code, table, .flowist-web-clip, [data-webclip], [data-math]')) {
+  // Don't rewrite lines inside these special blocks.
+  if (block.closest('pre, code, table, .flowist-web-clip, [data-webclip], [data-math], .rt-codeblock')) {
     return false;
   }
-  if (block.tagName === 'LI') return false; // already a list — let native Space through
 
   const text = textBeforeCaretInBlock(block).replace(/\u00A0/g, ' ');
   // Only convert if the token is *all* that's typed so far on this line.
   const match = text.match(/^(#{1,4}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>)$/i);
   if (!match) return false;
   const token = match[1];
+
+  // ── Nested-list smart indent when inside an existing <li> ────────────
+  if (block.tagName === 'LI') {
+    // Only bullet / numbered / checklist create nested sub-lists.
+    if (token === '-' || token === '*' || token === '+' || /^\d+\.$/.test(token) ||
+        token === '[]' || token === '[ ]' || token.toLowerCase() === '[x]') {
+      const li = block as HTMLLIElement;
+      const parentTag = li.parentElement?.tagName === 'OL' ? 'ol' : 'ul';
+      const isNumbered = /^\d+\.$/.test(token);
+      const isCheck = token === '[]' || token === '[ ]' || token.toLowerCase() === '[x]';
+      const wantTag: 'ul' | 'ol' = isNumbered ? 'ol' : 'ul';
+
+      // Clear the typed token from the current LI.
+      li.textContent = '';
+
+      // Find or create nested sublist inside current LI.
+      let nested = li.querySelector(`:scope > ${wantTag}`) as HTMLElement | null;
+      if (!nested) {
+        nested = document.createElement(wantTag);
+        if (isCheck) nested.className = 'checklist';
+        li.appendChild(nested);
+      }
+
+      if (isCheck) {
+        const checked = token.toLowerCase() === '[x]';
+        const nLi = document.createElement('li');
+        nLi.className = 'checklist-item';
+        if (checked) nLi.setAttribute('checked', 'true');
+        nLi.innerHTML =
+          `<input type="checkbox" class="checklist-checkbox"${checked ? ' checked' : ''} />` +
+          `<span class="checklist-text">\u00A0</span>`;
+        nested.appendChild(nLi);
+        const span = nLi.querySelector('.checklist-text') as HTMLElement | null;
+        if (span) moveCaretIntoStart(span);
+      } else {
+        const nLi = document.createElement('li');
+        nLi.innerHTML = '<br>';
+        nested.appendChild(nLi);
+        moveCaretIntoStart(nLi);
+      }
+      // Suppress parent numbering hint by keeping unused variable referenced.
+      void parentTag;
+      return true;
+    }
+    return false; // headings / quotes inside an <li> — let native Space through
+  }
 
   const clearBlock = () => { block.textContent = ''; };
 
@@ -165,9 +235,10 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
  */
 export function tryMarkdownEnterShortcut(root: HTMLElement | null): boolean {
   if (!root) return false;
+  if (isInsideCode(root)) return false;
   const block = getCaretBlock(root);
   if (!block) return false;
-  if (block.closest('pre, code, table, li')) return false;
+  if (block.closest('pre, code, table, li, .rt-codeblock')) return false;
   const text = textBeforeCaretInBlock(block).replace(/\u00A0/g, ' ').trim();
   if (text !== '---' && text !== '***' && text !== '___') return false;
   const hr = document.createElement('hr');
@@ -186,6 +257,7 @@ export function tryMarkdownEnterShortcut(root: HTMLElement | null): boolean {
  */
 export function tryMarkdownInlineShortcut(char: string, root: HTMLElement | null): boolean {
   if (!root) return false;
+  if (isInsideCode(root)) return false;
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
   const range = sel.getRangeAt(0);
@@ -195,7 +267,6 @@ export function tryMarkdownInlineShortcut(char: string, root: HTMLElement | null
   const caret = range.startOffset;
   const before = textNode.data.slice(0, caret);
 
-  // Choose the token & wrapper based on the closing char + what's already typed.
   let token = '';
   let tag: 'strong' | 'em' | 'code' | 'del' | null = null;
 
@@ -211,31 +282,185 @@ export function tryMarkdownInlineShortcut(char: string, root: HTMLElement | null
   }
   if (!tag || !token) return false;
 
-  // Find the matching opener.
   const openerIdx = before.lastIndexOf(token, before.length - token.length - 1);
   if (openerIdx < 0) return false;
   const inner = before.slice(openerIdx + token.length, before.length - (token === '**' || token === '~~' ? 1 : 0));
   if (!inner || /\s$/.test(inner) || /^\s/.test(inner)) return false;
 
-  // Replace `token + inner + partialClose` with wrapped element.
   const startDelete = openerIdx;
   const wrap = document.createElement(tag);
   wrap.textContent = inner;
 
-  // Delete the raw markdown range from the text node.
   const parent = textNode.parentNode!;
   const remainingAfter = textNode.data.slice(caret);
   textNode.data = textNode.data.slice(0, startDelete);
-  // Insert wrapper + trailing text after the trimmed node.
   parent.insertBefore(wrap, textNode.nextSibling);
-  const trailing = document.createTextNode('\u200B' + remainingAfter); // ZWSP escape from wrapper
+  const trailing = document.createTextNode('\u200B' + remainingAfter);
   parent.insertBefore(trailing, wrap.nextSibling);
 
-  // Place caret after the ZWSP so subsequent typing is unformatted.
   const newRange = document.createRange();
   newRange.setStart(trailing, 1);
   newRange.collapse(true);
   sel.removeAllRanges();
   sel.addRange(newRange);
   return true;
+}
+
+// ───────────────────────────────────────────────────────────────
+// Paste-time Markdown → HTML conversion
+// ───────────────────────────────────────────────────────────────
+
+const escapeHtml = (s: string) => s
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;');
+
+/** Apply inline markdown (bold/italic/code/strike/link) to an already-escaped line. */
+function applyInline(escapedLine: string): string {
+  let out = escapedLine;
+  // inline code first — protect from other rules
+  const codes: string[] = [];
+  out = out.replace(/`([^`\n]+)`/g, (_, c) => {
+    codes.push(`<code>${c}</code>`);
+    return `\u0001${codes.length - 1}\u0001`;
+  });
+  // links [text](url)
+  out = out.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    (_, t, u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${t}</a>`);
+  // bold + italic
+  out = out.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
+  out = out.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  out = out.replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
+  out = out.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+  // restore inline codes
+  out = out.replace(/\u0001(\d+)\u0001/g, (_, i) => codes[Number(i)]);
+  return out;
+}
+
+/**
+ * Convert a plain-text Markdown fragment into safe HTML for paste. Handles:
+ *   - ATX headings (# .. ####)
+ *   - Bullet + numbered lists (single-level, indented by 2/4 spaces → nested)
+ *   - Checklists ([ ], [x])
+ *   - Blockquotes (>)
+ *   - Horizontal rules (--- / *** / ___)
+ *   - Fenced code blocks (```lang ... ```)
+ *   - Inline bold / italic / code / strike / links
+ *
+ * If the input contains no recognisable markdown, returns null so the caller
+ * can fall back to plain-text paste and preserve editor structure.
+ */
+export function markdownPasteToHtml(text: string): string | null {
+  if (!text) return null;
+  const src = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const hasMd = /^(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|\[\s?[xX]?\]\s|```|---$|\*\*\*$|___$)/m.test(src)
+    || /\*\*[^*\n]+\*\*|`[^`\n]+`|~~[^~\n]+~~|\[[^\]]+\]\(https?:\/\/[^\s)]+\)/.test(src);
+  if (!hasMd) return null;
+
+  const lines = src.split('\n');
+  const out: string[] = [];
+  let i = 0;
+
+  const flushBlank = () => { /* no-op */ };
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Fenced code block
+    const fence = /^```([\w+-]*)\s*$/.exec(line);
+    if (fence) {
+      const lang = fence[1] || '';
+      const buf: string[] = [];
+      i++;
+      while (i < lines.length && !/^```\s*$/.test(lines[i])) { buf.push(lines[i]); i++; }
+      if (i < lines.length) i++; // consume closing fence
+      const code = escapeHtml(buf.join('\n'));
+      out.push(
+        `<pre class="rt-codeblock" data-lang="${escapeHtml(lang)}"><code>${code}</code></pre>`
+      );
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^(---|\*\*\*|___)\s*$/.test(line)) { out.push('<hr/>'); i++; continue; }
+
+    // Headings
+    const h = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (h) {
+      const lvl = Math.min(h[1].length, 6);
+      out.push(`<h${lvl}>${applyInline(escapeHtml(h[2]))}</h${lvl}>`);
+      i++; continue;
+    }
+
+    // Blockquote (collapse consecutive)
+    if (/^>\s?/.test(line)) {
+      const buf: string[] = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) {
+        buf.push(applyInline(escapeHtml(lines[i].replace(/^>\s?/, ''))));
+        i++;
+      }
+      out.push(`<blockquote>${buf.join('<br>')}</blockquote>`);
+      continue;
+    }
+
+    // Checklists
+    if (/^\s*[-*+]\s+\[[ xX]\]\s+/.test(line)) {
+      out.push('<ul class="checklist">');
+      while (i < lines.length && /^\s*[-*+]\s+\[[ xX]\]\s+/.test(lines[i])) {
+        const m = /^\s*[-*+]\s+\[([ xX])\]\s+(.*)$/.exec(lines[i])!;
+        const checked = m[1].toLowerCase() === 'x';
+        out.push(
+          `<li class="checklist-item"${checked ? ' checked="true"' : ''}>` +
+          `<input type="checkbox" class="checklist-checkbox"${checked ? ' checked' : ''}/>` +
+          `<span class="checklist-text">${applyInline(escapeHtml(m[2]))}</span></li>`
+        );
+        i++;
+      }
+      out.push('</ul>');
+      continue;
+    }
+
+    // Bullet / numbered lists (supports 1 level of nesting via 2-4 space indent)
+    if (/^(\s*)([-*+]|\d+\.)\s+/.test(line)) {
+      const ordered = /^\s*\d+\.\s+/.test(line);
+      const tag = ordered ? 'ol' : 'ul';
+      out.push(`<${tag}>`);
+      let curIndent = -1;
+      while (i < lines.length && /^(\s*)([-*+]|\d+\.)\s+/.test(lines[i]) && !/^\s*[-*+]\s+\[[ xX]\]\s+/.test(lines[i])) {
+        const m = /^(\s*)([-*+]|\d+\.)\s+(.*)$/.exec(lines[i])!;
+        const indent = Math.floor(m[1].length / 2);
+        const content = applyInline(escapeHtml(m[3]));
+        if (curIndent === -1) curIndent = indent;
+        if (indent > curIndent) {
+          const sub = /^\s*\d+\.\s+/.test(lines[i]) ? 'ol' : 'ul';
+          out.push(`<${sub}><li>${content}</li>`);
+          curIndent = indent;
+        } else if (indent < curIndent) {
+          out.push('</ul></li>');
+          out.push(`<li>${content}</li>`);
+          curIndent = indent;
+        } else {
+          out.push(`<li>${content}</li>`);
+        }
+        i++;
+      }
+      out.push(`</${tag}>`);
+      continue;
+    }
+
+    // Blank line → paragraph break
+    if (line.trim() === '') { flushBlank(); i++; continue; }
+
+    // Paragraph: consume until blank line
+    const buf: string[] = [];
+    while (i < lines.length && lines[i].trim() !== '' &&
+           !/^(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|---$|\*\*\*$|___$)/.test(lines[i])) {
+      buf.push(applyInline(escapeHtml(lines[i])));
+      i++;
+    }
+    if (buf.length) out.push(`<p>${buf.join('<br>')}</p>`);
+  }
+
+  return out.join('');
 }

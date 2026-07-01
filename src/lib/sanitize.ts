@@ -15,10 +15,10 @@ const RICH_TEXT_CONFIG = {
     'blockquote', 'hr', 'sub', 'sup', 's', 'strike',
     'font', 'small', 'big',
     'details', 'summary', // Toggle blocks
-    'audio', 'source', // Allow audio elements for voice recordings
-    'button', // Allow buttons for inline voice player controls
-    'svg', 'polygon', 'rect', 'path', 'circle', 'line', 'polyline', 'g', // Allow SVG icons in voice player
-    // MathML tags emitted by KaTeX
+    'figure', 'figcaption', // Image captions
+    'select', 'option', 'button', 'input', // Code-block chrome + checklists
+    'audio', 'source',
+    'svg', 'polygon', 'rect', 'path', 'circle', 'line', 'polyline', 'g',
     'math', 'semantics', 'annotation', 'mrow', 'mi', 'mo', 'mn', 'ms', 'mtext',
     'mfrac', 'msup', 'msub', 'msubsup', 'msqrt', 'mroot', 'mover', 'munder',
     'munderover', 'mtable', 'mtr', 'mtd', 'mstyle', 'mspace', 'mpadded', 'mphantom',
@@ -27,18 +27,19 @@ const RICH_TEXT_CONFIG = {
     'href', 'src', 'alt', 'class', 'style', 'id',
     'target', 'rel', 'width', 'height', 'colspan', 'rowspan',
     'data-id', 'data-type', 'data-find-highlight',
-    'data-mention-type', 'data-mention-id', 'data-mention-path', 'data-mention-href', 'data-prefix', 'data-variant', // Mentions + callouts
-    'data-latex', 'data-display', 'data-cols', 'data-comment', 'data-comment-id', 'data-synced-id', 'data-role', // Math, columns, comments, synced
-    'open', 'title', // details element + tooltip
-    'data-recording-id', 'data-audio-src', // Allow audio data attributes
-    'data-file-name', 'data-file-type', 'data-file-size', 'data-file-url', 'data-click-attached', // Allow file attachment attributes
-    'data-task-id', 'checked', // Note-to-task bridge + checklist state
+    'data-mention-type', 'data-mention-id', 'data-mention-path', 'data-mention-href', 'data-prefix', 'data-variant',
+    'data-latex', 'data-display', 'data-cols', 'data-comment', 'data-comment-id', 'data-synced-id', 'data-role',
+    'data-lang', 'data-line-numbers', 'data-image-caption', 'data-image-align', 'data-image-width', 'data-placeholder',
+    'open', 'title',
+    'data-recording-id', 'data-audio-src',
+    'data-file-name', 'data-file-type', 'data-file-size', 'data-file-url', 'data-click-attached',
+    'data-task-id', 'checked', 'value', 'selected', 'spellcheck', 'placeholder',
     'color', 'size', 'face', 'contenteditable', 'draggable',
-    'controls', 'type', // Allow audio controls
-    'aria-label', 'aria-hidden', 'role', 'tabindex', // Accessibility attrs for voice player
-    'viewBox', 'xmlns', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', // SVG attrs
-    'points', 'x', 'y', 'rx', 'ry', 'd', 'cx', 'cy', 'r', // SVG geometry attrs
-    'mathvariant', 'displaystyle', 'scriptlevel', 'lspace', 'rspace', 'separator', 'stretchy', 'accent', // MathML
+    'controls', 'type',
+    'aria-label', 'aria-hidden', 'role', 'tabindex',
+    'viewBox', 'xmlns', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin',
+    'points', 'x', 'y', 'rx', 'ry', 'd', 'cx', 'cy', 'r',
+    'mathvariant', 'displaystyle', 'scriptlevel', 'lspace', 'rspace', 'separator', 'stretchy', 'accent',
   ],
   ALLOW_DATA_ATTR: true,
   // Allow safe URLs only
