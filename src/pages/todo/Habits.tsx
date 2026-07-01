@@ -28,6 +28,7 @@ import { checkMilestones, milestoneEmoji } from '@/utils/habitMilestones';
 import { HabitImportSheet } from '@/components/habits/HabitImportSheet';
 import { isHabitDueOnDate as smartIsHabitDueOnDate, isMakeUpDay } from '@/utils/habitScheduler';
 import { applyStreakFreezes, freezesRemaining, getFreezeState } from '@/utils/habitFreezes';
+import { isHabitPausedOn } from '@/utils/habitPause';
 
 const Habits = () => {
   const navigate = useNavigate();
