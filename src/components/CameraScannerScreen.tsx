@@ -630,6 +630,7 @@ export const CameraScannerScreen = ({
           {mode === 'note' && onBatchNote && (
             <button
               onClick={() => {
+                if (!requirePro('batch')) return;
                 setBatchOn((v) => {
                   const next = !v;
                   toast(next
@@ -649,10 +650,12 @@ export const CameraScannerScreen = ({
             >
               <Files className="h-4 w-4" />
               Batch{batchPages.length > 0 ? ` · ${batchPages.length}` : ''}
+              {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
             </button>
           )}
           <button
             onClick={() => {
+              if (!requirePro('burst')) return;
               setBurstOn((v) => !v);
               toast(burstOn ? 'Burst mode off' : 'Burst mode on · 3 shots, sharpest wins', { duration: 1100 });
             }}
@@ -666,6 +669,7 @@ export const CameraScannerScreen = ({
           >
             <Layers className="h-4 w-4" />
             Burst
+            {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
           </button>
           <button
             onClick={toggleTorch}
