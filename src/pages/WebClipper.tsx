@@ -10,6 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIcon, FileType2, AlertTriangle, Download, X } from 'lucide-react';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { sanitizeForDisplay } from '@/lib/sanitize';
 import {
   MAX_LENGTHS,
   type ClipMode,
@@ -20,6 +22,7 @@ import {
   validateAttachment,
   formatBytes,
   ATTACHMENT_LIMITS,
+  escapeMarkdown,
 } from '@/utils/webClipper';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
