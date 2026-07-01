@@ -82,9 +82,11 @@ interface Props {
     items?: Array<{ name: string; qty?: number; unitPrice?: number; lineTotal?: number }>;
     html: string; title: string;
   }>;
-  /** Called when the user confirms the parsed receipt. */
+  /** Called when the user confirms the parsed receipt. Receives edited fields. */
   onConfirmReceipt?: (dataUrl: string, result: {
     merchant: string; total: number; currency: string; date: string;
+    category?: string; paymentMethod?: string; tax?: number;
+    items?: Array<{ name: string; qty?: number; unitPrice?: number; lineTotal?: number }>;
     html: string; title: string;
   }) => void;
   /**
