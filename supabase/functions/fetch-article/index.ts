@@ -23,7 +23,42 @@ const corsHeaders = {
 };
 
 const MAX_HTML_BYTES = 5 * 1024 * 1024; // 5MB page cap
+const MAX_CONTENT_HTML_BYTES = 500 * 1024; // 500KB cap on returned clip HTML
 const FETCH_TIMEOUT_MS = 20_000;
+
+/** Extract absolute image URLs from an HTML string (order-preserving, deduped). */
+function extractImageUrls(html: string): string[] {
+  if (!html) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const re = /<img\b[^>]*?\ssrc\s*=\s*["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const u = m[1].trim();
+    if (!u || u.startsWith("data:")) continue;
+    if (seen.has(u)) continue;
+    seen.add(u);
+    out.push(u);
+    if (out.length >= 100) break;
+  }
+  return out;
+}
+
+/** Truncate HTML at a byte budget without breaking a tag mid-attribute. */
+function capHtml(html: string, maxBytes: number): { html: string; truncated: boolean } {
+  if (!html) return { html: "", truncated: false };
+  const enc = new TextEncoder();
+  if (enc.encode(html).length <= maxBytes) return { html, truncated: false };
+  // Binary-search a safe character cut, then close at the last '>'.
+  let lo = 0, hi = html.length, cut = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (enc.encode(html.slice(0, mid)).length <= maxBytes) { cut = mid; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+  const lastGt = html.lastIndexOf(">", cut);
+  return { html: html.slice(0, lastGt > 0 ? lastGt + 1 : cut), truncated: true };
+}
 
 // Attributes commonly used by lazy-load libraries (LazySizes, Lozad,
 // WordPress, Medium, Substack, Ghost, etc.) to hold the *real* image URL.
