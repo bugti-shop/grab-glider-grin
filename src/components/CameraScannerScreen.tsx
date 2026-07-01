@@ -1097,8 +1097,8 @@ async function decodeBarcodeWithZxing(
  */
 const ChipStrip = ({ children }: { children: React.ReactNode }) => (
   <div
-    className="flex items-center justify-start gap-2 pb-3 overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-    style={{ WebkitOverflowScrolling: 'touch' }}
+    className="relative z-30 flex items-center justify-start gap-2 pb-3 overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    style={{ WebkitOverflowScrolling: 'touch', pointerEvents: 'auto' }}
   >
     {children}
   </div>
@@ -1117,21 +1117,26 @@ const ChipButton = ({
   const startRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const cancelledRef = useRef(false);
   const firedRef = useRef(false);
-  const fire = (e: React.SyntheticEvent) => {
-    if (cancelledRef.current || firedRef.current) return;
+  const label = (buttonProps as any)['data-scanner-label'] || 'chip';
+  const fire = (source: string) => {
+    if (cancelledRef.current || firedRef.current) {
+      console.log(`[Scanner] chip "${label}" ${source} suppressed (cancelled=${cancelledRef.current}, fired=${firedRef.current})`);
+      return;
+    }
     firedRef.current = true;
-    e.stopPropagation();
+    console.log(`[Scanner] chip "${label}" fired via ${source}`);
     onSelect();
-    // Reset so the next tap works
     setTimeout(() => { firedRef.current = false; }, 250);
   };
   return (
     <button
       {...buttonProps}
       type="button"
+      style={{ position: 'relative', zIndex: 40, touchAction: 'manipulation', pointerEvents: 'auto', ...(buttonProps.style || {}) }}
       onPointerDown={(e) => {
         buttonProps.onPointerDown?.(e);
         e.stopPropagation();
+        console.log(`[Scanner] chip "${label}" pointerdown`, { x: e.clientX, y: e.clientY, type: e.pointerType });
         startRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
         cancelledRef.current = false;
         firedRef.current = false;
@@ -1142,24 +1147,28 @@ const ChipButton = ({
         if (!s) return;
         const dx = Math.abs(e.clientX - s.x);
         const dy = Math.abs(e.clientY - s.y);
-        // Only treat as a scroll gesture when horizontal movement clearly dominates.
         if (dx > 18 && dx > dy * 1.5) cancelledRef.current = true;
       }}
       onPointerUp={(e) => {
         buttonProps.onPointerUp?.(e);
-        // Fire on pointerup regardless of whether the browser later dispatches
-        // click — some Android WebViews swallow click inside scroll containers.
+        e.stopPropagation();
         const s = startRef.current;
-        if (!s) return;
+        if (!s) {
+          console.log(`[Scanner] chip "${label}" pointerup with no start`);
+          return;
+        }
         const dx = Math.abs(e.clientX - s.x);
         const dy = Math.abs(e.clientY - s.y);
-        if (dx > 18 && dx > dy * 1.5) return;
-        fire(e);
+        if (dx > 18 && dx > dy * 1.5) {
+          console.log(`[Scanner] chip "${label}" pointerup treated as scroll`);
+          return;
+        }
+        fire('pointerup');
       }}
       onClick={(e) => {
         buttonProps.onClick?.(e);
-        // Fallback for mouse / desktop; guarded by firedRef to avoid double-trigger.
-        fire(e);
+        e.stopPropagation();
+        fire('click');
       }}
       className={cn(
         'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95 touch-manipulation',
@@ -1172,6 +1181,7 @@ const ChipButton = ({
     </button>
   );
 };
+
 
 /**
  * Full-screen review overlay shown after the object-count shutter fires.
