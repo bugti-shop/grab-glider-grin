@@ -64,6 +64,23 @@ interface Props {
   /** Called when the user confirms an object-count result. Parent creates the note/task and should close. */
   onConfirmObjectCount?: (dataUrl: string, result: ObjectCountResult) => void;
   /**
+   * Called when Receipt mode captures a frame. Should parse the receipt
+   * (via the ai-extract-receipt edge function) and return the structured
+   * result. The scanner will hand it off to `onConfirmReceipt` for final
+   * insertion.
+   */
+  onReceipt?: (dataUrl: string) => Promise<{
+    merchant: string; total: number; currency: string; date: string;
+    category?: string; paymentMethod?: string; tax?: number;
+    items?: Array<{ name: string; qty?: number; unitPrice?: number; lineTotal?: number }>;
+    html: string; title: string;
+  }>;
+  /** Called when the user confirms the parsed receipt. */
+  onConfirmReceipt?: (dataUrl: string, result: {
+    merchant: string; total: number; currency: string; date: string;
+    html: string; title: string;
+  }) => void;
+  /**
    * Called when a barcode is decoded in `barcode` mode. If omitted, decoded
    * barcodes are surfaced as a toast and the raw frame is still sent via
    * onCapture so the caller can decide how to handle it.
