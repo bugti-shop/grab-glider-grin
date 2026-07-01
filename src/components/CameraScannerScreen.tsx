@@ -1297,65 +1297,239 @@ const ReceiptReviewOverlay = ({
   loading: boolean;
   error: string | null;
   onRetake: () => void;
-  onConfirm: () => void;
+  onConfirm: (edited: {
+    merchant: string; total: number; currency: string; date: string;
+    category?: string; paymentMethod?: string; tax?: number;
+    items?: Array<{ name: string; qty?: number; unitPrice?: number; lineTotal?: number }>;
+    html: string; title: string;
+  }) => void;
 }) => {
+  type Item = { name: string; qty?: number; unitPrice?: number; lineTotal?: number };
+  const [merchant, setMerchant] = useState('');
+  const [total, setTotal] = useState('');
+  const [currency, setCurrency] = useState('');
+  const [date, setDate] = useState('');
+  const [category, setCategory] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [tax, setTax] = useState('');
+  const [items, setItems] = useState<Item[]>([]);
+
+  // Hydrate from AI result once it arrives.
+  useEffect(() => {
+    if (!result) return;
+    setMerchant(String(result.merchant || ''));
+    setTotal(result.total ? String(result.total) : '');
+    setCurrency(String(result.currency || ''));
+    setDate(String(result.date || ''));
+    setCategory(String(result.category || ''));
+    setPaymentMethod(String(result.paymentMethod || ''));
+    setTax(result.tax ? String(result.tax) : '');
+    setItems(Array.isArray(result.items) ? result.items : []);
+  }, [result]);
+
   const money = (n: number, ccy?: string) => `${ccy ? ccy + ' ' : ''}${Number(n || 0).toFixed(2)}`;
+  const totalNum = Number(total) || 0;
+  const taxNum = Number(tax) || 0;
+
+  const updateItem = (i: number, patch: Partial<Item>) => {
+    setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+  };
+  const addItem = () => setItems((arr) => [...arr, { name: '', qty: 1, unitPrice: 0 }]);
+  const removeItem = (i: number) => setItems((arr) => arr.filter((_, idx) => idx !== i));
+
+  const escapeHtml = (s: string) =>
+    String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
+  const buildHtml = () => {
+    const rows = items
+      .filter((it) => (it.name || '').trim())
+      .map((it) => {
+        const qty = Number(it.qty || 1);
+        const unit = Number(it.unitPrice || 0);
+        const line = it.lineTotal != null ? Number(it.lineTotal) : qty * unit;
+        return `<tr><td>${escapeHtml(it.name || '')}</td><td style="text-align:right">${qty}</td><td style="text-align:right">${money(unit, currency)}</td><td style="text-align:right"><strong>${money(line, currency)}</strong></td></tr>`;
+      })
+      .join('');
+    const itemsTable = rows
+      ? `<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left">Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit</th><th style="text-align:right">Line</th></tr></thead><tbody>${rows}</tbody></table>`
+      : '';
+    return (
+      `<h2>${escapeHtml(merchant || 'Receipt')}</h2>` +
+      `<p><strong>Total:</strong> ${money(totalNum, currency)}` +
+      (date ? ` · <strong>Date:</strong> ${escapeHtml(date)}` : '') +
+      (category ? ` · <strong>Category:</strong> ${escapeHtml(category)}` : '') +
+      `</p>` +
+      (paymentMethod ? `<p><strong>Paid:</strong> ${escapeHtml(paymentMethod)}</p>` : '') +
+      (taxNum ? `<p><strong>Tax:</strong> ${money(taxNum, currency)}</p>` : '') +
+      itemsTable
+    );
+  };
+
+  const handleConfirm = () => {
+    onConfirm({
+      merchant: merchant.trim(),
+      total: totalNum,
+      currency: currency.trim(),
+      date: date.trim(),
+      category: category.trim() || undefined,
+      paymentMethod: paymentMethod.trim() || undefined,
+      tax: taxNum || undefined,
+      items: items.filter((it) => (it.name || '').trim()),
+      html: buildHtml(),
+      title: merchant.trim() ? `Receipt · ${merchant.trim()}` : 'Receipt',
+    });
+  };
+
+  const canSave = !loading && !error && (merchant.trim() || totalNum > 0);
+
+  const fieldCls =
+    'w-full h-9 px-2.5 rounded-lg bg-white/10 border border-white/15 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white/40';
+
   return (
     <div className="absolute inset-0 z-10 flex flex-col bg-black text-white">
-      <div className="relative flex-1 overflow-hidden">
-        <img src={frame} alt="Receipt" className="absolute inset-0 w-full h-full object-contain" />
+      <div className="relative h-40 overflow-hidden shrink-0">
+        <img src={frame} alt="Receipt" className="absolute inset-0 w-full h-full object-cover opacity-70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/80" />
         {loading && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="h-8 w-8 animate-spin" />
+          <div className="absolute inset-0 backdrop-blur-sm flex items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-7 w-7 animate-spin" />
               <div className="text-sm font-medium">Reading receipt…</div>
-              <div className="text-xs text-white/70">Extracting merchant, total, date</div>
             </div>
           </div>
         )}
-        {!loading && result && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl px-4 py-2 flex items-center gap-2">
-            <Receipt className="h-4 w-4" />
-            <span className="text-sm font-semibold">
-              {result.merchant || 'Receipt'} · {money(result.total, result.currency)}
-            </span>
+        {!loading && (
+          <div className="absolute bottom-3 left-4 right-4 flex items-center gap-2">
+            <Receipt className="h-5 w-5" />
+            <div className="text-base font-semibold truncate">
+              {merchant || 'Receipt'} · {money(totalNum, currency)}
+            </div>
           </div>
         )}
       </div>
 
       <div
-        className="relative px-4 pt-3"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+        className="flex-1 overflow-y-auto px-4 pt-3 space-y-3"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)' }}
       >
         {error ? (
-          <div className="mb-3 text-sm text-red-300">{error}</div>
-        ) : result ? (
-          <div className="mb-3 max-h-40 overflow-y-auto rounded-2xl bg-white/5 border border-white/10 p-3 text-xs space-y-1">
-            <div className="flex justify-between"><span className="text-white/60">Merchant</span><span className="font-semibold">{result.merchant || '—'}</span></div>
-            <div className="flex justify-between"><span className="text-white/60">Total</span><span className="font-semibold">{money(result.total, result.currency)}</span></div>
-            <div className="flex justify-between"><span className="text-white/60">Date</span><span>{result.date || '—'}</span></div>
-            {result.category && (
-              <div className="flex justify-between"><span className="text-white/60">Category</span><span>{result.category}</span></div>
-            )}
-            {result.paymentMethod && (
-              <div className="flex justify-between"><span className="text-white/60">Paid</span><span>{result.paymentMethod}</span></div>
-            )}
-            {Array.isArray(result.items) && result.items.length > 0 && (
-              <div className="pt-1 mt-1 border-t border-white/10">
-                <div className="text-white/60 mb-1">{result.items.length} item{result.items.length === 1 ? '' : 's'}</div>
-                <ul className="space-y-0.5">
-                  {result.items.slice(0, 5).map((it: any, i: number) => (
-                    <li key={i} className="flex justify-between">
-                      <span className="truncate mr-2">{it.name}</span>
-                      <span className="text-white/80">{money(it.lineTotal ?? (Number(it.unitPrice || 0) * Number(it.qty || 1)), result.currency)}</span>
-                    </li>
-                  ))}
-                  {result.items.length > 5 && <li className="text-white/50">+ {result.items.length - 5} more…</li>}
-                </ul>
+          <div className="rounded-xl bg-red-500/15 border border-red-400/30 p-3 text-sm text-red-200">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="text-[10px] uppercase tracking-wider text-white/50">Edit before saving</div>
+
+        <label className="block">
+          <span className="text-[11px] text-white/60">Merchant</span>
+          <input className={fieldCls} value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Store name" />
+        </label>
+
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-[11px] text-white/60">Total</span>
+            <input className={fieldCls} type="number" inputMode="decimal" step="0.01" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0.00" />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-white/60">Currency</span>
+            <input className={fieldCls} value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} placeholder="USD" maxLength={6} />
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-[11px] text-white/60">Date</span>
+            <input className={fieldCls} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-white/60">Tax</span>
+            <input className={fieldCls} type="number" inputMode="decimal" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} placeholder="0.00" />
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-[11px] text-white/60">Category</span>
+            <input className={fieldCls} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Food, Travel…" />
+          </label>
+          <label className="block">
+            <span className="text-[11px] text-white/60">Payment</span>
+            <input className={fieldCls} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} placeholder="Card, Cash…" />
+          </label>
+        </div>
+
+        <div className="pt-1">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] uppercase tracking-wider text-white/60">Items ({items.length})</span>
+            <button
+              type="button"
+              onClick={addItem}
+              className="h-7 px-2 rounded-md bg-white/10 border border-white/15 text-[11px] font-semibold flex items-center gap-1 active:scale-95"
+            >
+              <Plus className="h-3 w-3" /> Add
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            {items.map((it, i) => {
+              const qty = Number(it.qty || 1);
+              const unit = Number(it.unitPrice || 0);
+              const line = it.lineTotal != null ? Number(it.lineTotal) : qty * unit;
+              return (
+                <div key={i} className="rounded-xl bg-white/5 border border-white/10 p-2 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      className={cn(fieldCls, 'flex-1')}
+                      value={it.name || ''}
+                      onChange={(e) => updateItem(i, { name: e.target.value })}
+                      placeholder="Item name"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeItem(i)}
+                      className="w-8 h-8 rounded-md bg-white/10 border border-white/15 flex items-center justify-center active:scale-95"
+                      aria-label="Remove item"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <input
+                      className={fieldCls}
+                      type="number"
+                      inputMode="decimal"
+                      value={it.qty ?? ''}
+                      onChange={(e) => updateItem(i, { qty: Number(e.target.value) || 0 })}
+                      placeholder="Qty"
+                    />
+                    <input
+                      className={fieldCls}
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      value={it.unitPrice ?? ''}
+                      onChange={(e) => updateItem(i, { unitPrice: Number(e.target.value) || 0 })}
+                      placeholder="Unit"
+                    />
+                    <div className={cn(fieldCls, 'flex items-center justify-end text-white/80 font-semibold')}>
+                      {money(line, currency)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {items.length === 0 && (
+              <div className="text-[11px] text-white/40 italic py-2 text-center">
+                No line items yet — tap Add to include one.
               </div>
             )}
           </div>
-        ) : null}
+        </div>
+      </div>
+
+      <div
+        className="absolute inset-x-0 bottom-0 px-4 pt-3 bg-gradient-to-t from-black via-black/90 to-transparent"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+      >
         <div className="flex gap-2">
           <button
             type="button"
@@ -1366,11 +1540,93 @@ const ReceiptReviewOverlay = ({
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            disabled={loading || !result || !!error}
-            className="flex-1 h-12 rounded-2xl bg-white text-black text-sm font-semibold active:scale-[0.98] transition disabled:opacity-50"
+            onClick={handleConfirm}
+            disabled={!canSave}
+            className="flex-[1.4] h-12 rounded-2xl bg-white text-black text-sm font-semibold active:scale-[0.98] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
-            Save as note
+            <Check className="h-4 w-4" />
+            Save expense note
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Pro upsell overlay — shown when a non-Pro user taps a Pro-gated toggle
+ * (Receipt, Burst, Batch) inside the scanner. Explains the benefit and
+ * fires `onSubscribe` for the parent to route into the paywall.
+ */
+const ProUpsellOverlay = ({
+  feature,
+  onClose,
+  onSubscribe,
+}: {
+  feature: 'receipt' | 'burst' | 'batch';
+  onClose: () => void;
+  onSubscribe: () => void;
+}) => {
+  const copy = {
+    receipt: {
+      title: 'Receipt scanning is a Pro feature',
+      body: 'Automatically parse merchant, total, date, tax, and every line item into a formatted expense note — no typing.',
+    },
+    burst: {
+      title: 'Burst capture is a Pro feature',
+      body: 'Every shot fires 3 frames and keeps the sharpest one — huge quality boost for handheld and low-light shots.',
+    },
+    batch: {
+      title: 'Multi-page batch scan is a Pro feature',
+      body: 'Capture as many pages as you need and stitch them into a single note with page headings and separators.',
+    },
+  }[feature];
+
+  return (
+    <div
+      className="absolute inset-0 z-40 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0"
+      onPointerDownCapture={(e) => e.stopPropagation()}
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-3xl border border-white/15 bg-neutral-900 text-white p-5 shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center">
+            <Sparkles className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="text-xs font-semibold tracking-wider uppercase text-primary/90 flex items-center gap-1">
+              <Lock className="h-3 w-3" />
+              Pro feature
+            </div>
+            <div className="text-base font-bold leading-tight">{copy.title}</div>
+          </div>
+        </div>
+        <p className="mt-3 text-sm text-white/70 leading-relaxed">{copy.body}</p>
+
+        <ul className="mt-3 space-y-1.5 text-[13px] text-white/80">
+          <li className="flex items-start gap-2"><Check className="h-4 w-4 text-primary mt-0.5" /> Full camera scanner suite (Note, Barcode, Objects)</li>
+          <li className="flex items-start gap-2"><Check className="h-4 w-4 text-primary mt-0.5" /> Receipt, Burst, and Multi-page batch capture</li>
+          <li className="flex items-start gap-2"><Check className="h-4 w-4 text-primary mt-0.5" /> Unlimited AI-powered extractions</li>
+        </ul>
+
+        <div className="flex gap-2 mt-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 h-11 rounded-xl bg-white/10 border border-white/15 text-sm font-semibold active:scale-[0.98]"
+          >
+            Not now
+          </button>
+          <button
+            type="button"
+            onClick={onSubscribe}
+            className="flex-[1.5] h-11 rounded-xl bg-primary text-primary-foreground text-sm font-bold active:scale-[0.98] shadow-[0_8px_24px_hsl(var(--primary)/0.4)] flex items-center justify-center gap-1.5"
+          >
+            <Sparkles className="h-4 w-4" />
+            Unlock Pro
           </button>
         </div>
       </div>
