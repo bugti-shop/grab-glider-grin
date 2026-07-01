@@ -297,6 +297,44 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       setContent(prev => prev + audioPlayerHtml);
     }
   }, []);
+
+  /**
+   * Deep-link scroll: NoteBlocksWidget (Home) navigates here with a
+   * `focusText` query, Notes.tsx re-emits it as a `lovable:focusNoteBlock`
+   * event. We scan the editor DOM for the first element whose textContent
+   * contains that snippet and scroll it into view + briefly highlight it.
+   * The content itself is never mutated — this is a pure jump so the
+   * originally clipped/linked content stays exactly as saved.
+   */
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ text?: string }>).detail;
+      const needle = (detail?.text || '').trim().toLowerCase();
+      if (!needle || !editorRef.current) return;
+      const nodes = editorRef.current.querySelectorAll<HTMLElement>(
+        'h1,h2,h3,h4,h5,h6,p,li,figure,a,img,.flowist-web-clip',
+      );
+      for (const node of Array.from(nodes)) {
+        const hay = (node.textContent || node.getAttribute('alt') || node.getAttribute('href') || '')
+          .trim().toLowerCase();
+        if (!hay) continue;
+        if (hay.includes(needle) || needle.includes(hay.slice(0, 40))) {
+          node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const prev = node.style.transition;
+          const prevBg = node.style.backgroundColor;
+          node.style.transition = 'background-color 600ms ease';
+          node.style.backgroundColor = 'hsl(var(--primary) / 0.18)';
+          window.setTimeout(() => {
+            node.style.backgroundColor = prevBg;
+            node.style.transition = prev;
+          }, 1600);
+          break;
+        }
+      }
+    };
+    window.addEventListener('lovable:focusNoteBlock', handler as EventListener);
+    return () => window.removeEventListener('lovable:focusNoteBlock', handler as EventListener);
+  }, []);
   
   // Calculate stats only when the stats bar is visible. Large 30k–200k word
   // notes must not be re-scanned on every keystroke or navigation frame.
