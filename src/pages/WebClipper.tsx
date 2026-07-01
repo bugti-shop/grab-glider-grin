@@ -588,7 +588,52 @@ const WebClipper = () => {
             </div>
           )}
 
-          {/* Mode picker — shown when no explicit ?mode= param was given. */}
+          {/* Editable preview — user reviews & tweaks EVERYTHING before saving. */}
+          {previewReady && !saved && (
+            <div className="space-y-3 pt-2 border-t border-border">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Pencil className="h-3.5 w-3.5" />
+                {t('webClipper.previewHeading', 'Review & edit your clip')}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('webClipper.previewTitleLabel', 'Title')}
+                </label>
+                <Input
+                  value={previewTitle}
+                  onChange={(e) => setPreviewTitle(e.target.value)}
+                  maxLength={MAX_LENGTHS.title}
+                  className="text-base font-semibold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('webClipper.previewContentLabel', 'Content (fully editable — tap to change anything)')}
+                </label>
+                <div
+                  ref={contentEditorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[55vh] overflow-y-auto rounded-lg border border-input bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {t('webClipper.previewHint', 'Everything the clipper found — images, videos, links, text — is above. Delete or edit anything before saving.')}
+                </p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button onClick={commitClip} disabled={saving} className="flex-1">
+                  <Save className="h-4 w-4 mr-1.5" />
+                  {t('webClipper.saveToNotes', 'Save to notes')}
+                </Button>
+                <Button variant="outline" onClick={() => navigate(-1)} disabled={saving}>
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+
           {picking && !saved && (
             <div className="space-y-2 pt-2">
               <p className="text-sm font-medium text-muted-foreground">
