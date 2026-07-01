@@ -8,7 +8,10 @@ export interface PublishedNoteRecord {
   title: string;
   published_at: string;
   updated_at: string;
+  view_count?: number;
+  last_viewed_at?: string | null;
 }
+
 
 /** URL-safe slug: lowercase, dashes, alphanumerics only. Trims to 60 chars. */
 export function slugify(input: string): string {
@@ -35,12 +38,13 @@ export async function getPublishedForNote(
 ): Promise<PublishedNoteRecord | null> {
   const { data, error } = await supabase
     .from('public_notes')
-    .select('id, note_id, slug, title, published_at, updated_at')
+    .select('id, note_id, slug, title, published_at, updated_at, view_count, last_viewed_at')
     .eq('note_id', noteId)
     .maybeSingle();
   if (error) throw error;
   return (data as PublishedNoteRecord) ?? null;
 }
+
 
 /** Ensures the slug is unique. Appends `-2`, `-3`, ... on collision. */
 async function ensureUniqueSlug(
@@ -92,12 +96,13 @@ export async function publishNote(
   const { data, error } = await supabase
     .from('public_notes')
     .upsert(payload, { onConflict: 'user_id,note_id' })
-    .select('id, note_id, slug, title, published_at, updated_at')
+    .select('id, note_id, slug, title, published_at, updated_at, view_count, last_viewed_at')
     .single();
 
   if (error) throw error;
   return data as PublishedNoteRecord;
 }
+
 
 export async function unpublishNote(noteId: string): Promise<void> {
   const { error } = await supabase.from('public_notes').delete().eq('note_id', noteId);
