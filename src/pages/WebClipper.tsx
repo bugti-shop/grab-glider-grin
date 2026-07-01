@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIcon, FileType2, AlertTriangle, Download, X, Save, Pencil } from 'lucide-react';
-import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
+import { saveNoteToDBSingle } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeForDisplay, sanitizeClippedArticle } from '@/lib/sanitize';
@@ -394,8 +394,11 @@ const WebClipper = () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      const existingNotes = await loadNotesFromDB();
-      await saveNotesToDB([newNote, ...existingNotes]);
+      // Save only the new clip row. Loading + rewriting the entire notes DB
+      // freezes on large libraries (5k+ notes) and leaves native share sheets
+      // stuck on “Saving to notes…”. The single-row path updates IndexedDB,
+      // metadata cache, UI events, and cloud sync without touching old notes.
+      await saveNoteToDBSingle(newNote);
       setSaved(true);
       setStage('idle');
       toast({
