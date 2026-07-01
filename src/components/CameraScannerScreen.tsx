@@ -34,13 +34,33 @@ import { compressImage } from '@/utils/imageCompression';
 
 export type ScannerMode = 'note' | 'barcode' | 'object' | 'image' | 'gallery';
 
+export interface ObjectDetection {
+  label: string;
+  /** [ymin, xmin, ymax, xmax] normalized 0-1000 (Gemini standard). */
+  box: [number, number, number, number] | number[];
+}
+
+export interface ObjectCountResult {
+  totalCount: number;
+  summary: string;
+  objectCounts: Array<{ label: string; count: number; confidence?: string }>;
+  detections: ObjectDetection[];
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   /** Called with a JPEG data URL when the user captures a frame. */
   onCapture: (dataUrl: string) => void;
-  /** Called with a JPEG data URL when Object Counting mode captures a frame. */
-  onObjectCount?: (dataUrl: string) => void;
+  /**
+   * Called when Object Counting mode captures a frame. Should invoke the AI
+   * and RESOLVE with the counted result. The scanner will then show a review
+   * overlay (bboxes + counts + Confirm/Retake) on top of the frozen frame.
+   * If it rejects, the scanner returns to the live camera view.
+   */
+  onObjectCount?: (dataUrl: string) => Promise<ObjectCountResult>;
+  /** Called when the user confirms an object-count result. Parent creates the note/task and should close. */
+  onConfirmObjectCount?: (dataUrl: string, result: ObjectCountResult) => void;
   /**
    * Called when a barcode is decoded in `barcode` mode. If omitted, decoded
    * barcodes are surfaced as a toast and the raw frame is still sent via
@@ -98,6 +118,7 @@ export const CameraScannerScreen = ({
   onClose,
   onCapture,
   onObjectCount,
+  onConfirmObjectCount,
   onBarcode,
   title = 'Scan',
   initialMode = 'note',
@@ -116,9 +137,20 @@ export const CameraScannerScreen = ({
   const [capturing, setCapturing] = useState(false);
   const [barcodeSupported, setBarcodeSupported] = useState(true);
   const [lastBarcode, setLastBarcode] = useState<string | null>(null);
+  // Object-count review state (kept inside scanner so we can overlay bboxes on the frozen frame).
+  const [objReviewFrame, setObjReviewFrame] = useState<string | null>(null);
+  const [objReviewLoading, setObjReviewLoading] = useState(false);
+  const [objReviewResult, setObjReviewResult] = useState<ObjectCountResult | null>(null);
+  const [objReviewError, setObjReviewError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) setMode(initialMode);
+    if (isOpen) {
+      setMode(initialMode);
+      setObjReviewFrame(null);
+      setObjReviewResult(null);
+      setObjReviewLoading(false);
+      setObjReviewError(null);
+    }
   }, [initialMode, isOpen]);
 
 
@@ -142,6 +174,8 @@ export const CameraScannerScreen = ({
       stopStream();
       return;
     }
+    // Pause camera stream while reviewing an object-count result.
+    if (objReviewFrame) return;
     let cancelled = false;
     setError(null);
     setReady(false);
@@ -161,12 +195,10 @@ export const CameraScannerScreen = ({
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          // Autoplay on iOS WebView requires inline + muted.
           videoRef.current.muted = true;
           (videoRef.current as any).playsInline = true;
           await videoRef.current.play().catch(() => { /* ignore autoplay errors */ });
         }
-        // Detect torch support.
         try {
           const track = stream.getVideoTracks()[0];
           const caps = (track.getCapabilities?.() as any) || {};
@@ -182,7 +214,7 @@ export const CameraScannerScreen = ({
       cancelled = true;
       stopStream();
     };
-  }, [isOpen, stopStream]);
+  }, [isOpen, stopStream, objReviewFrame]);
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
@@ -323,8 +355,20 @@ export const CameraScannerScreen = ({
         return;
       }
       if (mode === 'object' && onObjectCount) {
-        onObjectCount(compressed);
-        onClose();
+        // Enter review state: freeze the frame, run AI, then show boxes + counts.
+        setObjReviewFrame(compressed);
+        setObjReviewResult(null);
+        setObjReviewError(null);
+        setObjReviewLoading(true);
+        try {
+          const result = await onObjectCount(compressed);
+          setObjReviewResult(result);
+        } catch (err: any) {
+          console.error('[CameraScannerScreen] object count failed', err);
+          setObjReviewError(err?.message || 'Could not count objects');
+        } finally {
+          setObjReviewLoading(false);
+        }
         return;
       }
       onCapture(compressed);
@@ -360,19 +404,42 @@ export const CameraScannerScreen = ({
 
   const overlay = (
     <div className="fixed inset-0 z-[300] bg-black text-white flex flex-col select-none">
-      {/* Live camera feed (or fallback background) */}
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        className={cn(
-          'absolute inset-0 w-full h-full object-cover',
-          !ready && 'opacity-0',
-        )}
-      />
+      {/* Live camera feed (hidden while reviewing an object-count result) */}
+      {!objReviewFrame && (
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className={cn(
+            'absolute inset-0 w-full h-full object-cover',
+            !ready && 'opacity-0',
+          )}
+        />
+      )}
+      {/* Frozen object-count review frame + bounding boxes overlay */}
+      {objReviewFrame && (
+        <ObjectCountReviewOverlay
+          frame={objReviewFrame}
+          result={objReviewResult}
+          loading={objReviewLoading}
+          error={objReviewError}
+          onRetake={() => {
+            setObjReviewFrame(null);
+            setObjReviewResult(null);
+            setObjReviewError(null);
+          }}
+          onConfirm={() => {
+            if (!objReviewResult || !objReviewFrame) return;
+            onConfirmObjectCount?.(objReviewFrame, objReviewResult);
+            onClose();
+          }}
+        />
+      )}
       {/* Vignette / darken outside the frame */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70 pointer-events-none" />
+      {!objReviewFrame && (
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70 pointer-events-none" />
+      )}
 
       {/* Top bar */}
       <div
@@ -455,42 +522,34 @@ export const CameraScannerScreen = ({
         </div>
       </div>
 
-      {/* Bottom frosted control bar */}
+      {/* Bottom frosted control bar — hidden during object-count review */}
+      {!objReviewFrame && (
       <div
         className="relative z-10 px-4"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >
-        {/* Mode chips */}
-        <div
-          className="flex items-center justify-start gap-2 pb-3 overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
+        {/* Mode chips — scroll-safe (ignore taps that were scroll gestures). */}
+        <ChipStrip>
           {MODES.map(({ id, label, icon: Icon }) => {
             const active = mode === id;
             return (
-              <button
+              <ChipButton
                 key={id}
-                type="button"
-                onClick={() => {
+                active={active}
+                onSelect={() => {
                   if (id === 'gallery') {
                     openGallery();
                     return;
                   }
                   setMode(id);
                 }}
-                className={cn(
-                  'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95',
-                  active
-                    ? 'bg-white text-black border-white shadow-[0_8px_30px_rgba(255,255,255,0.25)]'
-                    : 'bg-white/10 text-white border-white/15',
-                )}
               >
                 <Icon className="h-4 w-4" />
                 {label}
-              </button>
+              </ChipButton>
             );
           })}
-        </div>
+        </ChipStrip>
 
         {/* Shutter row */}
         <div className="flex items-center justify-between px-2">
@@ -505,10 +564,19 @@ export const CameraScannerScreen = ({
 
           <button
             type="button"
-            onClick={handleShutter}
-            disabled={capturing}
-            className="relative w-[76px] h-[76px] rounded-full flex items-center justify-center active:scale-95 transition"
-            aria-label="Capture"
+            onPointerDown={(e) => {
+              // Ensure the shutter always fires as a capture — never as a
+              // native file-picker gesture bubbling from elsewhere.
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleShutter();
+            }}
+            disabled={capturing || !ready}
+            className="relative w-[76px] h-[76px] rounded-full flex items-center justify-center active:scale-95 transition disabled:opacity-60"
+            aria-label={`Capture (${activeModeLabel})`}
           >
             <span className="absolute inset-0 rounded-full border-2 border-white/70" />
             <span
@@ -525,6 +593,7 @@ export const CameraScannerScreen = ({
           <div className="w-12 h-12 opacity-0 pointer-events-none" aria-hidden />
         </div>
       </div>
+      )}
 
       {/* Local keyframes */}
       <style>{`
@@ -617,5 +686,217 @@ async function decodeBarcodeWithZxing(
   return { rawValue, format };
 }
 
+/**
+ * Scroll-safe chip strip: taps that were actually horizontal scroll gestures
+ * are suppressed so users can pan through the mode chips without accidentally
+ * activating one (fixes "Barcode aage scroll nahi hota" / accidental Gallery).
+ */
+const ChipStrip = ({ children }: { children: React.ReactNode }) => (
+  <div
+    className="flex items-center justify-start gap-2 pb-3 overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    style={{ WebkitOverflowScrolling: 'touch' }}
+  >
+    {children}
+  </div>
+);
+
+const ChipButton = ({
+  active,
+  onSelect,
+  children,
+}: {
+  active: boolean;
+  onSelect: () => void;
+  children: React.ReactNode;
+}) => {
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const movedRef = useRef(false);
+  return (
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        startRef.current = { x: e.clientX, y: e.clientY };
+        movedRef.current = false;
+      }}
+      onPointerMove={(e) => {
+        const s = startRef.current;
+        if (!s) return;
+        if (Math.abs(e.clientX - s.x) > 8 || Math.abs(e.clientY - s.y) > 8) {
+          movedRef.current = true;
+        }
+      }}
+      onClick={(e) => {
+        if (movedRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        onSelect();
+      }}
+      className={cn(
+        'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95',
+        active
+          ? 'bg-white text-black border-white shadow-[0_8px_30px_rgba(255,255,255,0.25)]'
+          : 'bg-white/10 text-white border-white/15',
+      )}
+    >
+      {children}
+    </button>
+  );
+};
+
+/**
+ * Full-screen review overlay shown after the object-count shutter fires.
+ * Displays the frozen frame, per-instance bounding boxes returned by Gemini,
+ * a total-count badge, grouped counts, and Retake / Confirm actions.
+ */
+const ObjectCountReviewOverlay = ({
+  frame,
+  result,
+  loading,
+  error,
+  onRetake,
+  onConfirm,
+}: {
+  frame: string;
+  result: ObjectCountResult | null;
+  loading: boolean;
+  error: string | null;
+  onRetake: () => void;
+  onConfirm: () => void;
+}) => {
+  const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [box, setBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+
+  // Compute the "contain" fit rectangle inside the container so bboxes align.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !imgSize) return;
+    const compute = () => {
+      const cw = el.clientWidth;
+      const ch = el.clientHeight;
+      const scale = Math.min(cw / imgSize.w, ch / imgSize.h);
+      const width = imgSize.w * scale;
+      const height = imgSize.h * scale;
+      setBox({ left: (cw - width) / 2, top: (ch - height) / 2, width, height });
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [imgSize]);
+
+  return (
+    <div className="absolute inset-0 z-10 flex flex-col bg-black text-white">
+      <div ref={containerRef} className="relative flex-1 overflow-hidden">
+        <img
+          src={frame}
+          alt="Captured frame"
+          className="absolute inset-0 w-full h-full object-contain"
+          onLoad={(e) => {
+            const t = e.currentTarget;
+            setImgSize({ w: t.naturalWidth, h: t.naturalHeight });
+          }}
+        />
+        {/* Bounding boxes */}
+        {box && result?.detections?.map((d, i) => {
+          const [ymin, xmin, ymax, xmax] = d.box as number[];
+          if ([ymin, xmin, ymax, xmax].some((n) => typeof n !== 'number')) return null;
+          const left = box.left + (xmin / 1000) * box.width;
+          const top = box.top + (ymin / 1000) * box.height;
+          const width = ((xmax - xmin) / 1000) * box.width;
+          const height = ((ymax - ymin) / 1000) * box.height;
+          return (
+            <div
+              key={i}
+              className="absolute border-2 rounded-md pointer-events-none"
+              style={{
+                left,
+                top,
+                width,
+                height,
+                borderColor: 'hsl(var(--primary))',
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.5) inset, 0 0 12px hsl(var(--primary) / 0.6)',
+              }}
+            >
+              <span
+                className="absolute -top-6 left-0 px-2 py-0.5 text-[10px] font-semibold rounded-md whitespace-nowrap"
+                style={{
+                  background: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary-foreground))',
+                }}
+              >
+                {i + 1}. {d.label}
+              </span>
+            </div>
+          );
+        })}
+        {/* Loading / error overlay */}
+        {loading && (
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <div className="text-sm font-medium">Counting objects…</div>
+              <div className="text-xs text-white/70">Analyzing with Gemini vision</div>
+            </div>
+          </div>
+        )}
+        {/* Total-count badge */}
+        {!loading && result && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl px-4 py-2 flex items-center gap-2">
+            <Boxes className="h-4 w-4" />
+            <span className="text-sm font-semibold">
+              {result.totalCount} object{result.totalCount === 1 ? '' : 's'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom summary + actions */}
+      <div
+        className="relative px-4 pt-3"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+      >
+        {error ? (
+          <div className="mb-3 text-sm text-red-300">{error}</div>
+        ) : result ? (
+          <div className="mb-3 max-h-32 overflow-y-auto rounded-2xl bg-white/5 border border-white/10 p-3 text-xs">
+            <div className="font-medium mb-1">{result.summary}</div>
+            {result.objectCounts?.length ? (
+              <ul className="space-y-0.5 text-white/80">
+                {result.objectCounts.map((oc, i) => (
+                  <li key={i}>
+                    • {oc.label}: <strong className="text-white">{oc.count}</strong>
+                    {oc.confidence ? <span className="opacity-60"> ({oc.confidence})</span> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onRetake}
+            className="flex-1 h-12 rounded-2xl bg-white/10 border border-white/15 text-sm font-semibold active:scale-[0.98] transition"
+          >
+            Retake
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading || !result || !!error}
+            className="flex-1 h-12 rounded-2xl bg-white text-black text-sm font-semibold active:scale-[0.98] transition disabled:opacity-50"
+          >
+            Confirm & Create
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default CameraScannerScreen;
+
 

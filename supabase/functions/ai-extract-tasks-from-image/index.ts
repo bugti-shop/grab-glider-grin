@@ -149,12 +149,16 @@ Deno.serve(async (req) => {
     if (body.scanMode === "object_count") {
       const objectPrompt = `You are a precise vision object counter for productivity scanning.
 
-Analyze the image and count the distinct visible physical objects. Group similar objects together with clear labels.
+Analyze the image and count the distinct visible physical objects. Group similar objects together with clear labels AND return a bounding box for EACH individual object instance (not each group).
+
+Bounding box format: [ymin, xmin, ymax, xmax] normalized to 0-1000 (Gemini standard). ymin/ymax are vertical (top-to-bottom), xmin/xmax are horizontal (left-to-right).
 
 Rules:
 - Count only visible, concrete objects in the photo.
 - Ignore screen UI, scanner overlays, decorative blur, shadows, and unreadable background noise.
 - For handwritten sticky notes or papers, count notes/pages separately from the written tasks.
+- Every object you count MUST have a corresponding bounding box in "detections".
+- Keep detections tight to the object; do not include huge background regions.
 - If the image is unclear, still return your best conservative estimate.
 - Return strictly via the tool call.`;
 
@@ -176,7 +180,7 @@ Rules:
                 content: [
                   {
                     type: "text",
-                    text: "Count the visible objects in this image and summarize the result.",
+                    text: "Count the visible objects in this image, group similar ones, and return a bounding box for every individual object instance.",
                   },
                   { type: "image_url", image_url: { url: imageUrl } },
                 ],
@@ -187,7 +191,7 @@ Rules:
                 type: "function",
                 function: {
                   name: "count_objects",
-                  description: "Return grouped object counts detected in the image.",
+                  description: "Return grouped object counts + per-instance bounding boxes for the image.",
                   parameters: {
                     type: "object",
                     properties: {
@@ -209,8 +213,27 @@ Rules:
                           additionalProperties: false,
                         },
                       },
+                      detections: {
+                        type: "array",
+                        description: "One entry per individual object instance with a bounding box.",
+                        items: {
+                          type: "object",
+                          properties: {
+                            label: { type: "string" },
+                            box: {
+                              type: "array",
+                              description: "[ymin, xmin, ymax, xmax] normalized 0-1000",
+                              items: { type: "number" },
+                              minItems: 4,
+                              maxItems: 4,
+                            },
+                          },
+                          required: ["label", "box"],
+                          additionalProperties: false,
+                        },
+                      },
                     },
-                    required: ["totalCount", "summary", "objectCounts"],
+                    required: ["totalCount", "summary", "objectCounts", "detections"],
                     additionalProperties: false,
                   },
                 },
@@ -248,12 +271,12 @@ Rules:
       const data = await aiResponse.json();
       const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
       if (!toolCall) {
-        return new Response(JSON.stringify({ totalCount: 0, summary: "No objects counted", objectCounts: [] }), {
+        return new Response(JSON.stringify({ totalCount: 0, summary: "No objects counted", objectCounts: [], detections: [] }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      let parsed: { totalCount?: number; summary?: string; objectCounts?: unknown[] } = {};
+      let parsed: { totalCount?: number; summary?: string; objectCounts?: unknown[]; detections?: unknown[] } = {};
       try {
         parsed = JSON.parse(toolCall.function.arguments);
       } catch (e) {
@@ -269,6 +292,7 @@ Rules:
           totalCount: Number.isFinite(parsed.totalCount) ? parsed.totalCount : 0,
           summary: typeof parsed.summary === "string" ? parsed.summary : "Objects counted",
           objectCounts: Array.isArray(parsed.objectCounts) ? parsed.objectCounts : [],
+          detections: Array.isArray(parsed.detections) ? parsed.detections : [],
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

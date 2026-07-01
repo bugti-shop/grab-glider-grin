@@ -187,23 +187,15 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     }
   };
 
-  const runObjectCounting = async (dataUrl: string) => {
-    if (!(await ensureScannerAccess())) return;
+  const fetchObjectCountResult = async (dataUrl: string) => {
+    if (!(await ensureScannerAccess())) throw new Error('Scanner access denied');
     const release = acquireAiLock();
     if (!release) {
       toast.error(getAiBusyMessage());
-      return;
+      throw new Error(getAiBusyMessage());
     }
-    setImageDataUrl(dataUrl);
-    setIsExtracting(true);
-    setHasRun(false);
-    setHtml('');
-    setSuggestedTitle('');
-    setErrorLabel(null);
     try {
-      await yieldToPaint();
-      setPhase('uploading');
-      const invokePromise = supabase.functions.invoke('ai-extract-tasks-from-image', {
+      const { data, error } = await supabase.functions.invoke('ai-extract-tasks-from-image', {
         body: {
           imageBase64: dataUrl,
           scanMode: 'object_count',
@@ -211,49 +203,55 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
         },
         timeout: AI_SCAN_TIMEOUT_MS,
       });
-      setTimeout(() => setPhase((p) => (p === 'uploading' ? 'processing' : p)), 800);
-      const { data, error } = await invokePromise;
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-
-      const total = Number((data as any)?.totalCount || 0);
-      const summary = String((data as any)?.summary || `Counted ${total} objects`).trim();
-      const counts = Array.isArray((data as any)?.objectCounts)
-        ? ((data as any).objectCounts as ObjectCountItem[])
-        : [];
-      const list = counts
-        .filter((item) => item && item.label)
-        .map((item) => {
-          const label = escapeHtml(String(item.label || 'Object'));
-          const count = Number(item.count || 0);
-          const confidence = item.confidence ? ` <small>(${escapeHtml(String(item.confidence))})</small>` : '';
-          return `<li>${label}: <strong>${count}</strong>${confidence}</li>`;
-        })
-        .join('');
-      const resultHtml =
-        `<h2>Object Count</h2>` +
-        `<p><strong>Total objects:</strong> ${total}</p>` +
-        `<p>${escapeHtml(summary)}</p>` +
-        (list ? `<ul>${list}</ul>` : '');
-      setHtml(resultHtml);
-      setSuggestedTitle(`Object count · ${total}`);
-      setHasRun(true);
-      setPhase('done');
-    } catch (e: any) {
-      console.error('[object count] error', e);
-      const msg = e?.message || '';
-      const label = msg.includes('429')
-        ? t('tasks.aiRateLimit', 'AI is busy, try again shortly')
-        : msg.includes('402')
-          ? t('tasks.aiCredits', 'AI credits exhausted')
-          : t('scanNote.objectCountFailed', 'Could not count objects in this image');
-      toast.error(label);
-      setErrorLabel(label);
-      setPhase('error');
+      return {
+        totalCount: Number((data as any)?.totalCount || 0),
+        summary: String((data as any)?.summary || 'Objects counted').trim(),
+        objectCounts: Array.isArray((data as any)?.objectCounts) ? (data as any).objectCounts : [],
+        detections: Array.isArray((data as any)?.detections) ? (data as any).detections : [],
+      };
     } finally {
-      setIsExtracting(false);
       release();
     }
+  };
+
+  const applyObjectCountResult = (
+    dataUrl: string,
+    result: {
+      totalCount: number;
+      summary: string;
+      objectCounts: ObjectCountItem[];
+      detections?: Array<{ label: string; box: number[] }>;
+    },
+  ) => {
+    setImageDataUrl(dataUrl);
+    setHasRun(false);
+    setHtml('');
+    setSuggestedTitle('');
+    setErrorLabel(null);
+    const total = result.totalCount;
+    const summary = result.summary;
+    const counts = result.objectCounts || [];
+    const list = counts
+      .filter((item) => item && item.label)
+      .map((item) => {
+        const label = escapeHtml(String(item.label || 'Object'));
+        const count = Number(item.count || 0);
+        const confidence = item.confidence ? ` <small>(${escapeHtml(String(item.confidence))})</small>` : '';
+        return `<li>${label}: <strong>${count}</strong>${confidence}</li>`;
+      })
+      .join('');
+    const resultHtml =
+      `<h2>Object Count</h2>` +
+      `<p><strong>Total objects:</strong> ${total}</p>` +
+      `<p>${escapeHtml(summary)}</p>` +
+      (list ? `<ul>${list}</ul>` : '');
+    setHtml(resultHtml);
+    setSuggestedTitle(`Object count · ${total}`);
+    setHasRun(true);
+    setPhase('done');
+    toast.success(`Counted ${total} object${total === 1 ? '' : 's'}`);
   };
 
 
@@ -406,8 +404,11 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
         initialMode="note"
         onBarcode={handleBarcode}
         onObjectCount={async (dataUrl) => {
+          return await fetchObjectCountResult(dataUrl);
+        }}
+        onConfirmObjectCount={(dataUrl, result) => {
           setShowCamera(false);
-          await runObjectCounting(dataUrl);
+          applyObjectCountResult(dataUrl, result);
         }}
         status={
           isExtracting
