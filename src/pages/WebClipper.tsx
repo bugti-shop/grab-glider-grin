@@ -273,6 +273,32 @@ const WebClipper = () => {
           finalTitle = articleTitle.substring(0, MAX_LENGTHS.title);
         }
         const parts: string[] = [];
+        const capturedAt = new Date().toISOString();
+        // Distinct "webClip" block — an embedded, non-editable-style object
+        // inside the note (Evernote-style). data-* attributes let downstream
+        // consumers detect + treat this region specially.
+        const safeUrl = url ? url.replace(/"/g, '&quot;') : '';
+        parts.push(
+          `<section class="flowist-web-clip" data-block-type="webClip" ` +
+          `data-source-url="${safeUrl}" data-captured-at="${capturedAt}" ` +
+          `data-site-name="${(articleSiteName || '').replace(/"/g, '&quot;')}" ` +
+          `data-author="${(articleByline || '').replace(/"/g, '&quot;')}">`,
+        );
+        // Header chip so users can visually see this is a Web Clip.
+        parts.push(
+          `<div class="flowist-web-clip-header" style="display:flex;align-items:center;gap:8px;font-size:12px;opacity:0.7;margin:0 0 8px 0">` +
+          `<span style="padding:2px 8px;border:1px solid currentColor;border-radius:999px;font-weight:600;letter-spacing:0.02em">WEB CLIP</span>` +
+          (articleSiteName ? `<span>${sanitizeForDisplay(articleSiteName)}</span>` : '') +
+          `<span>· ${new Date(capturedAt).toLocaleDateString()}</span>` +
+          `</div>`,
+        );
+        if (articleIsFallback) {
+          parts.push(
+            `<div class="flowist-web-clip-fallback-banner" style="padding:10px 12px;border:1px solid rgba(0,0,0,0.15);border-radius:8px;background:rgba(0,0,0,0.03);font-size:13px;margin:0 0 12px 0">` +
+            `⚠️ ${sanitizeForDisplay(t('webClipper.fallbackNotice', 'Full content unavailable — this page may require a login, be paywalled, or render with JavaScript.'))}` +
+            `</div>`,
+          );
+        }
         parts.push(`<h1>${sanitizeForDisplay(finalTitle)}</h1>`);
         const metaBits: string[] = [];
         if (articleByline) metaBits.push(sanitizeForDisplay(articleByline));
@@ -332,6 +358,7 @@ const WebClipper = () => {
             `<ul style="padding:0;margin:0">${items}</ul>`,
           );
         }
+        parts.push(`</section>`);
         // Single sanitize pass over the full assembled document (allows iframe/video for embeds).
         noteContent = sanitizeClippedArticle(parts.join('\n'));
       } else {
