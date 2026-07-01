@@ -139,6 +139,8 @@ export const CameraScannerScreen = ({
   onCapture,
   onObjectCount,
   onConfirmObjectCount,
+  onReceipt,
+  onConfirmReceipt,
   onBarcode,
   title = 'Scan',
   initialMode = 'note',
@@ -157,11 +159,18 @@ export const CameraScannerScreen = ({
   const [capturing, setCapturing] = useState(false);
   const [barcodeSupported, setBarcodeSupported] = useState(true);
   const [lastBarcode, setLastBarcode] = useState<string | null>(null);
-  // Object-count review state (kept inside scanner so we can overlay bboxes on the frozen frame).
+  // Burst mode: capture 3 frames and auto-pick the sharpest.
+  const [burstOn, setBurstOn] = useState(false);
+  // Object-count review state.
   const [objReviewFrame, setObjReviewFrame] = useState<string | null>(null);
   const [objReviewLoading, setObjReviewLoading] = useState(false);
   const [objReviewResult, setObjReviewResult] = useState<ObjectCountResult | null>(null);
   const [objReviewError, setObjReviewError] = useState<string | null>(null);
+  // Receipt review state.
+  const [receiptReviewFrame, setReceiptReviewFrame] = useState<string | null>(null);
+  const [receiptReviewLoading, setReceiptReviewLoading] = useState(false);
+  const [receiptReviewResult, setReceiptReviewResult] = useState<any>(null);
+  const [receiptReviewError, setReceiptReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
