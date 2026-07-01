@@ -522,42 +522,34 @@ export const CameraScannerScreen = ({
         </div>
       </div>
 
-      {/* Bottom frosted control bar */}
+      {/* Bottom frosted control bar — hidden during object-count review */}
+      {!objReviewFrame && (
       <div
         className="relative z-10 px-4"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >
-        {/* Mode chips */}
-        <div
-          className="flex items-center justify-start gap-2 pb-3 overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
+        {/* Mode chips — scroll-safe (ignore taps that were scroll gestures). */}
+        <ChipStrip>
           {MODES.map(({ id, label, icon: Icon }) => {
             const active = mode === id;
             return (
-              <button
+              <ChipButton
                 key={id}
-                type="button"
-                onClick={() => {
+                active={active}
+                onSelect={() => {
                   if (id === 'gallery') {
                     openGallery();
                     return;
                   }
                   setMode(id);
                 }}
-                className={cn(
-                  'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95',
-                  active
-                    ? 'bg-white text-black border-white shadow-[0_8px_30px_rgba(255,255,255,0.25)]'
-                    : 'bg-white/10 text-white border-white/15',
-                )}
               >
                 <Icon className="h-4 w-4" />
                 {label}
-              </button>
+              </ChipButton>
             );
           })}
-        </div>
+        </ChipStrip>
 
         {/* Shutter row */}
         <div className="flex items-center justify-between px-2">
@@ -572,10 +564,19 @@ export const CameraScannerScreen = ({
 
           <button
             type="button"
-            onClick={handleShutter}
-            disabled={capturing}
-            className="relative w-[76px] h-[76px] rounded-full flex items-center justify-center active:scale-95 transition"
-            aria-label="Capture"
+            onPointerDown={(e) => {
+              // Ensure the shutter always fires as a capture — never as a
+              // native file-picker gesture bubbling from elsewhere.
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleShutter();
+            }}
+            disabled={capturing || !ready}
+            className="relative w-[76px] h-[76px] rounded-full flex items-center justify-center active:scale-95 transition disabled:opacity-60"
+            aria-label={`Capture (${activeModeLabel})`}
           >
             <span className="absolute inset-0 rounded-full border-2 border-white/70" />
             <span
@@ -592,6 +593,7 @@ export const CameraScannerScreen = ({
           <div className="w-12 h-12 opacity-0 pointer-events-none" aria-hidden />
         </div>
       </div>
+      )}
 
       {/* Local keyframes */}
       <style>{`
