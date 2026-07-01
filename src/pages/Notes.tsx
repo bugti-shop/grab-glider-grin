@@ -3,7 +3,9 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { Note } from '@/types/note';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { NoteEditor } from '@/components/NoteEditor';
-import { Layers, Settings, Pin, Download, ListTodo, FileText, Archive, ArchiveRestore, Trash2, RotateCcw, Sun, Moon, Search, X, Crown, Tag } from 'lucide-react';
+import { Layers, Settings, Pin, Download, ListTodo, FileText, Archive, ArchiveRestore, Trash2, RotateCcw, Sun, Moon, Search, X, Crown, Tag, Sparkles, Loader2 } from 'lucide-react';
+import { AskNotesDialog } from '@/components/notes/AskNotesDialog';
+import { semanticSearchNotes, type SemanticSearchHit } from '@/utils/semanticSearch';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 
 
