@@ -185,7 +185,71 @@ function absolutizeDoc(doc: Document, base: string) {
     }
     img.removeAttribute("loading");
     img.setAttribute("referrerpolicy", "no-referrer");
+
+    // --- Caption / alt-text enrichment -----------------------------------
+    // Ensure every image carries meaningful alt text so screen readers and
+    // the pasted note keep context even when the source lazy-loaded it.
+    let alt = (img.getAttribute("alt") || "").trim();
+    const title = (img.getAttribute("title") || "").trim();
+    const ariaLabel = (img.getAttribute("aria-label") || "").trim();
+
+    // Look for an explicit caption near the image.
+    let captionText = "";
+    const parentFigure = img.closest?.("figure");
+    if (parentFigure) {
+      const fc = parentFigure.querySelector("figcaption");
+      if (fc) captionText = (fc.textContent || "").trim();
+    }
+    if (!captionText) {
+      // WordPress / Ghost / Substack common caption containers.
+      const wrap = img.parentElement;
+      if (wrap) {
+        const sib = wrap.querySelector?.(
+          ".wp-caption-text, .caption, .image-caption, .figcaption, .kg-card-figcaption, [class*='caption' i]",
+        );
+        if (sib && sib !== img) {
+          const t = (sib.textContent || "").trim();
+          if (t && t.length < 400) captionText = t;
+        }
+      }
+    }
+
+    if (!alt) alt = title || ariaLabel || captionText || "";
+    if (alt) img.setAttribute("alt", alt);
+    if (captionText && !img.getAttribute("data-caption")) {
+      img.setAttribute("data-caption", captionText);
+    }
+
+    // If the image has caption info but isn't already inside a <figure>,
+    // wrap it so Readability preserves the caption in the final HTML.
+    if (captionText && !parentFigure) {
+      try {
+        const fig = doc.createElement("figure");
+        fig.setAttribute("style", "margin:1em 0");
+        const cap = doc.createElement("figcaption");
+        cap.setAttribute(
+          "style",
+          "font-size:0.9em;opacity:0.75;margin-top:4px;text-align:center",
+        );
+        cap.textContent = captionText;
+        img.parentNode?.insertBefore(fig, img);
+        fig.appendChild(img);
+        fig.appendChild(cap);
+      } catch { /* ignore */ }
+    }
   });
+
+  // Normalise existing <figure><figcaption> blocks so they survive
+  // Readability's cleaner and render nicely in the note.
+  doc.querySelectorAll("figure").forEach((fig: any) => {
+    const cap = fig.querySelector("figcaption");
+    if (cap && !cap.getAttribute("style")) {
+      cap.setAttribute(
+        "style",
+        "font-size:0.9em;opacity:0.75;margin-top:4px;text-align:center",
+      );
+    }
+    if (!fig.getAttribute("style")) fig.setAttribute("style", "margin:1em 0");
 
   doc.querySelectorAll("a").forEach((a: any) => {
     const href = a.getAttribute("href");
