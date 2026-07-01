@@ -2259,6 +2259,7 @@ export const RichTextEditor = ({
         contentEditable
         spellCheck={spellCheckEnabled}
         onInput={handleInput}
+        onBeforeInput={handleBeforeInput}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
         onKeyDown={handleKeyDown}
