@@ -150,6 +150,7 @@ export const CameraScannerScreen = ({
   onConfirmObjectCount,
   onReceipt,
   onConfirmReceipt,
+  onBatchNote,
   onBarcode,
   title = 'Scan',
   initialMode = 'note',
