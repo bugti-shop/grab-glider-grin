@@ -300,8 +300,18 @@ export const ImageTaskExtractorSheet = ({
                 )}
               </p>
               <Button
-                onClick={runCapture}
+                onClick={() => setShowCamera(true)}
                 className="h-14 w-full gap-2"
+              >
+                <Camera className="h-5 w-5" />
+                <span className="text-sm">
+                  {t('imageExtract.openCamera', 'Open camera scanner')}
+                </span>
+              </Button>
+              <Button
+                onClick={runCapture}
+                variant="outline"
+                className="h-12 w-full gap-2"
               >
                 <ImageIcon className="h-5 w-5" />
                 <span className="text-sm">
