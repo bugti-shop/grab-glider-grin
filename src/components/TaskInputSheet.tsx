@@ -179,6 +179,8 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   const [showTagSheet, setShowTagSheet] = useState(false);
   const [deadline, setDeadline] = useState<Date | undefined>();
   const [deadlineReminderTime, setDeadlineReminderTime] = useState<Date | undefined>();
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
+  const [dateValidationError, setDateValidationError] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const descriptionPreview = useMemo(() => stripHtml(description).replace(/\s+/g, ' ').trim(), [description]);
@@ -409,10 +411,26 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
     const subtasks = pendingSubtasksRef.current;
     pendingSubtasksRef.current = undefined;
 
+    // ---- Validation: the three dates are independent but must be coherent ----
+    // Rule: scheduledDate <= deadline, and dueDate <= deadline (deadline is hard).
+    if (deadline) {
+      if (scheduledDate && scheduledDate.getTime() > deadline.getTime()) {
+        setDateValidationError(t('taskInput.errors.scheduledAfterDeadline', { defaultValue: 'Scheduled date must be on or before the deadline.' }));
+        return;
+      }
+      if (finalDueDate && new Date(finalDueDate).getTime() > deadline.getTime()) {
+        setDateValidationError(t('taskInput.errors.dueAfterDeadline', { defaultValue: 'Due date cannot be later than the deadline.' }));
+        return;
+      }
+    }
+    setDateValidationError(null);
+
     const mainTask: Omit<TodoItem, 'id' | 'completed'> = {
       text: finalText,
       priority: finalPriority,
       dueDate: finalDueDate,
+      scheduledDate,
+      deadline,
       reminderTime: finalReminderTime,
       repeatType: finalRepeatType,
       repeatDays: finalRepeatDays,
@@ -429,11 +447,6 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       estimatedHours: finalEstimatedHours,
       isUrgent: isUrgent || undefined,
     };
-
-    // If deadline is set, store it in dueDate
-    if (deadline) {
-      mainTask.dueDate = deadline;
-    }
 
     // Add task first
     onAddTask(mainTask);
@@ -452,6 +465,8 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       setSelectedTagIds([]);
       setDeadline(undefined);
       setDeadlineReminderTime(undefined);
+      setScheduledDate(undefined);
+      setDateValidationError(null);
       setDescription('');
       setLocation('');
       setFolderId(selectedFolderId ?? undefined);
@@ -1155,6 +1170,30 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
               >
                 <X className="h-4 w-4 text-rose-500 hover:text-rose-700" />
               </button>
+            </div>
+          )}
+
+          {/* Scheduled-date indicator (when you plan to work on it) */}
+          {scheduledDate && (
+            <div className="px-4 py-2 bg-violet-50 dark:bg-violet-950/20 rounded-lg flex items-center gap-2 mb-4">
+              <CalendarIcon className="h-4 w-4 text-violet-500" />
+              <span className="text-sm text-violet-700 dark:text-violet-300 font-medium">
+                {t('taskInput.scheduledLabel', { defaultValue: 'Scheduled', date: '' })}: {format(scheduledDate, 'MMM d, h:mm a')}
+              </span>
+              <button
+                onClick={() => setScheduledDate(undefined)}
+                className="ml-auto"
+                aria-label="Clear scheduled date"
+              >
+                <X className="h-4 w-4 text-violet-500 hover:text-violet-700" />
+              </button>
+            </div>
+          )}
+
+          {/* Date validation error */}
+          {dateValidationError && (
+            <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm rounded-lg mb-4" role="alert">
+              {dateValidationError}
             </div>
           )}
 

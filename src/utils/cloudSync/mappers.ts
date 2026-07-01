@@ -128,7 +128,7 @@ export const mappers = {
     },
     mergeCloud(local: TodoItem | undefined, r: any): Partial<TodoItem> & { id: string } {
       const prioMap = ['none', 'low', 'medium', 'high'] as const;
-      const payload = reviveDates(payloadObject(r), ['createdAt', 'modifiedAt', 'updatedAt', 'completedAt', 'dueDate', 'reminderTime', 'extraReminderTime']);
+      const payload = reviveDates(payloadObject(r), ['createdAt', 'modifiedAt', 'updatedAt', 'completedAt', 'dueDate', 'scheduledDate', 'deadline', 'reminderTime', 'extraReminderTime']);
       return {
         ...(local ?? {}),
         ...(payload ?? {}),

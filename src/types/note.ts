@@ -139,6 +139,18 @@ export interface TodoItem {
   status?: TaskStatus; // Task status (not started, in progress, almost done, completed)
   isPinned?: boolean; // Pin task to top
   dueDate?: Date;
+  /**
+   * When the user plans to *work on* this task. Distinct from `dueDate`
+   * (a calendar deadline shown on lists/agenda) and `deadline` (a hard
+   * "must be done by" moment). Used by the auto-scheduler.
+   */
+  scheduledDate?: Date;
+  /**
+   * Hard deadline — the latest point in time the task must be completed.
+   * Treated as a *hard constraint* by the auto-scheduler; never scheduled
+   * past this instant. Independent of `dueDate` and `scheduledDate`.
+   */
+  deadline?: Date;
   reminderTime?: Date;
   multiReminder?: MultiReminder; // Support for multiple reminders throughout the day
   locationReminder?: LocationReminder; // Location-based reminder
