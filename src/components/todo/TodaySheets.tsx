@@ -42,6 +42,10 @@ interface TodaySheetsProps {
   isInputOpen: boolean;
   onCloseInput: () => void;
   onAddTask: (task: Omit<TodoItem, 'id' | 'completed'>) => void;
+  /** When true, the task input sheet cannot be dismissed by tapping the
+   *  backdrop — used in the launcher-widget quick-add flow so accidental
+   *  taps don't kill the session while the user is still adding tasks. */
+  preventInputBackdropClose?: boolean;
   folders: Folder[];
   selectedFolderId: string | null;
   onCreateFolder: (name: string, color: string) => void;
