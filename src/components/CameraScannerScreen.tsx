@@ -404,19 +404,42 @@ export const CameraScannerScreen = ({
 
   const overlay = (
     <div className="fixed inset-0 z-[300] bg-black text-white flex flex-col select-none">
-      {/* Live camera feed (or fallback background) */}
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        className={cn(
-          'absolute inset-0 w-full h-full object-cover',
-          !ready && 'opacity-0',
-        )}
-      />
+      {/* Live camera feed (hidden while reviewing an object-count result) */}
+      {!objReviewFrame && (
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          playsInline
+          className={cn(
+            'absolute inset-0 w-full h-full object-cover',
+            !ready && 'opacity-0',
+          )}
+        />
+      )}
+      {/* Frozen object-count review frame + bounding boxes overlay */}
+      {objReviewFrame && (
+        <ObjectCountReviewOverlay
+          frame={objReviewFrame}
+          result={objReviewResult}
+          loading={objReviewLoading}
+          error={objReviewError}
+          onRetake={() => {
+            setObjReviewFrame(null);
+            setObjReviewResult(null);
+            setObjReviewError(null);
+          }}
+          onConfirm={() => {
+            if (!objReviewResult || !objReviewFrame) return;
+            onConfirmObjectCount?.(objReviewFrame, objReviewResult);
+            onClose();
+          }}
+        />
+      )}
       {/* Vignette / darken outside the frame */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70 pointer-events-none" />
+      {!objReviewFrame && (
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70 pointer-events-none" />
+      )}
 
       {/* Top bar */}
       <div
