@@ -109,8 +109,6 @@ public class QuickAddActivity extends Activity {
 
     private void refreshWidgets() {
         try {
-            AppWidgetManager mgr = AppWidgetManager.getInstance(this);
-            mgr.updateAppWidget(mgr.getAppWidgetIds(new ComponentName(this, AddTaskWidget.class)), null);
             sendBroadcast(new Intent(TasksListWidget.ACTION_REFRESH));
         } catch (Exception ignored) {}
     }
