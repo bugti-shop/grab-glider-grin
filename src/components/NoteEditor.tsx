@@ -48,7 +48,7 @@ import { NoteVoicePlayer } from './NoteVoicePlayer';
 import { AudioPlayer } from './AudioPlayer';
 import { useHardwareBackButton } from '@/hooks/useHardwareBackButton';
 import { sanitizeForDisplay } from '@/lib/sanitize';
-import { renderMathIn, hydrateSyncedIn } from './richtext/richTextBlocks';
+import { renderMathIn, hydrateSyncedIn, hydrateWebClipsIn } from './richtext/richTextBlocks';
 import 'katex/dist/katex.min.css';
 
 import { ErrorBoundary } from './ErrorBoundary';
