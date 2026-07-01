@@ -55,6 +55,13 @@ interface Props {
 }
 
 
+const MODES: Array<{ id: ScannerMode; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { id: 'note', label: 'Scan Note', icon: ScanLine },
+  { id: 'barcode', label: 'Barcode', icon: Barcode },
+  { id: 'image', label: 'Image', icon: ImagePlus },
+  { id: 'gallery', label: 'Gallery', icon: ImageIcon },
+];
+
 export const CameraScannerScreen = ({
   isOpen,
   onClose,
