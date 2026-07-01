@@ -798,18 +798,24 @@ export const CameraScannerScreen = ({
         <ChipStrip>
           {MODES.filter((m) => m.id !== 'gallery').map(({ id, label, icon: Icon }) => {
             const active = mode === id;
+            const locked = !hasPro && id === 'receipt';
             return (
               <ChipButton
                 key={id}
                 active={active}
                 onSelect={() => {
                   console.log('[Scanner] mode selected', id);
+                  if (locked) {
+                    requirePro('receipt');
+                    return;
+                  }
                   setMode(id);
                   toast(`Mode: ${label}`, { duration: 900 });
                 }}
               >
                 <Icon className="h-4 w-4" />
                 {label}
+                {locked && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
               </ChipButton>
             );
           })}
