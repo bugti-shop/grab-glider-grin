@@ -34,13 +34,33 @@ import { compressImage } from '@/utils/imageCompression';
 
 export type ScannerMode = 'note' | 'barcode' | 'object' | 'image' | 'gallery';
 
+export interface ObjectDetection {
+  label: string;
+  /** [ymin, xmin, ymax, xmax] normalized 0-1000 (Gemini standard). */
+  box: [number, number, number, number] | number[];
+}
+
+export interface ObjectCountResult {
+  totalCount: number;
+  summary: string;
+  objectCounts: Array<{ label: string; count: number; confidence?: string }>;
+  detections: ObjectDetection[];
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   /** Called with a JPEG data URL when the user captures a frame. */
   onCapture: (dataUrl: string) => void;
-  /** Called with a JPEG data URL when Object Counting mode captures a frame. */
-  onObjectCount?: (dataUrl: string) => void;
+  /**
+   * Called when Object Counting mode captures a frame. Should invoke the AI
+   * and RESOLVE with the counted result. The scanner will then show a review
+   * overlay (bboxes + counts + Confirm/Retake) on top of the frozen frame.
+   * If it rejects, the scanner returns to the live camera view.
+   */
+  onObjectCount?: (dataUrl: string) => Promise<ObjectCountResult>;
+  /** Called when the user confirms an object-count result. Parent creates the note/task and should close. */
+  onConfirmObjectCount?: (dataUrl: string, result: ObjectCountResult) => void;
   /**
    * Called when a barcode is decoded in `barcode` mode. If omitted, decoded
    * barcodes are surfaced as a toast and the raw frame is still sent via
