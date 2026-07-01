@@ -8,4 +8,5 @@
     android:initialLayout="@layout/widget_sketch_note"
     android:previewLayout="@layout/widget_sketch_note"
     android:resizeMode="horizontal|vertical"
+    android:description="@string/widget_sketch_note_desc"
     android:widgetCategory="home_screen" />
