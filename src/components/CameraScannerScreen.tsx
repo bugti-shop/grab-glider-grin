@@ -337,8 +337,6 @@ export const CameraScannerScreen = ({
       }
 
       const modeLabel =
-        mode === 'barcode' ? 'Barcode' :
-        mode === 'object'  ? 'Objects' :
         mode === 'receipt' ? 'Receipt' :
         mode === 'image'   ? 'Image'   : 'Scan Note';
       toast(
@@ -364,35 +362,6 @@ export const CameraScannerScreen = ({
       }).catch(() => raw);
       console.log('[Scanner] frame captured', { mode, bytes: compressed.length, burst: burstOn });
 
-      if (mode === 'barcode') {
-        const decoded = await decodeBarcodeFromCanvas(canvas).catch(() => null);
-        const fallbackDecoded = decoded || await decodeBarcodeWithZxing(canvas, zxingReaderRef.current || createZxingReader()).catch(() => null);
-        if (fallbackDecoded && onBarcode) {
-          setLastBarcode(fallbackDecoded.rawValue);
-          toast.success(`Barcode: ${fallbackDecoded.rawValue.slice(0, 32)}`);
-          onBarcode(fallbackDecoded.rawValue, fallbackDecoded.format);
-          onClose();
-          return;
-        }
-        toast.error('No barcode detected. Hold it inside the frame and try again.');
-        return;
-      }
-
-      if (mode === 'object' && onObjectCount) {
-        setObjReviewFrame(compressed);
-        setObjReviewResult(null);
-        setObjReviewError(null);
-        setObjReviewLoading(true);
-        try {
-          const result = await onObjectCount(compressed);
-          setObjReviewResult(result);
-        } catch (err: any) {
-          setObjReviewError(err?.message || 'Could not count objects');
-        } finally {
-          setObjReviewLoading(false);
-        }
-        return;
-      }
 
       if (mode === 'receipt' && onReceipt) {
         setReceiptReviewFrame(compressed);
