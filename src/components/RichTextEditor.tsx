@@ -1553,6 +1553,46 @@ export const RichTextEditor = ({
     handleInput();
   }, [notesSettings.markdownShortcuts, hydrateSynced]);
 
+  // Android/mobile soft keyboards fire `keydown` with keyCode 229 and no `key`,
+  // so our markdown block/inline shortcuts (which key off e.key===' '/'Enter'/'*'/etc.)
+  // never trigger on phones. `beforeinput` fires reliably on every platform with
+  // the actual inserted text, so we mirror the desktop shortcuts here.
+  const handleBeforeInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
+    const ie = e.nativeEvent as InputEvent;
+    if (notesSettings.markdownShortcuts === false) return;
+    if (slashMenu.open || mentionMenu.open) return;
+    if (isInsideCode(editorRef.current)) return;
+
+    const type = ie.inputType;
+    const data = ie.data || '';
+
+    // Space typed → try block shortcuts (#, -, 1., [], >, etc.)
+    if (type === 'insertText' && data === ' ') {
+      if (tryMarkdownBlockShortcut(editorRef.current)) {
+        e.preventDefault();
+        handleInput();
+      }
+      return;
+    }
+    // Enter typed → try `---` → <hr> conversion
+    if (type === 'insertParagraph' || (type === 'insertLineBreak')) {
+      if (tryMarkdownEnterShortcut(editorRef.current)) {
+        e.preventDefault();
+        handleInput();
+      }
+      return;
+    }
+    // Inline markers: *, _, `, ~
+    if (type === 'insertText' && data && data.length === 1) {
+      if (data === '*' || data === '_' || data === '`' || data === '~') {
+        if (tryMarkdownInlineShortcut(data, editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+        }
+      }
+    }
+  }, [notesSettings.markdownShortcuts, slashMenu.open, mentionMenu.open]);
+
   // Handle keydown - checklist Enter key and other keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.key === 'Backspace' || e.key === 'Delete') && removeAdjacentMention(e.key === 'Backspace' ? 'backward' : 'forward', editorRef.current)) {
@@ -2219,6 +2259,7 @@ export const RichTextEditor = ({
         contentEditable
         spellCheck={spellCheckEnabled}
         onInput={handleInput}
+        onBeforeInput={handleBeforeInput}
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
         onKeyDown={handleKeyDown}
