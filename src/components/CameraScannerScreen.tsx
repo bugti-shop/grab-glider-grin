@@ -34,7 +34,7 @@ import { toast } from 'sonner';
 import { captureImageForAI } from '@/utils/imageCaptureForAI';
 import { compressImage } from '@/utils/imageCompression';
 
-export type ScannerMode = 'note' | 'barcode' | 'object' | 'image' | 'gallery';
+export type ScannerMode = 'note' | 'barcode' | 'object' | 'image' | 'receipt' | 'gallery';
 
 export interface ObjectDetection {
   label: string;
