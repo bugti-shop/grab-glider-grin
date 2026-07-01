@@ -669,13 +669,24 @@ export const hydrateImageMediaIn = (root: HTMLElement | null) => {
       wrap.appendChild(cap);
     }
 
-    // Click-to-lightbox: double click opens fullscreen viewer.
+    // Click-to-lightbox: double click on desktop, single tap on touch.
     img.style.cursor = 'zoom-in';
+    const collectGallery = () => {
+      const all = Array.from(root.querySelectorAll<HTMLImageElement>('.resizable-image-wrapper img'));
+      return all.filter((i) => !!i.src).map((i) => ({ src: i.src, alt: i.alt || '' }));
+    };
     img.addEventListener('dblclick', (e) => {
       e.preventDefault(); e.stopPropagation();
-      openLightbox(img.src, img.alt || '');
+      openLightbox(img.src, img.alt || '', collectGallery());
     });
-  });
-};
+    // Touch: single tap opens (dblclick is unreliable on mobile).
+    let touchStart = 0;
+    img.addEventListener('touchstart', () => { touchStart = Date.now(); }, { passive: true });
+    img.addEventListener('touchend', (e) => {
+      if (Date.now() - touchStart < 300) {
+        e.preventDefault();
+        openLightbox(img.src, img.alt || '', collectGallery());
+      }
+    });
 
 
