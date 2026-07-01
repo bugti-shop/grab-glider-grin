@@ -402,15 +402,47 @@ export const ImageTaskExtractorSheet = ({
             </div>
           )}
 
-          {/* Loading state */}
-          {isExtracting && (
-            <div className="flex items-center gap-3 px-3 py-4 rounded-xl bg-primary/5">
-              <Loader2 className="h-5 w-5 text-primary animate-spin" />
-              <span className="text-sm text-foreground">
-                {t('imageExtract.reading', 'Reading your tasks…')}
-              </span>
+          {/* Progress / error state */}
+          {(isExtracting || phase === 'error') && (
+            <div
+              className={cn(
+                'flex items-start gap-3 px-3 py-3 rounded-xl border',
+                phase === 'error'
+                  ? 'bg-destructive/5 border-destructive/30'
+                  : 'bg-primary/5 border-primary/20',
+              )}
+            >
+              {phase === 'error' ? (
+                <X className="h-5 w-5 text-destructive mt-0.5" />
+              ) : (
+                <Loader2 className="h-5 w-5 text-primary animate-spin mt-0.5" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-foreground">
+                  {phase === 'capturing' && t('imageExtract.phaseCapturing', 'Capturing image…')}
+                  {phase === 'uploading' && t('imageExtract.phaseUploading', 'Uploading to AI…')}
+                  {phase === 'processing' && t('imageExtract.phaseProcessing', 'AI is reading your tasks…')}
+                  {phase === 'error' && (errorLabel || t('imageExtract.failed', 'Could not read tasks from this image'))}
+                </div>
+                {phase !== 'error' && (
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {phase === 'uploading'
+                      ? t('imageExtract.uploadingHint', 'Sending photo securely to Gemini')
+                      : t('imageExtract.processingHint', 'Usually finishes in 5–15 seconds')}
+                  </div>
+                )}
+                {phase === 'error' && imageDataUrl && (
+                  <button
+                    onClick={() => runExtraction(imageDataUrl)}
+                    className="mt-2 text-xs font-semibold text-primary"
+                  >
+                    {t('common.retry', 'Retry')}
+                  </button>
+                )}
+              </div>
             </div>
           )}
+
 
           {/* Extracted tasks list */}
           {!isExtracting && items.length > 0 && (
