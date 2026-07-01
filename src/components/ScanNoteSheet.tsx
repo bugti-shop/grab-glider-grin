@@ -445,16 +445,6 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           setShowCamera(false);
           applyObjectCountResult(dataUrl, result);
         }}
-        onReceipt={async (dataUrl) => await fetchReceiptResult(dataUrl)}
-        onConfirmReceipt={(dataUrl, result) => {
-          setShowCamera(false);
-          setImageDataUrl(dataUrl);
-          setHtml(result.html);
-          setSuggestedTitle(result.title);
-          setHasRun(true);
-          setPhase('done');
-          toast.success(`Receipt saved · ${result.merchant || 'expense'}`);
-        }}
         hasPro={hasPaidAi}
         onRequestUpgrade={() => {
           setShowCamera(false);
