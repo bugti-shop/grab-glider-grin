@@ -642,12 +642,28 @@ export const ImageTaskExtractorSheet = ({
         onClose={() => setShowCamera(false)}
         title={t('imageExtract.title', 'Scan tasks from paper')}
         initialMode="note"
+        onBarcode={handleBarcode}
+        status={
+          isExtracting
+            ? {
+                label:
+                  phase === 'uploading'
+                    ? t('imageExtract.phaseUploading', 'Uploading to AI…')
+                    : t('imageExtract.phaseProcessing', 'AI is reading your tasks…'),
+                sublabel:
+                  phase === 'uploading'
+                    ? t('imageExtract.uploadingHint', 'Sending photo securely to Gemini')
+                    : t('imageExtract.processingHint', 'Usually finishes in 5–15 seconds'),
+              }
+            : null
+        }
         onCapture={async (dataUrl) => {
           setShowCamera(false);
           setImageDataUrl(dataUrl);
           await runExtraction(dataUrl);
         }}
       />
+
     </Sheet>
   );
 };
