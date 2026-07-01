@@ -355,8 +355,20 @@ export const CameraScannerScreen = ({
         return;
       }
       if (mode === 'object' && onObjectCount) {
-        onObjectCount(compressed);
-        onClose();
+        // Enter review state: freeze the frame, run AI, then show boxes + counts.
+        setObjReviewFrame(compressed);
+        setObjReviewResult(null);
+        setObjReviewError(null);
+        setObjReviewLoading(true);
+        try {
+          const result = await onObjectCount(compressed);
+          setObjReviewResult(result);
+        } catch (err: any) {
+          console.error('[CameraScannerScreen] object count failed', err);
+          setObjReviewError(err?.message || 'Could not count objects');
+        } finally {
+          setObjReviewLoading(false);
+        }
         return;
       }
       onCapture(compressed);
