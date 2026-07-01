@@ -340,3 +340,45 @@ export const persistSyncedFrom = (root: HTMLElement | null) => {
     if (id && inner) setSyncedBlock(id, inner.innerHTML);
   });
 };
+
+/**
+ * Web-clip card hydration.
+ * - Adds a collapse/expand toggle when the body word-count exceeds threshold.
+ * - Idempotent: safe to call on every render.
+ */
+export const hydrateWebClipsIn = (root: HTMLElement | null, threshold = 600) => {
+  if (!root) return;
+  const clips = root.querySelectorAll<HTMLElement>('.flowist-web-clip');
+  clips.forEach((clip) => {
+    if (clip.dataset.hydrated === '1') return;
+    const body = clip.querySelector<HTMLElement>('.flowist-web-clip-body[data-role="body"]');
+    if (!body) { clip.dataset.hydrated = '1'; return; }
+    const words = (body.textContent || '').trim().split(/\s+/).filter(Boolean).length;
+    if (words > threshold) {
+      body.setAttribute('data-collapsed', '1');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'flowist-web-clip-toggle';
+      btn.setAttribute('contenteditable', 'false');
+      btn.setAttribute('data-role', 'toggle');
+      const setLabel = () => {
+        const collapsed = body.getAttribute('data-collapsed') === '1';
+        btn.textContent = collapsed
+          ? `▾ Read full clip (${words.toLocaleString()} words)`
+          : '▴ Collapse clip';
+      };
+      setLabel();
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const collapsed = body.getAttribute('data-collapsed') === '1';
+        if (collapsed) body.removeAttribute('data-collapsed');
+        else body.setAttribute('data-collapsed', '1');
+        setLabel();
+      });
+      body.insertAdjacentElement('afterend', btn);
+    }
+    clip.dataset.hydrated = '1';
+  });
+};
+
