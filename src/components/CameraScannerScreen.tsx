@@ -446,6 +446,16 @@ export const CameraScannerScreen = ({
         return;
       }
 
+      // Batch mode (Note only): accumulate the page and stay on the camera view.
+      if (mode === 'note' && batchOn && onBatchNote) {
+        setBatchPages((prev) => {
+          const next = [...prev, compressed];
+          toast.success(`📄 Page ${next.length} added · tap Done to combine`, { duration: 1200 });
+          return next;
+        });
+        return;
+      }
+
       onCapture(compressed);
       onClose();
     } catch (e) {
