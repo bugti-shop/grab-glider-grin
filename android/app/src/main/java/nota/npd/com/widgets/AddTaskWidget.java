@@ -9,8 +9,9 @@ import android.content.Intent;
 import android.net.Uri;
 import android.widget.RemoteViews;
 
-import nota.npd.com.QuickAddActivity;
+import nota.npd.com.QuickAddOverlayActivity;
 import nota.npd.com.R;
+
 
 /**
  * "Quick Add Task" home-screen widget.
@@ -34,7 +35,7 @@ public class AddTaskWidget extends AppWidgetProvider {
             RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_add_task);
 
             Intent open = new Intent(ACTION_QUICK_ADD, Uri.parse("flowist://quick-add?src=widget&wid=" + id));
-            open.setComponent(new ComponentName(ctx, QuickAddActivity.class));
+            open.setComponent(new ComponentName(ctx, QuickAddOverlayActivity.class));
             open.addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_MULTIPLE_TASK

@@ -131,15 +131,18 @@
 
         </activity>
 
-        <!-- Dedicated launcher-overlay entry point for the Quick Add widget.
-             Exported=true + custom scheme (flowist://quick-add) so ONLY widget
-             taps route here; MainActivity is never resurrected in this flow. -->
+        <!-- Translucent WebView overlay activity for the Quick Add widget.
+             Hosts the real React /quick-add route (TaskInputSheet inside the
+             full provider tree). Exported so the widget PendingIntent can
+             target it; singleInstance + excludeFromRecents keep it isolated
+             from MainActivity's task stack. -->
         <activity
-            android:name=".QuickAddActivity"
+            android:name=".QuickAddOverlayActivity"
             android:theme="@style/AppTheme.QuickAddOverlay"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
             android:taskAffinity=""
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|uiMode|density"
             android:exported="true">
             <intent-filter>
                 <action android:name="nota.npd.com.action.QUICK_ADD" />
@@ -151,6 +154,7 @@
                 <data android:scheme="flowist" android:host="quick-add" />
             </intent-filter>
         </activity>
+
 
         <service
             android:name=".FocusForegroundService"

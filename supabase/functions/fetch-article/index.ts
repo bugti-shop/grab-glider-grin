@@ -26,23 +26,40 @@ const MAX_HTML_BYTES = 5 * 1024 * 1024; // 5MB page cap
 const MAX_CONTENT_HTML_BYTES = 500 * 1024; // 500KB cap on returned clip HTML
 const FETCH_TIMEOUT_MS = 20_000;
 
-/** Extract absolute image URLs from an HTML string (order-preserving, deduped). */
+/** Extract safe, reachable absolute image URLs from an HTML string.
+ *  - Only http/https (drops data:, blob:, javascript:, protocol-relative junk).
+ *  - Filters obvious tracking pixels (1x1, /pixel, /beacon, /track, /impression).
+ *  - Filters tiny favicons the fallback link cards inject (google s2 favicons).
+ *  - Caps total to MAX_CLIP_IMAGES so a single clip never ships an avalanche. */
+const MAX_CLIP_IMAGES = 24;
 function extractImageUrls(html: string): string[] {
   if (!html) return [];
   const out: string[] = [];
   const seen = new Set<string>();
-  const re = /<img\b[^>]*?\ssrc\s*=\s*["']([^"']+)["']/gi;
+  const re = /<img\b[^>]*?\ssrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(html)) !== null) {
-    const u = m[1].trim();
-    if (!u || u.startsWith("data:")) continue;
-    if (seen.has(u)) continue;
-    seen.add(u);
-    out.push(u);
-    if (out.length >= 100) break;
+    const tag = m[0];
+    const rawUrl = m[1].trim();
+    if (!rawUrl) continue;
+    if (!/^https?:\/\//i.test(rawUrl)) continue;                 // http(s) only
+    if (seen.has(rawUrl)) continue;
+    const lower = rawUrl.toLowerCase();
+    // Common tracking-pixel / beacon patterns.
+    if (/(?:^|[/?&#=_.-])(pixel|beacon|track(?:ing)?|impression|analytics|telemetry|1x1|spacer|blank)(?:[/?&#=_.-]|\.(?:gif|png|jpg))/i.test(lower)) continue;
+    // Fallback-card favicons (Google favicon service, sz=128 etc.).
+    if (lower.includes("s2/favicons")) continue;
+    // Explicit tiny dimensions in the tag → skip.
+    const w = /\bwidth\s*=\s*["']?(\d+)/i.exec(tag)?.[1];
+    const h = /\bheight\s*=\s*["']?(\d+)/i.exec(tag)?.[1];
+    if (w && h && Number(w) <= 2 && Number(h) <= 2) continue;
+    seen.add(rawUrl);
+    out.push(rawUrl);
+    if (out.length >= MAX_CLIP_IMAGES) break;
   }
   return out;
 }
+
 
 /** Truncate HTML at a byte budget without breaking a tag mid-attribute. */
 function capHtml(html: string, maxBytes: number): { html: string; truncated: boolean } {
@@ -742,27 +759,28 @@ Deno.serve(async (req) => {
     const importantLinks = extractImportantLinks(document as any, base, content);
     const capped = capHtml(String(content || ""), MAX_CONTENT_HTML_BYTES);
 
-    // Graceful fallback for paywalled / JS-heavy pages: no real body extracted.
-    const hasBody = capped.html && capped.html.replace(/<[^>]+>/g, "").trim().length > 200;
+    // Always return the full extracted clip — no metadata-only card fallback.
+    // If Readability + jina both produced very little body, we still ship
+    // whatever HTML we have plus a small notice; the client can render it.
+    const bodyText = capped.html.replace(/<[^>]+>/g, "").trim();
+    const isThin = bodyText.length < 200;
     let responseContent = capped.html;
-    let isFallback = false;
-    if (!hasBody) {
-      isFallback = true;
+    if (isThin) {
       const safeTitle = escapeHtml(title);
-      const safeExcerpt = excerpt ? escapeHtml(excerpt) : "";
       const hero = leadImage
-        ? `<p><img src="${leadImage}" alt="" referrerpolicy="no-referrer" style="max-width:100%;height:auto;border-radius:8px" /></p>`
+        ? `<p><img src="${leadImage}" alt="${safeTitle}" referrerpolicy="no-referrer" style="max-width:100%;height:auto;border-radius:8px" /></p>`
         : "";
+      // Wrap the (thin) extracted content so nothing is discarded — user sees
+      // headings/images we DID find, plus a small notice at the end.
       responseContent =
-        `<section class="flowist-web-clip-fallback">` +
-        `<h1>${safeTitle}</h1>` +
-        hero +
-        (safeExcerpt ? `<blockquote>${safeExcerpt}</blockquote>` : "") +
-        `<p><em>Full content unavailable — this page may require a login, be paywalled, or render content with JavaScript. Tap the link below to open it.</em></p>` +
-        `<p><a href="${base}" target="_blank" rel="noopener noreferrer">${escapeHtml(base)}</a></p>` +
+        `<section class="flowist-web-clip-body">` +
+        (hero || "") +
+        (capped.html || `<h1>${safeTitle}</h1>`) +
+        `<p><em>Some sections may be missing — the page renders extra content with JavaScript. Open the original for the complete article.</em></p>` +
         `</section>`;
     }
     const images = extractImageUrls(responseContent);
+
 
     return new Response(
       JSON.stringify({
@@ -780,7 +798,7 @@ Deno.serve(async (req) => {
         textContent,
         length,
         truncated: capped.truncated,
-        fallback: isFallback,
+        fallback: false,
         embeds: [] as string[], // embeds are now inlined into `content` at their original position
         importantLinks,  // [{ href, text }]
       }),
