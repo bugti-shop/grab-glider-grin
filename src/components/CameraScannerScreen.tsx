@@ -211,14 +211,10 @@ export const CameraScannerScreen = ({
   const [receiptReviewResult, setReceiptReviewResult] = useState<any>(null);
   const [receiptReviewError, setReceiptReviewError] = useState<string | null>(null);
   const modeRef = useRef<ScannerMode>(initialMode);
-  const chipTapRef = useRef<{
-    mode: ScannerMode;
-    label: string;
-    locked: boolean;
-    x: number;
-    y: number;
-    cancelled: boolean;
-  } | null>(null);
+  // On-screen tap trace (visible over the camera) — helps verify chip taps
+  // are actually reaching the handlers on real devices.
+  const [tapTrace, setTapTrace] = useState<string>('');
+
 
   useEffect(() => {
     modeRef.current = mode;
@@ -559,67 +555,47 @@ export const CameraScannerScreen = ({
   );
 
   const selectScannerMode = useCallback((id: ScannerMode, label: string, locked: boolean) => {
-    console.log('[Scanner] mode selected', id);
+    const ts = new Date().toLocaleTimeString();
+    console.log('[Scanner] mode selected →', id, { label, locked, ts });
+    setTapTrace(`${ts} · tap → ${label}${locked ? ' (locked)' : ''}`);
+
     if (locked) {
+      toast.info(`${label} is a Pro feature`, { duration: 1200 });
       requirePro('receipt');
       return;
     }
-    if (modeRef.current === id) return;
+    if (modeRef.current === id) {
+      toast(`Already in ${label}`, { duration: 700 });
+      return;
+    }
     modeRef.current = id;
     setMode(id);
-    toast(`Mode: ${label}`, { duration: 900 });
+    toast.success(`Mode: ${label}`, { duration: 900 });
   }, [requirePro]);
 
-  const handleOverlayPointerDownCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const chip = (e.target as Element | null)?.closest?.('[data-scanner-mode]') as HTMLElement | null;
-    if (chip && e.currentTarget.contains(chip)) {
-      chipTapRef.current = {
-        mode: (chip.dataset.scannerMode || 'note') as ScannerMode,
-        label: chip.dataset.scannerLabel || 'Scan Note',
-        locked: chip.dataset.scannerLocked === 'true',
-        x: e.clientX,
-        y: e.clientY,
-        cancelled: false,
-      };
-    } else {
-      chipTapRef.current = null;
-    }
-    e.stopPropagation();
-  }, []);
 
-  const handleOverlayPointerMoveCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const tap = chipTapRef.current;
-    if (!tap) return;
-    const dx = Math.abs(e.clientX - tap.x);
-    const dy = Math.abs(e.clientY - tap.y);
-    if (dx > 18 && dx > dy * 1.5) tap.cancelled = true;
-  }, []);
-
-  const handleOverlayPointerUpCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const tap = chipTapRef.current;
-    if (!tap) return;
-    chipTapRef.current = null;
-    e.stopPropagation();
-    if (tap.cancelled) return;
-    e.preventDefault();
-    selectScannerMode(tap.mode, tap.label, tap.locked);
-  }, [selectScannerMode]);
+  // NOTE: Previously we called e.stopPropagation() during the CAPTURE phase on
+  // the overlay. That silently killed every child button's onPointerDown /
+  // onPointerUp handler (including the Barcode/Objects chips), because React
+  // stops synthetic-event dispatch to descendants once stopPropagation runs in
+  // capture. Now we ONLY stop propagation in the bubble phase, so the buttons'
+  // handlers run first and the outer Radix Sheet still doesn't see the event.
 
   if (!isOpen) return null;
+
+  const stopBubble = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
 
   const overlay = (
     <div
       className="fixed inset-0 z-[300] bg-black text-white flex flex-col select-none"
-      // Scanner is portal'd to <body> but lives inside a Radix Sheet. Without
-      // stopping propagation here, every pointer-down inside the scanner is
-      // treated as "outside the sheet" and closes the parent — which was
-      // making the flash button and Barcode/Objects chips close the whole scanner.
-      onPointerDownCapture={handleOverlayPointerDownCapture}
-      onPointerMoveCapture={handleOverlayPointerMoveCapture}
-      onPointerUpCapture={handleOverlayPointerUpCapture}
-      onPointerDown={(e) => e.stopPropagation()}
-      onMouseDownCapture={(e) => e.stopPropagation()}
-      onTouchStartCapture={(e) => e.stopPropagation()}
+      style={{ isolation: 'isolate', pointerEvents: 'auto' }}
+      // Bubble phase only — after child buttons handle their own pointer events.
+      onPointerDown={stopBubble}
+      onPointerUp={stopBubble}
+      onMouseDown={stopBubble}
+      onTouchStart={stopBubble}
     >
       {/* Live camera feed (hidden while reviewing a frozen result) */}
       {!objReviewFrame && !receiptReviewFrame && (
@@ -865,7 +841,13 @@ export const CameraScannerScreen = ({
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >
         {/* Mode chips — Gallery moved out so it can't compete with the shutter */}
+        {tapTrace && (
+          <div className="mb-1 px-2 py-1 rounded-md bg-black/60 border border-white/10 text-[10px] font-mono text-white/80 self-start max-w-full truncate">
+            {tapTrace}
+          </div>
+        )}
         <ChipStrip>
+
           {MODES.filter((m) => m.id !== 'gallery').map(({ id, label, icon: Icon }) => {
             const active = mode === id;
             const locked = !hasPro && id === 'receipt';
@@ -1120,8 +1102,8 @@ async function decodeBarcodeWithZxing(
  */
 const ChipStrip = ({ children }: { children: React.ReactNode }) => (
   <div
-    className="flex items-center justify-start gap-2 pb-3 overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-    style={{ WebkitOverflowScrolling: 'touch' }}
+    className="relative z-30 flex items-center justify-start gap-2 pb-3 overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    style={{ WebkitOverflowScrolling: 'touch', pointerEvents: 'auto' }}
   >
     {children}
   </div>
@@ -1140,21 +1122,26 @@ const ChipButton = ({
   const startRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const cancelledRef = useRef(false);
   const firedRef = useRef(false);
-  const fire = (e: React.SyntheticEvent) => {
-    if (cancelledRef.current || firedRef.current) return;
+  const label = (buttonProps as any)['data-scanner-label'] || 'chip';
+  const fire = (source: string) => {
+    if (cancelledRef.current || firedRef.current) {
+      console.log(`[Scanner] chip "${label}" ${source} suppressed (cancelled=${cancelledRef.current}, fired=${firedRef.current})`);
+      return;
+    }
     firedRef.current = true;
-    e.stopPropagation();
+    console.log(`[Scanner] chip "${label}" fired via ${source}`);
     onSelect();
-    // Reset so the next tap works
     setTimeout(() => { firedRef.current = false; }, 250);
   };
   return (
     <button
       {...buttonProps}
       type="button"
+      style={{ position: 'relative', zIndex: 40, touchAction: 'manipulation', pointerEvents: 'auto', ...(buttonProps.style || {}) }}
       onPointerDown={(e) => {
         buttonProps.onPointerDown?.(e);
         e.stopPropagation();
+        console.log(`[Scanner] chip "${label}" pointerdown`, { x: e.clientX, y: e.clientY, type: e.pointerType });
         startRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
         cancelledRef.current = false;
         firedRef.current = false;
@@ -1165,24 +1152,28 @@ const ChipButton = ({
         if (!s) return;
         const dx = Math.abs(e.clientX - s.x);
         const dy = Math.abs(e.clientY - s.y);
-        // Only treat as a scroll gesture when horizontal movement clearly dominates.
         if (dx > 18 && dx > dy * 1.5) cancelledRef.current = true;
       }}
       onPointerUp={(e) => {
         buttonProps.onPointerUp?.(e);
-        // Fire on pointerup regardless of whether the browser later dispatches
-        // click — some Android WebViews swallow click inside scroll containers.
+        e.stopPropagation();
         const s = startRef.current;
-        if (!s) return;
+        if (!s) {
+          console.log(`[Scanner] chip "${label}" pointerup with no start`);
+          return;
+        }
         const dx = Math.abs(e.clientX - s.x);
         const dy = Math.abs(e.clientY - s.y);
-        if (dx > 18 && dx > dy * 1.5) return;
-        fire(e);
+        if (dx > 18 && dx > dy * 1.5) {
+          console.log(`[Scanner] chip "${label}" pointerup treated as scroll`);
+          return;
+        }
+        fire('pointerup');
       }}
       onClick={(e) => {
         buttonProps.onClick?.(e);
-        // Fallback for mouse / desktop; guarded by firedRef to avoid double-trigger.
-        fire(e);
+        e.stopPropagation();
+        fire('click');
       }}
       className={cn(
         'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95 touch-manipulation',
@@ -1195,6 +1186,7 @@ const ChipButton = ({
     </button>
   );
 };
+
 
 /**
  * Full-screen review overlay shown after the object-count shutter fires.
