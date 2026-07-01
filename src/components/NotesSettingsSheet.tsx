@@ -228,6 +228,13 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
     toast.success(t('settings.settingsSaved', 'Settings saved'));
   };
 
+  const updateMarkdownShortcuts = async (value: boolean) => {
+    const newSettings = { ...settings, markdownShortcuts: value };
+    await saveSettings(newSettings);
+    window.dispatchEvent(new CustomEvent('notesSettingsChanged', { detail: newSettings }));
+    toast.success(t('settings.settingsSaved', 'Settings saved'));
+  };
+
   const updateStartNotesIn = async (value: 'title' | 'body') => {
     const newSettings = { ...settings, startNotesIn: value };
     await saveSettings(newSettings);
