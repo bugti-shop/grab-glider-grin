@@ -303,13 +303,7 @@ export const TodaySheets = (props: TodaySheetsProps) => {
         </SheetContent>
       </Sheet>
 
-      {/* Streak Challenge Dialog */}
-      <StreakChallengeDialog
-        isOpen={props.showStreakChallenge}
-        onClose={props.onCloseStreakChallenge}
-        currentStreak={props.currentStreak}
-        weekData={props.streakWeekData}
-      />
+      {/* Streak Challenge Dialog - disabled per user request */}
     </>
   );
 };
