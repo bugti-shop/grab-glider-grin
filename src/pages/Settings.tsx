@@ -32,6 +32,7 @@ const Settings = () => {
   const { t, navigate, isProSub, requireFeature, isBackingUp, hasAdminAccess } = state;
   const { openPaywall } = useSubscription();
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [showHeaderOffsetSheet, setShowHeaderOffsetSheet] = useState(false);
 
   // Unified row style component
   const SettingsRow = ({ label, onClick, showCrown }: { label: React.ReactNode; onClick: () => void; showCrown?: boolean }) => (
