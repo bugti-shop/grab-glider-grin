@@ -145,20 +145,25 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     } catch (e: any) {
       console.error('[scan note] error', e);
       const msg = e?.message || '';
+      let label: string;
       if (msg.includes('429')) {
-        toast.error(t('tasks.aiRateLimit', 'AI is busy, try again shortly'));
+        label = t('tasks.aiRateLimit', 'AI is busy, try again shortly');
       } else if (msg.includes('402')) {
-        toast.error(t('tasks.aiCredits', 'AI credits exhausted'));
+        label = t('tasks.aiCredits', 'AI credits exhausted');
       } else if (msg.includes('AbortError') || msg.includes('aborted') || msg.includes('timeout')) {
-        toast.error(t('scanNote.timeout', 'This scan took too long. Try a clearer or smaller photo.'));
+        label = t('scanNote.timeout', 'This scan took too long. Try a clearer or smaller photo.');
       } else {
-        toast.error(t('scanNote.failed', 'Could not read this page'));
+        label = t('scanNote.failed', 'Could not read this page');
       }
+      toast.error(label);
+      setErrorLabel(label);
+      setPhase('error');
     } finally {
       setIsExtracting(false);
       release();
     }
   };
+
 
   const handleInsert = () => {
     if (!html.trim()) {
