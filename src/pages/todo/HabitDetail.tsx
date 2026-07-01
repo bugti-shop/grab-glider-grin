@@ -691,6 +691,81 @@ const HabitDetail = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Vacation / Sick-day dialog */}
+      <Dialog open={pauseOpen} onOpenChange={setPauseOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Take a break</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm font-medium mb-2">Reason</div>
+              <div className="grid grid-cols-3 gap-2">
+                {(['vacation', 'sick', 'other'] as HabitPauseReason[]).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setPauseReason(r)}
+                    className={cn(
+                      'py-2 rounded-lg border text-sm font-medium capitalize',
+                      pauseReason === r ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-foreground border-border'
+                    )}
+                  >
+                    {r === 'sick' ? '🤒 Sick' : r === 'other' ? 'Paused' : '🌴 Vacation'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium mb-2">How many days?</div>
+              <div className="grid grid-cols-4 gap-2">
+                {[1, 3, 7, 14].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setPauseDays(n)}
+                    className={cn(
+                      'py-2 rounded-lg border text-sm font-medium',
+                      pauseDays === n ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-foreground border-border'
+                    )}
+                  >
+                    {n === 1 ? 'Today' : `${n} days`}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <label className="text-xs text-muted-foreground">Custom</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={90}
+                  value={pauseDays}
+                  onChange={(e) => setPauseDays(Math.max(1, Math.min(90, Number(e.target.value) || 1)))}
+                  className="flex-1 h-9 rounded-md border border-border bg-background px-2 text-sm"
+                />
+                <span className="text-xs text-muted-foreground">days</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium mb-2">Note (optional)</div>
+              <input
+                type="text"
+                value={pauseNote}
+                onChange={(e) => setPauseNote(e.target.value)}
+                placeholder="e.g. Trip to Kyoto"
+                className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Your streak stays safe. Skipped days won't count as missed and this habit will hide from Today's list until the pause ends.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPauseOpen(false)}>Cancel</Button>
+            <Button onClick={applyPause}>Start pause</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <HabitReflectionSheet
         open={reflectionOpen}
         onOpenChange={setReflectionOpen}
