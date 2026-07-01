@@ -111,18 +111,24 @@ class WidgetDataSyncManager {
     // already running, onCreate doesn't fire again so we must also listen for
     // appStateChange/resume to pick up the pending path written by onNewIntent.
     await this.drainPendingWidgetPath();
+    await this.drainPendingQuickAddTasks();
     [100, 350, 900, 1600].forEach((delay) => {
       window.setTimeout(() => this.drainPendingWidgetPath().catch(() => {}), delay);
+      window.setTimeout(() => this.drainPendingQuickAddTasks().catch(() => {}), delay);
     });
     try {
       CapApp.addListener('appUrlOpen', ({ url }: { url: string }) => {
         this.openWidgetUrl(url).catch(() => {});
       });
       CapApp.addListener('appStateChange', (s: { isActive: boolean }) => {
-        if (s.isActive) this.drainPendingWidgetPath().catch(() => {});
+        if (s.isActive) {
+          this.drainPendingWidgetPath().catch(() => {});
+          this.drainPendingQuickAddTasks().catch(() => {});
+        }
       });
       CapApp.addListener('resume', () => {
         this.drainPendingWidgetPath().catch(() => {});
+        this.drainPendingQuickAddTasks().catch(() => {});
       });
     } catch {}
 
