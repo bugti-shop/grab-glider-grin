@@ -89,6 +89,10 @@ const Notes = () => {
   const [filterTagIds, setFilterTagIds] = useState<string[]>([]);
   const deferredFilterTagIds = useDeferredValue(filterTagIds);
   const [allTags, setAllTags] = useState<import('@/utils/tagStorage').AppTag[]>([]);
+  const [semanticMode, setSemanticMode] = useState(false);
+  const [semanticHits, setSemanticHits] = useState<SemanticSearchHit[] | null>(null);
+  const [semanticLoading, setSemanticLoading] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
 
   // Load tags for filtering
   useEffect(() => {
