@@ -171,6 +171,10 @@ export const CameraScannerScreen = ({
   const [lastBarcode, setLastBarcode] = useState<string | null>(null);
   // Burst mode: capture 3 frames and auto-pick the sharpest.
   const [burstOn, setBurstOn] = useState(false);
+  // Multi-page batch scan (Note mode): capture N pages, save as one combined note.
+  const [batchOn, setBatchOn] = useState(false);
+  const [batchPages, setBatchPages] = useState<string[]>([]);
+  const [batchProcessing, setBatchProcessing] = useState(false);
   // Object-count review state.
   const [objReviewFrame, setObjReviewFrame] = useState<string | null>(null);
   const [objReviewLoading, setObjReviewLoading] = useState(false);
