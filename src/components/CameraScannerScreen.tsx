@@ -341,44 +341,42 @@ export const CameraScannerScreen = ({
 
 
   const handleShutter = useCallback(async () => {
-    console.log('[Scanner] shutter fired', { mode, ready, capturing });
+    console.log('[Scanner] shutter fired', { mode, ready, capturing, burstOn });
     if (capturing) {
       console.log('[Scanner] shutter ignored — already capturing');
       return;
     }
     setCapturing(true);
     try {
-      // Shutter ALWAYS captures the live camera frame. Gallery is only opened
-      // by the explicit gallery button — never by the shutter.
       if (!ready) {
         toast.error('Camera not ready yet');
-        console.warn('[Scanner] shutter aborted — camera not ready');
         return;
       }
-
       const video = videoRef.current;
       if (!video || video.videoWidth === 0) {
         toast.error('Camera not ready yet');
-        console.warn('[Scanner] shutter aborted — no video frame');
         return;
       }
 
-      // Confirm to the user which mode fired so they can see the shutter worked.
       const modeLabel =
         mode === 'barcode' ? 'Barcode' :
         mode === 'object'  ? 'Objects' :
+        mode === 'receipt' ? 'Receipt' :
         mode === 'image'   ? 'Image'   : 'Scan Note';
-      toast(`📸 Captured · ${modeLabel} mode`, { duration: 1200 });
+      toast(
+        burstOn ? `📸 Burst · ${modeLabel} — picking sharpest…` : `📸 Captured · ${modeLabel} mode`,
+        { duration: 1200 },
+      );
 
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
+      // Burst mode: grab 3 frames ~180ms apart and pick the sharpest.
+      // Otherwise: single frame.
+      const canvas = burstOn
+        ? await captureSharpestBurst(video, 3, 180)
+        : captureSingleFrame(video);
+      if (!canvas) {
         toast.error('Could not capture frame');
         return;
       }
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const raw = canvas.toDataURL('image/jpeg', 0.92);
       const compressed = await compressImage(raw, {
         maxWidth: 1400,
@@ -386,12 +384,11 @@ export const CameraScannerScreen = ({
         quality: 0.82,
         mimeType: 'image/jpeg',
       }).catch(() => raw);
-      console.log('[Scanner] frame captured', { mode, bytes: compressed.length });
+      console.log('[Scanner] frame captured', { mode, bytes: compressed.length, burst: burstOn });
 
       if (mode === 'barcode') {
         const decoded = await decodeBarcodeFromCanvas(canvas).catch(() => null);
         const fallbackDecoded = decoded || await decodeBarcodeWithZxing(canvas, zxingReaderRef.current || createZxingReader()).catch(() => null);
-        console.log('[Scanner] barcode decode result', fallbackDecoded);
         if (fallbackDecoded && onBarcode) {
           setLastBarcode(fallbackDecoded.rawValue);
           toast.success(`Barcode: ${fallbackDecoded.rawValue.slice(0, 32)}`);
@@ -402,35 +399,48 @@ export const CameraScannerScreen = ({
         toast.error('No barcode detected. Hold it inside the frame and try again.');
         return;
       }
+
       if (mode === 'object' && onObjectCount) {
-        console.log('[Scanner] entering object-count review');
         setObjReviewFrame(compressed);
         setObjReviewResult(null);
         setObjReviewError(null);
         setObjReviewLoading(true);
         try {
           const result = await onObjectCount(compressed);
-          console.log('[Scanner] object count result', result);
           setObjReviewResult(result);
         } catch (err: any) {
-          console.error('[Scanner] object count failed', err);
           setObjReviewError(err?.message || 'Could not count objects');
         } finally {
           setObjReviewLoading(false);
         }
         return;
       }
-      console.log('[Scanner] delivering capture to parent');
+
+      if (mode === 'receipt' && onReceipt) {
+        setReceiptReviewFrame(compressed);
+        setReceiptReviewResult(null);
+        setReceiptReviewError(null);
+        setReceiptReviewLoading(true);
+        try {
+          const result = await onReceipt(compressed);
+          setReceiptReviewResult(result);
+        } catch (err: any) {
+          setReceiptReviewError(err?.message || 'Could not read receipt');
+        } finally {
+          setReceiptReviewLoading(false);
+        }
+        return;
+      }
+
       onCapture(compressed);
       onClose();
-
     } catch (e) {
       console.error('[Scanner] shutter error', e);
       toast.error('Could not capture image');
     } finally {
       setCapturing(false);
     }
-  }, [capturing, mode, onCapture, onClose, onObjectCount, ready]);
+  }, [burstOn, capturing, mode, onBarcode, onCapture, onClose, onObjectCount, onReceipt, ready]);
 
   const openGallery = useCallback(async () => {
     console.log('[Scanner] gallery opened via explicit gallery button');
