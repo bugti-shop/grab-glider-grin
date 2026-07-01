@@ -60,9 +60,10 @@ const getPriorityWeight = (priority?: string): number => {
  * Find undated, incomplete tasks eligible for scheduling
  */
 export const getUndatedTasks = (tasks: TodoItem[]): TodoItem[] => {
-  return tasks.filter(t => 
-    !t.completed && 
-    !t.dueDate && 
+  return tasks.filter(t =>
+    !t.completed &&
+    !t.dueDate &&
+    !t.scheduledDate &&
     t.text.trim().length > 0
   );
 };
