@@ -3,7 +3,9 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { Note } from '@/types/note';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { NoteEditor } from '@/components/NoteEditor';
-import { Layers, Settings, Pin, Download, ListTodo, FileText, Archive, ArchiveRestore, Trash2, RotateCcw, Sun, Moon, Search, X, Crown, Tag } from 'lucide-react';
+import { Layers, Settings, Pin, Download, ListTodo, FileText, Archive, ArchiveRestore, Trash2, RotateCcw, Sun, Moon, Search, X, Crown, Tag, Sparkles, Loader2 } from 'lucide-react';
+import { AskNotesDialog } from '@/components/notes/AskNotesDialog';
+import { semanticSearchNotes, type SemanticSearchHit } from '@/utils/semanticSearch';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 
 
@@ -87,6 +89,10 @@ const Notes = () => {
   const [filterTagIds, setFilterTagIds] = useState<string[]>([]);
   const deferredFilterTagIds = useDeferredValue(filterTagIds);
   const [allTags, setAllTags] = useState<import('@/utils/tagStorage').AppTag[]>([]);
+  const [semanticMode, setSemanticMode] = useState(false);
+  const [semanticHits, setSemanticHits] = useState<SemanticSearchHit[] | null>(null);
+  const [semanticLoading, setSemanticLoading] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
 
   // Load tags for filtering
   useEffect(() => {
@@ -369,6 +375,39 @@ const Notes = () => {
   // Filter notes using lightweight metadata for instant performance
   const notesMetaById = useMemo(() => new Map(notesMeta.map(meta => [meta.id, meta])), [notesMeta]);
 
+  // Debounced semantic search when semanticMode is enabled
+  useEffect(() => {
+    if (!semanticMode) { setSemanticHits(null); return; }
+    const q = deferredSearchQuery.trim();
+    if (!q) { setSemanticHits(null); return; }
+    let cancelled = false;
+    setSemanticLoading(true);
+    const handle = window.setTimeout(async () => {
+      try {
+        const hits = await semanticSearchNotes(q, 20);
+        if (!cancelled) setSemanticHits(hits);
+      } catch (e: any) {
+        if (!cancelled) {
+          setSemanticHits([]);
+          toast.error(e?.message || 'Semantic search failed');
+        }
+      } finally {
+        if (!cancelled) setSemanticLoading(false);
+      }
+    }, 350);
+    return () => { cancelled = true; window.clearTimeout(handle); };
+  }, [semanticMode, deferredSearchQuery]);
+
+  const semanticNoteIds = useMemo(
+    () => semanticHits ? new Set(semanticHits.map(h => h.note_id)) : null,
+    [semanticHits],
+  );
+  const semanticRank = useMemo(() => {
+    const m = new Map<string, number>();
+    (semanticHits ?? []).forEach((h, i) => m.set(h.note_id, i));
+    return m;
+  }, [semanticHits]);
+
   const filteredNotes = useMemo(() => notes.filter(note => {
     const meta = notesMetaById.get(note.id);
 
@@ -386,6 +425,9 @@ const Notes = () => {
     }
 
     if (deferredSearchQuery.trim()) {
+      if (semanticMode) {
+        return semanticNoteIds ? semanticNoteIds.has(note.id) : false;
+      }
       const search = deferredSearchQuery.toLowerCase();
       const titleMatch = note.title.toLowerCase().includes(search);
       const contentMatch = meta?.contentPreview?.toLowerCase().includes(search) ?? false;
@@ -393,9 +435,15 @@ const Notes = () => {
     }
 
     return true;
-  }), [notes, notesMetaById, viewMode, deferredFilterTagIds, deferredSearchQuery]);
+  }), [notes, notesMetaById, viewMode, deferredFilterTagIds, deferredSearchQuery, semanticMode, semanticNoteIds]);
 
   const sortedNotes = useMemo(() => [...filteredNotes].sort((a, b) => {
+    // In semantic mode with an active query, order by relevance
+    if (semanticMode && deferredSearchQuery.trim() && semanticRank.size > 0) {
+      const ra = semanticRank.get(a.id) ?? 999;
+      const rb = semanticRank.get(b.id) ?? 999;
+      if (ra !== rb) return ra - rb;
+    }
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return 1;
     if (a.isPinned && b.isPinned) {
@@ -539,24 +587,54 @@ const Notes = () => {
 
         {/* Search Bar */}
         <div className="mb-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder={t('notes.searchNotes')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 pl-10 rounded-lg border-none bg-secondary text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder={semanticMode ? 'Ask in plain language…' : t('notes.searchNotes')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2 pl-10 pr-9 rounded-lg border-none bg-secondary text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+              />
+              {semanticLoading ? (
+                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary animate-spin" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              )}
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setSemanticMode((v) => !v)}
+              title={semanticMode ? 'Semantic AI search on' : 'Turn on semantic AI search'}
+              className={cn(
+                'h-9 px-2.5 rounded-lg text-xs font-medium inline-flex items-center gap-1 transition-colors shrink-0',
+                semanticMode
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              AI
+            </button>
+            <button
+              onClick={() => setAskOpen(true)}
+              title="Ask your notes"
+              className="h-9 px-2.5 rounded-lg text-xs font-medium inline-flex items-center gap-1 bg-secondary hover:bg-accent text-foreground shrink-0"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              Ask
+            </button>
           </div>
+          {semanticMode && deferredSearchQuery.trim() && !semanticLoading && semanticHits && semanticHits.length === 0 && (
+            <p className="text-xs text-muted-foreground mt-2">No semantically related notes found.</p>
+          )}
           <div className="h-[1px] bg-border mt-3" />
         </div>
 
@@ -827,6 +905,15 @@ const Notes = () => {
       <TagManagementSheet
         open={showTagManager}
         onOpenChange={setShowTagManager}
+      />
+
+      <AskNotesDialog
+        open={askOpen}
+        onOpenChange={setAskOpen}
+        onOpenNote={(noteId) => {
+          setAskOpen(false);
+          navigate(`/notes?openNote=${noteId}`);
+        }}
       />
 
       <div className="md:hidden">

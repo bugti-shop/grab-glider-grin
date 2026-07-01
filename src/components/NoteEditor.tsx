@@ -632,6 +632,16 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     }
     if (accepted === false) return;
 
+    // Bridge checklist items to global tasks on EVERY save (partial or full)
+    // so ticking a checkbox in a note mirrors to Today instantly.
+    syncNoteChecklistToTasks(savedNote)
+      .then((rewritten) => {
+        if (rewritten && rewritten !== savedNote.content) {
+          setContentState(rewritten);
+        }
+      })
+      .catch((e) => console.warn('[NoteEditor] task sync failed', e));
+
     if (full) {
       // Schedule or cancel note reminder in background
       if (savedNote.reminderEnabled && savedNote.reminderTime) {
@@ -647,14 +657,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       // Save version history (only on "full" save)
       saveNoteVersion(savedNote, note ? 'edit' : 'create');
 
-      // Bridge checklist items inside the note to the global task list
-      syncNoteChecklistToTasks(savedNote)
-        .then((rewritten) => {
-          if (rewritten && rewritten !== savedNote.content) {
-            setContentState(rewritten);
-          }
-        })
-        .catch((e) => console.warn('[NoteEditor] task sync failed', e));
+      // Update semantic search embeddings (debounced per note)
+      import('@/utils/semanticSearch').then(({ scheduleEmbedNote }) => {
+        scheduleEmbedNote({ id: savedNote.id, title: savedNote.title, content: savedNote.content });
+      }).catch(() => {});
     }
 
     persistNoteToIndexedDB(savedNote);

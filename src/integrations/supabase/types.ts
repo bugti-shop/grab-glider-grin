@@ -478,6 +478,45 @@ export type Database = {
           },
         ]
       }
+      note_embeddings: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          embedding: string
+          id: string
+          model: string
+          note_id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chunk_index?: number
+          content: string
+          created_at?: string
+          embedding: string
+          id?: string
+          model?: string
+          note_id: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          embedding?: string
+          id?: string
+          model?: string
+          note_id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       note_versions: {
         Row: {
           body_snapshot: string | null
@@ -1167,6 +1206,20 @@ export type Database = {
         Returns: {
           allowed: boolean
           new_count: number
+        }[]
+      }
+      match_note_chunks: {
+        Args: {
+          match_count?: number
+          min_similarity?: number
+          query_embedding: string
+        }
+        Returns: {
+          chunk_index: number
+          content: string
+          note_id: string
+          similarity: number
+          title: string
         }[]
       }
       record_public_note_view: {
