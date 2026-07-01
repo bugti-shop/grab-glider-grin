@@ -95,6 +95,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding"));
 const Landing = lazy(() => import("./pages/Landing"));
 const PremiumUnlock = lazy(() => import("./pages/PremiumUnlock"));
+const PublicNote = lazy(() => import("./pages/PublicNote"));
 // Eager import: /quick-add is the sole route rendered inside the Android
 // widget overlay WebView. Lazy-loading it would add a network round-trip on
 // cold-open — the exact metric we're optimising here.
@@ -482,6 +483,7 @@ const AppRoutes = () => {
             <Route path="/w/new/sketch" element={<WidgetNewSketch />} />
             <Route path="/mustafabugti890" element={<PremiumUnlock />} />
             <Route path="/quick-add" element={<QuickAdd />} />
+            <Route path="/p/:slug" element={<PublicNote />} />
             <Route path="*" element={<NotFound />} />
 
 
@@ -839,6 +841,7 @@ const AppContent = () => {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
               <Route path="/mustafabugti890" element={<PremiumUnlock />} />
+              <Route path="/p/:slug" element={<PublicNote />} />
               <Route path="*" element={<Landing />} />
 
             </Routes>
