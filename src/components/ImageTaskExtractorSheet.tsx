@@ -50,6 +50,12 @@ interface ReviewItem extends ExtractedTask {
   selected: boolean;
 }
 
+interface ObjectCountItem {
+  label?: string;
+  count?: number;
+  confidence?: string;
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -116,10 +122,25 @@ export const ImageTaskExtractorSheet = ({
     onClose();
   };
 
+  const ensureScannerAccess = async () => {
+    if (!(await ensureSignedInForAi())) return false;
+    if (!hasPaidAi) {
+      requireFeature('ai_dictation');
+      return false;
+    }
+    return true;
+  };
+
+  const openScanner = async () => {
+    if (!(await ensureScannerAccess())) return;
+    setShowCamera(true);
+  };
+
 
 
   const runCapture = async () => {
     if (captureLockRef.current) return;
+    if (!(await ensureScannerAccess())) return;
     captureLockRef.current = true;
     try {
       setPhase('capturing');
@@ -230,6 +251,80 @@ export const ImageTaskExtractorSheet = ({
     }
   };
 
+  const runObjectCounting = async (dataUrl: string) => {
+    if (!(await ensureScannerAccess())) return;
+    const release = acquireAiLock();
+    if (!release) {
+      toast.error(getAiBusyMessage());
+      return;
+    }
+    setImageDataUrl(dataUrl);
+    setIsExtracting(true);
+    setHasRun(false);
+    setItems([]);
+    setErrorLabel(null);
+    try {
+      await yieldToPaint();
+      setPhase('uploading');
+      const invokePromise = supabase.functions.invoke('ai-extract-tasks-from-image', {
+        body: {
+          imageBase64: dataUrl,
+          scanMode: 'object_count',
+          webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
+        },
+        timeout: AI_SCAN_TIMEOUT_MS,
+      });
+      setTimeout(() => setPhase((p) => (p === 'uploading' ? 'processing' : p)), 800);
+      const { data, error } = await invokePromise;
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      const total = Number((data as any)?.totalCount || 0);
+      const summary = String((data as any)?.summary || `Counted ${total} objects`).trim();
+      const counts = Array.isArray((data as any)?.objectCounts)
+        ? ((data as any).objectCounts as ObjectCountItem[])
+        : [];
+      const details = counts
+        .filter((item) => item && item.label)
+        .map((item) => {
+          const confidence = item.confidence ? ` (${item.confidence})` : '';
+          return `• ${item.label}: ${Number(item.count || 0)}${confidence}`;
+        })
+        .join('\n');
+
+      const objectTask: ReviewItem = {
+        uid: `object-count-${Date.now()}`,
+        title: `Object count: ${total} objects`,
+        description: [summary, details].filter(Boolean).join('\n\n'),
+        dueDateIso: null,
+        reminderIso: null,
+        deadlineIso: null,
+        priority: 'none',
+        folderId: currentFolderId || null,
+        sectionId: currentSectionId || null,
+        repeatType: 'none',
+        selected: true,
+      };
+      setItems([objectTask]);
+      setHasRun(true);
+      setPhase('done');
+    } catch (e: any) {
+      console.error('[object count] error', e);
+      const msg = e?.message || '';
+      const label = msg.includes('429')
+        ? t('tasks.aiRateLimit', 'AI is busy, try again shortly')
+        : msg.includes('402')
+          ? t('tasks.aiCredits', 'AI credits exhausted')
+          : t('imageExtract.objectCountFailed', 'Could not count objects in this image');
+      toast.error(label);
+      setErrorLabel(label);
+      setPhase('error');
+    } finally {
+      setIsExtracting(false);
+      release();
+    }
+  };
+
   const toggleSelect = (uid: string) => {
     setItems((prev) =>
       prev.map((it) => (it.uid === uid ? { ...it, selected: !it.selected } : it)),
@@ -333,7 +428,7 @@ export const ImageTaskExtractorSheet = ({
                 )}
               </p>
               <Button
-                onClick={() => setShowCamera(true)}
+                onClick={openScanner}
                 className="h-14 w-full gap-2"
               >
                 <Camera className="h-5 w-5" />
@@ -643,6 +738,10 @@ export const ImageTaskExtractorSheet = ({
         title={t('imageExtract.title', 'Scan tasks from paper')}
         initialMode="note"
         onBarcode={handleBarcode}
+        onObjectCount={async (dataUrl) => {
+          setShowCamera(false);
+          await runObjectCounting(dataUrl);
+        }}
         status={
           isExtracting
             ? {

@@ -32,6 +32,12 @@ interface Props {
 
 type Phase = 'idle' | 'capturing' | 'uploading' | 'processing' | 'done' | 'error';
 
+interface ObjectCountItem {
+  label?: string;
+  count?: number;
+  confidence?: string;
+}
+
 export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const { t, i18n } = useTranslation();
   const { isPro, isAdminBypass, requireFeature } = useSubscription();
@@ -64,6 +70,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
 
   const runCapture = async () => {
     if (captureLockRef.current) return;
+    if (!(await ensureScannerAccess())) return;
     captureLockRef.current = true;
     try {
       setPhase('capturing');
@@ -89,6 +96,20 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     toast.success(t('scanNote.barcodeInserted', 'Barcode inserted'));
     setShowCamera(false);
     onClose();
+  };
+
+  const ensureScannerAccess = async () => {
+    if (!(await ensureSignedInForAi())) return false;
+    if (!hasPaidAi) {
+      requireFeature('ai_dictation');
+      return false;
+    }
+    return true;
+  };
+
+  const openScanner = async () => {
+    if (!(await ensureScannerAccess())) return;
+    setShowCamera(true);
   };
 
   const runExtraction = async (dataUrl: string) => {
@@ -166,6 +187,75 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     }
   };
 
+  const runObjectCounting = async (dataUrl: string) => {
+    if (!(await ensureScannerAccess())) return;
+    const release = acquireAiLock();
+    if (!release) {
+      toast.error(getAiBusyMessage());
+      return;
+    }
+    setImageDataUrl(dataUrl);
+    setIsExtracting(true);
+    setHasRun(false);
+    setHtml('');
+    setSuggestedTitle('');
+    setErrorLabel(null);
+    try {
+      await yieldToPaint();
+      setPhase('uploading');
+      const invokePromise = supabase.functions.invoke('ai-extract-tasks-from-image', {
+        body: {
+          imageBase64: dataUrl,
+          scanMode: 'object_count',
+          webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
+        },
+        timeout: AI_SCAN_TIMEOUT_MS,
+      });
+      setTimeout(() => setPhase((p) => (p === 'uploading' ? 'processing' : p)), 800);
+      const { data, error } = await invokePromise;
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      const total = Number((data as any)?.totalCount || 0);
+      const summary = String((data as any)?.summary || `Counted ${total} objects`).trim();
+      const counts = Array.isArray((data as any)?.objectCounts)
+        ? ((data as any).objectCounts as ObjectCountItem[])
+        : [];
+      const list = counts
+        .filter((item) => item && item.label)
+        .map((item) => {
+          const label = escapeHtml(String(item.label || 'Object'));
+          const count = Number(item.count || 0);
+          const confidence = item.confidence ? ` <small>(${escapeHtml(String(item.confidence))})</small>` : '';
+          return `<li>${label}: <strong>${count}</strong>${confidence}</li>`;
+        })
+        .join('');
+      const resultHtml =
+        `<h2>Object Count</h2>` +
+        `<p><strong>Total objects:</strong> ${total}</p>` +
+        `<p>${escapeHtml(summary)}</p>` +
+        (list ? `<ul>${list}</ul>` : '');
+      setHtml(resultHtml);
+      setSuggestedTitle(`Object count · ${total}`);
+      setHasRun(true);
+      setPhase('done');
+    } catch (e: any) {
+      console.error('[object count] error', e);
+      const msg = e?.message || '';
+      const label = msg.includes('429')
+        ? t('tasks.aiRateLimit', 'AI is busy, try again shortly')
+        : msg.includes('402')
+          ? t('tasks.aiCredits', 'AI credits exhausted')
+          : t('scanNote.objectCountFailed', 'Could not count objects in this image');
+      toast.error(label);
+      setErrorLabel(label);
+      setPhase('error');
+    } finally {
+      setIsExtracting(false);
+      release();
+    }
+  };
+
 
   const handleInsert = () => {
     if (!html.trim()) {
@@ -202,7 +292,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
                   'Point your camera at a handwritten sticky note or page. AI will transcribe it and keep the headings and lists.',
                 )}
               </p>
-              <Button onClick={() => setShowCamera(true)} className="h-14 w-full gap-2">
+              <Button onClick={openScanner} className="h-14 w-full gap-2">
                 <Camera className="h-5 w-5" />
                 <span className="text-sm">{t('scanNote.openCamera', 'Open camera scanner')}</span>
               </Button>
@@ -315,6 +405,10 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
         title={t('scanNote.title', 'Scan page to note')}
         initialMode="note"
         onBarcode={handleBarcode}
+        onObjectCount={async (dataUrl) => {
+          setShowCamera(false);
+          await runObjectCounting(dataUrl);
+        }}
         status={
           isExtracting
             ? {
@@ -339,3 +433,6 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     </Sheet>
   );
 };
+
+const escapeHtml = (value: string) =>
+  value.replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]!));
