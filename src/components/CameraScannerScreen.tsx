@@ -603,5 +603,22 @@ async function decodeBarcodeFromCanvas(
   return null;
 }
 
+async function decodeBarcodeWithZxing(
+  source: HTMLVideoElement | HTMLCanvasElement,
+  reader: BrowserMultiFormatReader | null,
+): Promise<{ rawValue: string; format: string } | null> {
+  if (!reader) return null;
+  const result = source instanceof HTMLCanvasElement
+    ? reader.decodeFromCanvas(source)
+    : reader.decode(source);
+  const rawValue = result?.getText?.()?.trim?.() || '';
+  if (!rawValue) return null;
+  const barcodeFormat = result.getBarcodeFormat?.();
+  const format = typeof barcodeFormat === 'number'
+    ? String((BarcodeFormat as any)[barcodeFormat] || barcodeFormat).toLowerCase()
+    : String(barcodeFormat || 'unknown');
+  return { rawValue, format };
+}
+
 export default CameraScannerScreen;
 
