@@ -113,7 +113,11 @@ const WebClipper = () => {
     setSaving(false);
   };
 
-  const handleSaveClip = async (clipMode: ClipMode) => {
+  /**
+   * Fetch + assemble the clip and hand it to the editable preview UI.
+   * Does NOT save to the DB — commitClip() does that when the user hits Save.
+   */
+  const prepareClip = async (clipMode: ClipMode) => {
     setSaving(true);
     setError(null);
     canceledRef.current = false;
