@@ -740,8 +740,11 @@ export const ImageTaskExtractorSheet = ({
         initialMode="note"
         onBarcode={handleBarcode}
         onObjectCount={async (dataUrl) => {
+          return await fetchObjectCountResult(dataUrl);
+        }}
+        onConfirmObjectCount={(dataUrl, result) => {
           setShowCamera(false);
-          await runObjectCounting(dataUrl);
+          applyObjectCountResult(dataUrl, result);
         }}
         status={
           isExtracting
