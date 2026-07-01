@@ -182,6 +182,8 @@ export interface TodoItem {
   createdAt?: Date;
   modifiedAt?: Date;
   completedAt?: Date;
+  /** Set when the task was auto-created from a `.checklist-item` inside a note. */
+  sourceNoteId?: string;
 }
 
 export interface TaskTemplate {
