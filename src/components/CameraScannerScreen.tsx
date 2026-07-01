@@ -1101,6 +1101,105 @@ const ObjectCountReviewOverlay = ({
   );
 };
 
+/**
+ * Receipt review overlay — shows the frozen frame, parsed fields, and
+ * Retake / Confirm actions. Confirm hands off to the parent which creates
+ * the expense note.
+ */
+const ReceiptReviewOverlay = ({
+  frame,
+  result,
+  loading,
+  error,
+  onRetake,
+  onConfirm,
+}: {
+  frame: string;
+  result: any | null;
+  loading: boolean;
+  error: string | null;
+  onRetake: () => void;
+  onConfirm: () => void;
+}) => {
+  const money = (n: number, ccy?: string) => `${ccy ? ccy + ' ' : ''}${Number(n || 0).toFixed(2)}`;
+  return (
+    <div className="absolute inset-0 z-10 flex flex-col bg-black text-white">
+      <div className="relative flex-1 overflow-hidden">
+        <img src={frame} alt="Receipt" className="absolute inset-0 w-full h-full object-contain" />
+        {loading && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <div className="text-sm font-medium">Reading receipt…</div>
+              <div className="text-xs text-white/70">Extracting merchant, total, date</div>
+            </div>
+          </div>
+        )}
+        {!loading && result && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl px-4 py-2 flex items-center gap-2">
+            <Receipt className="h-4 w-4" />
+            <span className="text-sm font-semibold">
+              {result.merchant || 'Receipt'} · {money(result.total, result.currency)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div
+        className="relative px-4 pt-3"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+      >
+        {error ? (
+          <div className="mb-3 text-sm text-red-300">{error}</div>
+        ) : result ? (
+          <div className="mb-3 max-h-40 overflow-y-auto rounded-2xl bg-white/5 border border-white/10 p-3 text-xs space-y-1">
+            <div className="flex justify-between"><span className="text-white/60">Merchant</span><span className="font-semibold">{result.merchant || '—'}</span></div>
+            <div className="flex justify-between"><span className="text-white/60">Total</span><span className="font-semibold">{money(result.total, result.currency)}</span></div>
+            <div className="flex justify-between"><span className="text-white/60">Date</span><span>{result.date || '—'}</span></div>
+            {result.category && (
+              <div className="flex justify-between"><span className="text-white/60">Category</span><span>{result.category}</span></div>
+            )}
+            {result.paymentMethod && (
+              <div className="flex justify-between"><span className="text-white/60">Paid</span><span>{result.paymentMethod}</span></div>
+            )}
+            {Array.isArray(result.items) && result.items.length > 0 && (
+              <div className="pt-1 mt-1 border-t border-white/10">
+                <div className="text-white/60 mb-1">{result.items.length} item{result.items.length === 1 ? '' : 's'}</div>
+                <ul className="space-y-0.5">
+                  {result.items.slice(0, 5).map((it: any, i: number) => (
+                    <li key={i} className="flex justify-between">
+                      <span className="truncate mr-2">{it.name}</span>
+                      <span className="text-white/80">{money(it.lineTotal ?? (Number(it.unitPrice || 0) * Number(it.qty || 1)), result.currency)}</span>
+                    </li>
+                  ))}
+                  {result.items.length > 5 && <li className="text-white/50">+ {result.items.length - 5} more…</li>}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : null}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onRetake}
+            className="flex-1 h-12 rounded-2xl bg-white/10 border border-white/15 text-sm font-semibold active:scale-[0.98] transition"
+          >
+            Retake
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading || !result || !!error}
+            className="flex-1 h-12 rounded-2xl bg-white text-black text-sm font-semibold active:scale-[0.98] transition disabled:opacity-50"
+          >
+            Save as note
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default CameraScannerScreen;
 
 
