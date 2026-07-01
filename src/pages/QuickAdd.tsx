@@ -33,7 +33,7 @@ const QuickAdd = () => {
   useEffect(() => {
     (async () => {
       try {
-        const f = await getSetting<Folder[]>("todoFolders");
+        const f = await getSetting<Folder[]>("todoFolders", []);
         if (Array.isArray(f)) setFolders(f);
       } catch {}
     })();
