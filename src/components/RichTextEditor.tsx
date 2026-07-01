@@ -1533,7 +1533,7 @@ export const RichTextEditor = ({
   }, []);
 
   // Bubble menu command handler
-  const handleBubbleCommand = useCallback((cmd: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'link' | 'comment') => {
+  const handleBubbleCommand = useCallback((cmd: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'link' | 'comment' | 'markdown') => {
     switch (cmd) {
       case 'bold': execCommand('bold'); break;
       case 'italic': execCommand('italic'); break;
@@ -1549,8 +1549,36 @@ export const RichTextEditor = ({
         }
         break;
       }
+      case 'markdown': {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+          toast.error('Select some Markdown text first.');
+          break;
+        }
+        const range = sel.getRangeAt(0);
+        const editor = editorRef.current;
+        if (!editor || !editor.contains(range.commonAncestorContainer)) break;
+        const raw = sel.toString();
+        if (!raw.trim()) { toast.error('Selection is empty.'); break; }
+        const converted = markdownPasteToHtml(raw);
+        if (!converted) {
+          toast.error('No Markdown syntax detected in the selection.');
+          break;
+        }
+        try {
+          editor.focus();
+          document.execCommand('insertHTML', false, converted);
+          hydrateSynced();
+          handleInput();
+          toast.success('Converted Markdown to rich text.');
+        } catch {
+          toast.error('Could not convert selection.');
+        }
+        break;
+      }
     }
-  }, []);
+  }, [hydrateSynced]);
+
 
   // Paste handler: convert Markdown → HTML whenever the plain-text clipboard
   // payload clearly looks like markdown. Mobile browsers/chat apps often expose
