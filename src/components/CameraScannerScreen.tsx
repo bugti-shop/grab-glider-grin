@@ -179,6 +179,10 @@ export const CameraScannerScreen = ({
       setObjReviewResult(null);
       setObjReviewLoading(false);
       setObjReviewError(null);
+      setReceiptReviewFrame(null);
+      setReceiptReviewResult(null);
+      setReceiptReviewLoading(false);
+      setReceiptReviewError(null);
     }
   }, [initialMode, isOpen]);
 
