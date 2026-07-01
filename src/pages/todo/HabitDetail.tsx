@@ -422,6 +422,15 @@ const HabitDetail = () => {
             <DropdownMenuItem onClick={handleShare}>
               <Share2 className="h-4 w-4 mr-2" /> Share
             </DropdownMenuItem>
+            {activePause ? (
+              <DropdownMenuItem onClick={resumeNow}>
+                <XIcon className="h-4 w-4 mr-2" /> End vacation / resume
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={openPauseDialog}>
+                <Palmtree className="h-4 w-4 mr-2" /> Vacation / Sick day
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={handleArchive}>
               <Archive className="h-4 w-4 mr-2" /> {habit.isArchived ? 'Unarchive' : 'Archive'}
             </DropdownMenuItem>
