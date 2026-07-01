@@ -88,6 +88,11 @@ export default function SyncDiagnostics() {
 
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-6">
         <section>
+          <h2 className="mb-2 text-sm font-medium text-muted-foreground">Launcher widget</h2>
+          <WidgetQueueCard />
+        </section>
+
+        <section>
           <h2 className="mb-2 text-sm font-medium text-muted-foreground">Queue backlog</h2>
           <Card className="p-4">
             <div className="mb-3 flex items-center justify-between">
