@@ -383,7 +383,7 @@ async function fetchJinaFallback(target: URL): Promise<any | null> {
   try {
     // Jina Reader often succeeds where direct server fetches are blocked by
     // paywalls/bot checks, and returns images + headings + article markdown.
-    const jinaUrl = `https://r.jina.ai/http://r.jina.ai/http://${target.toString()}`;
+    const jinaUrl = `https://r.jina.ai/http://${target.toString()}`;
     const res = await fetch(jinaUrl, { headers: { "accept": "text/plain" } });
     if (!res.ok) return null;
     const text = await res.text();
