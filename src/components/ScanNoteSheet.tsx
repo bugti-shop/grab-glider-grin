@@ -314,12 +314,28 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
         onClose={() => setShowCamera(false)}
         title={t('scanNote.title', 'Scan page to note')}
         initialMode="note"
+        onBarcode={handleBarcode}
+        status={
+          isExtracting
+            ? {
+                label:
+                  phase === 'uploading'
+                    ? t('scanNote.phaseUploading', 'Uploading to AI…')
+                    : t('scanNote.phaseProcessing', 'AI is transcribing your page…'),
+                sublabel:
+                  phase === 'uploading'
+                    ? t('scanNote.uploadingHint', 'Sending photo securely to Gemini')
+                    : t('scanNote.processingHint', 'Usually finishes in 5–15 seconds'),
+              }
+            : null
+        }
         onCapture={async (dataUrl) => {
           setShowCamera(false);
           setImageDataUrl(dataUrl);
           await runExtraction(dataUrl);
         }}
       />
+
     </Sheet>
   );
 };
