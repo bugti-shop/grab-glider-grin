@@ -122,8 +122,9 @@ export const ImageTaskExtractorSheet = ({
     if (captureLockRef.current) return;
     captureLockRef.current = true;
     try {
+      setPhase('capturing');
       const dataUrl = await captureImageForAI('gallery');
-      if (!dataUrl) return;
+      if (!dataUrl) { setPhase('idle'); return; }
       setImageDataUrl(dataUrl);
       await runExtraction(dataUrl);
     } finally {
@@ -150,9 +151,11 @@ export const ImageTaskExtractorSheet = ({
     setIsExtracting(true);
     setHasRun(false);
     setItems([]);
+    setErrorLabel(null);
     try {
       await yieldToPaint();
-      const { data, error } = await supabase.functions.invoke(
+      setPhase('uploading');
+      const invokePromise = supabase.functions.invoke(
         'ai-extract-tasks-from-image',
         {
           body: {
@@ -168,6 +171,8 @@ export const ImageTaskExtractorSheet = ({
           timeout: AI_SCAN_TIMEOUT_MS,
         },
       );
+      setTimeout(() => setPhase((p) => (p === 'uploading' ? 'processing' : p)), 800);
+      const { data, error } = await invokePromise;
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
 
@@ -197,6 +202,7 @@ export const ImageTaskExtractorSheet = ({
 
       setItems(reviewItems);
       setHasRun(true);
+      setPhase('done');
 
       if (reviewItems.length === 0) {
         toast.info(t('imageExtract.noTasks', 'No tasks detected in this image'));
@@ -204,20 +210,23 @@ export const ImageTaskExtractorSheet = ({
     } catch (e: any) {
       console.error('[image extract] error', e);
       const msg = e?.message || '';
+      let label: string;
       if (msg.includes('429')) {
-        toast.error(t('tasks.aiRateLimit', 'AI is busy, try again shortly'));
+        label = t('tasks.aiRateLimit', 'AI is busy, try again shortly');
       } else if (msg.includes('402')) {
-        toast.error(t('tasks.aiCredits', 'AI credits exhausted'));
+        label = t('tasks.aiCredits', 'AI credits exhausted');
       } else if (msg.includes('AbortError') || msg.includes('aborted') || msg.includes('timeout')) {
-        toast.error(t('imageExtract.timeout', 'This scan took too long. Try a clearer or smaller photo.'));
+        label = t('imageExtract.timeout', 'This scan took too long. Try a clearer or smaller photo.');
       } else {
-        toast.error(
-          t('imageExtract.failed', 'Could not read tasks from this image'),
-        );
+        label = t('imageExtract.failed', 'Could not read tasks from this image');
       }
+      toast.error(label);
+      setErrorLabel(label);
+      setPhase('error');
     } finally {
       setIsExtracting(false);
       release();
+
     }
   };
 
