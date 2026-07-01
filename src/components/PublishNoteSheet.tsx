@@ -194,18 +194,7 @@ export default function PublishNoteSheet({ open, onOpenChange, note }: Props) {
               </div>
             )}
 
-                <div className="flex gap-2 pt-1">
-                  <Button size="sm" variant="secondary" className="flex-1" onClick={handleCopy}>
-                    <Copy className="h-3.5 w-3.5 mr-1.5" />
-                    Copy link
-                  </Button>
-                  <Button size="sm" variant="secondary" className="flex-1" onClick={handleShare}>
-                    <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                    Share
-                  </Button>
-                </div>
-              </div>
-            )}
+
 
             <div className="flex flex-col gap-2 pt-2">
               <Button onClick={handlePublish} disabled={busy} className="w-full">
