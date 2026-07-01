@@ -42,6 +42,7 @@ export interface NotesSettings {
   headings: FontSettings;
   startNotesIn: 'title' | 'body';
   spellCheck: boolean;
+  markdownShortcuts: boolean;
   smartDetection: {
     urls: boolean;
     phoneNumbers: boolean;
@@ -72,6 +73,7 @@ const DEFAULT_NOTES_SETTINGS: NotesSettings = {
   },
   startNotesIn: 'title',
   spellCheck: false,
+  markdownShortcuts: true,
   smartDetection: {
     urls: false,
     phoneNumbers: false,
