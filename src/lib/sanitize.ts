@@ -32,6 +32,7 @@ const RICH_TEXT_CONFIG = {
     'open', 'title', // details element + tooltip
     'data-recording-id', 'data-audio-src', // Allow audio data attributes
     'data-file-name', 'data-file-type', 'data-file-size', 'data-file-url', 'data-click-attached', // Allow file attachment attributes
+    'data-task-id', 'checked', // Note-to-task bridge + checklist state
     'color', 'size', 'face', 'contenteditable', 'draggable',
     'controls', 'type', // Allow audio controls
     'aria-label', 'aria-hidden', 'role', 'tabindex', // Accessibility attrs for voice player
