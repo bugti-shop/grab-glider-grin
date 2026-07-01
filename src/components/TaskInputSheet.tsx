@@ -465,6 +465,8 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       setSelectedTagIds([]);
       setDeadline(undefined);
       setDeadlineReminderTime(undefined);
+      setScheduledDate(undefined);
+      setDateValidationError(null);
       setDescription('');
       setLocation('');
       setFolderId(selectedFolderId ?? undefined);
