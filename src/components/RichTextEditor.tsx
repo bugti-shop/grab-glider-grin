@@ -1550,7 +1550,8 @@ export const RichTextEditor = ({
     // when the closing marker is typed.
     // Skip while slash / mention menus are showing so their own handling wins.
     // ─────────────────────────────────────────────────────────────
-    if (!slashMenu.open && !mentionMenu.open) {
+    const mdEnabled = notesSettings.markdownShortcuts !== false;
+    if (mdEnabled && !slashMenu.open && !mentionMenu.open && !isInsideCode(editorRef.current)) {
       if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (tryMarkdownBlockShortcut(editorRef.current)) {
           e.preventDefault();
