@@ -9,6 +9,7 @@ const corsHeaders = {
 
 interface ExtractRequest {
   imageBase64: string; // data URL or raw base64 of a JPEG/PNG image
+  scanMode?: "tasks" | "object_count";
   folders?: { id: string; name: string }[];
   sections?: { id: string; name: string }[];
   nowIso?: string;
@@ -144,6 +145,134 @@ Deno.serve(async (req) => {
     const tz = body.timezone || "UTC";
     const langCode = body.languageCode || "en";
     const langName = body.languageName || "English";
+
+    if (body.scanMode === "object_count") {
+      const objectPrompt = `You are a precise vision object counter for productivity scanning.
+
+Analyze the image and count the distinct visible physical objects. Group similar objects together with clear labels.
+
+Rules:
+- Count only visible, concrete objects in the photo.
+- Ignore screen UI, scanner overlays, decorative blur, shadows, and unreadable background noise.
+- For handwritten sticky notes or papers, count notes/pages separately from the written tasks.
+- If the image is unclear, still return your best conservative estimate.
+- Return strictly via the tool call.`;
+
+      const aiResponse = await fetch(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        {
+          method: "POST",
+          signal: AbortSignal.timeout(AI_GATEWAY_TIMEOUT_MS),
+          headers: {
+            "Lovable-API-Key": LOVABLE_API_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: [
+              { role: "system", content: objectPrompt },
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Count the visible objects in this image and summarize the result.",
+                  },
+                  { type: "image_url", image_url: { url: imageUrl } },
+                ],
+              },
+            ],
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: "count_objects",
+                  description: "Return grouped object counts detected in the image.",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      totalCount: { type: "integer", minimum: 0 },
+                      summary: { type: "string" },
+                      objectCounts: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            label: { type: "string" },
+                            count: { type: "integer", minimum: 0 },
+                            confidence: {
+                              type: "string",
+                              enum: ["high", "medium", "low"],
+                            },
+                          },
+                          required: ["label", "count", "confidence"],
+                          additionalProperties: false,
+                        },
+                      },
+                    },
+                    required: ["totalCount", "summary", "objectCounts"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+            ],
+            tool_choice: {
+              type: "function",
+              function: { name: "count_objects" },
+            },
+          }),
+        },
+      );
+
+      if (!aiResponse.ok) {
+        if (aiResponse.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        if (aiResponse.status === 402) {
+          return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const txt = await aiResponse.text();
+        console.error("AI gateway object count error", aiResponse.status, txt);
+        return new Response(JSON.stringify({ error: "AI gateway error" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const data = await aiResponse.json();
+      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+      if (!toolCall) {
+        return new Response(JSON.stringify({ totalCount: 0, summary: "No objects counted", objectCounts: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let parsed: { totalCount?: number; summary?: string; objectCounts?: unknown[] } = {};
+      try {
+        parsed = JSON.parse(toolCall.function.arguments);
+      } catch (e) {
+        console.error("Failed to parse object count tool args", e);
+        return new Response(JSON.stringify({ error: "Bad AI response" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(
+        JSON.stringify({
+          totalCount: Number.isFinite(parsed.totalCount) ? parsed.totalCount : 0,
+          summary: typeof parsed.summary === "string" ? parsed.summary : "Objects counted",
+          objectCounts: Array.isArray(parsed.objectCounts) ? parsed.objectCounts : [],
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const systemPrompt = `You are an expert multilingual vision-based task extractor specialized in HANDWRITTEN notes (cursive, print, messy handwriting on paper, sticky-notes, whiteboards, planners, bullet journals).
 
