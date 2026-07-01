@@ -6,4 +6,20 @@
     <string name="custom_url_scheme">nota.npd.com</string>
     <!-- Google Sign-In Web Client ID (for @capgo/capacitor-social-login) -->
     <string name="server_client_id">425291387152-u06impgmsgg286jg7odo4f40fu6pjmb5.apps.googleusercontent.com</string>
+
+    <!-- Widget names shown in the launcher's widget picker -->
+    <string name="widget_add_task_label">Flowist · Quick Add Task</string>
+    <string name="widget_add_task_desc">Open Flowist's task input sheet from your home screen.</string>
+    <string name="widget_tasks_list_label">Flowist · Today Tasks</string>
+    <string name="widget_tasks_list_desc">See today's tasks and tap to check them off.</string>
+    <string name="widget_habits_list_label">Flowist · Habits Today</string>
+    <string name="widget_habits_list_desc">Track today's habits with one-tap check-in.</string>
+    <string name="widget_sticky_note_label">Flowist · Sticky Note</string>
+    <string name="widget_sticky_note_desc">Pin a sticky note to your home screen.</string>
+    <string name="widget_lined_note_label">Flowist · Lined Note</string>
+    <string name="widget_lined_note_desc">Quick access to a lined notebook page.</string>
+    <string name="widget_regular_note_label">Flowist · Regular Note</string>
+    <string name="widget_regular_note_desc">Open a plain Flowist note from your home screen.</string>
+    <string name="widget_sketch_note_label">Flowist · Sketch Note</string>
+    <string name="widget_sketch_note_desc">Jump straight into a sketch canvas.</string>
 </resources>
