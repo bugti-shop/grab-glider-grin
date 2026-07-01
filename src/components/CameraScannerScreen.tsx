@@ -712,6 +712,60 @@ export const CameraScannerScreen = ({
         </div>
       </div>
 
+      {/* Batch scan tray — appears above the bottom bar as pages accumulate */}
+      {batchOn && batchPages.length > 0 && !objReviewFrame && !receiptReviewFrame && (
+        <div className="relative z-20 px-4 pb-2">
+          <div className="rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)]">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-semibold tracking-wide text-white/90">
+                {batchPages.length} page{batchPages.length === 1 ? '' : 's'} captured
+              </div>
+              <div className="text-[10px] text-white/60 uppercase tracking-wider">
+                One combined note
+              </div>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+              {batchPages.map((src, i) => (
+                <div
+                  key={i}
+                  className="relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-white/20 bg-black/40"
+                >
+                  <img src={src} alt={`Page ${i + 1}`} className="w-full h-full object-cover" />
+                  <span className="absolute bottom-0 right-0 text-[10px] px-1 rounded-tl bg-black/70 text-white font-bold">
+                    {i + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onPointerDownCapture={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); undoLastBatchPage(); }}
+                disabled={batchProcessing}
+                className="flex-1 h-10 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold text-white active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <Undo2 className="h-4 w-4" />
+                Undo last
+              </button>
+              <button
+                type="button"
+                onPointerDownCapture={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); finishBatch(); }}
+                disabled={batchProcessing}
+                className="flex-[1.4] h-10 rounded-xl bg-primary text-primary-foreground text-xs font-bold active:scale-95 transition disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-[0_6px_18px_hsl(var(--primary)/0.4)]"
+              >
+                {batchProcessing ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Combining {batchPages.length} pages…</>
+                ) : (
+                  <><Check className="h-4 w-4" /> Done · Save {batchPages.length} pages</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom frosted control bar — hidden during any review overlay */}
       {!objReviewFrame && !receiptReviewFrame && (
       <div
