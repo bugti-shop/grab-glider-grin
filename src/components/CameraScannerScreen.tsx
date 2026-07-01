@@ -319,9 +319,10 @@ export const CameraScannerScreen = ({
       if (mode === 'barcode') {
         // If native decoder is available, try one more sync decode on this frame.
         const decoded = await decodeBarcodeFromCanvas(canvas).catch(() => null);
-        if (decoded && onBarcode) {
-          setLastBarcode(decoded.rawValue);
-          onBarcode(decoded.rawValue, decoded.format);
+        const fallbackDecoded = decoded || await decodeBarcodeWithZxing(canvas, zxingReaderRef.current || createZxingReader()).catch(() => null);
+        if (fallbackDecoded && onBarcode) {
+          setLastBarcode(fallbackDecoded.rawValue);
+          onBarcode(fallbackDecoded.rawValue, fallbackDecoded.format);
           onClose();
           return;
         }
