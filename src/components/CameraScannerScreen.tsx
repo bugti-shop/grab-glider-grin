@@ -584,25 +584,28 @@ export const CameraScannerScreen = ({
 
           <button
             type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
+            onPointerDownCapture={(e) => e.stopPropagation()}
+            onClickCapture={(e) => {
               e.stopPropagation();
               e.preventDefault();
               handleShutter();
             }}
             disabled={capturing || !ready}
-            className="relative w-[86px] h-[86px] rounded-full flex items-center justify-center active:scale-95 transition disabled:opacity-60"
+            style={{ zIndex: 50, isolation: 'isolate', touchAction: 'manipulation' }}
+            className="relative w-[86px] h-[86px] rounded-full flex items-center justify-center active:scale-95 transition disabled:opacity-60 pointer-events-auto"
             aria-label={`Capture (${activeModeLabel})`}
+            data-testid="scanner-shutter"
+            data-mode={mode}
           >
-            <span className="absolute inset-0 rounded-full border-[3px] border-white shadow-[0_0_0_5px_rgba(0,0,0,0.35),0_10px_30px_rgba(0,0,0,0.45)]" />
+            <span className="absolute inset-0 rounded-full border-[3px] border-white shadow-[0_0_0_5px_rgba(0,0,0,0.35),0_10px_30px_rgba(0,0,0,0.45)] pointer-events-none" />
             <span
               className={cn(
-                'w-[66px] h-[66px] rounded-full bg-white transition-transform',
+                'w-[66px] h-[66px] rounded-full bg-white transition-transform pointer-events-none',
                 capturing && 'scale-90 opacity-80',
               )}
             />
             {capturing && (
-              <Loader2 className="absolute h-7 w-7 text-black animate-spin" />
+              <Loader2 className="absolute h-7 w-7 text-black animate-spin pointer-events-none" />
             )}
           </button>
 
