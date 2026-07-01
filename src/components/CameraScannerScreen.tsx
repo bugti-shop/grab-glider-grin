@@ -599,9 +599,9 @@ export const CameraScannerScreen = ({
             setReceiptReviewResult(null);
             setReceiptReviewError(null);
           }}
-          onConfirm={() => {
-            if (!receiptReviewResult || !receiptReviewFrame) return;
-            onConfirmReceipt?.(receiptReviewFrame, receiptReviewResult);
+          onConfirm={(edited) => {
+            if (!edited || !receiptReviewFrame) return;
+            onConfirmReceipt?.(receiptReviewFrame, edited);
             onClose();
           }}
         />
