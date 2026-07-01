@@ -251,22 +251,17 @@ export const ImageTaskExtractorSheet = ({
     }
   };
 
-  const runObjectCounting = async (dataUrl: string) => {
-    if (!(await ensureScannerAccess())) return;
+  const fetchObjectCountResult = async (dataUrl: string) => {
+    // Called from the scanner while the frame is frozen. Returns the raw AI
+    // result so the scanner can render bounding boxes + count for review.
+    if (!(await ensureScannerAccess())) throw new Error('Scanner access denied');
     const release = acquireAiLock();
     if (!release) {
       toast.error(getAiBusyMessage());
-      return;
+      throw new Error(getAiBusyMessage());
     }
-    setImageDataUrl(dataUrl);
-    setIsExtracting(true);
-    setHasRun(false);
-    setItems([]);
-    setErrorLabel(null);
     try {
-      await yieldToPaint();
-      setPhase('uploading');
-      const invokePromise = supabase.functions.invoke('ai-extract-tasks-from-image', {
+      const { data, error } = await supabase.functions.invoke('ai-extract-tasks-from-image', {
         body: {
           imageBase64: dataUrl,
           scanMode: 'object_count',
@@ -274,55 +269,61 @@ export const ImageTaskExtractorSheet = ({
         },
         timeout: AI_SCAN_TIMEOUT_MS,
       });
-      setTimeout(() => setPhase((p) => (p === 'uploading' ? 'processing' : p)), 800);
-      const { data, error } = await invokePromise;
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-
-      const total = Number((data as any)?.totalCount || 0);
-      const summary = String((data as any)?.summary || `Counted ${total} objects`).trim();
-      const counts = Array.isArray((data as any)?.objectCounts)
-        ? ((data as any).objectCounts as ObjectCountItem[])
-        : [];
-      const details = counts
-        .filter((item) => item && item.label)
-        .map((item) => {
-          const confidence = item.confidence ? ` (${item.confidence})` : '';
-          return `• ${item.label}: ${Number(item.count || 0)}${confidence}`;
-        })
-        .join('\n');
-
-      const objectTask: ReviewItem = {
-        uid: `object-count-${Date.now()}`,
-        title: `Object count: ${total} objects`,
-        description: [summary, details].filter(Boolean).join('\n\n'),
-        dueDateIso: null,
-        reminderIso: null,
-        deadlineIso: null,
-        priority: 'none',
-        folderId: currentFolderId || null,
-        sectionId: currentSectionId || null,
-        repeatType: 'none',
-        selected: true,
+      return {
+        totalCount: Number((data as any)?.totalCount || 0),
+        summary: String((data as any)?.summary || 'Objects counted').trim(),
+        objectCounts: Array.isArray((data as any)?.objectCounts) ? (data as any).objectCounts : [],
+        detections: Array.isArray((data as any)?.detections) ? (data as any).detections : [],
       };
-      setItems([objectTask]);
-      setHasRun(true);
-      setPhase('done');
-    } catch (e: any) {
-      console.error('[object count] error', e);
-      const msg = e?.message || '';
-      const label = msg.includes('429')
-        ? t('tasks.aiRateLimit', 'AI is busy, try again shortly')
-        : msg.includes('402')
-          ? t('tasks.aiCredits', 'AI credits exhausted')
-          : t('imageExtract.objectCountFailed', 'Could not count objects in this image');
-      toast.error(label);
-      setErrorLabel(label);
-      setPhase('error');
     } finally {
-      setIsExtracting(false);
       release();
     }
+  };
+
+  const applyObjectCountResult = (
+    dataUrl: string,
+    result: {
+      totalCount: number;
+      summary: string;
+      objectCounts: ObjectCountItem[];
+      detections?: Array<{ label: string; box: number[] }>;
+    },
+  ) => {
+    // Creates the reviewable task from a confirmed object-count result.
+    setImageDataUrl(dataUrl);
+    setHasRun(false);
+    setItems([]);
+    setErrorLabel(null);
+    const total = result.totalCount;
+    const summary = result.summary;
+    const counts = result.objectCounts || [];
+    const details = counts
+      .filter((item) => item && item.label)
+      .map((item) => {
+        const confidence = item.confidence ? ` (${item.confidence})` : '';
+        return `• ${item.label}: ${Number(item.count || 0)}${confidence}`;
+      })
+      .join('\n');
+
+    const objectTask: ReviewItem = {
+      uid: `object-count-${Date.now()}`,
+      title: `Object count: ${total} objects`,
+      description: [summary, details].filter(Boolean).join('\n\n'),
+      dueDateIso: null,
+      reminderIso: null,
+      deadlineIso: null,
+      priority: 'none',
+      folderId: currentFolderId || null,
+      sectionId: currentSectionId || null,
+      repeatType: 'none',
+      selected: true,
+    };
+    setItems([objectTask]);
+    setHasRun(true);
+    setPhase('done');
+    toast.success(`Counted ${total} object${total === 1 ? '' : 's'}`);
   };
 
   const toggleSelect = (uid: string) => {
