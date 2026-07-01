@@ -29,6 +29,10 @@ import {
   Files,
   Undo2,
   Check,
+  Lock,
+  Sparkles,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
