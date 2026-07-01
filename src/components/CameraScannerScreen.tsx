@@ -86,6 +86,7 @@ const MODES: Array<{ id: ScannerMode; label: string; icon: React.ComponentType<{
   { id: 'note', label: 'Scan Note', icon: ScanLine },
   { id: 'barcode', label: 'Barcode', icon: Barcode },
   { id: 'object', label: 'Objects', icon: Boxes },
+  { id: 'receipt', label: 'Receipt', icon: Receipt },
   { id: 'image', label: 'Image', icon: ImagePlus },
   { id: 'gallery', label: 'Gallery', icon: ImageIcon },
 ];
