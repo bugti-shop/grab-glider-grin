@@ -55,6 +55,8 @@ import {
   tryMarkdownBlockShortcut,
   tryMarkdownEnterShortcut,
   tryMarkdownInlineShortcut,
+  markdownPasteToHtml,
+  isInsideCode,
 } from './richtext/markdownShortcuts';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
 import {
@@ -72,6 +74,7 @@ import {
   mentionHTML, getCaretRect, getCaretLI, indentListItem, outdentListItem,
   replaceTriggerAndInsert, columnsHTML, mathHTML, renderMathIn, wrapSelectionAsComment,
   syncedHTML, hydrateSyncedIn, persistSyncedFrom, removeAdjacentMention, hydrateWebClipsIn,
+  hydrateCodeBlocksIn, hydrateImageMediaIn,
 } from './richtext/richTextBlocks';
 import { SyncedBlockPicker } from './richtext/SyncedBlockPicker';
 import 'katex/dist/katex.min.css';
@@ -210,6 +213,8 @@ export const RichTextEditor = ({
     if (syncedUnsubRef.current) { syncedUnsubRef.current(); syncedUnsubRef.current = null; }
     syncedUnsubRef.current = hydrateSyncedIn(editorRef.current, { editable: true });
     hydrateWebClipsIn(editorRef.current);
+    hydrateCodeBlocksIn(editorRef.current);
+    hydrateImageMediaIn(editorRef.current);
   }, []);
   useEffect(() => () => { syncedUnsubRef.current?.(); }, []);
 
