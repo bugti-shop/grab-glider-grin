@@ -300,32 +300,44 @@ function absolutizeDoc(doc: Document, base: string) {
   });
 }
 
-/** Collect safe embeds (video / iframe / audio) BEFORE Readability strips
- *  them. Returns HTML fragments ready to append back into the note. */
-function extractEmbeds(doc: Document, base: string): string[] {
-  const out: string[] = [];
+/** Replace safe embeds (iframe / video / audio) IN PLACE inside the DOM
+ *  before Readability runs. Preserving their original DOM position keeps
+ *  the reading order of images / embeds relative to headings intact.
+ *  Each replacement is a Readability-friendly node (figure) that survives
+ *  the cleaner. Returns the number of embeds inlined. */
+function inlineEmbeds(doc: Document, base: string): number {
+  let count = 0;
   const seen = new Set<string>();
 
-  const push = (html: string, key: string) => {
-    if (seen.has(key)) return;
+  const replaceWithHtml = (el: any, html: string, key: string) => {
+    if (!html || seen.has(key)) { el.remove?.(); return; }
     seen.add(key);
-    out.push(html);
+    try {
+      const wrapper = doc.createElement("div");
+      wrapper.innerHTML = html;
+      const node = wrapper.firstElementChild;
+      if (node && el.parentNode) {
+        el.parentNode.insertBefore(node, el);
+        el.remove?.();
+        count++;
+      }
+    } catch { /* ignore */ }
   };
 
   doc.querySelectorAll("iframe").forEach((el: any) => {
     const src = el.getAttribute("src");
-    if (!src) return;
+    if (!src) { el.remove?.(); return; }
     const abs = absolutize(src, base);
     const title = (el.getAttribute("title") || "Embedded content").replace(/"/g, "&quot;");
     if (!isEmbedAllowed(abs)) {
-      // Unsupported embed → link-card fallback so users still get a click-through.
-      push(embedFallback(abs, title), abs);
+      replaceWithHtml(el, embedFallback(abs, title), abs);
       return;
     }
     const w = el.getAttribute("width") || "560";
     const h = el.getAttribute("height") || "315";
-    push(
-      `<p><iframe src="${abs}" width="${w}" height="${h}" title="${title}" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"></iframe></p>`,
+    replaceWithHtml(
+      el,
+      `<figure style="margin:1em 0"><iframe src="${abs}" width="${w}" height="${h}" title="${title}" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"></iframe></figure>`,
       abs,
     );
   });
@@ -340,27 +352,27 @@ function extractEmbeds(doc: Document, base: string): string[] {
       if (ss) sources.push(`<source src="${absolutize(ss, base)}"${t ? ` type="${t}"` : ""}>`);
     });
     const key = src || sources[0] || poster || "";
-    if (!key) return;
+    if (!key) { el.remove?.(); return; }
     const hasPlayable = !!src || sources.length > 0;
     if (!hasPlayable) {
-      // No playable source (DRM / blob-only). Emit thumbnail fallback.
-      push(embedFallback(absolutize(key, base), "Video", poster ? absolutize(poster, base) : undefined), key);
+      replaceWithHtml(el, embedFallback(absolutize(key, base), "Video", poster ? absolutize(poster, base) : undefined), key);
       return;
     }
-    push(
-      `<p><video controls${poster ? ` poster="${absolutize(poster, base)}"` : ""}${src ? ` src="${absolutize(src, base)}"` : ""} style="max-width:100%">${sources.join("")}</video></p>`,
+    replaceWithHtml(
+      el,
+      `<figure style="margin:1em 0"><video controls${poster ? ` poster="${absolutize(poster, base)}"` : ""}${src ? ` src="${absolutize(src, base)}"` : ""} style="max-width:100%">${sources.join("")}</video></figure>`,
       key,
     );
   });
 
   doc.querySelectorAll("audio").forEach((el: any) => {
     const src = el.getAttribute("src");
-    if (!src) return;
+    if (!src) { el.remove?.(); return; }
     const abs = absolutize(src, base);
-    push(`<p><audio controls src="${abs}"></audio></p>`, abs);
+    replaceWithHtml(el, `<figure style="margin:1em 0"><audio controls src="${abs}"></audio></figure>`, abs);
   });
 
-  return out;
+  return count;
 }
 
 /** Collect substantive outbound links from the raw article container so
