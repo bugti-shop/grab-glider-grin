@@ -686,5 +686,217 @@ async function decodeBarcodeWithZxing(
   return { rawValue, format };
 }
 
+/**
+ * Scroll-safe chip strip: taps that were actually horizontal scroll gestures
+ * are suppressed so users can pan through the mode chips without accidentally
+ * activating one (fixes "Barcode aage scroll nahi hota" / accidental Gallery).
+ */
+const ChipStrip = ({ children }: { children: React.ReactNode }) => (
+  <div
+    className="flex items-center justify-start gap-2 pb-3 overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    style={{ WebkitOverflowScrolling: 'touch' }}
+  >
+    {children}
+  </div>
+);
+
+const ChipButton = ({
+  active,
+  onSelect,
+  children,
+}: {
+  active: boolean;
+  onSelect: () => void;
+  children: React.ReactNode;
+}) => {
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const movedRef = useRef(false);
+  return (
+    <button
+      type="button"
+      onPointerDown={(e) => {
+        startRef.current = { x: e.clientX, y: e.clientY };
+        movedRef.current = false;
+      }}
+      onPointerMove={(e) => {
+        const s = startRef.current;
+        if (!s) return;
+        if (Math.abs(e.clientX - s.x) > 8 || Math.abs(e.clientY - s.y) > 8) {
+          movedRef.current = true;
+        }
+      }}
+      onClick={(e) => {
+        if (movedRef.current) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        onSelect();
+      }}
+      className={cn(
+        'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95',
+        active
+          ? 'bg-white text-black border-white shadow-[0_8px_30px_rgba(255,255,255,0.25)]'
+          : 'bg-white/10 text-white border-white/15',
+      )}
+    >
+      {children}
+    </button>
+  );
+};
+
+/**
+ * Full-screen review overlay shown after the object-count shutter fires.
+ * Displays the frozen frame, per-instance bounding boxes returned by Gemini,
+ * a total-count badge, grouped counts, and Retake / Confirm actions.
+ */
+const ObjectCountReviewOverlay = ({
+  frame,
+  result,
+  loading,
+  error,
+  onRetake,
+  onConfirm,
+}: {
+  frame: string;
+  result: ObjectCountResult | null;
+  loading: boolean;
+  error: string | null;
+  onRetake: () => void;
+  onConfirm: () => void;
+}) => {
+  const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [box, setBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+
+  // Compute the "contain" fit rectangle inside the container so bboxes align.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !imgSize) return;
+    const compute = () => {
+      const cw = el.clientWidth;
+      const ch = el.clientHeight;
+      const scale = Math.min(cw / imgSize.w, ch / imgSize.h);
+      const width = imgSize.w * scale;
+      const height = imgSize.h * scale;
+      setBox({ left: (cw - width) / 2, top: (ch - height) / 2, width, height });
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [imgSize]);
+
+  return (
+    <div className="absolute inset-0 z-10 flex flex-col bg-black text-white">
+      <div ref={containerRef} className="relative flex-1 overflow-hidden">
+        <img
+          src={frame}
+          alt="Captured frame"
+          className="absolute inset-0 w-full h-full object-contain"
+          onLoad={(e) => {
+            const t = e.currentTarget;
+            setImgSize({ w: t.naturalWidth, h: t.naturalHeight });
+          }}
+        />
+        {/* Bounding boxes */}
+        {box && result?.detections?.map((d, i) => {
+          const [ymin, xmin, ymax, xmax] = d.box as number[];
+          if ([ymin, xmin, ymax, xmax].some((n) => typeof n !== 'number')) return null;
+          const left = box.left + (xmin / 1000) * box.width;
+          const top = box.top + (ymin / 1000) * box.height;
+          const width = ((xmax - xmin) / 1000) * box.width;
+          const height = ((ymax - ymin) / 1000) * box.height;
+          return (
+            <div
+              key={i}
+              className="absolute border-2 rounded-md pointer-events-none"
+              style={{
+                left,
+                top,
+                width,
+                height,
+                borderColor: 'hsl(var(--primary))',
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.5) inset, 0 0 12px hsl(var(--primary) / 0.6)',
+              }}
+            >
+              <span
+                className="absolute -top-6 left-0 px-2 py-0.5 text-[10px] font-semibold rounded-md whitespace-nowrap"
+                style={{
+                  background: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary-foreground))',
+                }}
+              >
+                {i + 1}. {d.label}
+              </span>
+            </div>
+          );
+        })}
+        {/* Loading / error overlay */}
+        {loading && (
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <div className="text-sm font-medium">Counting objects…</div>
+              <div className="text-xs text-white/70">Analyzing with Gemini vision</div>
+            </div>
+          </div>
+        )}
+        {/* Total-count badge */}
+        {!loading && result && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl px-4 py-2 flex items-center gap-2">
+            <Boxes className="h-4 w-4" />
+            <span className="text-sm font-semibold">
+              {result.totalCount} object{result.totalCount === 1 ? '' : 's'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom summary + actions */}
+      <div
+        className="relative px-4 pt-3"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+      >
+        {error ? (
+          <div className="mb-3 text-sm text-red-300">{error}</div>
+        ) : result ? (
+          <div className="mb-3 max-h-32 overflow-y-auto rounded-2xl bg-white/5 border border-white/10 p-3 text-xs">
+            <div className="font-medium mb-1">{result.summary}</div>
+            {result.objectCounts?.length ? (
+              <ul className="space-y-0.5 text-white/80">
+                {result.objectCounts.map((oc, i) => (
+                  <li key={i}>
+                    • {oc.label}: <strong className="text-white">{oc.count}</strong>
+                    {oc.confidence ? <span className="opacity-60"> ({oc.confidence})</span> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onRetake}
+            className="flex-1 h-12 rounded-2xl bg-white/10 border border-white/15 text-sm font-semibold active:scale-[0.98] transition"
+          >
+            Retake
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading || !result || !!error}
+            className="flex-1 h-12 rounded-2xl bg-white text-black text-sm font-semibold active:scale-[0.98] transition disabled:opacity-50"
+          >
+            Confirm & Create
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default CameraScannerScreen;
+
 
