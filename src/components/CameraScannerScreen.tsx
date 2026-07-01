@@ -118,6 +118,7 @@ export const CameraScannerScreen = ({
   onClose,
   onCapture,
   onObjectCount,
+  onConfirmObjectCount,
   onBarcode,
   title = 'Scan',
   initialMode = 'note',
@@ -136,9 +137,20 @@ export const CameraScannerScreen = ({
   const [capturing, setCapturing] = useState(false);
   const [barcodeSupported, setBarcodeSupported] = useState(true);
   const [lastBarcode, setLastBarcode] = useState<string | null>(null);
+  // Object-count review state (kept inside scanner so we can overlay bboxes on the frozen frame).
+  const [objReviewFrame, setObjReviewFrame] = useState<string | null>(null);
+  const [objReviewLoading, setObjReviewLoading] = useState(false);
+  const [objReviewResult, setObjReviewResult] = useState<ObjectCountResult | null>(null);
+  const [objReviewError, setObjReviewError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) setMode(initialMode);
+    if (isOpen) {
+      setMode(initialMode);
+      setObjReviewFrame(null);
+      setObjReviewResult(null);
+      setObjReviewLoading(false);
+      setObjReviewError(null);
+    }
   }, [initialMode, isOpen]);
 
 
@@ -162,6 +174,8 @@ export const CameraScannerScreen = ({
       stopStream();
       return;
     }
+    // Pause camera stream while reviewing an object-count result.
+    if (objReviewFrame) return;
     let cancelled = false;
     setError(null);
     setReady(false);
@@ -181,12 +195,10 @@ export const CameraScannerScreen = ({
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          // Autoplay on iOS WebView requires inline + muted.
           videoRef.current.muted = true;
           (videoRef.current as any).playsInline = true;
           await videoRef.current.play().catch(() => { /* ignore autoplay errors */ });
         }
-        // Detect torch support.
         try {
           const track = stream.getVideoTracks()[0];
           const caps = (track.getCapabilities?.() as any) || {};
@@ -202,7 +214,7 @@ export const CameraScannerScreen = ({
       cancelled = true;
       stopStream();
     };
-  }, [isOpen, stopStream]);
+  }, [isOpen, stopStream, objReviewFrame]);
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
