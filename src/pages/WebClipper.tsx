@@ -11,7 +11,7 @@ import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIco
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { sanitizeForDisplay } from '@/lib/sanitize';
+import { sanitizeForDisplay, sanitizeClippedArticle } from '@/lib/sanitize';
 import {
   MAX_LENGTHS,
   type ClipMode,
@@ -186,13 +186,13 @@ const WebClipper = () => {
       let articleExcerpt = '';
       let articlePublished = '';
       let articleHtml = '';
+      let articleEmbeds: string[] = [];
+      let articleLinks: Array<{ href: string; text: string }> = [];
+      let fetchFailure: { code: string; status?: number; message?: string } | null = null;
       const shouldFetchFull =
         !attachment &&
         !!url &&
         (clipMode === 'article' || clipMode === 'fullpage') &&
-        // Only skip if the caller already sent a big body (the extension
-        // captured full content itself). 2 KB threshold — anything less
-        // is treated as a snippet and we re-fetch.
         (content || '').length < 2048;
 
       if (shouldFetchFull) {
@@ -203,7 +203,12 @@ const WebClipper = () => {
           const { data, error } = await supabase.functions.invoke('fetch-article', {
             body: { url },
           });
-          if (!error && data && !controller.signal.aborted) {
+          if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+          if (error) {
+            fetchFailure = { code: 'network', message: error.message };
+          } else if (data?.error) {
+            fetchFailure = { code: String(data.code || 'upstream_error'), status: data.status, message: String(data.error) };
+          } else if (data) {
             articleTitle = String(data.title || '').trim();
             articleByline = String(data.byline || '').trim();
             articleSiteName = String(data.siteName || '').trim();
@@ -211,11 +216,35 @@ const WebClipper = () => {
             articleExcerpt = String(data.excerpt || '').trim();
             articlePublished = String(data.publishedTime || '').trim();
             articleHtml = String(data.content || '').trim();
+            articleEmbeds = Array.isArray(data.embeds) ? data.embeds.filter((x: unknown) => typeof x === 'string') : [];
+            articleLinks = Array.isArray(data.importantLinks)
+              ? data.importantLinks.filter((l: any) => l && typeof l.href === 'string' && typeof l.text === 'string')
+              : [];
           }
         } catch (err) {
+          if (canceledRef.current || (err as Error)?.name === 'AbortError') throw err;
           console.warn('[webClipper] full-article fetch failed', err);
-          // Soft-fail: fall back to whatever content was passed in.
+          fetchFailure = { code: 'network', message: (err as Error)?.message };
         }
+      }
+
+      // If the fetch failed but there's no fallback body to save, surface a
+      // clear error with retry — don't silently save a link-only stub.
+      if (fetchFailure && !articleHtml && !content && !selection) {
+        const map: Record<string, { titleKey: string; titleFallback: string; descKey: string; descFallback: string }> = {
+          paywall:        { titleKey: 'webClipper.errPaywallTitle',   titleFallback: 'Site blocked access',           descKey: 'webClipper.errPaywallDesc',   descFallback: 'This page needs a login or blocks clippers. Try copying the text and using Selection mode.' },
+          not_found:      { titleKey: 'webClipper.errNotFoundTitle',  titleFallback: 'Page not found',                descKey: 'webClipper.errNotFoundDesc',  descFallback: 'The URL returned 404. Double-check the link.' },
+          rate_limited:   { titleKey: 'webClipper.errRateTitle',      titleFallback: 'Rate limited',                  descKey: 'webClipper.errRateDesc',      descFallback: 'The source site is throttling requests. Wait a moment and retry.' },
+          timeout:        { titleKey: 'webClipper.errTimeoutTitle',   titleFallback: 'Fetch timed out',               descKey: 'webClipper.errTimeoutDesc',   descFallback: 'The page took too long to load. Retry, or open it once in the browser and share it back.' },
+          too_large:      { titleKey: 'webClipper.errTooLargeTitle',  titleFallback: 'Page too large',                descKey: 'webClipper.errTooLargeDesc',  descFallback: 'This page exceeds the 5 MB limit. Try Selection mode on the parts you need.' },
+          bad_url:        { titleKey: 'webClipper.errBadUrlTitle',    titleFallback: 'Invalid URL',                   descKey: 'webClipper.errBadUrlDesc',    descFallback: 'That URL is not reachable.' },
+          upstream_error: { titleKey: 'webClipper.errUpstreamTitle',  titleFallback: 'Source site returned an error', descKey: 'webClipper.errUpstreamDesc',  descFallback: fetchFailure.status ? `The site replied with HTTP ${fetchFailure.status}.` : 'The site did not respond properly.' },
+          network:        { titleKey: 'webClipper.errNetworkTitle',   titleFallback: 'Could not reach article',       descKey: 'webClipper.errNetworkDesc',   descFallback: 'Network trouble fetching this page. Check your connection and retry.' },
+          internal:       { titleKey: 'webClipper.errInternalTitle',  titleFallback: 'Clipper hit an error',          descKey: 'webClipper.errInternalDesc',  descFallback: 'Something went wrong on our side while parsing the page.' },
+        };
+        const info = map[fetchFailure.code] || map.internal;
+        failWith(info.titleKey, info.titleFallback, info.descKey, info.descFallback);
+        return;
       }
 
       setStage('embedding');
@@ -254,8 +283,22 @@ const WebClipper = () => {
         if (selection) {
           parts.push(`<blockquote>${sanitizeForDisplay(selection)}</blockquote>`);
         }
-        parts.push(sanitizeForDisplay(articleHtml));
-        noteContent = parts.join('\n');
+        parts.push(articleHtml);
+        if (articleEmbeds.length) {
+          parts.push(`<h3>${sanitizeForDisplay(t('webClipper.embedsHeading', 'Embedded media'))}</h3>`);
+          parts.push(articleEmbeds.join('\n'));
+        }
+        if (articleLinks.length) {
+          const items = articleLinks
+            .map(
+              (l) =>
+                `<li><a href="${l.href}" target="_blank" rel="noopener noreferrer">${sanitizeForDisplay(l.text)}</a></li>`,
+            )
+            .join('');
+          parts.push(`<h3>${sanitizeForDisplay(t('webClipper.linksHeading', 'Related links'))}</h3><ul>${items}</ul>`);
+        }
+        // Single sanitize pass over the full assembled document (allows iframe/video for embeds).
+        noteContent = sanitizeClippedArticle(parts.join('\n'));
       } else {
         const mergedContent = extractedPdfText
           ? [content, extractedPdfText, pdfTruncated ? '_(PDF text truncated)_' : '']
@@ -272,6 +315,7 @@ const WebClipper = () => {
           attachmentType,
         });
       }
+
 
       const newNote: Note = {
         id: crypto.randomUUID(),
@@ -403,7 +447,7 @@ const WebClipper = () => {
             </div>
           )}
 
-          {/* Live progress for download / extract / embed / save stages. */}
+          {/* Live progress for download / extract / fetch / embed / save stages. */}
           {saving && stage !== 'idle' && !error && (
             <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
               <div className="flex items-center gap-2 text-sm">
@@ -414,12 +458,22 @@ const WebClipper = () => {
                 )}
               </div>
               <Progress value={typeof progress === 'number' ? progress : undefined} className="h-1.5" />
+              {stage === 'fetching' && (
+                <p className="text-[11px] text-muted-foreground">
+                  {t('webClipper.fetchingHint', 'Downloading the page, extracting images, embeds, and article text…')}
+                </p>
+              )}
               {stage === 'extracting' && (
                 <p className="text-[11px] text-muted-foreground">
                   {t('webClipper.extractingHint', 'Reading PDF text — your note body will populate shortly.')}
                 </p>
               )}
-              {(stage === 'validating' || stage === 'downloading' || stage === 'extracting') && (
+              {stage === 'embedding' && (
+                <p className="text-[11px] text-muted-foreground">
+                  {t('webClipper.embeddingHint', 'Assembling images, videos, and links into your note…')}
+                </p>
+              )}
+              {(stage === 'validating' || stage === 'downloading' || stage === 'extracting' || stage === 'fetching') && (
                 <Button
                   type="button"
                   variant="outline"
@@ -438,9 +492,36 @@ const WebClipper = () => {
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>{error.title}</AlertTitle>
-              <AlertDescription>{error.description}</AlertDescription>
+              <AlertDescription className="space-y-2">
+                <p>{error.description}</p>
+                {(url || attachment) && !saved && (
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => { setError(null); void handleSaveClip(mode); }}
+                    >
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5" />
+                      {t('webClipper.retry', 'Try again')}
+                    </Button>
+                    {url && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                        {t('webClipper.openSource', 'Open source')}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </AlertDescription>
             </Alert>
           )}
+
 
           {selection && (
             <div className="space-y-2">

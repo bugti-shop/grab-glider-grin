@@ -82,6 +82,23 @@ export const sanitizeForDisplay = (html: string): string => {
 };
 
 /**
+ * Sanitize HTML captured by the Web Clipper. Extends the display config to
+ * allow safe embeds (iframe/video) so users can keep YouTube/Vimeo-style
+ * players and lazy-loaded imagery in the saved note.
+ */
+export const sanitizeClippedArticle = (html: string): string => {
+  return DOMPurify.sanitize(html, {
+    ...RICH_TEXT_CONFIG,
+    ADD_TAGS: ['iframe', 'video', 'figure', 'figcaption', 'picture'],
+    ADD_ATTR: [
+      'loading', 'srcset', 'sizes', 'poster', 'controls', 'muted',
+      'playsinline', 'autoplay', 'preload',
+      'frameborder', 'allow', 'allowfullscreen', 'referrerpolicy',
+    ],
+  }) as string;
+};
+
+/**
  * Strip all HTML tags and return plain text
  * Useful for extracting text content safely
  */
