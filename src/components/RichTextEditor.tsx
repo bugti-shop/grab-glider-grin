@@ -1204,11 +1204,31 @@ export const RichTextEditor = ({
     loadSmartDetectionSettings();
   }, []);
   
-  const handleInput = () => {
+  const handleInput = (event?: React.FormEvent<HTMLDivElement>) => {
     try {
       if (editorRef.current) {
         // Mark that this change came from user input
         isUserInputRef.current = true;
+        const inputType = (event?.nativeEvent as InputEvent | undefined)?.inputType || '';
+
+        // Safety net for mobile/browser paste paths that bypass onPaste and
+        // insert raw plaintext markdown directly into the contenteditable.
+        if (
+          notesSettings.markdownShortcuts !== false &&
+          inputType === 'insertFromPaste' &&
+          !isInsideCode(editorRef.current)
+        ) {
+          const pastedText = editorRef.current.innerText || '';
+          const converted = markdownPasteToHtml(pastedText);
+          const hasRichBlocks = !!editorRef.current.querySelector(
+            'h1,h2,h3,h4,h5,h6,ul,ol,blockquote,hr,pre,code,strong,em,del,.checklist'
+          );
+          if (converted && !hasRichBlocks) {
+            editorRef.current.innerHTML = converted;
+            hydrateSynced();
+          }
+        }
+
         const rawHtml = editorRef.current.innerHTML;
         const newContent = isFindReplaceOpen ? stripFindHighlights(rawHtml) : rawHtml;
         
