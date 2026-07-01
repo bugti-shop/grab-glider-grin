@@ -605,6 +605,30 @@ export const CameraScannerScreen = ({
           {title}
         </div>
         <div className="flex items-center gap-2">
+          {mode === 'note' && onBatchNote && (
+            <button
+              onClick={() => {
+                setBatchOn((v) => {
+                  const next = !v;
+                  toast(next
+                    ? 'Batch scan on · capture pages, tap Done to combine'
+                    : 'Batch scan off', { duration: 1200 });
+                  if (!next) setBatchPages([]);
+                  return next;
+                });
+              }}
+              className={cn(
+                'h-10 px-3 rounded-full backdrop-blur-xl border flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition',
+                batchOn
+                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_6px_18px_hsl(var(--primary)/0.35)]'
+                  : 'bg-white/10 border-white/15 text-white',
+              )}
+              aria-label="Toggle batch scan"
+            >
+              <Files className="h-4 w-4" />
+              Batch{batchPages.length > 0 ? ` · ${batchPages.length}` : ''}
+            </button>
+          )}
           <button
             onClick={() => {
               setBurstOn((v) => !v);
