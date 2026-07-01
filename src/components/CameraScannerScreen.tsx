@@ -903,6 +903,18 @@ export const CameraScannerScreen = ({
           </div>
         </div>
       )}
+
+      {/* Pro-gated upsell overlay */}
+      {upsell && (
+        <ProUpsellOverlay
+          feature={upsell.feature}
+          onClose={() => setUpsell(null)}
+          onSubscribe={() => {
+            setUpsell(null);
+            onRequestUpgrade?.();
+          }}
+        />
+      )}
     </div>
 
   );
