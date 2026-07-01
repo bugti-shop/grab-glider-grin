@@ -95,7 +95,11 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding"));
 const Landing = lazy(() => import("./pages/Landing"));
 const PremiumUnlock = lazy(() => import("./pages/PremiumUnlock"));
-const QuickAdd = lazy(() => import("./pages/QuickAdd"));
+// Eager import: /quick-add is the sole route rendered inside the Android
+// widget overlay WebView. Lazy-loading it would add a network round-trip on
+// cold-open — the exact metric we're optimising here.
+import QuickAdd from "./pages/QuickAdd";
+
 
 
 
