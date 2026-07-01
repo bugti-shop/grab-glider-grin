@@ -784,26 +784,6 @@ Deno.serve(async (req) => {
         embeds: [] as string[], // embeds are now inlined into `content` at their original position
         importantLinks,  // [{ href, text }]
       }),
-      }
-    }
-
-    const importantLinks = extractImportantLinks(document as any, base, content);
-
-    return new Response(
-      JSON.stringify({
-        url: base,
-        title,
-        byline,
-        siteName,
-        excerpt,
-        leadImage,
-        publishedTime: metaPublished,
-        content,
-        textContent,
-        length,
-        embeds: [] as string[], // embeds are now inlined into `content` at their original position
-        importantLinks,  // [{ href, text }]
-      }),
       {
         status: 200,
         headers: {
