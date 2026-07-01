@@ -955,7 +955,20 @@ const Today = () => {
       {/* All sheets/dialogs extracted to TodaySheets */}
       <Suspense fallback={null}><TodaySheets
         isInputOpen={isInputOpen}
-        onCloseInput={() => { setIsInputOpen(false); setInputSectionId(null); }}
+        onCloseInput={() => {
+          setIsInputOpen(false); setInputSectionId(null);
+          if (widgetModeRef.current) {
+            widgetModeRef.current = false;
+            // Return user to the launcher — the widget-quick-add flow
+            // should feel like a launcher overlay, not a full app trip.
+            import('@capacitor/app').then(({ App }) => {
+              // minimizeApp is Android-only; fall back to exitApp otherwise.
+              const anyApp: any = App;
+              if (typeof anyApp.minimizeApp === 'function') anyApp.minimizeApp().catch(() => {});
+              else App.exitApp().catch(() => {});
+            }).catch(() => {});
+          }
+        }}
         onAddTask={handleAddTask}
         folders={folders}
         selectedFolderId={selectedFolderId}
