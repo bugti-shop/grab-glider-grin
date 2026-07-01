@@ -210,6 +210,7 @@ const Settings = () => {
       />
       
       <FeedbackDialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog} />
+      <HeaderOffsetSheet isOpen={showHeaderOffsetSheet} onClose={() => setShowHeaderOffsetSheet(false)} />
     </div>
   );
 };
