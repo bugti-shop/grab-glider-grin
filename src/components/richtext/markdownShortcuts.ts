@@ -62,7 +62,16 @@ export function isInsideCode(root: HTMLElement | null): boolean {
 function getCaretBlock(root: HTMLElement): BlockEl | null {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return null;
-  let node: Node | null = sel.getRangeAt(0).startContainer;
+  const range = sel.getRangeAt(0);
+  let node: Node | null = range.startContainer;
+
+  // Fresh/empty contenteditable editors often begin with text typed directly
+  // inside the editor root instead of inside a <p>/<div>. Treat that root as
+  // the active block so first-line shortcuts like `# ` and `- ` work.
+  if (node === root || node.parentNode === root) {
+    return root as BlockEl;
+  }
+
   while (node && node !== root) {
     if (node.nodeType === 1 && BLOCK_TAGS.has((node as HTMLElement).tagName)) {
       return node as BlockEl;
@@ -96,8 +105,12 @@ function moveCaretIntoStart(el: HTMLElement) {
   sel.addRange(range);
 }
 
-function replaceBlockWith(oldBlock: BlockEl, newBlock: HTMLElement) {
-  oldBlock.replaceWith(newBlock);
+function replaceBlockWith(oldBlock: BlockEl, newBlock: HTMLElement, root?: HTMLElement | null) {
+  if (root && oldBlock === root) {
+    root.replaceChildren(newBlock);
+  } else {
+    oldBlock.replaceWith(newBlock);
+  }
   moveCaretIntoStart(newBlock);
 }
 
@@ -174,7 +187,7 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
     const level = token.length;
     const h = document.createElement(`h${level}`);
     h.innerHTML = '<br>';
-    replaceBlockWith(block, h);
+    replaceBlockWith(block, h, root);
     return true;
   }
 
@@ -184,7 +197,7 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
     const li = document.createElement('li');
     li.innerHTML = '<br>';
     ul.appendChild(li);
-    replaceBlockWith(block, ul);
+    replaceBlockWith(block, ul, root);
     moveCaretIntoStart(li);
     return true;
   }
@@ -195,7 +208,7 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
     const li = document.createElement('li');
     li.innerHTML = '<br>';
     ol.appendChild(li);
-    replaceBlockWith(block, ol);
+    replaceBlockWith(block, ol, root);
     moveCaretIntoStart(li);
     return true;
   }
@@ -212,7 +225,7 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
       `<input type="checkbox" class="checklist-checkbox"${checked ? ' checked' : ''} />` +
       `<span class="checklist-text">\u00A0</span>`;
     ul.appendChild(li);
-    replaceBlockWith(block, ul);
+    replaceBlockWith(block, ul, root);
     const span = li.querySelector('.checklist-text') as HTMLElement | null;
     if (span) moveCaretIntoStart(span);
     return true;
@@ -222,7 +235,7 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
   if (token === '>') {
     const bq = document.createElement('blockquote');
     bq.innerHTML = '<br>';
-    replaceBlockWith(block, bq);
+    replaceBlockWith(block, bq, root);
     return true;
   }
 
@@ -244,8 +257,12 @@ export function tryMarkdownEnterShortcut(root: HTMLElement | null): boolean {
   const hr = document.createElement('hr');
   const nextP = document.createElement('p');
   nextP.innerHTML = '<br>';
-  block.replaceWith(hr);
-  hr.insertAdjacentElement('afterend', nextP);
+  if (block === root) {
+    root.replaceChildren(hr, nextP);
+  } else {
+    block.replaceWith(hr);
+    hr.insertAdjacentElement('afterend', nextP);
+  }
   moveCaretIntoStart(nextP);
   return true;
 }
