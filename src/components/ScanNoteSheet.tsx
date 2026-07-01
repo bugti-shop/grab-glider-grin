@@ -37,6 +37,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const [html, setHtml] = useState('');
   const [suggestedTitle, setSuggestedTitle] = useState('');
   const [hasRun, setHasRun] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const captureLockRef = useRef(false);
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       setSuggestedTitle('');
       setIsExtracting(false);
       setHasRun(false);
+      setShowCamera(false);
       captureLockRef.current = false;
       releaseAllAiLocks();
     }
