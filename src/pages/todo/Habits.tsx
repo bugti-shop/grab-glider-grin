@@ -185,6 +185,8 @@ const Habits = () => {
   };
 
   const isHabitDueOn = (habit: Habit, d: Date): boolean => {
+    // Paused / vacation / sick day always wins — hide from today list.
+    if (isHabitPausedOn(habit, d)) return false;
     if (
       habit.frequency === 'weekly' &&
       !habit.weeklyDays?.length &&
