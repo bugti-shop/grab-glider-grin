@@ -525,24 +525,18 @@ export const CameraScannerScreen = ({
       {/* Bottom frosted control bar — hidden during object-count review */}
       {!objReviewFrame && (
       <div
-        className="relative z-10 px-4"
+        className="relative z-10 px-4 pt-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >
-        {/* Mode chips — scroll-safe (ignore taps that were scroll gestures). */}
+        {/* Mode chips — Gallery moved out so it can't compete with the shutter */}
         <ChipStrip>
-          {MODES.map(({ id, label, icon: Icon }) => {
+          {MODES.filter((m) => m.id !== 'gallery').map(({ id, label, icon: Icon }) => {
             const active = mode === id;
             return (
               <ChipButton
                 key={id}
                 active={active}
-                onSelect={() => {
-                  if (id === 'gallery') {
-                    openGallery();
-                    return;
-                  }
-                  setMode(id);
-                }}
+                onSelect={() => setMode(id)}
               >
                 <Icon className="h-4 w-4" />
                 {label}
@@ -551,12 +545,18 @@ export const CameraScannerScreen = ({
           })}
         </ChipStrip>
 
-        {/* Shutter row */}
-        <div className="flex items-center justify-between px-2">
+        {/* Shutter row — CamScanner-style: big centered shutter, tucked gallery, mode badge */}
+        <div className="relative flex items-center justify-center h-[96px]">
           <button
             type="button"
-            onClick={openGallery}
-            className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/15 flex items-center justify-center active:scale-95 transition"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              openGallery();
+            }}
+            disabled={capturing}
+            className="absolute left-0 bottom-1 w-11 h-11 rounded-xl bg-white/10 backdrop-blur-xl border border-white/15 flex items-center justify-center active:scale-95 transition disabled:opacity-50"
             aria-label="Pick from gallery"
           >
             <ImageIcon className="h-5 w-5" />
@@ -564,33 +564,31 @@ export const CameraScannerScreen = ({
 
           <button
             type="button"
-            onPointerDown={(e) => {
-              // Ensure the shutter always fires as a capture — never as a
-              // native file-picker gesture bubbling from elsewhere.
-              e.stopPropagation();
-            }}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
               handleShutter();
             }}
             disabled={capturing || !ready}
-            className="relative w-[76px] h-[76px] rounded-full flex items-center justify-center active:scale-95 transition disabled:opacity-60"
+            className="relative w-[86px] h-[86px] rounded-full flex items-center justify-center active:scale-95 transition disabled:opacity-60"
             aria-label={`Capture (${activeModeLabel})`}
           >
-            <span className="absolute inset-0 rounded-full border-2 border-white/70" />
+            <span className="absolute inset-0 rounded-full border-[3px] border-white shadow-[0_0_0_5px_rgba(0,0,0,0.35),0_10px_30px_rgba(0,0,0,0.45)]" />
             <span
               className={cn(
-                'w-[60px] h-[60px] rounded-full bg-white transition',
+                'w-[66px] h-[66px] rounded-full bg-white transition-transform',
                 capturing && 'scale-90 opacity-80',
               )}
             />
             {capturing && (
-              <Loader2 className="absolute h-6 w-6 text-black animate-spin" />
+              <Loader2 className="absolute h-7 w-7 text-black animate-spin" />
             )}
           </button>
 
-          <div className="w-12 h-12 opacity-0 pointer-events-none" aria-hidden />
+          <div className="absolute right-0 bottom-1 h-11 px-3 rounded-xl bg-white/10 backdrop-blur-xl border border-white/15 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/90">
+            {activeModeLabel}
+          </div>
         </div>
       </div>
       )}
@@ -709,32 +707,40 @@ const ChipButton = ({
   onSelect: () => void;
   children: React.ReactNode;
 }) => {
-  const startRef = useRef<{ x: number; y: number } | null>(null);
-  const movedRef = useRef(false);
+  const startRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const cancelledRef = useRef(false);
   return (
     <button
       type="button"
       onPointerDown={(e) => {
-        startRef.current = { x: e.clientX, y: e.clientY };
-        movedRef.current = false;
+        startRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+        cancelledRef.current = false;
       }}
       onPointerMove={(e) => {
         const s = startRef.current;
         if (!s) return;
-        if (Math.abs(e.clientX - s.x) > 8 || Math.abs(e.clientY - s.y) > 8) {
-          movedRef.current = true;
+        // Only treat as a scroll if horizontal movement is significant AND
+        // dominates vertical — this keeps taps working even with small finger tremor.
+        const dx = Math.abs(e.clientX - s.x);
+        const dy = Math.abs(e.clientY - s.y);
+        if (dx > 16 && dx > dy) {
+          cancelledRef.current = true;
         }
       }}
+      onPointerCancel={() => {
+        cancelledRef.current = true;
+      }}
       onClick={(e) => {
-        if (movedRef.current) {
+        if (cancelledRef.current) {
           e.preventDefault();
           e.stopPropagation();
           return;
         }
+        e.stopPropagation();
         onSelect();
       }}
       className={cn(
-        'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95',
+        'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95 touch-manipulation',
         active
           ? 'bg-white text-black border-white shadow-[0_8px_30px_rgba(255,255,255,0.25)]'
           : 'bg-white/10 text-white border-white/15',
