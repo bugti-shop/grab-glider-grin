@@ -423,7 +423,17 @@ export const CameraScannerScreen = ({
   if (!isOpen) return null;
 
   const overlay = (
-    <div className="fixed inset-0 z-[300] bg-black text-white flex flex-col select-none">
+    <div
+      className="fixed inset-0 z-[300] bg-black text-white flex flex-col select-none"
+      // Scanner is portal'd to <body> but lives inside a Radix Sheet. Without
+      // stopping propagation here, every pointer-down inside the scanner is
+      // treated as "outside the sheet" and closes the parent — which was
+      // making the flash button and Barcode/Objects chips close the whole scanner.
+      onPointerDownCapture={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDownCapture={(e) => e.stopPropagation()}
+      onTouchStartCapture={(e) => e.stopPropagation()}
+    >
       {/* Live camera feed (hidden while reviewing an object-count result) */}
       {!objReviewFrame && (
         <video
@@ -736,35 +746,45 @@ const ChipButton = ({
 }) => {
   const startRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const cancelledRef = useRef(false);
+  const firedRef = useRef(false);
+  const fire = (e: React.SyntheticEvent) => {
+    if (cancelledRef.current || firedRef.current) return;
+    firedRef.current = true;
+    e.stopPropagation();
+    onSelect();
+    // Reset so the next tap works
+    setTimeout(() => { firedRef.current = false; }, 250);
+  };
   return (
     <button
       type="button"
       onPointerDown={(e) => {
+        e.stopPropagation();
         startRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
         cancelledRef.current = false;
+        firedRef.current = false;
       }}
       onPointerMove={(e) => {
         const s = startRef.current;
         if (!s) return;
-        // Only treat as a scroll if horizontal movement is significant AND
-        // dominates vertical — this keeps taps working even with small finger tremor.
         const dx = Math.abs(e.clientX - s.x);
         const dy = Math.abs(e.clientY - s.y);
-        if (dx > 16 && dx > dy) {
-          cancelledRef.current = true;
-        }
+        // Only treat as a scroll gesture when horizontal movement clearly dominates.
+        if (dx > 18 && dx > dy * 1.5) cancelledRef.current = true;
       }}
-      onPointerCancel={() => {
-        cancelledRef.current = true;
+      onPointerUp={(e) => {
+        // Fire on pointerup regardless of whether the browser later dispatches
+        // click — some Android WebViews swallow click inside scroll containers.
+        const s = startRef.current;
+        if (!s) return;
+        const dx = Math.abs(e.clientX - s.x);
+        const dy = Math.abs(e.clientY - s.y);
+        if (dx > 18 && dx > dy * 1.5) return;
+        fire(e);
       }}
       onClick={(e) => {
-        if (cancelledRef.current) {
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
-        e.stopPropagation();
-        onSelect();
+        // Fallback for mouse / desktop; guarded by firedRef to avoid double-trigger.
+        fire(e);
       }}
       className={cn(
         'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95 touch-manipulation',
