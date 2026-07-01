@@ -25,8 +25,20 @@ export const quoteHTML = (text = 'Quote text here…') =>
 
 export const dividerHTML = () => `<hr/><p><br></p>`;
 
-export const codeBlockHTML = (code = '// your code') =>
-  `<pre style="background:hsl(var(--muted));padding:12px;border-radius:8px;font-family:monospace;font-size:0.9em;overflow-x:auto;"><code>${code}</code></pre><p><br></p>`;
+// Supported languages for the code-block language selector.
+export const CODE_BLOCK_LANGS = [
+  'plaintext', 'javascript', 'typescript', 'tsx', 'jsx', 'python', 'java',
+  'kotlin', 'swift', 'go', 'rust', 'ruby', 'php', 'c', 'cpp', 'csharp',
+  'html', 'css', 'scss', 'json', 'yaml', 'markdown', 'bash', 'sql', 'xml',
+] as const;
+
+const escapeCode = (s: string) => s
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;');
+
+export const codeBlockHTML = (code = '// your code', lang = 'plaintext') =>
+  `<pre class="rt-codeblock" data-lang="${lang}" data-line-numbers="1"><code>${escapeCode(code)}</code></pre><p><br></p>`;
 
 export const checklistHTML = (text = '') =>
   `<ul class="checklist"><li class="checklist-item"><input type="checkbox" class="checklist-checkbox"/><span class="checklist-text">${text || '&nbsp;'}</span></li></ul>`;
