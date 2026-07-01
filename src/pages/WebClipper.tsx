@@ -415,8 +415,8 @@ const WebClipper = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-background flex items-start sm:items-center justify-center p-3 sm:p-4">
+      <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
             {saving ? (
