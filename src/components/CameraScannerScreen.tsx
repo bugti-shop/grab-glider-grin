@@ -168,7 +168,16 @@ export const CameraScannerScreen = ({
   title = 'Scan',
   initialMode = 'note',
   status = null,
+  hasPro = true,
+  onRequestUpgrade,
 }: Props) => {
+  // Pro-gate upsell overlay state.
+  const [upsell, setUpsell] = useState<null | { feature: 'receipt' | 'burst' | 'batch' }>(null);
+  const requirePro = useCallback((feature: 'receipt' | 'burst' | 'batch') => {
+    if (hasPro) return true;
+    setUpsell({ feature });
+    return false;
+  }, [hasPro]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const barcodeLoopRef = useRef<number | null>(null);
