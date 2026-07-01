@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Code, Link as LinkIcon, MessageSquare } from 'lucide-react';
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Code, Link as LinkIcon, MessageSquare, Wand2 } from 'lucide-react';
 
 interface BubbleMenuProps {
   editorRef: React.RefObject<HTMLDivElement>;
-  onCommand: (cmd: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'link' | 'comment') => void;
+  onCommand: (cmd: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'link' | 'comment' | 'markdown') => void;
 }
 
 export const BubbleMenu = ({ editorRef, onCommand }: BubbleMenuProps) => {
@@ -57,6 +57,16 @@ export const BubbleMenu = ({ editorRef, onCommand }: BubbleMenuProps) => {
       <div className="w-px h-5 bg-border mx-1" />
       <button type="button" className={btn} onClick={() => onCommand('link')} title="Insert link"><LinkIcon size={18} /></button>
       <button type="button" className={btn} onClick={() => onCommand('comment')} title="Add comment"><MessageSquare size={18} /></button>
+      <div className="w-px h-5 bg-border mx-1" />
+      <button
+        type="button"
+        className={btn + ' flex items-center gap-1 text-xs font-medium'}
+        onClick={() => onCommand('markdown')}
+        title="Convert selection from Markdown"
+      >
+        <Wand2 size={16} />
+        <span className="hidden sm:inline">Markdown</span>
+      </button>
     </div>
   );
 };
