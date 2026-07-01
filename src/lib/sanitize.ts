@@ -89,7 +89,7 @@ export const sanitizeForDisplay = (html: string): string => {
 export const sanitizeClippedArticle = (html: string): string => {
   const clean = DOMPurify.sanitize(html, {
     ...RICH_TEXT_CONFIG,
-    ADD_TAGS: ['iframe', 'video', 'figure', 'figcaption', 'picture'],
+    ADD_TAGS: ['iframe', 'video', 'figure', 'figcaption', 'picture', 'section', 'article', 'aside', 'header', 'footer'],
     ADD_ATTR: [
       'loading', 'srcset', 'sizes', 'poster', 'controls', 'muted',
       'playsinline', 'autoplay', 'preload',

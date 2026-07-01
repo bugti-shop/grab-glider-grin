@@ -23,7 +23,42 @@ const corsHeaders = {
 };
 
 const MAX_HTML_BYTES = 5 * 1024 * 1024; // 5MB page cap
+const MAX_CONTENT_HTML_BYTES = 500 * 1024; // 500KB cap on returned clip HTML
 const FETCH_TIMEOUT_MS = 20_000;
+
+/** Extract absolute image URLs from an HTML string (order-preserving, deduped). */
+function extractImageUrls(html: string): string[] {
+  if (!html) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const re = /<img\b[^>]*?\ssrc\s*=\s*["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const u = m[1].trim();
+    if (!u || u.startsWith("data:")) continue;
+    if (seen.has(u)) continue;
+    seen.add(u);
+    out.push(u);
+    if (out.length >= 100) break;
+  }
+  return out;
+}
+
+/** Truncate HTML at a byte budget without breaking a tag mid-attribute. */
+function capHtml(html: string, maxBytes: number): { html: string; truncated: boolean } {
+  if (!html) return { html: "", truncated: false };
+  const enc = new TextEncoder();
+  if (enc.encode(html).length <= maxBytes) return { html, truncated: false };
+  // Binary-search a safe character cut, then close at the last '>'.
+  let lo = 0, hi = html.length, cut = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (enc.encode(html.slice(0, mid)).length <= maxBytes) { cut = mid; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+  const lastGt = html.lastIndexOf(">", cut);
+  return { html: html.slice(0, lastGt > 0 ? lastGt + 1 : cut), truncated: true };
+}
 
 // Attributes commonly used by lazy-load libraries (LazySizes, Lozad,
 // WordPress, Medium, Substack, Ghost, etc.) to hold the *real* image URL.
@@ -687,7 +722,17 @@ Deno.serve(async (req) => {
     if (length < 800 || !content || content.trim().length < 1200) {
       const fallback = await fetchJinaFallback(target);
       if (fallback && fallback.length > length) {
-        return new Response(JSON.stringify(fallback), {
+        const capped = capHtml(String(fallback.content || ""), MAX_CONTENT_HTML_BYTES);
+        const images = extractImageUrls(capped.html);
+        const enriched = {
+          ...fallback,
+          contentHtml: capped.html,
+          author: fallback.byline || "",
+          images,
+          truncated: capped.truncated,
+          fallback: false,
+        };
+        return new Response(JSON.stringify(enriched), {
           status: 200,
           headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "public, max-age=300" },
         });
@@ -695,19 +740,47 @@ Deno.serve(async (req) => {
     }
 
     const importantLinks = extractImportantLinks(document as any, base, content);
+    const capped = capHtml(String(content || ""), MAX_CONTENT_HTML_BYTES);
+
+    // Graceful fallback for paywalled / JS-heavy pages: no real body extracted.
+    const hasBody = capped.html && capped.html.replace(/<[^>]+>/g, "").trim().length > 200;
+    let responseContent = capped.html;
+    let isFallback = false;
+    if (!hasBody) {
+      isFallback = true;
+      const safeTitle = escapeHtml(title);
+      const safeExcerpt = excerpt ? escapeHtml(excerpt) : "";
+      const hero = leadImage
+        ? `<p><img src="${leadImage}" alt="" referrerpolicy="no-referrer" style="max-width:100%;height:auto;border-radius:8px" /></p>`
+        : "";
+      responseContent =
+        `<section class="flowist-web-clip-fallback">` +
+        `<h1>${safeTitle}</h1>` +
+        hero +
+        (safeExcerpt ? `<blockquote>${safeExcerpt}</blockquote>` : "") +
+        `<p><em>Full content unavailable — this page may require a login, be paywalled, or render content with JavaScript. Tap the link below to open it.</em></p>` +
+        `<p><a href="${base}" target="_blank" rel="noopener noreferrer">${escapeHtml(base)}</a></p>` +
+        `</section>`;
+    }
+    const images = extractImageUrls(responseContent);
 
     return new Response(
       JSON.stringify({
         url: base,
         title,
         byline,
+        author: byline,           // spec alias
         siteName,
         excerpt,
         leadImage,
         publishedTime: metaPublished,
-        content,
+        content: responseContent,
+        contentHtml: responseContent, // spec alias
+        images,
         textContent,
         length,
+        truncated: capped.truncated,
+        fallback: isFallback,
         embeds: [] as string[], // embeds are now inlined into `content` at their original position
         importantLinks,  // [{ href, text }]
       }),
