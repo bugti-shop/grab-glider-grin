@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, RefreshCw, Trash2 } from 'lucide-react';
+import { ChevronLeft, RefreshCw, Trash2, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import {
 } from '@/utils/cloudSync/diagnostics';
 import { flushQueue } from '@/utils/cloudSync/writeQueue';
 import { SYNC_TABLES } from '@/utils/cloudSync/syncTables';
+import WidgetQueueCard from '@/components/WidgetQueueCard';
 
 interface Snapshot {
   backlog: Record<string, number>;
