@@ -58,6 +58,10 @@ const HabitDetail = () => {
   const [reflectionDate, setReflectionDate] = useState<string>('');
   const [reflectionReadOnly, setReflectionReadOnly] = useState(false);
   const [parentHabit, setParentHabit] = useState<Habit | null>(null);
+  const [pauseOpen, setPauseOpen] = useState(false);
+  const [pauseDays, setPauseDays] = useState(7);
+  const [pauseReason, setPauseReason] = useState<HabitPauseReason>('vacation');
+  const [pauseNote, setPauseNote] = useState('');
   // Sweep finished/stale focus entries from prior sessions once per mount.
   useEffect(() => { cleanupStaleFocusKeys(); }, []);
 
