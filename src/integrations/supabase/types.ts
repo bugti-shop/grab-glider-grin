@@ -693,6 +693,7 @@ export type Database = {
           cover_image: string | null
           created_at: string
           id: string
+          last_viewed_at: string | null
           note_id: string
           published_at: string
           slug: string
@@ -706,6 +707,7 @@ export type Database = {
           cover_image?: string | null
           created_at?: string
           id?: string
+          last_viewed_at?: string | null
           note_id: string
           published_at?: string
           slug: string
@@ -719,6 +721,7 @@ export type Database = {
           cover_image?: string | null
           created_at?: string
           id?: string
+          last_viewed_at?: string | null
           note_id?: string
           published_at?: string
           slug?: string
@@ -1164,6 +1167,13 @@ export type Database = {
         Returns: {
           allowed: boolean
           new_count: number
+        }[]
+      }
+      record_public_note_view: {
+        Args: { p_slug: string }
+        Returns: {
+          last_viewed_at: string
+          view_count: number
         }[]
       }
     }

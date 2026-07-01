@@ -3,8 +3,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Globe, Copy, ExternalLink, Loader2, Trash2, Share2 } from 'lucide-react';
+import { Globe, Copy, ExternalLink, Loader2, Trash2, Share2, Eye, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
+
 import type { Note } from '@/types/note';
 import {
   getPublishedForNote,
@@ -157,6 +159,28 @@ export default function PublishNoteSheet({ open, onOpenChange, note }: Props) {
                   </a>
                 </div>
                 <div className="text-sm break-all font-mono text-foreground/80">{url}</div>
+
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <div className="rounded-md bg-background/60 border border-border/50 p-2.5">
+                    <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <Eye className="h-3 w-3" /> Views
+                    </div>
+                    <div className="text-lg font-semibold mt-0.5">
+                      {record.view_count ?? 0}
+                    </div>
+                  </div>
+                  <div className="rounded-md bg-background/60 border border-border/50 p-2.5">
+                    <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <Clock className="h-3 w-3" /> Last viewed
+                    </div>
+                    <div className="text-sm font-medium mt-0.5 truncate">
+                      {record.last_viewed_at
+                        ? formatDistanceToNow(new Date(record.last_viewed_at), { addSuffix: true })
+                        : '—'}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex gap-2 pt-1">
                   <Button size="sm" variant="secondary" className="flex-1" onClick={handleCopy}>
                     <Copy className="h-3.5 w-3.5 mr-1.5" />
@@ -169,6 +193,8 @@ export default function PublishNoteSheet({ open, onOpenChange, note }: Props) {
                 </div>
               </div>
             )}
+
+
 
             <div className="flex flex-col gap-2 pt-2">
               <Button onClick={handlePublish} disabled={busy} className="w-full">

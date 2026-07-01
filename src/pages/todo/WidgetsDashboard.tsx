@@ -24,6 +24,8 @@ import {
   Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { NoteBlocksWidget } from '@/components/dashboard/NoteBlocksWidget';
+
 import { loadTodoItems } from '@/utils/todoItemsStorage';
 import { 
   isToday, 
@@ -383,8 +385,12 @@ const WidgetsDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Configurable note-content widget */}
+            <NoteBlocksWidget />
           </div>
         </main>
+
       </ScrollArea>
     </TodoLayout>
   );
