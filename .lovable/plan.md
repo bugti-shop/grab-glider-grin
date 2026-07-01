@@ -1,93 +1,112 @@
-# Habit Tracker Expansion
+# Notes Power-Up: 4 Feature Bundle
 
-Nine missing pieces, grouped by where they touch. All work stays inside the existing habit feature; no other modules change. Realtime sync continues through `storeBridge.pushHabits` automatically since we only add fields to the existing `Habit` record.
+Each bundle ships independently — you can approve one at a time or all four. Order below is by ROI (biggest win first, least risk).
 
-## 1. Type & storage changes (`src/types/habit.ts`)
+---
 
-Add the following optional fields so old habits keep working:
+## Bundle 1 — Web Clipper inline "card" block  *(1 pass, front-end only)*
 
-- `kind?: 'build' | 'avoid'` — default `'build'` (existing behavior). `'avoid'` is the bad-habit mode.
-- `reminders?: HabitReminder[]` — new array. Keep legacy `reminder` for back-compat; migration on load merges single → array.
-- `chainAfterHabitId?: string` — "after habit X" stack link.
-- `parentSectionId?: string` on `HabitSection` — enables nested sections (one level of nesting; matches notes folders).
-- `HabitReminder` gains `days?: number[]` (0–6) for per-weekday times. Empty/undefined = every day.
+**What changes for you**
+- Web-clip content inside a note is no longer a plain wall of text. It renders as an **Evernote-style card**: favicon + site name header strip, hero image, title, byline·date, excerpt, and a collapsible "Read full clip" body.
+- Collapsed by default when the clip is > 600 words — one click expands.
+- Card gets a subtle bordered container, a colored source strip, and a small "↗ Open original" pill.
+- Works retroactively on every clip you already saved (uses the existing `data-block-type="webClip"` markup).
 
-No DB migration is required: the `habits` table already stores the full habit JSON via `storeBridge` mappers, so new fields ride along inside the existing blob column. Confirm by reading `src/utils/cloudSync/mappers.ts` before shipping; if any field is whitelisted explicitly we extend that mapper.
+**Technical**
+- New CSS module `src/components/richtext/webClipCard.css` styling `.flowist-web-clip` + subclasses.
+- Strip inline `style="…"` attrs in `WebClipper.tsx` in favor of classnames.
+- New `hydrateWebClipsIn(root)` helper in `richTextBlocks.ts` that wires the expand/collapse button and word-count badge on every render.
+- Notes list preview (`NoteCard.tsx`) shows a mini clip chip with favicon + site name when the note starts with a web clip.
 
-## 2. Amount-based logging (`src/pages/todo/HabitDetail.tsx`)
+---
 
-When `habit.goalType === 'amount'`:
+## Bundle 2 — Tasks inside notes → global task list  *(2 passes, backend + frontend)*
 
-- Replace the binary "Tap to check in" pill with a counter card: `−` button, big number `current / goalAmount goalUnit`, `+` button, plus a "Set custom" inline input.
-- Each tap writes `HabitCompletionRecord { date, amount, completed: amount >= goalAmount, status: completed ? 'done' : undefined }`.
-- Calendar dots show partial fill (ring with % when `amount < goalAmount`, solid when complete).
-- `Habits.tsx` row: tapping the circle increments by 1 instead of cycling status; long-press still cycles.
+**What changes for you**
+- Any checkbox line inside a note (`ul.checklist > li.checklist-item`) is now a **real task** in Today / Upcoming.
+- Two-way: check it in the note → it completes in Today. Check it in Today → the note reflects it.
+- Delete the line in the note → task is soft-archived (not deleted, to prevent accidents).
+- Optional "@today", "!high", "^2pm" inline shortcuts parse into due date/priority.
+- Tasks show a "📝 from *Note Title*" chip so you can jump back to the source.
 
-## 3. Daily note / reflection
+**Technical**
+- New column `tasks.source_note_id uuid` + `tasks.source_block_id text` + index. Migration + GRANTs.
+- New util `src/utils/noteTaskBridge.ts`:
+  - `syncChecklistToTasks(noteId, editorRoot)` — diffs current checklist items vs. `tasks` where `source_note_id = ?`; upserts new, updates text/completed on existing, soft-archives removed.
+  - Runs on note save (debounced 500 ms) via `NoteEditor.tsx` `onInput`.
+  - Runs in reverse via a Realtime subscription on `tasks`: when a linked task changes, patch the corresponding `<li>` in any open note editor.
+- Each `<li>` gets `data-task-id="..."`; assignment happens on first sync.
+- Natural language parser reuses existing `src/utils/naturalLanguageParser.ts`.
 
-- Add a "Reflection" sheet (reuse `Dialog`) opened from a small pencil button next to the check-in card in `HabitDetail.tsx`.
-- Stores `note` on today's `HabitCompletionRecord` (creating the record if missing, even when not completed).
-- Calendar day cells with a note get a tiny dot indicator; tapping a past day opens a read-only sheet with that day's note and completion status.
+---
 
-## 4. Auto-popup log dialog
+## Bundle 3 — Home dashboard widgets from note content  *(2 passes)*
 
-- In `HabitDetail.tsx` `toggleToday` and `Habits.tsx` `cycleStatus`, after a successful `done` transition, if `habit.autoPopupLog` is true, open the Reflection sheet automatically (debounced so undo doesn't reopen it).
-- For amount habits, popup fires only when the goal is reached.
+**What changes for you**
+- On any note block (checklist, table, callout, heading section), open the block menu → **"Pin to Home"**.
+- Home dashboard grows a "Pinned from Notes" row (drag to reorder, resize S/M/L).
+- Widget is live: edit the source note → widget updates instantly on all devices.
+- Types supported v1: **Checklist widget** (interactive checkboxes), **Table widget** (read-only), **Callout widget**, **Heading + text widget**.
 
-## 5. Weekly "N days per week" mode
+**Technical**
+- New table `note_widgets`:
+  ```
+  id uuid pk, user_id, note_id, block_id text, kind text,
+  size text default 'M', position int, created_at, updated_at
+  ```
+  RLS: user can only see own. GRANTs to authenticated + service_role.
+- Realtime enabled → same live-sync path as tasks.
+- New `src/components/home/NoteWidgetsRow.tsx` renders widgets, hydrates blocks by scanning stored note HTML for `data-block-id="…"`.
+- New "Pin block" affordance in `BubbleMenu.tsx` — assigns a stable `data-block-id` (nanoid) to the target block if missing, inserts a `note_widgets` row.
 
-- `Habits.tsx` `isHabitDueOn`: when `frequency === 'weekly'`, `weeklyDays` is empty, and `weeklyCount > 0`, treat the habit as due **every day until the weekly quota is met** for the current ISO week (Mon–Sun). Show a small "2 / 5 this week" pill on the row.
-- `HabitNew.tsx`: the existing weekly-count input remains; clarify copy: "Any N days per week".
+---
 
-## 6. Target-day progress bar
+## Bundle 4 — Publish note as public webpage + inline formulas  *(2–3 passes)*
 
-In `HabitDetail.tsx` hero area (below the name/quote), when `goalDays > 0`:
+### 4a. Publish as public webpage  *(freemium)*
 
-- Render `Progress` bar with `value = completedDays / goalDays * 100`.
-- Caption "Day {completedDays} of {goalDays}". On completion, show a one-time "Goal reached" toast + confetti (reuse existing celebration component if present, else simple toast).
+**What changes for you**
+- Note menu → **"Publish"** → modal shows preview + URL.
+- **Free tier:** unlisted URL `flowist.me/n/<random-8-char>` — noindex, no custom slug, no password.
+- **Pro tier:** custom slug `flowist.me/n/<your-slug>`, indexable, optional password, view counter, "Updated N minutes ago" stamp.
+- One click to unpublish. Republish regenerates or preserves URL.
+- Beautiful reader page with your note title, meta description, OG image (first image in note), semantic HTML, print-friendly CSS.
 
-## 7. Bad habits ("avoid" mode)
+**Technical**
+- New table `published_notes`:
+  ```
+  slug text pk, note_id uuid, user_id uuid, is_indexable bool,
+  password_hash text null, view_count int default 0,
+  published_html text, published_at, updated_at
+  ```
+- RLS: owner can read/write own row; **`anon` can SELECT** for the reader page (public content). GRANTs accordingly.
+- New route `/n/:slug` renders a static-feeling `PublishedNote.tsx` with SSR-like SEO (title, description, canonical, og:*, JSON-LD Article).
+- New edge function `publish-note` — sanitizes note HTML, uploads referenced images to Storage (`user-attachments/published/…`) so they survive private-storage constraints, stamps `published_html`.
+- Pro gate uses existing `SubscriptionProvider` — free users get unlisted-only, Pro unlocks slug/index/password.
+- `robots.txt` and dynamic `<meta name="robots" content="noindex">` for unlisted rows.
 
-- In `HabitNew.tsx`, add a segmented toggle at the top of the form: **Build** vs **Avoid**.
-- Saves `kind: 'avoid'`.
-- In avoid mode:
-  - Check-in label becomes "I avoided it today".
-  - Status cycle becomes: `null → avoided (green check) → slipped (red X) → null`. Internally `avoided` maps to `status:'done'+completed:true`; `slipped` maps to `status:'failed'`. This keeps streak math working.
-  - Detail page hero copy shows "Days clean: {streak}" and "Best clean streak: {bestStreak}".
+### 4b. Inline formulas & variables
 
-## 8. Habit chains / stacking
+**What changes for you**
+- Type `{{today}}`, `{{now}}`, `{{page.title}}`, `{{page.created}}` → renders live values inline.
+- Type `=SUM(1,2,3)`, `=AVG(...)`, `=IF(a>b, "yes", "no")`, `=42*1.2` → evaluates and renders result with a small ƒ chip; click chip to edit formula.
+- Variables scoped per note: `{{price}} = 10` on one line → `{{price * qty}}` recalculates elsewhere.
 
-- `HabitNew.tsx`: add "Stack after" selector → pick another habit by id; stored in `chainAfterHabitId`.
-- `Habits.tsx`: when the parent habit gets a `done` check-in for the day, fire a one-shot local toast + (on native) `LocalNotifications.schedule` 5 seconds later: "Next up: {child.name}". Also bring the child habit to the top of its section visually for the rest of the day.
-- Detail page shows "After: {parent.name}" caption.
+**Technical**
+- New `src/components/richtext/formulaEngine.ts` — safe evaluator (no `eval`, custom Pratt parser or `expr-eval` package).
+- New block wrapper `<span class="rt-formula" data-expr="…" data-result="…" contenteditable="false">` similar to existing `rt-math`.
+- Hydrator `hydrateFormulasIn(root, noteContext)` re-evaluates on every render (cheap; expressions are small).
+- Slash menu entry `/formula`; markdown-style trigger auto-converts `{{…}}` and `=…` when caret leaves the token.
+- Variable table built by first pass over the note collecting `{{name}} = value` definitions.
 
-## 9. Multiple reminders + per-weekday times
+---
 
-- `HabitNew.tsx`: replace the single time picker with a `RemindersList`:
-  - Rows: time + day chips (S M T W T F S, all-selected = "Every day") + delete.
-  - `+ Add reminder` button (no hard cap; soft cap 5).
-- `habitReminders.ts`:
-  - `scheduleHabitReminder(habit)` iterates `habit.reminders ?? (habit.reminder ? [habit.reminder] : [])`.
-  - Each reminder becomes one notification per selected weekday on native (Capacitor `LocalNotifications` supports `schedule.on.weekday`). Web fallback uses one timer per reminder, re-armed on fire, gated by today's weekday.
-  - `cancelHabitReminder(id)` cancels all `notificationIds` recorded on the habit (extend `HabitReminder.notificationIds` to be set per-occurrence).
+## Order of delivery
 
-## 10. Nested folder/tag organization for sections
+1. **Bundle 1** — 1 pass (safe, self-contained; unblock immediately after approval)
+2. **Bundle 2** — 2 passes (migration first, then bridge + UI)
+3. **Bundle 3** — 2 passes (migration + widgets, then Home integration)
+4. **Bundle 4a** — 2 passes (backend + reader page)
+5. **Bundle 4b** — 1 pass (frontend-only)
 
-- `habitSectionsStorage.ts`: add `parentSectionId?: string` to `HabitSection`; helpers `getChildren(parentId)`, `getRootSections()`.
-- `HabitSections.tsx` (manager): allow choosing a parent when editing/creating, with a single nesting level (validated to prevent cycles).
-- `Habits.tsx`: render parent section → indented children below it; collapse state shared via the existing `collapsed` map. Empty parents still render if any descendant has visible habits.
-- `HabitNew.tsx` section picker shows indented children with `›` separator (e.g. "Health › Morning").
-
-## Technical Notes
-
-- Files touched: `src/types/habit.ts`, `src/utils/habitSectionsStorage.ts`, `src/utils/habitReminders.ts`, `src/utils/habitStorage.ts` (small migration helper that converts `reminder` → `reminders[]` on read, idempotent), `src/pages/todo/Habits.tsx`, `src/pages/todo/HabitDetail.tsx`, `src/pages/todo/HabitNew.tsx`, `src/pages/todo/HabitSections.tsx`.
-- New small components: `src/components/habits/HabitAmountCounter.tsx`, `src/components/habits/HabitReflectionSheet.tsx`, `src/components/habits/RemindersList.tsx`.
-- Sync: confirm `src/utils/cloudSync/mappers.ts` passes the full habit JSON. If it whitelists fields, extend the whitelist with `kind`, `reminders`, `chainAfterHabitId`, and `parentSectionId` on `HabitSection`. No SQL migration needed because columns already store JSON payloads.
-- Back-compat: legacy single `reminder` is read on load and copied into `reminders[]` once; legacy field kept until next save.
-- Streak math (`calculateStreak`, `getCompletionRate`) keeps using `completed === true`, so amount habits and avoid habits both work without changes.
-- Capacity gate (`requireCapacity('habits', …)`) is untouched.
-- After implementation: `tsgo` for type check, then a Playwright smoke that creates a build habit + an avoid habit + an amount habit and verifies the three different check-in UIs render.
-
-## Out of Scope
-
-- Stats page / heatmap / archive view / color picker / import / widget / AI suggestions — flagged earlier but not in this batch.
+Total: ~8 focused passes. I can also ship them in any order you prefer, or stop after any bundle. Which do you want me to start with — Bundle 1 right now?

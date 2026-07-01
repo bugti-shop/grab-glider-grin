@@ -452,5 +452,159 @@ export const RICH_TEXT_EDITOR_STYLES = `
     box-shadow: 0 0 0 2px hsl(var(--primary) / 0.35);
     border-radius: 6px;
   }
+
+  /* ─── Web Clipper "card" block (Evernote-style) ─── */
+  .flowist-web-clip {
+    display: block;
+    margin: 1.25rem 0;
+    padding: 0;
+    border: 1px solid hsl(var(--border));
+    border-radius: 14px;
+    background: hsl(var(--card));
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 6px 20px -12px rgba(0,0,0,0.12);
+    position: relative;
+  }
+  .flowist-web-clip::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--primary) / 0.4));
+  }
+  .flowist-web-clip-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid hsl(var(--border) / 0.7);
+    background: hsl(var(--muted) / 0.35);
+    font-size: 12px;
+    color: hsl(var(--muted-foreground));
+    flex-wrap: wrap;
+  }
+  .flowist-web-clip-favicon {
+    width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0;
+  }
+  .flowist-web-clip-badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: hsl(var(--primary) / 0.15);
+    color: hsl(var(--primary));
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+  }
+  .flowist-web-clip-site { font-weight: 600; color: hsl(var(--foreground)); }
+  .flowist-web-clip-dot { opacity: 0.5; }
+  .flowist-web-clip-open {
+    margin-left: auto;
+    padding: 3px 10px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 999px;
+    text-decoration: none;
+    color: hsl(var(--foreground));
+    font-weight: 600;
+    font-size: 11px;
+    transition: background 0.15s;
+  }
+  .flowist-web-clip-open:hover { background: hsl(var(--accent)); }
+  .flowist-web-clip-fallback-banner {
+    margin: 12px 14px 0;
+    padding: 10px 12px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 8px;
+    background: hsl(var(--muted) / 0.6);
+    font-size: 13px;
+  }
+  .flowist-web-clip-title {
+    margin: 14px 18px 4px !important;
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+  }
+  .flowist-web-clip-meta {
+    margin: 0 18px 10px !important;
+    font-size: 12px;
+    color: hsl(var(--muted-foreground));
+    font-style: italic;
+  }
+  .flowist-web-clip-hero {
+    margin: 8px 0 0;
+    padding: 0;
+  }
+  .flowist-web-clip-hero img {
+    width: 100%; height: auto; display: block; max-height: 320px; object-fit: cover;
+  }
+  .flowist-web-clip-excerpt,
+  .flowist-web-clip-selection {
+    margin: 10px 18px !important;
+    padding: 10px 14px !important;
+    border-left: 3px solid hsl(var(--primary) / 0.5) !important;
+    background: hsl(var(--muted) / 0.4);
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    color: hsl(var(--foreground));
+  }
+  .flowist-web-clip-body { padding: 6px 18px 16px; position: relative; }
+  .flowist-web-clip-body[data-collapsed="1"] {
+    max-height: 380px;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, #000 65%, transparent);
+            mask-image: linear-gradient(180deg, #000 65%, transparent);
+  }
+  .flowist-web-clip-body img { max-width: 100%; height: auto; border-radius: 6px; }
+  .flowist-web-clip-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 18px 14px;
+    padding: 6px 14px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 999px;
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .flowist-web-clip-toggle:hover { background: hsl(var(--accent)); }
+  .flowist-web-clip-links {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 8px 0 0 !important;
+    display: grid;
+    gap: 6px;
+  }
+  .flowist-web-clip-link a {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 8px;
+    text-decoration: none !important;
+    color: inherit !important;
+    transition: background 0.15s;
+  }
+  .flowist-web-clip-link a:hover { background: hsl(var(--accent)); }
+  .flowist-web-clip-link img { width: 20px; height: 20px; flex-shrink: 0; border-radius: 3px; }
+  .flowist-web-clip-link span { display: flex; flex-direction: column; min-width: 0; }
+  .flowist-web-clip-link strong { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .flowist-web-clip-link em { font-size: 12px; opacity: 0.7; font-style: normal; }
+  .flowist-web-clip-footer {
+    padding: 10px 14px;
+    border-top: 1px solid hsl(var(--border) / 0.7);
+    background: hsl(var(--muted) / 0.25);
+    font-size: 11px;
+  }
+  .flowist-web-clip-source {
+    color: hsl(var(--muted-foreground));
+    text-decoration: none;
+    word-break: break-all;
+  }
+  .flowist-web-clip-source:hover { text-decoration: underline; }
 `;
+
 

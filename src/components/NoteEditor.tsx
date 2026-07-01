@@ -48,7 +48,7 @@ import { NoteVoicePlayer } from './NoteVoicePlayer';
 import { AudioPlayer } from './AudioPlayer';
 import { useHardwareBackButton } from '@/hooks/useHardwareBackButton';
 import { sanitizeForDisplay } from '@/lib/sanitize';
-import { renderMathIn, hydrateSyncedIn } from './richtext/richTextBlocks';
+import { renderMathIn, hydrateSyncedIn, hydrateWebClipsIn } from './richtext/richTextBlocks';
 import 'katex/dist/katex.min.css';
 
 import { ErrorBoundary } from './ErrorBoundary';
@@ -1903,7 +1903,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   className="prose prose-sm max-w-none dark:prose-invert"
                   style={{ fontFamily, fontSize, fontWeight, lineHeight }}
                   dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(content) }}
-                  ref={(el) => { if (el) { renderMathIn(el); hydrateSyncedIn(el, { editable: false }); } }}
+                  ref={(el) => { if (el) { renderMathIn(el); hydrateSyncedIn(el, { editable: false }); hydrateWebClipsIn(el); } }}
                 />
               </div>
             </div>
