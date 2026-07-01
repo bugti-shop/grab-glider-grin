@@ -156,6 +156,50 @@ class WidgetDataSyncManager {
     } catch {}
   }
 
+  /**
+   * Drains tasks queued by the launcher-level Quick Add widget
+   * (QuickAddActivity.java). Each entry is inserted into IndexedDB via
+   * putTaskInDB, which fires cloud-sync in the background. Runs on cold
+   * start and every resume so no widget task is ever lost.
+   */
+  private async drainPendingQuickAddTasks(): Promise<void> {
+    try {
+      const { value } = await Preferences.get({ key: 'widget_pending_new_tasks' });
+      if (!value) return;
+      let queue: Array<{ id?: string; text?: string; createdAt?: number }> = [];
+      try { queue = JSON.parse(value) || []; } catch { queue = []; }
+      if (!Array.isArray(queue) || queue.length === 0) {
+        await Preferences.remove({ key: 'widget_pending_new_tasks' });
+        return;
+      }
+      // Clear the queue optimistically so a slow insert can't cause duplicates
+      // on the next drain call.
+      await Preferences.remove({ key: 'widget_pending_new_tasks' });
+
+      const { putTaskInDB } = await import('./taskStorage');
+      for (const entry of queue) {
+        const text = (entry?.text || '').trim();
+        if (!text) continue;
+        const id = entry?.id || (crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`);
+        const createdAtMs = typeof entry?.createdAt === 'number' ? entry.createdAt : Date.now();
+        try {
+          await putTaskInDB({
+            id,
+            text,
+            completed: false,
+            dueDate: new Date(createdAtMs),
+          } as any);
+        } catch (err) {
+          console.warn('[WidgetSync] Failed to insert quick-add task', err);
+        }
+      }
+      window.dispatchEvent(new CustomEvent('tasksUpdated'));
+      window.dispatchEvent(new CustomEvent('todoItemsChanged'));
+    } catch (err) {
+      console.warn('[WidgetSync] drainPendingQuickAddTasks failed', err);
+    }
+  }
+
   private async openWidgetUrl(url: string): Promise<void> {
     try {
       const parsed = new URL(url);
