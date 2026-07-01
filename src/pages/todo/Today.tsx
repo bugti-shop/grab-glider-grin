@@ -254,11 +254,15 @@ const Today = () => {
   // (either after saving or by dismissing) minimizes the app back to the
   // launcher instead of leaving the user parked inside Flowist.
   const widgetModeRef = useRef(false);
+  const [widgetMode, setWidgetMode] = useState(false);
   useEffect(() => {
     const checkAddParam = () => {
       const params = new URLSearchParams(window.location.search);
       if (params.get('add') !== '1') return;
-      if (params.get('widget') === '1') widgetModeRef.current = true;
+      if (params.get('widget') === '1') {
+        widgetModeRef.current = true;
+        setWidgetMode(true);
+      }
       setIsInputOpen(true);
       params.delete('add');
       params.delete('widget');
