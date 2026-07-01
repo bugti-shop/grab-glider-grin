@@ -554,7 +554,7 @@ const WebClipper = () => {
                       type="button"
                       size="sm"
                       variant="secondary"
-                      onClick={() => { setError(null); void handleSaveClip(mode); }}
+                      onClick={() => { setError(null); void prepareClip(mode); }}
                     >
                       <Loader2 className="h-3.5 w-3.5 mr-1.5" />
                       {t('webClipper.retry', 'Try again')}
