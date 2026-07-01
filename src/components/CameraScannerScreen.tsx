@@ -24,6 +24,8 @@ import {
   ImagePlus,
   Loader2,
   Boxes,
+  Receipt,
+  Layers,
 } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
