@@ -2291,6 +2291,14 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         }}
       />
 
+      {/* Publish to Web Sheet */}
+      <PublishNoteSheet
+        open={showPublishSheet}
+        onOpenChange={setShowPublishSheet}
+        note={buildCurrentNote()}
+      />
+
+
       {/* Sketch Note Title + Meta Description Dialog */}
       {showSketchMetaDialog && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4" style={{ zIndex: document.body.classList.contains('onboarding-active') ? 400 : 100 }}>
