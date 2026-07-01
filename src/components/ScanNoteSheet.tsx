@@ -216,6 +216,41 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     }
   };
 
+  const fetchReceiptResult = async (dataUrl: string) => {
+    if (!(await ensureScannerAccess())) throw new Error('Scanner access denied');
+    const release = acquireAiLock();
+    if (!release) {
+      toast.error(getAiBusyMessage());
+      throw new Error(getAiBusyMessage());
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-extract-receipt', {
+        body: {
+          imageBase64: dataUrl,
+          webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
+        },
+        timeout: AI_SCAN_TIMEOUT_MS,
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const d = data as any;
+      return {
+        merchant: String(d?.merchant || ''),
+        total: Number(d?.total || 0),
+        currency: String(d?.currency || ''),
+        date: String(d?.date || ''),
+        category: String(d?.category || ''),
+        paymentMethod: String(d?.paymentMethod || ''),
+        tax: Number(d?.tax || 0),
+        items: Array.isArray(d?.items) ? d.items : [],
+        html: String(d?.html || ''),
+        title: String(d?.title || ''),
+      };
+    } finally {
+      release();
+    }
+  };
+
   const applyObjectCountResult = (
     dataUrl: string,
     result: {
@@ -409,6 +444,16 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
         onConfirmObjectCount={(dataUrl, result) => {
           setShowCamera(false);
           applyObjectCountResult(dataUrl, result);
+        }}
+        onReceipt={async (dataUrl) => await fetchReceiptResult(dataUrl)}
+        onConfirmReceipt={(dataUrl, result) => {
+          setShowCamera(false);
+          setImageDataUrl(dataUrl);
+          setHtml(result.html);
+          setSuggestedTitle(result.title);
+          setHasRun(true);
+          setPhase('done');
+          toast.success(`Receipt saved · ${result.merchant || 'expense'}`);
         }}
         status={
           isExtracting
