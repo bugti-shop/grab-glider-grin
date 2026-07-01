@@ -28,6 +28,8 @@ interface Props {
   onInsertHtml: (html: string, suggestedTitle?: string) => void;
 }
 
+type Phase = 'idle' | 'capturing' | 'uploading' | 'processing' | 'done' | 'error';
+
 export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const { t, i18n } = useTranslation();
   const { isPro, isAdminBypass, requireFeature } = useSubscription();
@@ -38,7 +40,10 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const [suggestedTitle, setSuggestedTitle] = useState('');
   const [hasRun, setHasRun] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [errorLabel, setErrorLabel] = useState<string | null>(null);
   const captureLockRef = useRef(false);
+
 
   useEffect(() => {
     if (!isOpen) {
