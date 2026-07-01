@@ -12,12 +12,17 @@
  * (supported by the plugin's Android Notification.Builder pass-through).
  */
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 
 const ONGOING_ID = 918273; // arbitrary stable id
 const COMPLETE_ID = 918274;
 
 const isNative = () => Capacitor.isNativePlatform();
+
+const FocusTimerNative = registerPlugin<{
+  start(opts: { taskTitle?: string; remainingSec: number; endAtMs?: number; running: boolean }): Promise<{ ok: boolean }>;
+  stop(): Promise<{ ok: boolean }>;
+}>('FocusTimerNative');
 
 const fmt = (sec: number) => {
   const s = Math.max(0, Math.floor(sec));
@@ -41,6 +46,18 @@ let lastPostedLabel = '';
 export const showFocusOngoing = async (opts: FocusOngoingOpts) => {
   if (!isNative()) return;
   try {
+    // Android real foreground service: survives closing the sheet/app and
+    // keeps the timer in the notification shade until Exit/complete.
+    try {
+      await FocusTimerNative.start({
+        taskTitle: opts.taskTitle,
+        remainingSec: opts.remainingSec,
+        endAtMs: opts.endAtMs,
+        running: opts.running,
+      });
+      return;
+    } catch {}
+
     // Ensure permission (usually already granted; harmless if not)
     try { await LocalNotifications.requestPermissions(); } catch {}
 
@@ -57,7 +74,7 @@ export const showFocusOngoing = async (opts: FocusOngoingOpts) => {
         id: ONGOING_ID,
         title,
         body,
-        smallIcon: 'ic_stat_icon_config_sample',
+        smallIcon: 'ic_stat_notify',
         ongoing: true,
         autoCancel: false,
         // Fire immediately
@@ -75,7 +92,7 @@ export const showFocusOngoing = async (opts: FocusOngoingOpts) => {
             id: COMPLETE_ID,
             title: '✅ Focus complete',
             body: `Great work!${opts.taskTitle ? ` · ${opts.taskTitle}` : ''}`,
-            smallIcon: 'ic_stat_icon_config_sample',
+            smallIcon: 'ic_stat_notify',
             schedule: { at: new Date(opts.endAtMs) },
           }],
         });
@@ -90,6 +107,7 @@ export const hideFocusOngoing = async () => {
   lastPostedLabel = '';
   if (!isNative()) return;
   try {
+    try { await FocusTimerNative.stop(); } catch {}
     await LocalNotifications.cancel({
       notifications: [{ id: ONGOING_ID }, { id: COMPLETE_ID }],
     });

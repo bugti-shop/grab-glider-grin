@@ -15,6 +15,7 @@
 
     <!-- Foreground Service (for notifications) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <!-- Microphone (for voice notes/recording) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -129,6 +130,20 @@
             </intent-filter>
 
         </activity>
+
+        <activity
+            android:name=".QuickAddActivity"
+            android:theme="@style/AppTheme.QuickAddOverlay"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:exported="false" />
+
+        <service
+            android:name=".FocusForegroundService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="focus_timer" />
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"

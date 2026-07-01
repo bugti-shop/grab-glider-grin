@@ -3,6 +3,7 @@ import { Preferences } from '@capacitor/preferences';
 import { App as CapApp } from '@capacitor/app';
 import { loadNotesFromDB } from './noteStorage';
 import { loadTodoItems } from './todoItemsStorage';
+import { saveTodoItem } from './todoItemsStorage';
 import { getSetting, setSetting } from './settingsStorage';
 import { Note, NoteType, TodoItem, Folder } from '@/types/note';
 import { loadFolders } from './folderStorage';
@@ -10,6 +11,8 @@ import { loadStreakData } from './streakStorage';
 import { loadHabits } from './habitStorage';
 import { isHabitDueOnDate } from './habitScheduler';
 import { format } from 'date-fns';
+import { genId } from '@/utils/genId';
+import { parseNaturalLanguageTask } from '@/utils/naturalLanguageParser';
 
 // Widget configuration types
 export interface WidgetConfig {
@@ -73,6 +76,7 @@ const WIDGET_NOTES_BY_TYPE_KEY = `${WIDGET_PREFS_PREFIX}notes_by_type`;
 const WIDGET_FOLDERS_KEY = `${WIDGET_PREFS_PREFIX}folders`;
 const WIDGET_STREAK_KEY = `streak_data`;
 const WIDGET_HABITS_KEY = `${WIDGET_PREFS_PREFIX}habits`;
+const WIDGET_PENDING_TASKS_KEY = 'widget_pending_new_tasks';
 
 /**
  * Widget Data Sync Manager
@@ -102,6 +106,7 @@ class WidgetDataSyncManager {
     }
     if (this.initialized) {
       await this.drainPendingWidgetPath();
+      await this.drainPendingNewTasks();
       return;
     }
     this.initialized = true;
@@ -111,6 +116,7 @@ class WidgetDataSyncManager {
     // already running, onCreate doesn't fire again so we must also listen for
     // appStateChange/resume to pick up the pending path written by onNewIntent.
     await this.drainPendingWidgetPath();
+    await this.drainPendingNewTasks();
     [100, 350, 900, 1600].forEach((delay) => {
       window.setTimeout(() => this.drainPendingWidgetPath().catch(() => {}), delay);
     });
@@ -120,9 +126,11 @@ class WidgetDataSyncManager {
       });
       CapApp.addListener('appStateChange', (s: { isActive: boolean }) => {
         if (s.isActive) this.drainPendingWidgetPath().catch(() => {});
+        if (s.isActive) this.drainPendingNewTasks().catch(() => {});
       });
       CapApp.addListener('resume', () => {
         this.drainPendingWidgetPath().catch(() => {});
+        this.drainPendingNewTasks().catch(() => {});
       });
     } catch {}
 
@@ -148,6 +156,43 @@ class WidgetDataSyncManager {
       await Preferences.remove({ key: 'widget_pending_path' });
       this.openWidgetPath(value);
     } catch {}
+  }
+
+  private async drainPendingNewTasks(): Promise<void> {
+    try {
+      const { value } = await Preferences.get({ key: WIDGET_PENDING_TASKS_KEY });
+      if (!value) return;
+      await Preferences.remove({ key: WIDGET_PENDING_TASKS_KEY });
+      const arr = JSON.parse(value) as Array<{ text?: string; createdAt?: number }>;
+      if (!Array.isArray(arr) || arr.length === 0) return;
+      for (const item of arr) {
+        const text = String(item?.text || '').trim();
+        if (!text) continue;
+        const parsed = parseNaturalLanguageTask(text);
+        const now = new Date(item.createdAt || Date.now());
+        const task: TodoItem = {
+          id: genId(),
+          text,
+          completed: false,
+          priority: parsed.priority || 'none',
+          dueDate: parsed.dueDate,
+          reminderTime: parsed.reminderTime,
+          repeatType: parsed.repeatType || 'none',
+          repeatDays: parsed.repeatDays,
+          advancedRepeat: parsed.advancedRepeat,
+          description: parsed.description,
+          location: parsed.location,
+          createdAt: now,
+          modifiedAt: now,
+        } as TodoItem;
+        await saveTodoItem(task);
+      }
+      window.dispatchEvent(new Event('tasksUpdated'));
+      window.dispatchEvent(new Event('todoItemsChanged'));
+      await this.syncTasks();
+    } catch (e) {
+      console.warn('[WidgetSync] Pending launcher tasks drain failed', e);
+    }
   }
 
 
