@@ -9,11 +9,11 @@
 
     <!-- Widget names shown in the launcher's widget picker -->
     <string name="widget_add_task_label">Flowist · Quick Add Task</string>
-    <string name="widget_add_task_desc">Open Flowist's task input sheet from your home screen.</string>
+    <string name="widget_add_task_desc">Open Flowist\'s task input sheet from your home screen.</string>
     <string name="widget_tasks_list_label">Flowist · Today Tasks</string>
-    <string name="widget_tasks_list_desc">See today's tasks and tap to check them off.</string>
+    <string name="widget_tasks_list_desc">See today\'s tasks and tap to check them off.</string>
     <string name="widget_habits_list_label">Flowist · Habits Today</string>
-    <string name="widget_habits_list_desc">Track today's habits with one-tap check-in.</string>
+    <string name="widget_habits_list_desc">Track today\'s habits with one-tap check-in.</string>
     <string name="widget_sticky_note_label">Flowist · Sticky Note</string>
     <string name="widget_sticky_note_desc">Pin a sticky note to your home screen.</string>
     <string name="widget_lined_note_label">Flowist · Lined Note</string>
