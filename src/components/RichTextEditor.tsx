@@ -66,7 +66,7 @@ import {
   calloutHTML, toggleHTML, quoteHTML, dividerHTML, codeBlockHTML, checklistHTML,
   mentionHTML, getCaretRect, getCaretLI, indentListItem, outdentListItem,
   replaceTriggerAndInsert, columnsHTML, mathHTML, renderMathIn, wrapSelectionAsComment,
-  syncedHTML, hydrateSyncedIn, persistSyncedFrom, removeAdjacentMention,
+  syncedHTML, hydrateSyncedIn, persistSyncedFrom, removeAdjacentMention, hydrateWebClipsIn,
 } from './richtext/richTextBlocks';
 import { SyncedBlockPicker } from './richtext/SyncedBlockPicker';
 import 'katex/dist/katex.min.css';
