@@ -84,6 +84,9 @@ export const getNextDueDate = (habit: Habit, ref: Date = new Date()): Date => {
 export const isHabitDueOnDate = (habit: Habit, d: Date): boolean => {
   const day = startOfDay(d);
 
+  // Paused / vacation / sick day → not due (streak stays intact).
+  if (isHabitPausedOn(habit, day)) return false;
+
   if (habit.frequency === 'daily') return true;
 
   if (habit.frequency === 'weekly') {
