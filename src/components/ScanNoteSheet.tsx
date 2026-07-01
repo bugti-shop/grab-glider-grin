@@ -243,14 +243,46 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             </div>
           )}
 
-          {isExtracting && (
-            <div className="flex items-center gap-3 px-3 py-4 rounded-xl bg-primary/5">
-              <Loader2 className="h-5 w-5 text-primary animate-spin" />
-              <span className="text-sm text-foreground">
-                {t('scanNote.reading', 'Transcribing your page…')}
-              </span>
+          {(isExtracting || phase === 'error') && (
+            <div
+              className={cn(
+                'flex items-start gap-3 px-3 py-3 rounded-xl border',
+                phase === 'error'
+                  ? 'bg-destructive/5 border-destructive/30'
+                  : 'bg-primary/5 border-primary/20',
+              )}
+            >
+              {phase === 'error' ? (
+                <X className="h-5 w-5 text-destructive mt-0.5" />
+              ) : (
+                <Loader2 className="h-5 w-5 text-primary animate-spin mt-0.5" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-foreground">
+                  {phase === 'capturing' && t('scanNote.phaseCapturing', 'Capturing image…')}
+                  {phase === 'uploading' && t('scanNote.phaseUploading', 'Uploading to AI…')}
+                  {phase === 'processing' && t('scanNote.phaseProcessing', 'AI is transcribing your page…')}
+                  {phase === 'error' && (errorLabel || t('scanNote.failed', 'Could not read this page'))}
+                </div>
+                {phase !== 'error' && (
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {phase === 'uploading'
+                      ? t('scanNote.uploadingHint', 'Sending photo securely to Gemini')
+                      : t('scanNote.processingHint', 'Usually finishes in 5–15 seconds')}
+                  </div>
+                )}
+                {phase === 'error' && imageDataUrl && (
+                  <button
+                    onClick={() => runExtraction(imageDataUrl)}
+                    className="mt-2 text-xs font-semibold text-primary"
+                  >
+                    {t('common.retry', 'Retry')}
+                  </button>
+                )}
+              </div>
             </div>
           )}
+
 
           {!isExtracting && hasRun && html && (
             <div className="space-y-3">
