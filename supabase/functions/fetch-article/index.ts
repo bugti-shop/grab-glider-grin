@@ -708,7 +708,7 @@ Deno.serve(async (req) => {
         content,
         textContent,
         length,
-        embeds,          // string[] of safe iframe/video/audio HTML
+        embeds: [] as string[], // embeds are now inlined into `content` at their original position
         importantLinks,  // [{ href, text }]
       }),
       {
