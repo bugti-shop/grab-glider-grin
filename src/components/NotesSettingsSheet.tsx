@@ -618,7 +618,24 @@ export const NotesSettingsSheet = ({ isOpen, onClose }: NotesSettingsSheetProps)
             />
           </div>
 
+          <SectionHeading title={t('settings.markdownShortcutsSection', 'Markdown Shortcuts')} />
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+            <div className="flex-1 pr-4">
+              <span className="text-foreground text-sm block">
+                {t('settings.markdownShortcuts', 'Auto-format Markdown shortcuts')}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {t('settings.markdownShortcutsDesc', 'Convert #, -, 1., [], **bold**, `code`, --- and pasted markdown into rich formatting as you type.')}
+              </span>
+            </div>
+            <Switch
+              checked={settings.markdownShortcuts}
+              onCheckedChange={updateMarkdownShortcuts}
+            />
+          </div>
+
           <SectionHeading title={t('settings.smartDetection', 'Smart Detection')} />
+          
           
           {/* URLs */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
