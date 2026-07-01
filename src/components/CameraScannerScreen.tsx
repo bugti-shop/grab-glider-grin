@@ -37,8 +37,6 @@ import {
   RotateCcw,
   AlertCircle,
 } from 'lucide-react';
-import { BrowserMultiFormatReader } from '@zxing/browser';
-import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { captureImageForAI } from '@/utils/imageCaptureForAI';
