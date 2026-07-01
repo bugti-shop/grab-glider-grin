@@ -1903,7 +1903,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   className="prose prose-sm max-w-none dark:prose-invert"
                   style={{ fontFamily, fontSize, fontWeight, lineHeight }}
                   dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(content) }}
-                  ref={(el) => { if (el) { renderMathIn(el); hydrateSyncedIn(el, { editable: false }); } }}
+                  ref={(el) => { if (el) { renderMathIn(el); hydrateSyncedIn(el, { editable: false }); hydrateWebClipsIn(el); } }}
                 />
               </div>
             </div>
