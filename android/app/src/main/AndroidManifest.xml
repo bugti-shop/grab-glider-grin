@@ -130,6 +130,21 @@
 
         </activity>
 
+        <!-- ============ Launcher-level Quick Add ============
+             Translucent dialog activity launched by the AddTaskWidget.
+             Renders directly over the user's launcher so tasks can be
+             added WITHOUT opening the main Flowist app. Typed text is
+             queued into Capacitor Preferences (widget_pending_new_tasks)
+             and drained by the React app on next launch. -->
+        <activity
+            android:name=".widgets.QuickAddActivity"
+            android:theme="@style/QuickAddDialogTheme"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:exported="true" />
+
 
         <provider
             android:name="androidx.core.content.FileProvider"

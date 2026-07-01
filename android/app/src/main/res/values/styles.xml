@@ -23,4 +23,17 @@
              ActionBar (pink "Flowist" header) never renders over the WebView. -->
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
+
+    <!-- Translucent dialog theme used by the launcher-level Quick Add
+         activity. The activity floats over the launcher without opening
+         the main Flowist app. -->
+    <style name="QuickAddDialogTheme" parent="Theme.AppCompat.DayNight.Dialog">
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>
