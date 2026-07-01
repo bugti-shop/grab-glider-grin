@@ -79,7 +79,10 @@ export const ImageTaskExtractorSheet = ({
   const [hasRun, setHasRun] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'capturing' | 'uploading' | 'processing' | 'done' | 'error'>('idle');
+  const [errorLabel, setErrorLabel] = useState<string | null>(null);
   const captureLockRef = useRef(false);
+
 
   // Reset on close
   useEffect(() => {
