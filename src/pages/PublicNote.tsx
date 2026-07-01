@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeForDisplay } from '@/lib/sanitize';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { Loader2, ArrowLeft, ExternalLink, Eye, Lock, Smartphone } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 
