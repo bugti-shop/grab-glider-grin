@@ -1532,6 +1532,27 @@ export const RichTextEditor = ({
     }
   }, []);
 
+  // Paste handler: convert Markdown → HTML when the clipboard is plain text
+  // and Markdown shortcuts are enabled. Falls back to default paste otherwise.
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    if (notesSettings.markdownShortcuts === false) return;
+    if (isInsideCode(editorRef.current)) return; // preserve raw paste inside code blocks
+    const cd = e.clipboardData;
+    if (!cd) return;
+    const html = cd.getData('text/html');
+    // Only intercept plain-text pastes so we don't mangle real HTML from other editors.
+    if (html && html.trim()) return;
+    const text = cd.getData('text/plain');
+    if (!text) return;
+    const converted = markdownPasteToHtml(text);
+    if (!converted) return;
+    e.preventDefault();
+    document.execCommand('insertHTML', false, converted);
+    // Hydrate any freshly-inserted code blocks / web-clips.
+    hydrateSynced();
+    handleInput();
+  }, [notesSettings.markdownShortcuts, hydrateSynced]);
+
   // Handle keydown - checklist Enter key and other keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if ((e.key === 'Backspace' || e.key === 'Delete') && removeAdjacentMention(e.key === 'Backspace' ? 'backward' : 'forward', editorRef.current)) {
@@ -2201,6 +2222,7 @@ export const RichTextEditor = ({
         onCompositionStart={handleCompositionStart}
         onCompositionEnd={handleCompositionEnd}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         onCopy={handleCopy}
         data-gramm="false"
         data-gramm_editor="false"
