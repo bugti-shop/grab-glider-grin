@@ -20,6 +20,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(FocusTimerPlugin.class);
         storeWidgetPath(getIntent());
         // Store the widget target BEFORE BridgeActivity boots the WebView so
         // cold-start taps are available to JS on the first read.

@@ -8,7 +8,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.widget.RemoteViews;
 
-import nota.npd.com.MainActivity;
+import nota.npd.com.QuickAddActivity;
 import nota.npd.com.R;
 
 /**
@@ -29,17 +29,9 @@ public class AddTaskWidget extends AppWidgetProvider {
     public void onUpdate(Context ctx, AppWidgetManager mgr, int[] ids) {
         for (int id : ids) {
             RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_add_task);
-            String path = "/todo/today?add=1";
-            Intent open = new Intent(ctx, MainActivity.class);
+            Intent open = new Intent(ctx, QuickAddActivity.class);
             open.setAction("nota.npd.com.widgets.QUICK_ADD_" + id);
-            open.setData(Uri.parse("flowist://widget" + path));
-            open.putExtra("widget_path", path);
-            open.putExtra("openQuickAdd", true);
-            open.setFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK
-                | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                | Intent.FLAG_ACTIVITY_CLEAR_TOP
-            );
+            open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             PendingIntent pi = PendingIntent.getActivity(
                 ctx,
                 ("quickadd-" + id).hashCode(),

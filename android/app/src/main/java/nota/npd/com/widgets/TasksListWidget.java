@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.widget.RemoteViews;
 
 import nota.npd.com.MainActivity;
+import nota.npd.com.QuickAddActivity;
 import nota.npd.com.R;
 
 /**
@@ -37,7 +38,7 @@ public class TasksListWidget extends AppWidgetProvider {
             rv.setOnClickPendingIntent(R.id.widget_title, buildOpenIntent(ctx, "/todo/today", id, "TITLE"));
 
             // Quick-add button -> open add-task sheet
-            rv.setOnClickPendingIntent(R.id.widget_quick_add, buildOpenIntent(ctx, "/w/add-task", id, "QUICK_ADD"));
+            rv.setOnClickPendingIntent(R.id.widget_quick_add, buildQuickAddIntent(ctx, id));
 
             // Template intent for list rows (each row supplies its own fillInIntent)
             Intent rowOpen = new Intent(ctx, MainActivity.class);
@@ -71,6 +72,14 @@ public class TasksListWidget extends AppWidgetProvider {
         open.putExtra("widget_path", path);
         open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         return PendingIntent.getActivity(ctx, (tag + path + widgetId).hashCode(), open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent buildQuickAddIntent(Context ctx, int widgetId) {
+        Intent open = new Intent(ctx, QuickAddActivity.class);
+        open.setAction("nota.npd.com.widgets.TASKS_LIST_QUICK_ADD_" + widgetId);
+        open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        return PendingIntent.getActivity(ctx, ("quickadd-list" + widgetId).hashCode(), open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 }
