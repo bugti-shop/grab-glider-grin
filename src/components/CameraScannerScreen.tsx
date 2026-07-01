@@ -111,6 +111,13 @@ interface Props {
    * the camera view is still mounted so the user always sees progress.
    */
   status?: { label: string; sublabel?: string } | null;
+  /**
+   * Pro-gating. When `hasPro` is false, premium chips/toggles (Receipt, Burst,
+   * Batch) show a lock and, when tapped, present a clear upsell overlay with a
+   * Subscribe CTA that calls `onRequestUpgrade`. Defaults to `true`.
+   */
+  hasPro?: boolean;
+  onRequestUpgrade?: () => void;
 }
 
 
