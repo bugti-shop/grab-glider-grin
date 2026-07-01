@@ -158,41 +158,87 @@ class WidgetDataSyncManager {
     } catch {}
   }
 
+  private draining = false;
   private async drainPendingNewTasks(): Promise<void> {
+    // Guard against re-entrant drains (resume + appStateChange fire together)
+    if (this.draining) return;
+    this.draining = true;
     try {
       const { value } = await Preferences.get({ key: WIDGET_PENDING_TASKS_KEY });
       if (!value) return;
-      await Preferences.remove({ key: WIDGET_PENDING_TASKS_KEY });
-      const arr = JSON.parse(value) as Array<{ text?: string; createdAt?: number }>;
-      if (!Array.isArray(arr) || arr.length === 0) return;
+      let arr: Array<{ text?: string; createdAt?: number }> = [];
+      try { arr = JSON.parse(value) || []; } catch { arr = []; }
+      if (!Array.isArray(arr) || arr.length === 0) {
+        await Preferences.remove({ key: WIDGET_PENDING_TASKS_KEY });
+        return;
+      }
+
+      // CRASH-SAFE DRAIN: save first, remove ONLY successfully-saved entries.
+      // If we crash mid-loop, unsaved items remain queued for the next drain.
+      const remaining: typeof arr = [];
+      let savedAny = false;
       for (const item of arr) {
         const text = String(item?.text || '').trim();
         if (!text) continue;
-        const parsed = parseNaturalLanguageTask(text);
-        const now = new Date(item.createdAt || Date.now());
-        const task: TodoItem = {
-          id: genId(),
-          text,
-          completed: false,
-          priority: parsed.priority || 'none',
-          dueDate: parsed.dueDate,
-          reminderTime: parsed.reminderTime,
-          repeatType: parsed.repeatType || 'none',
-          repeatDays: parsed.repeatDays,
-          advancedRepeat: parsed.advancedRepeat,
-          description: parsed.description,
-          location: parsed.location,
-          createdAt: now,
-          modifiedAt: now,
-        } as TodoItem;
-        await saveTodoItem(task);
+        try {
+          const parsed = parseNaturalLanguageTask(text);
+          const now = new Date(item.createdAt || Date.now());
+          const task: TodoItem = {
+            id: genId(),
+            text,
+            completed: false,
+            priority: parsed.priority || 'none',
+            dueDate: parsed.dueDate,
+            reminderTime: parsed.reminderTime,
+            repeatType: parsed.repeatType || 'none',
+            repeatDays: parsed.repeatDays,
+            advancedRepeat: parsed.advancedRepeat,
+            description: parsed.description,
+            location: parsed.location,
+            createdAt: now,
+            modifiedAt: now,
+          } as TodoItem;
+          await saveTodoItem(task);
+          savedAny = true;
+        } catch (err) {
+          console.warn('[WidgetSync] Failed to save queued task, will retry', err);
+          remaining.push(item);
+        }
       }
-      window.dispatchEvent(new Event('tasksUpdated'));
-      window.dispatchEvent(new Event('todoItemsChanged'));
-      await this.syncTasks();
+
+      // Persist only what still needs to be drained.
+      if (remaining.length === 0) {
+        await Preferences.remove({ key: WIDGET_PENDING_TASKS_KEY });
+      } else {
+        await Preferences.set({ key: WIDGET_PENDING_TASKS_KEY, value: JSON.stringify(remaining) });
+      }
+
+      if (savedAny) {
+        window.dispatchEvent(new Event('tasksUpdated'));
+        window.dispatchEvent(new Event('todoItemsChanged'));
+        try { window.dispatchEvent(new CustomEvent('flowist:widget:drained', { detail: { count: arr.length - remaining.length } })); } catch {}
+        await this.syncTasks();
+      }
     } catch (e) {
       console.warn('[WidgetSync] Pending launcher tasks drain failed', e);
+    } finally {
+      this.draining = false;
     }
+  }
+
+  /** Public: peek at the pending launcher-task queue (for diagnostics). */
+  async peekPendingNewTasks(): Promise<Array<{ text?: string; createdAt?: number }>> {
+    try {
+      const { value } = await Preferences.get({ key: WIDGET_PENDING_TASKS_KEY });
+      if (!value) return [];
+      const arr = JSON.parse(value);
+      return Array.isArray(arr) ? arr : [];
+    } catch { return []; }
+  }
+
+  /** Public: force a drain attempt now (for diagnostics "Drain now" button). */
+  async forceDrainPendingNewTasks(): Promise<void> {
+    return this.drainPendingNewTasks();
   }
 
 
