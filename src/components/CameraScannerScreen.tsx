@@ -475,7 +475,21 @@ export const CameraScannerScreen = ({
           50% { opacity: 1; filter: drop-shadow(0 0 14px hsl(var(--primary) / 0.95)); }
         }
       `}</style>
+
+      {/* Parent-controlled status overlay (uploading / processing) */}
+      {status && (
+        <div className="absolute inset-0 z-20 bg-black/70 backdrop-blur-sm flex items-center justify-center px-8">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Loader2 className="h-8 w-8 text-white animate-spin" />
+            <div className="text-base font-semibold">{status.label}</div>
+            {status.sublabel && (
+              <div className="text-xs text-white/70 max-w-xs">{status.sublabel}</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+
   );
 
   return createPortal(overlay, document.body);
