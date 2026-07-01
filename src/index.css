@@ -114,16 +114,17 @@ body.flowist-task-dragging [data-flowist-virtual-list="tasks"] {
      Let real safe-area-inset-top work so headers get proper padding.
      Bottom safe area stays 0 — we handle nav bar via native styles. */
   body.android-app {
-    /* Sit right under the status bar — no extra cushion so section headers
-       stay near the top of the screen as users expect. */
-    --safe-top: max(env(safe-area-inset-top, 12px), 12px);
+    /* Nudge dashboard headers a touch closer to the status bar — users asked
+       for the Notes/Home/Profile/Calendar/Settings headers to sit higher. */
+    --safe-top: max(env(safe-area-inset-top, 4px), 4px);
     --safe-bottom: 0px;
   }
 
-  /* iOS: respect the notch inset only, no additional cushion. */
+  /* iOS: respect the notch inset only, minimal cushion. */
   body.ios-app {
-    --safe-top: env(safe-area-inset-top, 12px);
+    --safe-top: max(env(safe-area-inset-top, 4px), 4px);
   }
+
 
 
   /* Android edge-to-edge fix: WebView extends behind system nav bar but
