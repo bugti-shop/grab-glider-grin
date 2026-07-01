@@ -57,6 +57,16 @@ export const BubbleMenu = ({ editorRef, onCommand }: BubbleMenuProps) => {
       <div className="w-px h-5 bg-border mx-1" />
       <button type="button" className={btn} onClick={() => onCommand('link')} title="Insert link"><LinkIcon size={18} /></button>
       <button type="button" className={btn} onClick={() => onCommand('comment')} title="Add comment"><MessageSquare size={18} /></button>
+      <div className="w-px h-5 bg-border mx-1" />
+      <button
+        type="button"
+        className={btn + ' flex items-center gap-1 text-xs font-medium'}
+        onClick={() => onCommand('markdown')}
+        title="Convert selection from Markdown"
+      >
+        <Wand2 size={16} />
+        <span className="hidden sm:inline">Markdown</span>
+      </button>
     </div>
   );
 };
