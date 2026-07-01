@@ -36,11 +36,24 @@ interface Props {
   onClose: () => void;
   /** Called with a JPEG data URL when the user captures a frame. */
   onCapture: (dataUrl: string) => void;
+  /**
+   * Called when a barcode is decoded in `barcode` mode. If omitted, decoded
+   * barcodes are surfaced as a toast and the raw frame is still sent via
+   * onCapture so the caller can decide how to handle it.
+   */
+  onBarcode?: (value: string, format: string) => void;
   /** Screen title shown at the top. Defaults to "Scan". */
   title?: string;
   /** Which mode chip should be highlighted first. */
   initialMode?: ScannerMode;
+  /**
+   * Parent-controlled status overlay. Renders a full-screen blocking layer
+   * with a spinner + label. Use to show "Uploading…" / "Processing…" while
+   * the camera view is still mounted so the user always sees progress.
+   */
+  status?: { label: string; sublabel?: string } | null;
 }
+
 
 const MODES: Array<{ id: ScannerMode; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'note', label: 'Scan Note', icon: ScanLine },
@@ -53,17 +66,24 @@ export const CameraScannerScreen = ({
   isOpen,
   onClose,
   onCapture,
+  onBarcode,
   title = 'Scan',
   initialMode = 'note',
+  status = null,
 }: Props) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const barcodeLoopRef = useRef<number | null>(null);
+  const barcodeHandledRef = useRef(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
   const [mode, setMode] = useState<ScannerMode>(initialMode);
   const [capturing, setCapturing] = useState(false);
+  const [barcodeSupported, setBarcodeSupported] = useState(true);
+  const [lastBarcode, setLastBarcode] = useState<string | null>(null);
+
 
   const stopStream = useCallback(() => {
     const s = streamRef.current;
@@ -140,6 +160,72 @@ export const CameraScannerScreen = ({
     }
   }, [torchOn]);
 
+  // Reset barcode-handled guard whenever mode toggles or scanner reopens.
+  useEffect(() => {
+    barcodeHandledRef.current = false;
+    setLastBarcode(null);
+  }, [mode, isOpen]);
+
+  // Continuous barcode scanning loop when mode === 'barcode' + camera ready.
+  useEffect(() => {
+    if (!isOpen || mode !== 'barcode' || !ready) return;
+    const AnyBarcodeDetector = (window as any).BarcodeDetector;
+    if (!AnyBarcodeDetector) {
+      setBarcodeSupported(false);
+      return;
+    }
+    setBarcodeSupported(true);
+    let detector: any;
+    try {
+      detector = new AnyBarcodeDetector({
+        formats: [
+          'qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'code_93',
+          'upc_a', 'upc_e', 'itf', 'pdf417', 'aztec', 'data_matrix',
+        ],
+      });
+    } catch (e) {
+      console.warn('[CameraScannerScreen] BarcodeDetector init failed', e);
+      setBarcodeSupported(false);
+      return;
+    }
+
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      const video = videoRef.current;
+      if (video && video.readyState >= 2 && !barcodeHandledRef.current) {
+        try {
+          const results = await detector.detect(video);
+          if (results && results.length > 0 && !barcodeHandledRef.current) {
+            barcodeHandledRef.current = true;
+            const value = String(results[0].rawValue ?? '').trim();
+            const format = String(results[0].format ?? 'unknown');
+            setLastBarcode(value);
+            try { navigator.vibrate?.(80); } catch { /* ignore */ }
+            if (value && onBarcode) {
+              onBarcode(value, format);
+              onClose();
+              return;
+            }
+          }
+        } catch (e) {
+          // Detection errors are transient — keep looping.
+        }
+      }
+      barcodeLoopRef.current = window.setTimeout(tick, 300) as unknown as number;
+    };
+    tick();
+    return () => {
+      cancelled = true;
+      if (barcodeLoopRef.current) {
+        clearTimeout(barcodeLoopRef.current);
+        barcodeLoopRef.current = null;
+      }
+    };
+  }, [isOpen, mode, ready, onBarcode, onClose]);
+
+
+
   const handleShutter = useCallback(async () => {
     if (capturing) return;
     setCapturing(true);
@@ -177,12 +263,19 @@ export const CameraScannerScreen = ({
       }).catch(() => raw);
 
       if (mode === 'barcode') {
-        // Barcode decoding not implemented — hand the image off for now so the
-        // caller (AI extraction) can still try to read printed text.
-        toast.message('Barcode scanning is coming soon — sending as image');
+        // If native decoder is available, try one more sync decode on this frame.
+        const decoded = await decodeBarcodeFromCanvas(canvas).catch(() => null);
+        if (decoded && onBarcode) {
+          setLastBarcode(decoded.rawValue);
+          onBarcode(decoded.rawValue, decoded.format);
+          onClose();
+          return;
+        }
+        toast.message('No barcode detected — sending as image');
       }
       onCapture(compressed);
       onClose();
+
     } catch (e) {
       console.error('[CameraScannerScreen] shutter error', e);
       toast.error('Could not capture image');
@@ -288,10 +381,21 @@ export const CameraScannerScreen = ({
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Starting camera…
               </span>
+            ) : mode === 'barcode' && !barcodeSupported ? (
+              <span className="text-white/90">
+                Barcode scanning not supported here — tap shutter to try one frame
+              </span>
+            ) : mode === 'barcode' ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Scanning for barcode…
+                {lastBarcode ? ` · ${lastBarcode.slice(0, 24)}` : ''}
+              </span>
             ) : (
               <span>Point at a sticky note or handwritten page · {activeModeLabel}</span>
             )}
           </div>
+
         </div>
       </div>
 
@@ -371,7 +475,21 @@ export const CameraScannerScreen = ({
           50% { opacity: 1; filter: drop-shadow(0 0 14px hsl(var(--primary) / 0.95)); }
         }
       `}</style>
+
+      {/* Parent-controlled status overlay (uploading / processing) */}
+      {status && (
+        <div className="absolute inset-0 z-20 bg-black/70 backdrop-blur-sm flex items-center justify-center px-8">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Loader2 className="h-8 w-8 text-white animate-spin" />
+            <div className="text-base font-semibold">{status.label}</div>
+            {status.sublabel && (
+              <div className="text-xs text-white/70 max-w-xs">{status.sublabel}</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+
   );
 
   return createPortal(overlay, document.body);
@@ -399,4 +517,23 @@ const CornerBracket = ({
   );
 };
 
+async function decodeBarcodeFromCanvas(
+  canvas: HTMLCanvasElement,
+): Promise<{ rawValue: string; format: string } | null> {
+  const AnyBarcodeDetector = (window as any).BarcodeDetector;
+  if (!AnyBarcodeDetector) return null;
+  try {
+    const detector = new AnyBarcodeDetector();
+    const results = await detector.detect(canvas);
+    if (results && results.length > 0) {
+      return {
+        rawValue: String(results[0].rawValue ?? ''),
+        format: String(results[0].format ?? 'unknown'),
+      };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 export default CameraScannerScreen;
+

@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { captureImageForAI } from '@/utils/imageCaptureForAI';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeForDisplay } from '@/lib/sanitize';
+import { cn } from '@/lib/utils';
+
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { acquireAiLock, getAiBusyMessage, releaseAllAiLocks } from '@/utils/aiConcurrencyLock';
 import { ensureSignedInForAi } from '@/utils/aiAccessGuard';
@@ -28,6 +30,8 @@ interface Props {
   onInsertHtml: (html: string, suggestedTitle?: string) => void;
 }
 
+type Phase = 'idle' | 'capturing' | 'uploading' | 'processing' | 'done' | 'error';
+
 export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const { t, i18n } = useTranslation();
   const { isPro, isAdminBypass, requireFeature } = useSubscription();
@@ -38,7 +42,10 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const [suggestedTitle, setSuggestedTitle] = useState('');
   const [hasRun, setHasRun] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [errorLabel, setErrorLabel] = useState<string | null>(null);
   const captureLockRef = useRef(false);
+
 
   useEffect(() => {
     if (!isOpen) {
@@ -48,6 +55,8 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       setIsExtracting(false);
       setHasRun(false);
       setShowCamera(false);
+      setPhase('idle');
+      setErrorLabel(null);
       captureLockRef.current = false;
       releaseAllAiLocks();
     }
@@ -57,13 +66,29 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     if (captureLockRef.current) return;
     captureLockRef.current = true;
     try {
+      setPhase('capturing');
       const dataUrl = await captureImageForAI('gallery');
-      if (!dataUrl) return;
+      if (!dataUrl) {
+        setPhase('idle');
+        return;
+      }
       setImageDataUrl(dataUrl);
       await runExtraction(dataUrl);
     } finally {
       captureLockRef.current = false;
     }
+  };
+
+  const handleBarcode = (value: string, format: string) => {
+    if (!value) return;
+    const safe = value.trim();
+    const html =
+      `<h2>Scanned ${format.replace(/_/g, ' ')}</h2>` +
+      `<p><code>${safe.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]!))}</code></p>`;
+    onInsertHtml(html, `Scanned code · ${safe.slice(0, 32)}`);
+    toast.success(t('scanNote.barcodeInserted', 'Barcode inserted'));
+    setShowCamera(false);
+    onClose();
   };
 
   const runExtraction = async (dataUrl: string) => {
@@ -85,9 +110,11 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     setHasRun(false);
     setHtml('');
     setSuggestedTitle('');
+    setErrorLabel(null);
     try {
       await yieldToPaint();
-      const { data, error } = await supabase.functions.invoke(
+      setPhase('uploading');
+      const invokePromise = supabase.functions.invoke(
         'ai-extract-note-from-image',
         {
           body: {
@@ -99,6 +126,9 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           timeout: AI_SCAN_TIMEOUT_MS,
         },
       );
+      // Once the upload has flushed, we're really waiting on the model.
+      setTimeout(() => setPhase((p) => (p === 'uploading' ? 'processing' : p)), 800);
+      const { data, error } = await invokePromise;
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
 
@@ -107,6 +137,9 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       setHtml(rawHtml);
       setSuggestedTitle(title);
       setHasRun(true);
+      setPhase('done');
+
+
 
       if (!rawHtml) {
         toast.info(t('scanNote.noText', 'No readable text found in this image'));
@@ -114,20 +147,25 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     } catch (e: any) {
       console.error('[scan note] error', e);
       const msg = e?.message || '';
+      let label: string;
       if (msg.includes('429')) {
-        toast.error(t('tasks.aiRateLimit', 'AI is busy, try again shortly'));
+        label = t('tasks.aiRateLimit', 'AI is busy, try again shortly');
       } else if (msg.includes('402')) {
-        toast.error(t('tasks.aiCredits', 'AI credits exhausted'));
+        label = t('tasks.aiCredits', 'AI credits exhausted');
       } else if (msg.includes('AbortError') || msg.includes('aborted') || msg.includes('timeout')) {
-        toast.error(t('scanNote.timeout', 'This scan took too long. Try a clearer or smaller photo.'));
+        label = t('scanNote.timeout', 'This scan took too long. Try a clearer or smaller photo.');
       } else {
-        toast.error(t('scanNote.failed', 'Could not read this page'));
+        label = t('scanNote.failed', 'Could not read this page');
       }
+      toast.error(label);
+      setErrorLabel(label);
+      setPhase('error');
     } finally {
       setIsExtracting(false);
       release();
     }
   };
+
 
   const handleInsert = () => {
     if (!html.trim()) {
@@ -207,14 +245,46 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             </div>
           )}
 
-          {isExtracting && (
-            <div className="flex items-center gap-3 px-3 py-4 rounded-xl bg-primary/5">
-              <Loader2 className="h-5 w-5 text-primary animate-spin" />
-              <span className="text-sm text-foreground">
-                {t('scanNote.reading', 'Transcribing your page…')}
-              </span>
+          {(isExtracting || phase === 'error') && (
+            <div
+              className={cn(
+                'flex items-start gap-3 px-3 py-3 rounded-xl border',
+                phase === 'error'
+                  ? 'bg-destructive/5 border-destructive/30'
+                  : 'bg-primary/5 border-primary/20',
+              )}
+            >
+              {phase === 'error' ? (
+                <X className="h-5 w-5 text-destructive mt-0.5" />
+              ) : (
+                <Loader2 className="h-5 w-5 text-primary animate-spin mt-0.5" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-foreground">
+                  {phase === 'capturing' && t('scanNote.phaseCapturing', 'Capturing image…')}
+                  {phase === 'uploading' && t('scanNote.phaseUploading', 'Uploading to AI…')}
+                  {phase === 'processing' && t('scanNote.phaseProcessing', 'AI is transcribing your page…')}
+                  {phase === 'error' && (errorLabel || t('scanNote.failed', 'Could not read this page'))}
+                </div>
+                {phase !== 'error' && (
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {phase === 'uploading'
+                      ? t('scanNote.uploadingHint', 'Sending photo securely to Gemini')
+                      : t('scanNote.processingHint', 'Usually finishes in 5–15 seconds')}
+                  </div>
+                )}
+                {phase === 'error' && imageDataUrl && (
+                  <button
+                    onClick={() => runExtraction(imageDataUrl)}
+                    className="mt-2 text-xs font-semibold text-primary"
+                  >
+                    {t('common.retry', 'Retry')}
+                  </button>
+                )}
+              </div>
             </div>
           )}
+
 
           {!isExtracting && hasRun && html && (
             <div className="space-y-3">
@@ -244,12 +314,28 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
         onClose={() => setShowCamera(false)}
         title={t('scanNote.title', 'Scan page to note')}
         initialMode="note"
+        onBarcode={handleBarcode}
+        status={
+          isExtracting
+            ? {
+                label:
+                  phase === 'uploading'
+                    ? t('scanNote.phaseUploading', 'Uploading to AI…')
+                    : t('scanNote.phaseProcessing', 'AI is transcribing your page…'),
+                sublabel:
+                  phase === 'uploading'
+                    ? t('scanNote.uploadingHint', 'Sending photo securely to Gemini')
+                    : t('scanNote.processingHint', 'Usually finishes in 5–15 seconds'),
+              }
+            : null
+        }
         onCapture={async (dataUrl) => {
           setShowCamera(false);
           setImageDataUrl(dataUrl);
           await runExtraction(dataUrl);
         }}
       />
+
     </Sheet>
   );
 };

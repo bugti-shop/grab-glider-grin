@@ -79,7 +79,10 @@ export const ImageTaskExtractorSheet = ({
   const [hasRun, setHasRun] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'capturing' | 'uploading' | 'processing' | 'done' | 'error'>('idle');
+  const [errorLabel, setErrorLabel] = useState<string | null>(null);
   const captureLockRef = useRef(false);
+
 
   // Reset on close
   useEffect(() => {
@@ -89,17 +92,39 @@ export const ImageTaskExtractorSheet = ({
       setIsExtracting(false);
       setHasRun(false);
       setShowCamera(false);
+      setPhase('idle');
+      setErrorLabel(null);
       captureLockRef.current = false;
       releaseAllAiLocks();
     }
   }, [isOpen]);
 
+  const handleBarcode = (value: string, format: string) => {
+    if (!value) return;
+    const safe = value.trim();
+    onAddTasks([
+      {
+        text: `Scanned ${format.replace(/_/g, ' ')}: ${safe}`,
+        priority: 'none',
+        repeatType: 'none',
+        folderId: currentFolderId || undefined,
+        sectionId: currentSectionId || undefined,
+      } as any,
+    ]);
+    toast.success(t('imageExtract.barcodeAdded', 'Barcode added as task'));
+    setShowCamera(false);
+    onClose();
+  };
+
+
+
   const runCapture = async () => {
     if (captureLockRef.current) return;
     captureLockRef.current = true;
     try {
+      setPhase('capturing');
       const dataUrl = await captureImageForAI('gallery');
-      if (!dataUrl) return;
+      if (!dataUrl) { setPhase('idle'); return; }
       setImageDataUrl(dataUrl);
       await runExtraction(dataUrl);
     } finally {
@@ -126,9 +151,11 @@ export const ImageTaskExtractorSheet = ({
     setIsExtracting(true);
     setHasRun(false);
     setItems([]);
+    setErrorLabel(null);
     try {
       await yieldToPaint();
-      const { data, error } = await supabase.functions.invoke(
+      setPhase('uploading');
+      const invokePromise = supabase.functions.invoke(
         'ai-extract-tasks-from-image',
         {
           body: {
@@ -144,6 +171,8 @@ export const ImageTaskExtractorSheet = ({
           timeout: AI_SCAN_TIMEOUT_MS,
         },
       );
+      setTimeout(() => setPhase((p) => (p === 'uploading' ? 'processing' : p)), 800);
+      const { data, error } = await invokePromise;
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
 
@@ -173,6 +202,7 @@ export const ImageTaskExtractorSheet = ({
 
       setItems(reviewItems);
       setHasRun(true);
+      setPhase('done');
 
       if (reviewItems.length === 0) {
         toast.info(t('imageExtract.noTasks', 'No tasks detected in this image'));
@@ -180,20 +210,23 @@ export const ImageTaskExtractorSheet = ({
     } catch (e: any) {
       console.error('[image extract] error', e);
       const msg = e?.message || '';
+      let label: string;
       if (msg.includes('429')) {
-        toast.error(t('tasks.aiRateLimit', 'AI is busy, try again shortly'));
+        label = t('tasks.aiRateLimit', 'AI is busy, try again shortly');
       } else if (msg.includes('402')) {
-        toast.error(t('tasks.aiCredits', 'AI credits exhausted'));
+        label = t('tasks.aiCredits', 'AI credits exhausted');
       } else if (msg.includes('AbortError') || msg.includes('aborted') || msg.includes('timeout')) {
-        toast.error(t('imageExtract.timeout', 'This scan took too long. Try a clearer or smaller photo.'));
+        label = t('imageExtract.timeout', 'This scan took too long. Try a clearer or smaller photo.');
       } else {
-        toast.error(
-          t('imageExtract.failed', 'Could not read tasks from this image'),
-        );
+        label = t('imageExtract.failed', 'Could not read tasks from this image');
       }
+      toast.error(label);
+      setErrorLabel(label);
+      setPhase('error');
     } finally {
       setIsExtracting(false);
       release();
+
     }
   };
 
@@ -369,15 +402,47 @@ export const ImageTaskExtractorSheet = ({
             </div>
           )}
 
-          {/* Loading state */}
-          {isExtracting && (
-            <div className="flex items-center gap-3 px-3 py-4 rounded-xl bg-primary/5">
-              <Loader2 className="h-5 w-5 text-primary animate-spin" />
-              <span className="text-sm text-foreground">
-                {t('imageExtract.reading', 'Reading your tasks…')}
-              </span>
+          {/* Progress / error state */}
+          {(isExtracting || phase === 'error') && (
+            <div
+              className={cn(
+                'flex items-start gap-3 px-3 py-3 rounded-xl border',
+                phase === 'error'
+                  ? 'bg-destructive/5 border-destructive/30'
+                  : 'bg-primary/5 border-primary/20',
+              )}
+            >
+              {phase === 'error' ? (
+                <X className="h-5 w-5 text-destructive mt-0.5" />
+              ) : (
+                <Loader2 className="h-5 w-5 text-primary animate-spin mt-0.5" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-foreground">
+                  {phase === 'capturing' && t('imageExtract.phaseCapturing', 'Capturing image…')}
+                  {phase === 'uploading' && t('imageExtract.phaseUploading', 'Uploading to AI…')}
+                  {phase === 'processing' && t('imageExtract.phaseProcessing', 'AI is reading your tasks…')}
+                  {phase === 'error' && (errorLabel || t('imageExtract.failed', 'Could not read tasks from this image'))}
+                </div>
+                {phase !== 'error' && (
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {phase === 'uploading'
+                      ? t('imageExtract.uploadingHint', 'Sending photo securely to Gemini')
+                      : t('imageExtract.processingHint', 'Usually finishes in 5–15 seconds')}
+                  </div>
+                )}
+                {phase === 'error' && imageDataUrl && (
+                  <button
+                    onClick={() => runExtraction(imageDataUrl)}
+                    className="mt-2 text-xs font-semibold text-primary"
+                  >
+                    {t('common.retry', 'Retry')}
+                  </button>
+                )}
+              </div>
             </div>
           )}
+
 
           {/* Extracted tasks list */}
           {!isExtracting && items.length > 0 && (
@@ -577,12 +642,28 @@ export const ImageTaskExtractorSheet = ({
         onClose={() => setShowCamera(false)}
         title={t('imageExtract.title', 'Scan tasks from paper')}
         initialMode="note"
+        onBarcode={handleBarcode}
+        status={
+          isExtracting
+            ? {
+                label:
+                  phase === 'uploading'
+                    ? t('imageExtract.phaseUploading', 'Uploading to AI…')
+                    : t('imageExtract.phaseProcessing', 'AI is reading your tasks…'),
+                sublabel:
+                  phase === 'uploading'
+                    ? t('imageExtract.uploadingHint', 'Sending photo securely to Gemini')
+                    : t('imageExtract.processingHint', 'Usually finishes in 5–15 seconds'),
+              }
+            : null
+        }
         onCapture={async (dataUrl) => {
           setShowCamera(false);
           setImageDataUrl(dataUrl);
           await runExtraction(dataUrl);
         }}
       />
+
     </Sheet>
   );
 };
