@@ -121,9 +121,25 @@ export interface Habit {
     frozenDates: string[];
   };
 
+  /**
+   * Pause / vacation / sick-day ranges. During these ranges the habit is
+   * treated as "not due" (won't break streak, hidden from today's list, and
+   * excluded from weekly quota counts). Dates are inclusive `YYYY-MM-DD`.
+   */
+  pausedRanges?: HabitPauseRange[];
+
   isArchived: boolean;
   createdAt: string; // ISO
   updatedAt: string; // ISO
+}
+
+export type HabitPauseReason = 'vacation' | 'sick' | 'other';
+
+export interface HabitPauseRange {
+  start: string; // YYYY-MM-DD inclusive
+  end: string;   // YYYY-MM-DD inclusive
+  reason?: HabitPauseReason;
+  note?: string;
 }
 
 /**
