@@ -131,12 +131,26 @@
 
         </activity>
 
+        <!-- Dedicated launcher-overlay entry point for the Quick Add widget.
+             Exported=true + custom scheme (flowist://quick-add) so ONLY widget
+             taps route here; MainActivity is never resurrected in this flow. -->
         <activity
             android:name=".QuickAddActivity"
             android:theme="@style/AppTheme.QuickAddOverlay"
             android:excludeFromRecents="true"
-            android:launchMode="singleTop"
-            android:exported="false" />
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:exported="true">
+            <intent-filter>
+                <action android:name="nota.npd.com.action.QUICK_ADD" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="flowist" android:host="quick-add" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name=".FocusForegroundService"
