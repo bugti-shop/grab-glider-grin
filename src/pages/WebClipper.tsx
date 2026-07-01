@@ -13,6 +13,7 @@ import { saveNoteToDBSingle } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeForDisplay, sanitizeClippedArticle } from '@/lib/sanitize';
+import { hydrateWebClipsIn } from '@/components/richtext/richTextBlocks';
 import {
   MAX_LENGTHS,
   type ClipMode,
