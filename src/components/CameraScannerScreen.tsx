@@ -23,19 +23,24 @@ import {
   Barcode,
   ImagePlus,
   Loader2,
+  Boxes,
 } from 'lucide-react';
+import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { captureImageForAI } from '@/utils/imageCaptureForAI';
 import { compressImage } from '@/utils/imageCompression';
 
-export type ScannerMode = 'note' | 'barcode' | 'image' | 'gallery';
+export type ScannerMode = 'note' | 'barcode' | 'object' | 'image' | 'gallery';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   /** Called with a JPEG data URL when the user captures a frame. */
   onCapture: (dataUrl: string) => void;
+  /** Called with a JPEG data URL when Object Counting mode captures a frame. */
+  onObjectCount?: (dataUrl: string) => void;
   /**
    * Called when a barcode is decoded in `barcode` mode. If omitted, decoded
    * barcodes are surfaced as a toast and the raw frame is still sent via
@@ -58,14 +63,41 @@ interface Props {
 const MODES: Array<{ id: ScannerMode; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'note', label: 'Scan Note', icon: ScanLine },
   { id: 'barcode', label: 'Barcode', icon: Barcode },
+  { id: 'object', label: 'Objects', icon: Boxes },
   { id: 'image', label: 'Image', icon: ImagePlus },
   { id: 'gallery', label: 'Gallery', icon: ImageIcon },
 ];
+
+const BARCODE_FORMATS = [
+  BarcodeFormat.QR_CODE,
+  BarcodeFormat.EAN_13,
+  BarcodeFormat.EAN_8,
+  BarcodeFormat.CODE_128,
+  BarcodeFormat.CODE_39,
+  BarcodeFormat.CODE_93,
+  BarcodeFormat.UPC_A,
+  BarcodeFormat.UPC_E,
+  BarcodeFormat.ITF,
+  BarcodeFormat.PDF_417,
+  BarcodeFormat.AZTEC,
+  BarcodeFormat.DATA_MATRIX,
+];
+
+const createZxingReader = () => {
+  const hints = new Map();
+  hints.set(DecodeHintType.POSSIBLE_FORMATS, BARCODE_FORMATS);
+  hints.set(DecodeHintType.TRY_HARDER, true);
+  return new BrowserMultiFormatReader(hints, {
+    delayBetweenScanAttempts: 180,
+    delayBetweenScanSuccess: 500,
+  });
+};
 
 export const CameraScannerScreen = ({
   isOpen,
   onClose,
   onCapture,
+  onObjectCount,
   onBarcode,
   title = 'Scan',
   initialMode = 'note',
@@ -75,6 +107,7 @@ export const CameraScannerScreen = ({
   const streamRef = useRef<MediaStream | null>(null);
   const barcodeLoopRef = useRef<number | null>(null);
   const barcodeHandledRef = useRef(false);
+  const zxingReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [torchOn, setTorchOn] = useState(false);
@@ -83,6 +116,10 @@ export const CameraScannerScreen = ({
   const [capturing, setCapturing] = useState(false);
   const [barcodeSupported, setBarcodeSupported] = useState(true);
   const [lastBarcode, setLastBarcode] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) setMode(initialMode);
+  }, [initialMode, isOpen]);
 
 
   const stopStream = useCallback(() => {
@@ -170,24 +207,24 @@ export const CameraScannerScreen = ({
   useEffect(() => {
     if (!isOpen || mode !== 'barcode' || !ready) return;
     const AnyBarcodeDetector = (window as any).BarcodeDetector;
-    if (!AnyBarcodeDetector) {
-      setBarcodeSupported(false);
-      return;
-    }
-    setBarcodeSupported(true);
+    let nativeDetector: any = null;
     let detector: any;
-    try {
-      detector = new AnyBarcodeDetector({
-        formats: [
-          'qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'code_93',
-          'upc_a', 'upc_e', 'itf', 'pdf417', 'aztec', 'data_matrix',
-        ],
-      });
-    } catch (e) {
-      console.warn('[CameraScannerScreen] BarcodeDetector init failed', e);
-      setBarcodeSupported(false);
-      return;
+    if (AnyBarcodeDetector) {
+      try {
+        nativeDetector = new AnyBarcodeDetector({
+          formats: [
+            'qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'code_93',
+            'upc_a', 'upc_e', 'itf', 'pdf417', 'aztec', 'data_matrix',
+          ],
+        });
+      } catch (e) {
+        console.warn('[CameraScannerScreen] BarcodeDetector init failed', e);
+      }
     }
+    if (!zxingReaderRef.current) zxingReaderRef.current = createZxingReader();
+    detector = nativeDetector || zxingReaderRef.current;
+    setBarcodeSupported(Boolean(detector));
+    if (!detector) return;
 
     let cancelled = false;
     const tick = async () => {
@@ -195,11 +232,23 @@ export const CameraScannerScreen = ({
       const video = videoRef.current;
       if (video && video.readyState >= 2 && !barcodeHandledRef.current) {
         try {
-          const results = await detector.detect(video);
-          if (results && results.length > 0 && !barcodeHandledRef.current) {
+          let decoded: { rawValue: string; format: string } | null = null;
+          if (nativeDetector) {
+            const results = await nativeDetector.detect(video);
+            if (results && results.length > 0) {
+              decoded = {
+                rawValue: String(results[0].rawValue ?? '').trim(),
+                format: String(results[0].format ?? 'unknown'),
+              };
+            }
+          }
+          if (!decoded) {
+            decoded = await decodeBarcodeWithZxing(video, zxingReaderRef.current).catch(() => null);
+          }
+          if (decoded && decoded.rawValue && !barcodeHandledRef.current) {
             barcodeHandledRef.current = true;
-            const value = String(results[0].rawValue ?? '').trim();
-            const format = String(results[0].format ?? 'unknown');
+            const value = decoded.rawValue.trim();
+            const format = decoded.format || 'unknown';
             setLastBarcode(value);
             try { navigator.vibrate?.(80); } catch { /* ignore */ }
             if (value && onBarcode) {
@@ -212,7 +261,7 @@ export const CameraScannerScreen = ({
           // Detection errors are transient — keep looping.
         }
       }
-      barcodeLoopRef.current = window.setTimeout(tick, 300) as unknown as number;
+      barcodeLoopRef.current = window.setTimeout(tick, nativeDetector ? 300 : 550) as unknown as number;
     };
     tick();
     return () => {
@@ -230,13 +279,18 @@ export const CameraScannerScreen = ({
     if (capturing) return;
     setCapturing(true);
     try {
-      // Fallback modes just open the OS picker.
-      if (mode === 'gallery' || mode === 'image' || !ready) {
+      // Only the Gallery action opens the OS picker. Shutter should never
+      // unexpectedly launch Gallery just because the camera is still warming up.
+      if (mode === 'gallery') {
         const dataUrl = await captureImageForAI('gallery');
         if (dataUrl) {
           onCapture(dataUrl);
           onClose();
         }
+        return;
+      }
+      if (!ready) {
+        toast.error('Camera not ready yet');
         return;
       }
 
@@ -271,7 +325,13 @@ export const CameraScannerScreen = ({
           onClose();
           return;
         }
-        toast.message('No barcode detected — sending as image');
+        toast.error('No barcode detected. Hold it inside the frame and try again.');
+        return;
+      }
+      if (mode === 'object' && onObjectCount) {
+        onObjectCount(compressed);
+        onClose();
+        return;
       }
       onCapture(compressed);
       onClose();
@@ -282,7 +342,7 @@ export const CameraScannerScreen = ({
     } finally {
       setCapturing(false);
     }
-  }, [capturing, mode, onCapture, onClose, ready]);
+  }, [capturing, mode, onCapture, onClose, onObjectCount, ready]);
 
   const openGallery = useCallback(async () => {
     setCapturing(true);
@@ -391,6 +451,8 @@ export const CameraScannerScreen = ({
                 Scanning for barcode…
                 {lastBarcode ? ` · ${lastBarcode.slice(0, 24)}` : ''}
               </span>
+            ) : mode === 'object' ? (
+              <span>Frame the objects clearly · tap capture to count</span>
             ) : (
               <span>Point at a sticky note or handwritten page · {activeModeLabel}</span>
             )}
@@ -405,12 +467,16 @@ export const CameraScannerScreen = ({
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
       >
         {/* Mode chips */}
-        <div className="flex items-center justify-center gap-2 pb-3 overflow-x-auto scrollbar-none">
+        <div
+          className="flex items-center justify-start gap-2 pb-3 overflow-x-auto overscroll-x-contain touch-pan-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {MODES.map(({ id, label, icon: Icon }) => {
             const active = mode === id;
             return (
               <button
                 key={id}
+                type="button"
                 onClick={() => {
                   setMode(id);
                   if (id === 'gallery') openGallery();
@@ -432,6 +498,7 @@ export const CameraScannerScreen = ({
         {/* Shutter row */}
         <div className="flex items-center justify-between px-2">
           <button
+            type="button"
             onClick={openGallery}
             className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/15 flex items-center justify-center active:scale-95 transition"
             aria-label="Pick from gallery"
@@ -440,6 +507,7 @@ export const CameraScannerScreen = ({
           </button>
 
           <button
+            type="button"
             onClick={handleShutter}
             disabled={capturing}
             className="relative w-[76px] h-[76px] rounded-full flex items-center justify-center active:scale-95 transition"
