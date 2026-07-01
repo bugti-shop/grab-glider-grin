@@ -33,6 +33,9 @@ import {
   Sparkles,
   Plus,
   Trash2,
+  GripVertical,
+  RotateCcw,
+  AlertCircle,
 } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
@@ -1300,42 +1303,136 @@ const ReceiptReviewOverlay = ({
   onConfirm: (edited: {
     merchant: string; total: number; currency: string; date: string;
     category?: string; paymentMethod?: string; tax?: number;
-    items?: Array<{ name: string; qty?: number; unitPrice?: number; lineTotal?: number }>;
+    items?: Array<{ name: string; qty?: number; unitPrice?: number; lineTotal?: number; taxable?: boolean }>;
     html: string; title: string;
   }) => void;
 }) => {
-  type Item = { name: string; qty?: number; unitPrice?: number; lineTotal?: number };
+  type Item = {
+    name: string;
+    qty?: number;
+    unitPrice?: number;
+    lineTotal?: number;   // when set, this overrides qty*unitPrice
+    taxable?: boolean;    // default true
+  };
   const [merchant, setMerchant] = useState('');
   const [total, setTotal] = useState('');
-  const [currency, setCurrency] = useState('');
+  const [totalTouched, setTotalTouched] = useState(false);
+  const [currency, setCurrency] = useState('USD');
   const [date, setDate] = useState('');
   const [category, setCategory] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [tax, setTax] = useState('');
   const [items, setItems] = useState<Item[]>([]);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
 
   // Hydrate from AI result once it arrives.
   useEffect(() => {
     if (!result) return;
     setMerchant(String(result.merchant || ''));
     setTotal(result.total ? String(result.total) : '');
-    setCurrency(String(result.currency || ''));
+    setCurrency(String(result.currency || 'USD').toUpperCase());
     setDate(String(result.date || ''));
     setCategory(String(result.category || ''));
     setPaymentMethod(String(result.paymentMethod || ''));
     setTax(result.tax ? String(result.tax) : '');
-    setItems(Array.isArray(result.items) ? result.items : []);
+    const seeded = Array.isArray(result.items) ? result.items : [];
+    setItems(
+      seeded.map((it: any) => ({
+        name: String(it?.name || ''),
+        qty: it?.qty != null ? Number(it.qty) : 1,
+        unitPrice: it?.unitPrice != null ? Number(it.unitPrice) : 0,
+        lineTotal: it?.lineTotal != null ? Number(it.lineTotal) : undefined,
+        taxable: it?.taxable !== false, // default true
+      })),
+    );
   }, [result]);
 
-  const money = (n: number, ccy?: string) => `${ccy ? ccy + ' ' : ''}${Number(n || 0).toFixed(2)}`;
-  const totalNum = Number(total) || 0;
+  // Line total: explicit override wins, otherwise qty*unitPrice.
+  const lineOf = (it: Item) => {
+    if (it.lineTotal != null && Number.isFinite(it.lineTotal)) return Number(it.lineTotal);
+    return (Number(it.qty) || 0) * (Number(it.unitPrice) || 0);
+  };
+
+  // Currency formatter with graceful fallback if the code isn't a valid ISO 4217 value.
+  const fmt = useMemo(() => {
+    const code = (currency || '').trim().toUpperCase();
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: code || 'USD',
+        currencyDisplay: 'narrowSymbol',
+      });
+    } catch {
+      return {
+        format: (n: number) => `${code ? code + ' ' : ''}${(Number(n) || 0).toFixed(2)}`,
+      } as Intl.NumberFormat;
+    }
+  }, [currency]);
+  const money = (n: number) => fmt.format(Number(n) || 0);
+
+  const subtotal = items.reduce((s, it) => s + lineOf(it), 0);
+  const taxableSubtotal = items.filter((it) => it.taxable !== false).reduce((s, it) => s + lineOf(it), 0);
   const taxNum = Number(tax) || 0;
+  const computedTotal = subtotal + taxNum;
+  const totalNum = totalTouched && total !== '' ? (Number(total) || 0) : computedTotal;
+  const taxRate = taxableSubtotal > 0 ? (taxNum / taxableSubtotal) * 100 : 0;
+  const totalMismatch =
+    totalTouched && total !== '' && Math.abs(totalNum - computedTotal) > 0.01 && subtotal > 0;
+
+  // ---- Validation ----
+  const currencyValid = /^[A-Z]{3}$/.test((currency || '').trim());
+  const dateValid = !date || /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const totalValid = totalNum >= 0 && Number.isFinite(totalNum);
+  const taxValid = taxNum >= 0 && Number.isFinite(taxNum);
+  const itemsValid = items.every(
+    (it) => !((it.qty ?? 0) > 0 || (it.unitPrice ?? 0) > 0 || (it.lineTotal ?? 0) > 0) || (it.name || '').trim().length > 0,
+  );
+  const merchantValid = merchant.trim().length > 0;
+  const errors: string[] = [];
+  if (!merchantValid) errors.push('Merchant is required.');
+  if (!currencyValid) errors.push('Currency must be a 3-letter code (e.g. USD, EUR, PKR).');
+  if (!dateValid) errors.push('Date must be a valid YYYY-MM-DD.');
+  if (!totalValid) errors.push('Total must be a non-negative number.');
+  if (!taxValid) errors.push('Tax must be a non-negative number.');
+  if (!itemsValid) errors.push('Every line with a quantity or price needs a name.');
 
   const updateItem = (i: number, patch: Partial<Item>) => {
     setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   };
-  const addItem = () => setItems((arr) => [...arr, { name: '', qty: 1, unitPrice: 0 }]);
+  const addItem = () =>
+    setItems((arr) => [...arr, { name: '', qty: 1, unitPrice: 0, taxable: true }]);
   const removeItem = (i: number) => setItems((arr) => arr.filter((_, idx) => idx !== i));
+  const clearLineOverride = (i: number) =>
+    setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, lineTotal: undefined } : it)));
+
+  // Drag reorder
+  const reorder = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0) return;
+    setItems((arr) => {
+      const next = arr.slice();
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
+  const onDragStart = (i: number) => (e: React.DragEvent) => {
+    setDragFrom(i);
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', String(i)); } catch {}
+  };
+  const onDragOverItem = (i: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOver !== i) setDragOver(i);
+  };
+  const onDropItem = (i: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragFrom != null) reorder(dragFrom, i);
+    setDragFrom(null);
+    setDragOver(null);
+  };
+  const onDragEnd = () => { setDragFrom(null); setDragOver(null); };
 
   const escapeHtml = (s: string) =>
     String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -1344,32 +1441,40 @@ const ReceiptReviewOverlay = ({
     const rows = items
       .filter((it) => (it.name || '').trim())
       .map((it) => {
-        const qty = Number(it.qty || 1);
+        const qty = Number(it.qty || 0);
         const unit = Number(it.unitPrice || 0);
-        const line = it.lineTotal != null ? Number(it.lineTotal) : qty * unit;
-        return `<tr><td>${escapeHtml(it.name || '')}</td><td style="text-align:right">${qty}</td><td style="text-align:right">${money(unit, currency)}</td><td style="text-align:right"><strong>${money(line, currency)}</strong></td></tr>`;
+        const line = lineOf(it);
+        const taxMark = it.taxable === false ? ' <span title="Non-taxable" style="opacity:.6">(NT)</span>' : '';
+        return `<tr><td>${escapeHtml(it.name || '')}${taxMark}</td><td style="text-align:right">${qty || ''}</td><td style="text-align:right">${unit ? money(unit) : ''}</td><td style="text-align:right"><strong>${money(line)}</strong></td></tr>`;
       })
       .join('');
     const itemsTable = rows
       ? `<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left">Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit</th><th style="text-align:right">Line</th></tr></thead><tbody>${rows}</tbody></table>`
       : '';
+    const summary =
+      `<p>` +
+      `<strong>Subtotal:</strong> ${money(subtotal)}` +
+      (taxNum ? ` · <strong>Tax:</strong> ${money(taxNum)}${taxRate ? ` (${taxRate.toFixed(2)}%)` : ''}` : '') +
+      ` · <strong>Total:</strong> ${money(totalNum)}` +
+      `</p>`;
     return (
       `<h2>${escapeHtml(merchant || 'Receipt')}</h2>` +
-      `<p><strong>Total:</strong> ${money(totalNum, currency)}` +
-      (date ? ` · <strong>Date:</strong> ${escapeHtml(date)}` : '') +
-      (category ? ` · <strong>Category:</strong> ${escapeHtml(category)}` : '') +
+      `<p>` +
+      (date ? `<strong>Date:</strong> ${escapeHtml(date)}` : '') +
+      (category ? `${date ? ' · ' : ''}<strong>Category:</strong> ${escapeHtml(category)}` : '') +
+      (paymentMethod ? `${date || category ? ' · ' : ''}<strong>Paid:</strong> ${escapeHtml(paymentMethod)}` : '') +
       `</p>` +
-      (paymentMethod ? `<p><strong>Paid:</strong> ${escapeHtml(paymentMethod)}</p>` : '') +
-      (taxNum ? `<p><strong>Tax:</strong> ${money(taxNum, currency)}</p>` : '') +
+      summary +
       itemsTable
     );
   };
 
   const handleConfirm = () => {
+    if (errors.length) return;
     onConfirm({
       merchant: merchant.trim(),
       total: totalNum,
-      currency: currency.trim(),
+      currency: currency.trim().toUpperCase(),
       date: date.trim(),
       category: category.trim() || undefined,
       paymentMethod: paymentMethod.trim() || undefined,
@@ -1380,10 +1485,11 @@ const ReceiptReviewOverlay = ({
     });
   };
 
-  const canSave = !loading && !error && (merchant.trim() || totalNum > 0);
+  const canSave = !loading && !error && errors.length === 0 && (merchantValid || totalNum > 0);
 
   const fieldCls =
     'w-full h-9 px-2.5 rounded-lg bg-white/10 border border-white/15 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white/40';
+  const invalidCls = 'border-red-400/60 focus:border-red-400';
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col bg-black text-white">
@@ -1402,7 +1508,7 @@ const ReceiptReviewOverlay = ({
           <div className="absolute bottom-3 left-4 right-4 flex items-center gap-2">
             <Receipt className="h-5 w-5" />
             <div className="text-base font-semibold truncate">
-              {merchant || 'Receipt'} · {money(totalNum, currency)}
+              {merchant || 'Receipt'} · {money(totalNum)}
             </div>
           </div>
         )}
@@ -1422,28 +1528,65 @@ const ReceiptReviewOverlay = ({
 
         <label className="block">
           <span className="text-[11px] text-white/60">Merchant</span>
-          <input className={fieldCls} value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Store name" />
+          <input
+            className={cn(fieldCls, !merchantValid && merchant.length > 0 ? invalidCls : '')}
+            value={merchant}
+            onChange={(e) => setMerchant(e.target.value)}
+            placeholder="Store name"
+          />
         </label>
 
         <div className="grid grid-cols-2 gap-2">
           <label className="block">
             <span className="text-[11px] text-white/60">Total</span>
-            <input className={fieldCls} type="number" inputMode="decimal" step="0.01" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0.00" />
+            <input
+              className={cn(fieldCls, !totalValid ? invalidCls : '')}
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min={0}
+              value={total}
+              onFocus={() => setTotalTouched(true)}
+              onChange={(e) => { setTotalTouched(true); setTotal(e.target.value); }}
+              placeholder={computedTotal ? computedTotal.toFixed(2) : '0.00'}
+            />
           </label>
           <label className="block">
             <span className="text-[11px] text-white/60">Currency</span>
-            <input className={fieldCls} value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} placeholder="USD" maxLength={6} />
+            <input
+              className={cn(fieldCls, !currencyValid ? invalidCls : '')}
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))}
+              placeholder="USD"
+              maxLength={3}
+            />
           </label>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <label className="block">
             <span className="text-[11px] text-white/60">Date</span>
-            <input className={fieldCls} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <input
+              className={cn(fieldCls, !dateValid ? invalidCls : '')}
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
           </label>
           <label className="block">
-            <span className="text-[11px] text-white/60">Tax</span>
-            <input className={fieldCls} type="number" inputMode="decimal" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} placeholder="0.00" />
+            <span className="text-[11px] text-white/60">
+              Tax {taxRate > 0 ? <span className="text-white/40">· {taxRate.toFixed(2)}%</span> : null}
+            </span>
+            <input
+              className={cn(fieldCls, !taxValid ? invalidCls : '')}
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min={0}
+              value={tax}
+              onChange={(e) => setTax(e.target.value)}
+              placeholder="0.00"
+            />
           </label>
         </div>
 
@@ -1458,9 +1601,45 @@ const ReceiptReviewOverlay = ({
           </label>
         </div>
 
+        {/* Live summary */}
+        <div className="rounded-xl bg-white/[0.06] border border-white/10 p-3 text-[12px] space-y-1">
+          <div className="flex justify-between"><span className="text-white/60">Subtotal</span><span className="tabular-nums">{money(subtotal)}</span></div>
+          <div className="flex justify-between">
+            <span className="text-white/60">Tax {taxRate > 0 ? `(${taxRate.toFixed(2)}%)` : ''}</span>
+            <span className="tabular-nums">{money(taxNum)}</span>
+          </div>
+          <div className="flex justify-between font-semibold text-white pt-1 border-t border-white/10 mt-1">
+            <span>Total</span>
+            <span className="tabular-nums">{money(totalNum)}</span>
+          </div>
+          {totalMismatch && (
+            <div className="flex items-start gap-1.5 pt-1.5 text-[11px] text-amber-300">
+              <AlertCircle className="h-3.5 w-3.5 mt-[1px] shrink-0" />
+              <span>
+                Entered total differs from subtotal + tax ({money(computedTotal)}).{' '}
+                <button
+                  type="button"
+                  className="underline decoration-dotted"
+                  onClick={() => { setTotal(computedTotal.toFixed(2)); }}
+                >
+                  Use calculated
+                </button>
+              </span>
+            </div>
+          )}
+        </div>
+
+        {errors.length > 0 && (
+          <div className="rounded-xl bg-amber-500/10 border border-amber-400/30 p-2.5 text-[11px] text-amber-200 space-y-0.5">
+            {errors.map((e, i) => (
+              <div key={i} className="flex items-start gap-1.5"><AlertCircle className="h-3.5 w-3.5 mt-[1px] shrink-0" /><span>{e}</span></div>
+            ))}
+          </div>
+        )}
+
         <div className="pt-1">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] uppercase tracking-wider text-white/60">Items ({items.length})</span>
+            <span className="text-[11px] uppercase tracking-wider text-white/60">Items ({items.length}) · drag to reorder</span>
             <button
               type="button"
               onClick={addItem}
@@ -1471,34 +1650,67 @@ const ReceiptReviewOverlay = ({
           </div>
           <div className="space-y-1.5">
             {items.map((it, i) => {
-              const qty = Number(it.qty || 1);
-              const unit = Number(it.unitPrice || 0);
-              const line = it.lineTotal != null ? Number(it.lineTotal) : qty * unit;
+              const line = lineOf(it);
+              const overridden = it.lineTotal != null;
+              const nameMissing = ((it.qty ?? 0) > 0 || (it.unitPrice ?? 0) > 0 || (it.lineTotal ?? 0) > 0) && !(it.name || '').trim();
+              const isDropTarget = dragOver === i && dragFrom != null && dragFrom !== i;
               return (
-                <div key={i} className="rounded-xl bg-white/5 border border-white/10 p-2 space-y-1.5">
+                <div
+                  key={i}
+                  draggable
+                  onDragStart={onDragStart(i)}
+                  onDragOver={onDragOverItem(i)}
+                  onDrop={onDropItem(i)}
+                  onDragEnd={onDragEnd}
+                  className={cn(
+                    'rounded-xl bg-white/5 border border-white/10 p-2 space-y-1.5 transition',
+                    dragFrom === i && 'opacity-50',
+                    isDropTarget && 'border-primary/70 ring-1 ring-primary/60',
+                  )}
+                >
                   <div className="flex items-center gap-1.5">
+                    <span
+                      className="w-7 h-9 flex items-center justify-center text-white/40 cursor-grab active:cursor-grabbing touch-none"
+                      title="Drag to reorder"
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </span>
                     <input
-                      className={cn(fieldCls, 'flex-1')}
+                      className={cn(fieldCls, 'flex-1', nameMissing && invalidCls)}
                       value={it.name || ''}
                       onChange={(e) => updateItem(i, { name: e.target.value })}
                       placeholder="Item name"
                     />
                     <button
                       type="button"
+                      onClick={() => updateItem(i, { taxable: it.taxable === false })}
+                      className={cn(
+                        'h-9 px-2 rounded-md border text-[10px] font-bold uppercase tracking-wide active:scale-95',
+                        it.taxable === false
+                          ? 'bg-white/5 border-white/15 text-white/50'
+                          : 'bg-primary/20 border-primary/40 text-primary',
+                      )}
+                      title={it.taxable === false ? 'Non-taxable — tap to mark taxable' : 'Taxable — tap to mark non-taxable'}
+                    >
+                      Tax
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => removeItem(i)}
-                      className="w-8 h-8 rounded-md bg-white/10 border border-white/15 flex items-center justify-center active:scale-95"
+                      className="w-8 h-9 rounded-md bg-white/10 border border-white/15 flex items-center justify-center active:scale-95"
                       aria-label="Remove item"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-1.5">
+                  <div className="grid grid-cols-[1fr_1fr_1.1fr] gap-1.5">
                     <input
                       className={fieldCls}
                       type="number"
                       inputMode="decimal"
+                      min={0}
                       value={it.qty ?? ''}
-                      onChange={(e) => updateItem(i, { qty: Number(e.target.value) || 0 })}
+                      onChange={(e) => updateItem(i, { qty: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value) || 0) })}
                       placeholder="Qty"
                     />
                     <input
@@ -1506,12 +1718,34 @@ const ReceiptReviewOverlay = ({
                       type="number"
                       inputMode="decimal"
                       step="0.01"
+                      min={0}
                       value={it.unitPrice ?? ''}
-                      onChange={(e) => updateItem(i, { unitPrice: Number(e.target.value) || 0 })}
+                      onChange={(e) => updateItem(i, { unitPrice: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value) || 0) })}
                       placeholder="Unit"
                     />
-                    <div className={cn(fieldCls, 'flex items-center justify-end text-white/80 font-semibold')}>
-                      {money(line, currency)}
+                    <div className="relative">
+                      <input
+                        className={cn(fieldCls, 'pr-7 text-right font-semibold', overridden && 'border-primary/50 text-primary')}
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min={0}
+                        value={overridden ? String(it.lineTotal) : line.toFixed(2)}
+                        onChange={(e) =>
+                          updateItem(i, { lineTotal: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value) || 0) })
+                        }
+                        title={overridden ? 'Line total override (tap ↻ to recompute from qty × unit)' : 'Auto-calculated · edit to override'}
+                      />
+                      {overridden && (
+                        <button
+                          type="button"
+                          onClick={() => clearLineOverride(i)}
+                          className="absolute inset-y-0 right-1 my-auto h-6 w-6 rounded-md text-white/60 hover:text-white flex items-center justify-center"
+                          title="Reset to qty × unit"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1552,6 +1786,7 @@ const ReceiptReviewOverlay = ({
     </div>
   );
 };
+
 
 /**
  * Pro upsell overlay — shown when a non-Pro user taps a Pro-gated toggle
