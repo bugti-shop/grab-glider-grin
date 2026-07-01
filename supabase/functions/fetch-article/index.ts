@@ -654,8 +654,8 @@ Deno.serve(async (req) => {
       "article:published_time", "og:published_time", "datePublished", "date",
     ]);
 
-    // Extract embeds & links from the pre-Readability DOM.
-    const embeds = extractEmbeds(document as any, base);
+    // Inline embeds into the DOM (preserves order vs. headings/images).
+    inlineEmbeds(document as any, base);
 
     let article: any = null;
     try {
