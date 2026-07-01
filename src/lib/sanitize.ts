@@ -94,6 +94,7 @@ export const sanitizeClippedArticle = (html: string): string => {
       'loading', 'srcset', 'sizes', 'poster', 'controls', 'muted',
       'playsinline', 'autoplay', 'preload',
       'frameborder', 'allow', 'allowfullscreen', 'referrerpolicy',
+      'alt', 'title', 'aria-label', 'data-caption',
     ],
   }) as string;
   // ── Post-sanitize normalization: strip layout traps (floats, absolute
