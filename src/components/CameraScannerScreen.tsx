@@ -308,22 +308,35 @@ export const CameraScannerScreen = ({
 
 
   const handleShutter = useCallback(async () => {
-    if (capturing) return;
+    console.log('[Scanner] shutter fired', { mode, ready, capturing });
+    if (capturing) {
+      console.log('[Scanner] shutter ignored — already capturing');
+      return;
+    }
     setCapturing(true);
     try {
       // Shutter ALWAYS captures the live camera frame. Gallery is only opened
-      // by the explicit Gallery chip or the small gallery button.
-      if (mode === 'gallery') setMode('note');
+      // by the explicit gallery button — never by the shutter.
       if (!ready) {
         toast.error('Camera not ready yet');
+        console.warn('[Scanner] shutter aborted — camera not ready');
         return;
       }
 
       const video = videoRef.current;
       if (!video || video.videoWidth === 0) {
         toast.error('Camera not ready yet');
+        console.warn('[Scanner] shutter aborted — no video frame');
         return;
       }
+
+      // Confirm to the user which mode fired so they can see the shutter worked.
+      const modeLabel =
+        mode === 'barcode' ? 'Barcode' :
+        mode === 'object'  ? 'Objects' :
+        mode === 'image'   ? 'Image'   : 'Scan Note';
+      toast(`📸 Captured · ${modeLabel} mode`, { duration: 1200 });
+
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -340,13 +353,15 @@ export const CameraScannerScreen = ({
         quality: 0.82,
         mimeType: 'image/jpeg',
       }).catch(() => raw);
+      console.log('[Scanner] frame captured', { mode, bytes: compressed.length });
 
       if (mode === 'barcode') {
-        // If native decoder is available, try one more sync decode on this frame.
         const decoded = await decodeBarcodeFromCanvas(canvas).catch(() => null);
         const fallbackDecoded = decoded || await decodeBarcodeWithZxing(canvas, zxingReaderRef.current || createZxingReader()).catch(() => null);
+        console.log('[Scanner] barcode decode result', fallbackDecoded);
         if (fallbackDecoded && onBarcode) {
           setLastBarcode(fallbackDecoded.rawValue);
+          toast.success(`Barcode: ${fallbackDecoded.rawValue.slice(0, 32)}`);
           onBarcode(fallbackDecoded.rawValue, fallbackDecoded.format);
           onClose();
           return;
@@ -355,27 +370,29 @@ export const CameraScannerScreen = ({
         return;
       }
       if (mode === 'object' && onObjectCount) {
-        // Enter review state: freeze the frame, run AI, then show boxes + counts.
+        console.log('[Scanner] entering object-count review');
         setObjReviewFrame(compressed);
         setObjReviewResult(null);
         setObjReviewError(null);
         setObjReviewLoading(true);
         try {
           const result = await onObjectCount(compressed);
+          console.log('[Scanner] object count result', result);
           setObjReviewResult(result);
         } catch (err: any) {
-          console.error('[CameraScannerScreen] object count failed', err);
+          console.error('[Scanner] object count failed', err);
           setObjReviewError(err?.message || 'Could not count objects');
         } finally {
           setObjReviewLoading(false);
         }
         return;
       }
+      console.log('[Scanner] delivering capture to parent');
       onCapture(compressed);
       onClose();
 
     } catch (e) {
-      console.error('[CameraScannerScreen] shutter error', e);
+      console.error('[Scanner] shutter error', e);
       toast.error('Could not capture image');
     } finally {
       setCapturing(false);
@@ -383,10 +400,12 @@ export const CameraScannerScreen = ({
   }, [capturing, mode, onCapture, onClose, onObjectCount, ready]);
 
   const openGallery = useCallback(async () => {
+    console.log('[Scanner] gallery opened via explicit gallery button');
     setCapturing(true);
     try {
       const dataUrl = await captureImageForAI('gallery');
       if (dataUrl) {
+        toast('🖼️ Photo picked from gallery', { duration: 1000 });
         onCapture(dataUrl);
         onClose();
       }
@@ -394,6 +413,7 @@ export const CameraScannerScreen = ({
       setCapturing(false);
     }
   }, [onCapture, onClose]);
+
 
   const activeModeLabel = useMemo(
     () => MODES.find((m) => m.id === mode)?.label ?? '',
