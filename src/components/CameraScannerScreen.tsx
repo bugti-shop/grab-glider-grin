@@ -766,6 +766,77 @@ const CornerBracket = ({
   );
 };
 
+/** Grab a single frame from the live video into a canvas. */
+function captureSingleFrame(video: HTMLVideoElement): HTMLCanvasElement | null {
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+/**
+ * Burst-capture: grab N frames spaced by `spacingMs` and return the sharpest
+ * one. Sharpness = mean squared Laplacian on a downscaled grayscale copy —
+ * cheap, deterministic, and correlates well with motion blur / defocus.
+ */
+async function captureSharpestBurst(
+  video: HTMLVideoElement,
+  count: number,
+  spacingMs: number,
+): Promise<HTMLCanvasElement | null> {
+  const frames: HTMLCanvasElement[] = [];
+  for (let i = 0; i < count; i++) {
+    const c = captureSingleFrame(video);
+    if (c) frames.push(c);
+    if (i < count - 1) await new Promise((r) => setTimeout(r, spacingMs));
+  }
+  if (!frames.length) return null;
+  let best = frames[0];
+  let bestScore = -1;
+  for (const f of frames) {
+    const s = sharpnessScore(f);
+    if (s > bestScore) { bestScore = s; best = f; }
+  }
+  console.log('[Scanner] burst scores', frames.map(sharpnessScore), 'chose', bestScore);
+  return best;
+}
+
+/** Cheap sharpness estimate via variance of a 3x3 Laplacian on grayscale. */
+function sharpnessScore(canvas: HTMLCanvasElement): number {
+  const w = 200;
+  const h = Math.max(1, Math.round((canvas.height / canvas.width) * w));
+  const small = document.createElement('canvas');
+  small.width = w; small.height = h;
+  const sctx = small.getContext('2d');
+  if (!sctx) return 0;
+  sctx.drawImage(canvas, 0, 0, w, h);
+  const data = sctx.getImageData(0, 0, w, h).data;
+  // Grayscale
+  const gray = new Float32Array(w * h);
+  for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+    gray[j] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+  }
+  let sum = 0, sumSq = 0, n = 0;
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      const lap =
+        -gray[i - w - 1] - gray[i - w] - gray[i - w + 1]
+        - gray[i - 1] + 8 * gray[i] - gray[i + 1]
+        - gray[i + w - 1] - gray[i + w] - gray[i + w + 1];
+      sum += lap; sumSq += lap * lap; n++;
+    }
+  }
+  if (!n) return 0;
+  const mean = sum / n;
+  return sumSq / n - mean * mean;
+}
+
+
+
 async function decodeBarcodeFromCanvas(
   canvas: HTMLCanvasElement,
 ): Promise<{ rawValue: string; format: string } | null> {
