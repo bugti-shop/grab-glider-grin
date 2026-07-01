@@ -1130,6 +1130,42 @@ export const TaskDetailPage = ({
           )}
         </div>
 
+        {/* Deadline & Scheduled date (distinct from dueDate) */}
+        {(task.deadline || task.scheduledDate) && (
+          <div className="bg-muted/30 rounded-xl p-4 space-y-2">
+            {task.deadline && (() => {
+              const dl = new Date(task.deadline);
+              const overdue = !task.completed && dl.getTime() < Date.now();
+              const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+              return (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className={`h-4 w-4 ${overdue ? 'text-destructive' : 'text-rose-500'}`} />
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t('taskDetail.deadline', { defaultValue: 'Deadline' })}</p>
+                      <p className={`text-sm font-medium ${overdue ? 'text-destructive' : ''}`}>
+                        {format(dl, 'EEE, MMM d yyyy • h:mm a')}
+                        <span className="ml-1 text-xs text-muted-foreground">({tz})</span>
+                        {overdue && <span className="ml-2 text-[10px] uppercase tracking-wide text-destructive">Overdue</span>}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            {task.scheduledDate && (
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-violet-500" />
+                <div>
+                  <p className="text-xs text-muted-foreground">{t('taskDetail.scheduled', { defaultValue: 'Scheduled to work on' })}</p>
+                  <p className="text-sm font-medium">{format(new Date(task.scheduledDate), 'EEE, MMM d • h:mm a')}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+
         {/* Deadline Escalation Rules */}
         {task.dueDate && (
           <div className="bg-muted/30 rounded-xl p-4">
