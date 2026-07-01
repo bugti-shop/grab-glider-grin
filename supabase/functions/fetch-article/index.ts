@@ -49,21 +49,58 @@ const LAZY_SRCSET_ATTRS = [
   "data-original-srcset",
 ];
 
+// Stricter allowlist — only embeds that render reliably inside a sandboxed
+// note view without third-party scripts. Anything outside this list gets
+// downgraded to a link-card fallback (thumbnail + title + open link).
 const EMBED_HOST_ALLOWLIST = [
   "youtube.com", "youtube-nocookie.com", "youtu.be",
   "vimeo.com", "player.vimeo.com",
-  "twitter.com", "x.com", "platform.twitter.com",
-  "instagram.com",
-  "tiktok.com",
   "soundcloud.com", "w.soundcloud.com",
-  "spotify.com", "open.spotify.com",
-  "dailymotion.com",
+  "open.spotify.com",
   "loom.com",
   "wistia.com", "fast.wistia.net",
   "codepen.io",
-  "gist.github.com", "github.com",
   "codesandbox.io",
 ];
+
+function faviconFor(host: string): string {
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=128`;
+}
+
+function youtubeThumb(src: string): string | null {
+  try {
+    const u = new URL(src);
+    const host = u.hostname.replace(/^www\./, "");
+    let id = "";
+    if (host === "youtu.be") id = u.pathname.slice(1);
+    else if (host.endsWith("youtube.com") || host.endsWith("youtube-nocookie.com")) {
+      id = u.searchParams.get("v") || u.pathname.split("/").filter(Boolean).pop() || "";
+    }
+    if (id && /^[A-Za-z0-9_-]{6,}$/.test(id)) return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  } catch { /* ignore */ }
+  return null;
+}
+
+function vimeoThumb(src: string): string | null {
+  // Vimeo needs an API call for real thumbs; skip — favicon fallback wins.
+  return null;
+}
+
+function embedFallback(src: string, label: string, posterHint?: string): string {
+  let host = "";
+  try { host = new URL(src).hostname.replace(/^www\./, ""); } catch { return ""; }
+  const thumb = posterHint || youtubeThumb(src) || vimeoThumb(src) || faviconFor(host);
+  const safeLabel = (label || host).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return (
+    `<p><a href="${src}" target="_blank" rel="noopener noreferrer" ` +
+    `style="display:flex;gap:12px;align-items:center;padding:10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;text-decoration:none;color:inherit">` +
+    `<img src="${thumb}" alt="" referrerpolicy="no-referrer" style="width:96px;height:64px;object-fit:cover;border-radius:4px;flex-shrink:0" />` +
+    `<span style="display:flex;flex-direction:column;gap:2px;min-width:0">` +
+    `<strong style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeLabel}</strong>` +
+    `<span style="font-size:12px;opacity:0.7">${host} · Open embed ↗</span>` +
+    `</span></a></p>`
+  );
+}
 
 function absolutize(url: string, base: string): string {
   try {
@@ -213,12 +250,16 @@ function extractEmbeds(doc: Document, base: string): string[] {
     const src = el.getAttribute("src");
     if (!src) return;
     const abs = absolutize(src, base);
-    if (!isEmbedAllowed(abs)) return;
+    const title = (el.getAttribute("title") || "Embedded content").replace(/"/g, "&quot;");
+    if (!isEmbedAllowed(abs)) {
+      // Unsupported embed → link-card fallback so users still get a click-through.
+      push(embedFallback(abs, title), abs);
+      return;
+    }
     const w = el.getAttribute("width") || "560";
     const h = el.getAttribute("height") || "315";
-    const title = (el.getAttribute("title") || "Embedded content").replace(/"/g, "&quot;");
     push(
-      `<p><iframe src="${abs}" width="${w}" height="${h}" title="${title}" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></p>`,
+      `<p><iframe src="${abs}" width="${w}" height="${h}" title="${title}" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"></iframe></p>`,
       abs,
     );
   });
@@ -234,6 +275,12 @@ function extractEmbeds(doc: Document, base: string): string[] {
     });
     const key = src || sources[0] || poster || "";
     if (!key) return;
+    const hasPlayable = !!src || sources.length > 0;
+    if (!hasPlayable) {
+      // No playable source (DRM / blob-only). Emit thumbnail fallback.
+      push(embedFallback(absolutize(key, base), "Video", poster ? absolutize(poster, base) : undefined), key);
+      return;
+    }
     push(
       `<p><video controls${poster ? ` poster="${absolutize(poster, base)}"` : ""}${src ? ` src="${absolutize(src, base)}"` : ""} style="max-width:100%">${sources.join("")}</video></p>`,
       key,
