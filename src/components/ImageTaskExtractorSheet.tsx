@@ -92,10 +92,31 @@ export const ImageTaskExtractorSheet = ({
       setIsExtracting(false);
       setHasRun(false);
       setShowCamera(false);
+      setPhase('idle');
+      setErrorLabel(null);
       captureLockRef.current = false;
       releaseAllAiLocks();
     }
   }, [isOpen]);
+
+  const handleBarcode = (value: string, format: string) => {
+    if (!value) return;
+    const safe = value.trim();
+    onAddTasks([
+      {
+        text: `Scanned ${format.replace(/_/g, ' ')}: ${safe}`,
+        priority: 'none',
+        repeatType: 'none',
+        folderId: currentFolderId || undefined,
+        sectionId: currentSectionId || undefined,
+      } as any,
+    ]);
+    toast.success(t('imageExtract.barcodeAdded', 'Barcode added as task'));
+    setShowCamera(false);
+    onClose();
+  };
+
+
 
   const runCapture = async () => {
     if (captureLockRef.current) return;
