@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Code, Link as LinkIcon, MessageSquare } from 'lucide-react';
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Code, Link as LinkIcon, MessageSquare, Wand2 } from 'lucide-react';
 
 interface BubbleMenuProps {
   editorRef: React.RefObject<HTMLDivElement>;
-  onCommand: (cmd: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'link' | 'comment') => void;
+  onCommand: (cmd: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'link' | 'comment' | 'markdown') => void;
 }
 
 export const BubbleMenu = ({ editorRef, onCommand }: BubbleMenuProps) => {
