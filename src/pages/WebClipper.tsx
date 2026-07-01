@@ -199,6 +199,7 @@ const WebClipper = () => {
       let articleHtml = '';
       let articleEmbeds: string[] = [];
       let articleLinks: Array<{ href: string; text: string }> = [];
+      let articleIsFallback = false;
       let fetchFailure: { code: string; status?: number; message?: string } | null = null;
       const shouldFetchFull =
         !attachment &&
@@ -221,12 +222,13 @@ const WebClipper = () => {
             fetchFailure = { code: String(data.code || 'upstream_error'), status: data.status, message: String(data.error) };
           } else if (data) {
             articleTitle = String(data.title || '').trim();
-            articleByline = String(data.byline || '').trim();
+            articleByline = String(data.author || data.byline || '').trim();
             articleSiteName = String(data.siteName || '').trim();
             articleLeadImage = String(data.leadImage || '').trim();
             articleExcerpt = String(data.excerpt || '').trim();
             articlePublished = String(data.publishedTime || '').trim();
-            articleHtml = String(data.content || '').trim();
+            articleHtml = String(data.contentHtml || data.content || '').trim();
+            articleIsFallback = data.fallback === true;
             articleEmbeds = Array.isArray(data.embeds) ? data.embeds.filter((x: unknown) => typeof x === 'string') : [];
             articleLinks = Array.isArray(data.importantLinks)
               ? data.importantLinks.filter((l: any) => l && typeof l.href === 'string' && typeof l.text === 'string')
