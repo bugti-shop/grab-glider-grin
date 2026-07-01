@@ -37,8 +37,6 @@ import {
   RotateCcw,
   AlertCircle,
 } from 'lucide-react';
-import { BrowserMultiFormatReader } from '@zxing/browser';
-import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { captureImageForAI } from '@/utils/imageCaptureForAI';
@@ -131,30 +129,11 @@ const MODES: Array<{ id: ScannerMode; label: string; icon: React.ComponentType<{
   { id: 'gallery', label: 'Gallery', icon: ImageIcon },
 ];
 
-const BARCODE_FORMATS = [
-  BarcodeFormat.QR_CODE,
-  BarcodeFormat.EAN_13,
-  BarcodeFormat.EAN_8,
-  BarcodeFormat.CODE_128,
-  BarcodeFormat.CODE_39,
-  BarcodeFormat.CODE_93,
-  BarcodeFormat.UPC_A,
-  BarcodeFormat.UPC_E,
-  BarcodeFormat.ITF,
-  BarcodeFormat.PDF_417,
-  BarcodeFormat.AZTEC,
-  BarcodeFormat.DATA_MATRIX,
-];
+// Barcode mode removed; keep no-op stubs so any residual references stay type-safe.
+const BARCODE_FORMATS: any[] = [];
+type BrowserMultiFormatReader = any;
+const createZxingReader = (): BrowserMultiFormatReader | null => null;
 
-const createZxingReader = () => {
-  const hints = new Map();
-  hints.set(DecodeHintType.POSSIBLE_FORMATS, BARCODE_FORMATS);
-  hints.set(DecodeHintType.TRY_HARDER, true);
-  return new BrowserMultiFormatReader(hints, {
-    delayBetweenScanAttempts: 180,
-    delayBetweenScanSuccess: 500,
-  });
-};
 
 export const CameraScannerScreen = ({
   isOpen,
@@ -977,7 +956,7 @@ async function decodeBarcodeWithZxing(
   if (!rawValue) return null;
   const barcodeFormat = result.getBarcodeFormat?.();
   const format = typeof barcodeFormat === 'number'
-    ? String((BarcodeFormat as any)[barcodeFormat] || barcodeFormat).toLowerCase()
+    ? String(barcodeFormat).toLowerCase()
     : String(barcodeFormat || 'unknown');
   return { rawValue, format };
 }
