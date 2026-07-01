@@ -559,16 +559,21 @@ export const CameraScannerScreen = ({
   );
 
   const selectScannerMode = useCallback((id: ScannerMode, label: string, locked: boolean) => {
-    console.log('[Scanner] mode selected', id);
+    console.log('[Scanner] mode selected →', id, { label, locked });
     if (locked) {
+      toast.info(`${label} is a Pro feature`, { duration: 1200 });
       requirePro('receipt');
       return;
     }
-    if (modeRef.current === id) return;
+    if (modeRef.current === id) {
+      toast(`Already in ${label}`, { duration: 700 });
+      return;
+    }
     modeRef.current = id;
     setMode(id);
-    toast(`Mode: ${label}`, { duration: 900 });
+    toast.success(`Mode: ${label}`, { duration: 900 });
   }, [requirePro]);
+
 
   // NOTE: Previously we called e.stopPropagation() during the CAPTURE phase on
   // the overlay. That silently killed every child button's onPointerDown /
