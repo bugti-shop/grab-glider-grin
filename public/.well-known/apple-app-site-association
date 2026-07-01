@@ -7,7 +7,8 @@
         "components": [
           { "/": "/webclipper*", "comment": "Deep-link clipper into the app" },
           { "/": "/r/*", "comment": "Affiliate / referral links" },
-          { "/": "/clip*" }
+          { "/": "/clip*" },
+          { "/": "/p/*", "comment": "Published notes — open read-only viewer inside the app" }
         ]
       }
     ]
