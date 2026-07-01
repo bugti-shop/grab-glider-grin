@@ -467,6 +467,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     setRunning(false);
     setRemaining(prefs.durationMin * 60);
     noise.stop();
+    void hideFocusOngoing();
   };
 
   // ---- Fullscreen ---------------------------------------------------------
