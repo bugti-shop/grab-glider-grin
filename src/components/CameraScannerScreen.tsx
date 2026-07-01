@@ -33,6 +33,9 @@ import {
   Sparkles,
   Plus,
   Trash2,
+  GripVertical,
+  RotateCcw,
+  AlertCircle,
 } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
