@@ -5,9 +5,10 @@ import { Note } from '@/types/note';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIcon, FileType2, AlertTriangle, Download, X } from 'lucide-react';
+import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIcon, FileType2, AlertTriangle, Download, X, Save, Pencil } from 'lucide-react';
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,6 +49,12 @@ const WebClipper = () => {
   const abortRef = useRef<AbortController | null>(null);
   const canceledRef = useRef(false);
 
+  // Editable preview state — populated by prepareClip(), committed by commitClip().
+  const [previewReady, setPreviewReady] = useState(false);
+  const [previewTitle, setPreviewTitle] = useState('');
+  const [previewHtml, setPreviewHtml] = useState('');
+  const contentEditorRef = useRef<HTMLDivElement>(null);
+
   // Sanitize incoming params (URL ?title=… &url=… &content=… &selection=… &mode=…).
   // The Share-intent hook and the desktop browser extension both hit this same route.
   const title = sanitizeParam(searchParams.get('title'), MAX_LENGTHS.title) || 'Untitled Clip';
@@ -60,14 +67,14 @@ const WebClipper = () => {
     rawAttachmentType === 'image' || rawAttachmentType === 'pdf' ? rawAttachmentType : null;
   const initialMode = parseClipMode(searchParams.get('mode'));
 
-  // Explicit mode OR an attachment payload auto-saves immediately (no picker).
+  // Explicit mode OR an attachment payload auto-prepares immediately (no picker).
   const explicitMode = searchParams.has('mode') || !!attachment;
   const [mode, setMode] = useState<ClipMode>(initialMode);
   const [picking, setPicking] = useState(!explicitMode);
 
   useEffect(() => {
-    if (!picking && (title || url || content || selection || attachment)) {
-      void handleSaveClip(mode);
+    if (!picking && !previewReady && (title || url || content || selection || attachment)) {
+      void prepareClip(mode);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picking]);
@@ -106,7 +113,11 @@ const WebClipper = () => {
     setSaving(false);
   };
 
-  const handleSaveClip = async (clipMode: ClipMode) => {
+  /**
+   * Fetch + assemble the clip and hand it to the editable preview UI.
+   * Does NOT save to the DB — commitClip() does that when the user hits Save.
+   */
+  const prepareClip = async (clipMode: ClipMode) => {
     setSaving(true);
     setError(null);
     canceledRef.current = false;
@@ -335,30 +346,13 @@ const WebClipper = () => {
       }
 
 
-      const newNote: Note = {
-        id: crypto.randomUUID(),
-        type: 'regular',
-        title: finalTitle,
-        content: noteContent,
-        voiceRecordings: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      setStage('saving');
-      setProgressLabel(t('webClipper.stageSaving', 'Saving to notes…'));
-      const existingNotes = await loadNotesFromDB();
-      await saveNotesToDB([newNote, ...existingNotes]);
-
-      setSaved(true);
+      // Hand off to the editable preview — user can tweak title + content
+      // before we persist. Nothing hits the DB until commitClip() runs.
+      setPreviewTitle(finalTitle);
+      setPreviewHtml(noteContent);
+      setPreviewReady(true);
       setStage('idle');
       setProgress(null);
-      toast({
-        title: t('toasts.webClipSaved', 'Web clip saved'),
-        description: t('toasts.clipSavedDesc', { title, defaultValue: `Saved "${title}" to your notes` }),
-      });
-
-      setTimeout(() => navigate('/notesdashboard'), 1200);
     } catch (error) {
       if (canceledRef.current || (error as Error)?.name === 'AbortError') {
         failWith(
@@ -366,7 +360,7 @@ const WebClipper = () => {
           'webClipper.canceledDesc', 'Stopped before the note was saved.',
         );
       } else {
-        console.error('Error saving clip:', error);
+        console.error('Error preparing clip:', error);
         failWith(
           'toasts.errorSavingClip', 'Could not save clip',
           'toasts.somethingWentWrong', 'Something went wrong',
@@ -378,9 +372,51 @@ const WebClipper = () => {
     }
   };
 
+  /**
+   * Persist the (possibly-edited) preview to the notes DB.
+   * Reads the live HTML from the contentEditable div so any user edits
+   * — including deletes, re-orders, and inline tweaks — are captured.
+   */
+  const commitClip = async () => {
+    try {
+      setSaving(true);
+      setStage('saving');
+      setProgressLabel(t('webClipper.stageSaving', 'Saving to notes…'));
+      const liveHtml = contentEditorRef.current?.innerHTML ?? previewHtml;
+      const cleanHtml = sanitizeClippedArticle(liveHtml);
+      const cleanTitle = (previewTitle || 'Untitled Clip').substring(0, MAX_LENGTHS.title);
+      const newNote: Note = {
+        id: crypto.randomUUID(),
+        type: 'regular',
+        title: cleanTitle,
+        content: cleanHtml,
+        voiceRecordings: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const existingNotes = await loadNotesFromDB();
+      await saveNotesToDB([newNote, ...existingNotes]);
+      setSaved(true);
+      setStage('idle');
+      toast({
+        title: t('toasts.webClipSaved', 'Web clip saved'),
+        description: t('toasts.clipSavedDesc', { title: cleanTitle, defaultValue: `Saved "${cleanTitle}" to your notes` }),
+      });
+      setTimeout(() => navigate('/notesdashboard'), 900);
+    } catch (err) {
+      console.error('Error saving clip:', err);
+      failWith(
+        'toasts.errorSavingClip', 'Could not save clip',
+        'toasts.somethingWentWrong', 'Something went wrong',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-background flex items-start sm:items-center justify-center p-3 sm:p-4">
+      <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
             {saving ? (
@@ -518,7 +554,7 @@ const WebClipper = () => {
                       type="button"
                       size="sm"
                       variant="secondary"
-                      onClick={() => { setError(null); void handleSaveClip(mode); }}
+                      onClick={() => { setError(null); void prepareClip(mode); }}
                     >
                       <Loader2 className="h-3.5 w-3.5 mr-1.5" />
                       {t('webClipper.retry', 'Try again')}
@@ -552,7 +588,52 @@ const WebClipper = () => {
             </div>
           )}
 
-          {/* Mode picker — shown when no explicit ?mode= param was given. */}
+          {/* Editable preview — user reviews & tweaks EVERYTHING before saving. */}
+          {previewReady && !saved && (
+            <div className="space-y-3 pt-2 border-t border-border">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Pencil className="h-3.5 w-3.5" />
+                {t('webClipper.previewHeading', 'Review & edit your clip')}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('webClipper.previewTitleLabel', 'Title')}
+                </label>
+                <Input
+                  value={previewTitle}
+                  onChange={(e) => setPreviewTitle(e.target.value)}
+                  maxLength={MAX_LENGTHS.title}
+                  className="text-base font-semibold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t('webClipper.previewContentLabel', 'Content (fully editable — tap to change anything)')}
+                </label>
+                <div
+                  ref={contentEditorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  className="prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[55vh] overflow-y-auto rounded-lg border border-input bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  dangerouslySetInnerHTML={{ __html: previewHtml }}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {t('webClipper.previewHint', 'Everything the clipper found — images, videos, links, text — is above. Delete or edit anything before saving.')}
+                </p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button onClick={commitClip} disabled={saving} className="flex-1">
+                  <Save className="h-4 w-4 mr-1.5" />
+                  {t('webClipper.saveToNotes', 'Save to notes')}
+                </Button>
+                <Button variant="outline" onClick={() => navigate(-1)} disabled={saving}>
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+
           {picking && !saved && (
             <div className="space-y-2 pt-2">
               <p className="text-sm font-medium text-muted-foreground">

@@ -42,6 +42,10 @@ interface TodaySheetsProps {
   isInputOpen: boolean;
   onCloseInput: () => void;
   onAddTask: (task: Omit<TodoItem, 'id' | 'completed'>) => void;
+  /** When true, the task input sheet cannot be dismissed by tapping the
+   *  backdrop — used in the launcher-widget quick-add flow so accidental
+   *  taps don't kill the session while the user is still adding tasks. */
+  preventInputBackdropClose?: boolean;
   folders: Folder[];
   selectedFolderId: string | null;
   onCreateFolder: (name: string, color: string) => void;
@@ -182,7 +186,7 @@ export const TodaySheets = (props: TodaySheetsProps) => {
 
   return (
     <>
-      <TaskInputSheet isOpen={props.isInputOpen} onClose={props.onCloseInput} onAddTask={props.onAddTask} folders={props.folders} selectedFolderId={props.selectedFolderId} onCreateFolder={props.onCreateFolder} sections={props.sections} selectedSectionId={props.inputSectionId} />
+      <TaskInputSheet isOpen={props.isInputOpen} onClose={props.onCloseInput} onAddTask={props.onAddTask} folders={props.folders} selectedFolderId={props.selectedFolderId} onCreateFolder={props.onCreateFolder} sections={props.sections} selectedSectionId={props.inputSectionId} preventBackdropClose={props.preventInputBackdropClose} />
       <TaskDetailPage 
         isOpen={!!props.selectedTask} 
         task={props.selectedTask} 
