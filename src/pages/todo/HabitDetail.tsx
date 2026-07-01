@@ -36,6 +36,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { toast } from 'sonner';
 import { HabitAmountCounter } from '@/components/habits/HabitAmountCounter';
 import { HabitReflectionSheet } from '@/components/habits/HabitReflectionSheet';
+import { getActivePause, pauseHabit, endActivePause, pauseLabel } from '@/utils/habitPause';
+import { HabitPauseReason } from '@/types/habit';
 import {
   readFocus, writeFocus, clearFocus,
   setActiveFocus, clearActiveFocus, cleanupStaleFocusKeys,
