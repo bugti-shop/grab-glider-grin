@@ -37,9 +37,8 @@ export default function WidgetQueueCard() {
   const drainNow = async () => {
     setBusy(true);
     try {
-      const mod = await import('@/utils/widgetDataSync');
-      const mgr = (mod as any).default || (mod as any).WidgetDataSyncManager?.getInstance?.();
-      await mgr?.forceDrainPendingNewTasks?.();
+      const { widgetDataSync } = await import('@/utils/widgetDataSync');
+      await widgetDataSync.forceDrainPendingNewTasks();
       setLastDrained(Date.now());
       await refresh();
     } finally { setBusy(false); }
