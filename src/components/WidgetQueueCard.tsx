@@ -17,12 +17,9 @@ export default function WidgetQueueCard() {
 
   const refresh = useCallback(async () => {
     try {
-      const mod = await import('@/utils/widgetDataSync');
-      const mgr = (mod as any).default || (mod as any).WidgetDataSyncManager?.getInstance?.();
-      if (mgr?.peekPendingNewTasks) {
-        const q = await mgr.peekPendingNewTasks();
-        setQueue(q || []);
-      }
+      const { widgetDataSync } = await import('@/utils/widgetDataSync');
+      const q = await widgetDataSync.peekPendingNewTasks();
+      setQueue(q || []);
     } catch { /* not native or import failed */ }
   }, []);
 
