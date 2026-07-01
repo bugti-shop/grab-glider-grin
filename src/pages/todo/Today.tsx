@@ -250,19 +250,22 @@ const Today = () => {
   } = state;
 
   // Widget deep-link: ?add=1 → auto-open the task input sheet.
-  // Re-runs on every search change so tapping a different widget while the
-  // page is already mounted still triggers the action.
+  // ?widget=1 marks this as a launcher-widget flow, so closing the sheet
+  // (either after saving or by dismissing) minimizes the app back to the
+  // launcher instead of leaving the user parked inside Flowist.
+  const widgetModeRef = useRef(false);
   useEffect(() => {
     const checkAddParam = () => {
       const params = new URLSearchParams(window.location.search);
       if (params.get('add') !== '1') return;
+      if (params.get('widget') === '1') widgetModeRef.current = true;
       setIsInputOpen(true);
       params.delete('add');
+      params.delete('widget');
       const qs = params.toString();
       window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
     };
     checkAddParam();
-    // Cold-start safety: widget pending-path may drain AFTER this mount.
     const t1 = window.setTimeout(checkAddParam, 250);
     const t2 = window.setTimeout(checkAddParam, 800);
     window.addEventListener('popstate', checkAddParam);
