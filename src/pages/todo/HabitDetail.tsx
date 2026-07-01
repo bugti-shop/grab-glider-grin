@@ -15,7 +15,7 @@ import {
 import {
   ArrowLeft, MoreVertical, ChevronLeft, ChevronRight,
   CheckCircle2, CalendarCheck, Percent, Activity, Trash2, Check, Share2, ChevronUp,
-  Pencil, Target, Archive, NotebookPen,
+  Pencil, Target, Archive, NotebookPen, Palmtree, X as XIcon,
 } from 'lucide-react';
 
 import { m as motion, AnimatePresence } from 'framer-motion';
