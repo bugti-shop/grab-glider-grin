@@ -20,6 +20,7 @@
  *                       to the original startDate offset.
  */
 import { Habit } from '@/types/habit';
+import { isHabitPausedOn } from '@/utils/habitPause';
 import { addDays, differenceInCalendarDays, format, parseISO, startOfDay, subDays } from 'date-fns';
 
 const toKey = (d: Date) => format(d, 'yyyy-MM-dd');
