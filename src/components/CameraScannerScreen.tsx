@@ -658,19 +658,8 @@ export const CameraScannerScreen = ({
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Starting camera…
               </span>
-            ) : mode === 'barcode' && !barcodeSupported ? (
-              <span className="text-white/90">
-                Barcode scanning not supported here — tap shutter to try one frame
-              </span>
-            ) : mode === 'barcode' ? (
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Scanning for barcode…
-                {lastBarcode ? ` · ${lastBarcode.slice(0, 24)}` : ''}
-              </span>
-            ) : mode === 'object' ? (
-              <span>Frame the objects clearly · tap capture to count</span>
             ) : (
+
               <span>Point at a sticky note or handwritten page · {activeModeLabel}</span>
             )}
           </div>
