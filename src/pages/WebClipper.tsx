@@ -617,7 +617,7 @@ const WebClipper = () => {
                   ref={contentEditorRef}
                   contentEditable
                   suppressContentEditableWarning
-                  className="prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[55vh] overflow-y-auto rounded-lg border border-input bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[55vh] overflow-y-auto rounded-lg border border-input bg-background p-4 focus:outline-none focus:ring-2 focus:ring-ring"
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
                 <p className="text-[11px] text-muted-foreground">

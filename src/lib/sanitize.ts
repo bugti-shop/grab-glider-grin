@@ -87,7 +87,7 @@ export const sanitizeForDisplay = (html: string): string => {
  * players and lazy-loaded imagery in the saved note.
  */
 export const sanitizeClippedArticle = (html: string): string => {
-  return DOMPurify.sanitize(html, {
+  const clean = DOMPurify.sanitize(html, {
     ...RICH_TEXT_CONFIG,
     ADD_TAGS: ['iframe', 'video', 'figure', 'figcaption', 'picture'],
     ADD_ATTR: [
@@ -96,6 +96,70 @@ export const sanitizeClippedArticle = (html: string): string => {
       'frameborder', 'allow', 'allowfullscreen', 'referrerpolicy',
     ],
   }) as string;
+  // ── Post-sanitize normalization: strip layout traps (floats, absolute
+  // positioning, tiny fixed widths) that break the reader view — this is
+  // what causes the broken column-of-single-letters wrapping around orphan
+  // floated images. Also flatten empty placeholder blocks left behind by
+  // lazy-loaders and give every clip a stable `.evernote-clip` shell.
+  try {
+    if (typeof window === 'undefined' || !clean) return clean;
+    const doc = new DOMParser().parseFromString(`<div id="__root">${clean}</div>`, 'text/html');
+    const root = doc.getElementById('__root');
+    if (!root) return clean;
+
+    const KILL_STYLE = /(?:^|;)\s*(?:float|position|transform|clip|clip-path|z-index|top|left|right|bottom|max-height|min-width|min-height|columns|column-count|writing-mode)\s*:[^;]+/gi;
+    const KILL_WIDTH = /(?:^|;)\s*(?:width|max-width)\s*:[^;]+/gi;
+
+    root.querySelectorAll<HTMLElement>('*').forEach((el) => {
+      const s = el.getAttribute('style');
+      if (s) {
+        let next = s.replace(KILL_STYLE, '');
+        if (!/^(IMG|VIDEO|IFRAME|PICTURE)$/i.test(el.tagName)) next = next.replace(KILL_WIDTH, '');
+        next = next.replace(/^\s*;+/, '').trim();
+        if (next) el.setAttribute('style', next);
+        else el.removeAttribute('style');
+      }
+      if (el.hasAttribute('align')) el.removeAttribute('align');
+      if (!/^(IMG|VIDEO|IFRAME|PICTURE|TABLE|TD|TH)$/i.test(el.tagName)) {
+        el.removeAttribute('width');
+        el.removeAttribute('height');
+      }
+    });
+
+    root.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
+      img.removeAttribute('width');
+      img.removeAttribute('height');
+      img.setAttribute('loading', 'lazy');
+      img.setAttribute('referrerpolicy', 'no-referrer');
+      const prev = img.getAttribute('style') || '';
+      img.setAttribute(
+        'style',
+        `${prev};display:block;max-width:100%;height:auto;margin:16px auto;border-radius:8px;`.replace(/^;/, ''),
+      );
+    });
+
+    root.querySelectorAll<HTMLElement>('div,span,section,aside').forEach((el) => {
+      const hasMedia = el.querySelector('img,video,iframe,picture,svg,audio');
+      const text = (el.textContent || '').trim();
+      if (!hasMedia && text.length === 0) el.remove();
+    });
+
+    root.querySelectorAll<SVGElement>('svg').forEach((svg) => {
+      const w = parseInt(svg.getAttribute('width') || '0', 10);
+      const h = parseInt(svg.getAttribute('height') || '0', 10);
+      if (w && h && w < 24 && h < 24) svg.remove();
+    });
+
+    if (!root.querySelector(':scope > .evernote-clip')) {
+      const shell = doc.createElement('div');
+      shell.className = 'evernote-clip';
+      while (root.firstChild) shell.appendChild(root.firstChild);
+      root.appendChild(shell);
+    }
+    return root.innerHTML;
+  } catch {
+    return clean;
+  }
 };
 
 /**
