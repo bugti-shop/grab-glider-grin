@@ -11,7 +11,7 @@ import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIco
 import { loadNotesFromDB, saveNotesToDB } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { sanitizeForDisplay } from '@/lib/sanitize';
+import { sanitizeForDisplay, sanitizeClippedArticle } from '@/lib/sanitize';
 import {
   MAX_LENGTHS,
   type ClipMode,
