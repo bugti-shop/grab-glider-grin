@@ -57,7 +57,15 @@ const preloadNotesDashboardPage = () => import("./pages/Index");
 const Today = lazy(preloadTodayPage);
 
 const Index = lazy(preloadNotesDashboardPage);
-void preloadTodayPage();
+// Skip preloading the Today page chunk when we're cold-booting the /quick-add
+// overlay — the widget flow never navigates there and every extra chunk fetch
+// pushes the sheet's first paint back.
+const __IS_QUICK_ADD_BOOT__ =
+  typeof window !== 'undefined' && window.location.pathname === '/quick-add';
+if (!__IS_QUICK_ADD_BOOT__) {
+  void preloadTodayPage();
+}
+
 
 // Lazy load everything else - they load in background after first paint
 const Notes = lazy(() => import("./pages/Notes"));
@@ -87,7 +95,11 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding"));
 const Landing = lazy(() => import("./pages/Landing"));
 const PremiumUnlock = lazy(() => import("./pages/PremiumUnlock"));
-const QuickAdd = lazy(() => import("./pages/QuickAdd"));
+// Eager import: /quick-add is the sole route rendered inside the Android
+// widget overlay WebView. Lazy-loading it would add a network round-trip on
+// cold-open — the exact metric we're optimising here.
+import QuickAdd from "./pages/QuickAdd";
+
 
 
 
@@ -900,23 +912,77 @@ const DeferredSyncInit = () => {
 
  
 
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <LazyMotion features={domAnimation}>
-        <TooltipProvider>
-          <GoogleAuthProvider>
-            <DriveSyncBootstrap />
-            <NotesProvider>
-              <SubscriptionProvider>
-                <AppContent />
-              </SubscriptionProvider>
-            </NotesProvider>
-          </GoogleAuthProvider>
-        </TooltipProvider>
-      </LazyMotion>
-    </QueryClientProvider>
-  </ErrorBoundary>
-);
+/**
+ * Ultra-lean shell used ONLY when the app is cold-booted at /quick-add inside
+ * the Android widget-overlay WebView. Skips DriveSyncBootstrap, GoogleAuth,
+ * NotesProvider, useCloudSync, onboarding checks, landing gate, all overlays,
+ * the router, and the DesktopSidebar — none of which the Quick-Add sheet
+ * needs. Cuts cold-open TTI dramatically (measured client-side and logged as
+ * `[quick-add] cold-open Xms` below).
+ */
+const QuickAddShell = () => {
+  useEffect(() => {
+    try {
+      const nav = performance.getEntriesByType('navigation')[0] as
+        | PerformanceNavigationTiming
+        | undefined;
+      const startedAt = nav?.startTime ?? 0;
+      // Two RAFs guarantee we log AFTER the first real paint of the sheet.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const ms = Math.round(performance.now() - startedAt);
+          try {
+            performance.mark('quick-add:first-paint');
+            (window as unknown as { __quickAddColdMs?: number }).__quickAddColdMs = ms;
+          } catch {}
+          // Log with a stable tag so `adb logcat | grep quick-add` picks it up.
+          console.log(`[quick-add] cold-open ${ms}ms`);
+        });
+      });
+    } catch {}
+  }, []);
+  return <QuickAdd />;
+};
+
+const App = () => {
+  // Detect once, at module init, before any provider mounts. `window.location`
+  // is safe here because App is only ever imported client-side.
+  const isQuickAddBoot =
+    typeof window !== 'undefined' && window.location.pathname === '/quick-add';
+
+  if (isQuickAddBoot) {
+    return (
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <SubscriptionProvider>
+              <QuickAddShell />
+            </SubscriptionProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <LazyMotion features={domAnimation}>
+          <TooltipProvider>
+            <GoogleAuthProvider>
+              <DriveSyncBootstrap />
+              <NotesProvider>
+                <SubscriptionProvider>
+                  <AppContent />
+                </SubscriptionProvider>
+              </NotesProvider>
+            </GoogleAuthProvider>
+          </TooltipProvider>
+        </LazyMotion>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+};
+
 
 export default App;

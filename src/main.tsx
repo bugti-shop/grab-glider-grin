@@ -275,69 +275,84 @@ if (Capacitor.isNativePlatform()) {
 // Warm settings cache in background (non-blocking)
 warmSettingsCache().catch(() => {});
 
-// Background sync worker (web only, production builds only — guarded internally)
-import('./utils/cloudSync/registerSyncWorker').then(m => m.registerSyncWorker()).catch(() => {});
+// When the WebView is cold-booted at /quick-add (Android widget overlay),
+// skip every non-essential deferred subsystem — background sync worker,
+// notification schedulers, migrations, status-bar theming. None of it is
+// needed for the sub-second Task-Input-Sheet flow, and each import adds
+// parse+execute time on a low-end launcher-owned WebView.
+const __IS_QUICK_ADD_BOOT_MAIN__ =
+  typeof window !== 'undefined' && window.location.pathname === '/quick-add';
 
-// Initialize native social-login plugin EARLY on iOS/Android.
-// Capgo's SocialLogin requires initialize() before login() — otherwise the
-// native sheet may open but the JS callback never fires.
-if (Capacitor.isNativePlatform()) {
-  Promise.all([
-    import('./utils/googleAuth').then((m) => m.initNativeSocialLogin()),
-    import('./utils/nativeAppleAuth').then((m) => m.initNativeApple()),
-  ]).catch((e) => console.warn('[Boot] Native social-login init failed:', e));
+if (!__IS_QUICK_ADD_BOOT_MAIN__) {
+  // Background sync worker (web only, production builds only — guarded internally)
+  import('./utils/cloudSync/registerSyncWorker').then(m => m.registerSyncWorker()).catch(() => {});
 
-  // Drain widget pending deep-link path EARLY so cold-start widget taps
-  // (?add=1, ?newNote=sticky, etc.) land on the right route before pages mount.
-  import('./utils/widgetDataSync').then((m) => m.widgetDataSync.initialize()).catch(() => {});
+  // Initialize native social-login plugin EARLY on iOS/Android.
+  // Capgo's SocialLogin requires initialize() before login() — otherwise the
+  // native sheet may open but the JS callback never fires.
+  if (Capacitor.isNativePlatform()) {
+    Promise.all([
+      import('./utils/googleAuth').then((m) => m.initNativeSocialLogin()),
+      import('./utils/nativeAppleAuth').then((m) => m.initNativeApple()),
+    ]).catch((e) => console.warn('[Boot] Native social-login init failed:', e));
+
+    // Drain widget pending deep-link path EARLY so cold-start widget taps
+    // (?add=1, ?newNote=sticky, etc.) land on the right route before pages mount.
+    import('./utils/widgetDataSync').then((m) => m.widgetDataSync.initialize()).catch(() => {});
+  }
+
+  // Defer ALL non-critical initialization until after first paint
+  scheduleDeferred(async () => {
+    try {
+      const [
+        { startBackgroundScheduler },
+        { initializeReminders },
+        { initializeStreakNotifications },
+        { initializeSmartNotifications },
+        { initializeSmartNudges },
+        { restoreHabitReminders },
+        { restoreCountdownReminders },
+      ] = await Promise.all([
+        import("./utils/backgroundScheduler"),
+        import("./utils/reminderScheduler"),
+        import("./utils/streakNotifications"),
+        import("./utils/smartNotifications"),
+        import("./utils/smartNudges"),
+        import("./utils/habitReminders"),
+        import("./utils/countdownReminders"),
+      ]);
+
+      // Run migrations in parallel
+      await Promise.all([
+        migrateLocalStorageToIndexedDB(),
+        migrateNotesToIndexedDB(),
+        initializeTaskOrder(),
+        initializeProtectionSettings(),
+      ]);
+
+      // Start background scheduler
+      startBackgroundScheduler();
+
+      // Fire-and-forget notification initializations
+      initializeReminders().catch(console.warn);
+      initializeStreakNotifications().catch(console.warn);
+      initializeSmartNotifications().catch(console.warn);
+      initializeSmartNudges().catch(console.warn);
+      restoreHabitReminders().catch(console.warn);
+      restoreCountdownReminders().catch(console.warn);
+
+      
+
+      // Configure status bar
+      const theme = await getSetting<string>('theme', 'light');
+      await configureStatusBar(theme !== 'light', theme || 'light');
+    } catch (error) {
+      console.error('Deferred initialization error:', error);
+    }
+  });
+} else {
+  // Quick-Add cold-open: mark the boot so the perf log in QuickAddShell has a
+  // stable reference point even on browsers that don't expose navigation timing.
+  try { performance.mark('quick-add:boot-main'); } catch {}
 }
 
-// Defer ALL non-critical initialization until after first paint
-scheduleDeferred(async () => {
-  try {
-    const [
-      { startBackgroundScheduler },
-      { initializeReminders },
-      { initializeStreakNotifications },
-      { initializeSmartNotifications },
-      { initializeSmartNudges },
-      { restoreHabitReminders },
-      { restoreCountdownReminders },
-    ] = await Promise.all([
-      import("./utils/backgroundScheduler"),
-      import("./utils/reminderScheduler"),
-      import("./utils/streakNotifications"),
-      import("./utils/smartNotifications"),
-      import("./utils/smartNudges"),
-      import("./utils/habitReminders"),
-      import("./utils/countdownReminders"),
-    ]);
-
-    // Run migrations in parallel
-    await Promise.all([
-      migrateLocalStorageToIndexedDB(),
-      migrateNotesToIndexedDB(),
-      initializeTaskOrder(),
-      initializeProtectionSettings(),
-    ]);
-
-    // Start background scheduler
-    startBackgroundScheduler();
-
-    // Fire-and-forget notification initializations
-    initializeReminders().catch(console.warn);
-    initializeStreakNotifications().catch(console.warn);
-    initializeSmartNotifications().catch(console.warn);
-    initializeSmartNudges().catch(console.warn);
-    restoreHabitReminders().catch(console.warn);
-    restoreCountdownReminders().catch(console.warn);
-
-    
-
-    // Configure status bar
-    const theme = await getSetting<string>('theme', 'light');
-    await configureStatusBar(theme !== 'light', theme || 'light');
-  } catch (error) {
-    console.error('Deferred initialization error:', error);
-  }
-});
