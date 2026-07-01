@@ -160,11 +160,15 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             <div className="space-y-3 pt-2">
               <p className="text-sm text-muted-foreground">
                 {t(
-                  'scanNote.helperGallery',
-                  'Pick a photo of a handwritten or printed page from your gallery. AI will transcribe it and keep the headings and lists.',
+                  'scanNote.helperCamera',
+                  'Point your camera at a handwritten sticky note or page. AI will transcribe it and keep the headings and lists.',
                 )}
               </p>
-              <Button onClick={runCapture} className="h-14 w-full gap-2">
+              <Button onClick={() => setShowCamera(true)} className="h-14 w-full gap-2">
+                <Camera className="h-5 w-5" />
+                <span className="text-sm">{t('scanNote.openCamera', 'Open camera scanner')}</span>
+              </Button>
+              <Button onClick={runCapture} variant="outline" className="h-12 w-full gap-2">
                 <ImageIcon className="h-5 w-5" />
                 <span className="text-sm">{t('imageExtract.fromGallery', 'From gallery')}</span>
               </Button>
