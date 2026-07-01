@@ -190,10 +190,28 @@ const useFocusAudio = () => {
 
   const startUrl = useCallback((url: string, volume: number) => {
     try {
-      const a = new Audio(url);
+      const a = new Audio();
+      a.src = url;
       a.loop = true;
+      a.preload = 'auto';
       a.crossOrigin = 'anonymous';
       a.volume = Math.max(0, Math.min(1, volume));
+      // Anti-interrupt: if playback ends unexpectedly (some browsers ignore loop
+      // near track end, or network stalls) restart from 0. On error, reload the
+      // source. Keeps ambient sound gapless even during long sessions.
+      a.addEventListener('ended', () => {
+        try { a.currentTime = 0; void a.play(); } catch {}
+      });
+      a.addEventListener('pause', () => {
+        // Only auto-resume if we didn't intentionally stop (element still mounted)
+        if (audioRef.current === a && !a.ended) {
+          setTimeout(() => { try { void a.play(); } catch {} }, 250);
+        }
+      });
+      a.addEventListener('error', () => {
+        try { a.src = url; a.load(); void a.play(); } catch {}
+      });
+      a.addEventListener('stalled', () => { try { void a.play(); } catch {} });
       a.play().catch(() => { toast.message('Audio blocked — tap Play again'); });
       audioRef.current = a;
     } catch {}
