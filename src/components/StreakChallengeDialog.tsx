@@ -269,19 +269,28 @@ export const StreakChallengeDialog = ({ isOpen, onClose, currentStreak, weekData
  * Hook to manage showing the streak challenge dialog once per day
  * after the first task completion that increments the streak
  */
+// In-memory guard prevents rapid-fire duplicates when multiple task
+// completions dispatch the event in the same tick (before setSetting flushes).
+let __streakShownForDay: string | null = null;
+let __streakInFlight = false;
+
 export const useStreakChallengeDialog = () => {
   const [showDialog, setShowDialog] = useState(false);
 
   useEffect(() => {
-    const handleStreakChallenge = async (e: CustomEvent<{ currentStreak: number }>) => {
+    const handleStreakChallenge = async (_e: CustomEvent<{ currentStreak: number }>) => {
       const today = format(new Date(), 'yyyy-MM-dd');
-      const lastShown = await getSetting<string | null>('streakChallengeLastShown', null);
-
-      // Only show once per day
-      if (lastShown === today) return;
-
-      await setSetting('streakChallengeLastShown', today);
-      setShowDialog(true);
+      if (__streakShownForDay === today || __streakInFlight) return;
+      __streakInFlight = true;
+      try {
+        const lastShown = await getSetting<string | null>('streakChallengeLastShown', null);
+        if (lastShown === today) { __streakShownForDay = today; return; }
+        __streakShownForDay = today;
+        await setSetting('streakChallengeLastShown', today);
+        setShowDialog(true);
+      } finally {
+        __streakInFlight = false;
+      }
     };
 
     window.addEventListener('streakChallengeShow', handleStreakChallenge as EventListener);

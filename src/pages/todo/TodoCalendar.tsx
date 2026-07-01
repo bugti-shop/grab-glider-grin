@@ -1320,12 +1320,13 @@ const TodoCalendar = () => {
             emptyStateSubMessage={t('calendar.clickToCreateTasks', 'Click "+" to create your tasks.')}
             calendarBackground={calendarBackground}
             onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
-            getDayChips={(day) => {
-              const chips: { id: string; label: string; color: string; completed?: boolean }[] = [];
-              // Tasks (and countdown pseudo-tasks) on this day, colored by section
+            getDayChips={useMemo(() => {
+              // Pre-bucket all tasks + events into a Map<YYYY-M-D, chips[]> once
+              // so day cells look up in O(1) instead of scanning 5000 items each.
+              const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+              const bucket = new Map<string, { id: string; label: string; color: string; completed?: boolean }[]>();
               for (const task of itemsWithCountdowns) {
                 if (!task.dueDate) continue;
-                if (!isSameDay(new Date(task.dueDate), day)) continue;
                 const isCountdown = task.id?.startsWith('countdown:');
                 if (isCountdown && hideCountdowns) continue;
                 const sectionKey = task.sectionId || 'default';
@@ -1335,29 +1336,36 @@ const TodoCalendar = () => {
                   || section?.color
                   || (task.priority ? getPriorityColor(task.priority as Priority) : undefined)
                   || '#3c78f0';
-                chips.push({
-                  id: task.id,
-                  label: task.text || t('calendar.untitledTask', 'Task'),
-                  color,
-                  completed: !!task.completed,
-                });
+                const k = key(new Date(task.dueDate));
+                const arr = bucket.get(k) || [];
+                arr.push({ id: task.id, label: task.text || 'Task', color, completed: !!task.completed });
+                bucket.set(k, arr);
               }
-              // Calendar events on this day (including recurring)
               if (!hideEvents) {
                 for (const ev of events) {
                   const start = new Date(ev.startDate);
-                  const onDay = isSameDay(start, day)
-                    || (ev.repeat !== 'never' && isRecurringEventOnDate(ev, day));
-                  if (!onDay) continue;
-                  chips.push({
-                    id: `event:${ev.id}:${day.getTime()}`,
-                    label: ev.title || t('calendar.untitledEvent', 'Event'),
-                    color: '#10b981',
-                  });
+                  const k = key(start);
+                  const arr = bucket.get(k) || [];
+                  arr.push({ id: `event:${ev.id}:${start.getTime()}`, label: ev.title || 'Event', color: '#10b981' });
+                  bucket.set(k, arr);
+                  // Note: recurring events still resolved per-day via isRecurringEventOnDate below.
                 }
               }
-              return chips;
-            }}
+              return (day: Date) => {
+                const chips = bucket.get(key(day)) || [];
+                if (hideEvents) return chips;
+                // Recurring events (rare — only iterate events list, not tasks)
+                const rec: typeof chips = [];
+                for (const ev of events) {
+                  if (ev.repeat === 'never') continue;
+                  if (isSameDay(new Date(ev.startDate), day)) continue; // already bucketed
+                  if (isRecurringEventOnDate(ev, day)) {
+                    rec.push({ id: `event:${ev.id}:${day.getTime()}`, label: ev.title || 'Event', color: '#10b981' });
+                  }
+                }
+                return rec.length ? [...chips, ...rec] : chips;
+              };
+            }, [itemsWithCountdowns, events, sections, hiddenSections, hideEvents, hideCountdowns, getPriorityColor])}
             onChipClick={(chip) => {
               if (chip.id.startsWith('event:')) {
                 const eventId = chip.id.split(':')[1];

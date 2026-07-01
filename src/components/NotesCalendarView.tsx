@@ -138,9 +138,29 @@ export const NotesCalendarView = ({
     return [...leadingDays, ...daysInMonth, ...trailingDays];
   }, [displayMonth]);
 
-  const hasNote = (date: Date) => noteDates.some((nDate) => isSameDay(nDate, date));
-  const hasTask = (date: Date) => taskDates.some((tDate) => isSameDay(tDate, date));
-  const hasEvent = (date: Date) => eventDates.some((eDate) => isSameDay(eDate, date));
+  // O(1) lookups: bucket date arrays into Set<YYYY-MM-DD>. Critical for perf
+  // when notes/tasks count is in the thousands (previously O(N*42) per render).
+  const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const noteDateSet = useMemo(() => new Set(noteDates.map(dateKey)), [noteDates]);
+  const taskDateSet = useMemo(() => new Set(taskDates.map(dateKey)), [taskDates]);
+  const eventDateSet = useMemo(() => new Set(eventDates.map(dateKey)), [eventDates]);
+  const hasNote = (date: Date) => noteDateSet.has(dateKey(date));
+  const hasTask = (date: Date) => taskDateSet.has(dateKey(date));
+  const hasEvent = (date: Date) => eventDateSet.has(dateKey(date));
+
+  // Memoize chip lookup: compute once per (getDayChips, visible month) instead
+  // of running the caller's O(N) filter for every one of ~42 day cells.
+  const chipsByDay = useMemo(() => {
+    if (!getDayChips) return null;
+    const m = new Map<string, DayChip[]>();
+    return { get: (day: Date) => {
+      const k = dateKey(day);
+      let v = m.get(k);
+      if (v === undefined) { v = getDayChips(day) || []; m.set(k, v); }
+      return v;
+    }};
+  }, [getDayChips, displayMonth]);
+
    
 
   const handlePrevMonth = () => {
@@ -278,7 +298,7 @@ export const NotesCalendarView = ({
 
           // ---------- Apple-Calendar style cell with colored chips ----------
           if (chipsEnabled) {
-            const chips = getDayChips!(day) || [];
+            const chips = (chipsByDay ? chipsByDay.get(day) : getDayChips!(day)) || [];
             const visible = chips.slice(0, maxChipsPerDay);
             const extra = chips.length - visible.length;
 

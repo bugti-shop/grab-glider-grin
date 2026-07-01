@@ -7,6 +7,7 @@ import { addPomodoroSession } from '@/utils/pomodoroStorage';
 import { addNotification } from '@/utils/notificationStore';
 import { sendWebNotification, requestNotificationPermission } from '@/utils/webNotifications';
 import { setFocusBgState, clearFocusBgState, onFocusBgCommand } from '@/utils/focusBackgroundState';
+import { showFocusOngoing, hideFocusOngoing } from '@/utils/focusPersistentNotification';
 import { SoundLibrary } from '@/components/focus/SoundLibrary';
 import { FocusFlipClock } from '@/components/focus/FocusFlipClock';
 import { findTrack, FocusTrack } from '@/components/focus/FocusSounds';
@@ -189,10 +190,28 @@ const useFocusAudio = () => {
 
   const startUrl = useCallback((url: string, volume: number) => {
     try {
-      const a = new Audio(url);
+      const a = new Audio();
+      a.src = url;
       a.loop = true;
+      a.preload = 'auto';
       a.crossOrigin = 'anonymous';
       a.volume = Math.max(0, Math.min(1, volume));
+      // Anti-interrupt: if playback ends unexpectedly (some browsers ignore loop
+      // near track end, or network stalls) restart from 0. On error, reload the
+      // source. Keeps ambient sound gapless even during long sessions.
+      a.addEventListener('ended', () => {
+        try { a.currentTime = 0; void a.play(); } catch {}
+      });
+      a.addEventListener('pause', () => {
+        // Only auto-resume if we didn't intentionally stop (element still mounted)
+        if (audioRef.current === a && !a.ended) {
+          setTimeout(() => { try { void a.play(); } catch {} }, 250);
+        }
+      });
+      a.addEventListener('error', () => {
+        try { a.src = url; a.load(); void a.play(); } catch {}
+      });
+      a.addEventListener('stalled', () => { try { void a.play(); } catch {} });
       a.play().catch(() => { toast.message('Audio blocked — tap Play again'); });
       audioRef.current = a;
     } catch {}
@@ -418,6 +437,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     setRunning(false);
     setRemaining(0);
     noise.stop();
+    void hideFocusOngoing();
     toast.success('Focus session complete 🎯');
     notifyFocus(prefs.notifications, 'complete', { taskTitle: completedTaskTitle, durationMin: completedDurationMin });
     onComplete?.();
@@ -447,6 +467,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     setRunning(false);
     setRemaining(prefs.durationMin * 60);
     noise.stop();
+    void hideFocusOngoing();
   };
 
   // ---- Fullscreen ---------------------------------------------------------
@@ -486,10 +507,38 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
       remainingSec: sessionRef.current?.remainingSec ?? remaining,
     });
     if (!backgrounded) {
-      // visible: ensure bar is hidden
+      // visible: ensure bar is hidden AND cancel the ongoing native notification
       clearFocusBgState();
+      void hideFocusOngoing();
+    } else if (active) {
+      // Post/update the persistent Android ongoing notification so the user
+      // can see the timer from the notification shade until they Exit.
+      void showFocusOngoing({
+        taskTitle: sessionRef.current?.taskTitle,
+        remainingSec: remaining,
+        endAtMs: sessionRef.current?.endAt,
+        running,
+      });
     }
   }, [open, backgrounded, running, remaining]);
+
+  // While backgrounded, refresh the ongoing notification every 15s so remaining
+  // time stays fresh without flooding the notification system.
+  useEffect(() => {
+    if (!backgrounded || !running) return;
+    const id = setInterval(() => {
+      void showFocusOngoing({
+        taskTitle: sessionRef.current?.taskTitle,
+        remainingSec: sessionRef.current?.endAt
+          ? Math.max(0, Math.floor((sessionRef.current.endAt - Date.now()) / 1000))
+          : remaining,
+        endAtMs: sessionRef.current?.endAt,
+        running: true,
+      });
+    }, 15000);
+    return () => clearInterval(id);
+  }, [backgrounded, running]);
+
 
   useEffect(() => {
     return onFocusBgCommand((cmd) => {
