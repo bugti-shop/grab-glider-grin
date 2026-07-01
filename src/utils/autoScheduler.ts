@@ -330,8 +330,12 @@ export const scheduleWithTimeBlocks = (
     pushBusy(new Date(s), { start: s, end: s + durMin * 60_000 });
   }
 
-  // ---- Sort undated tasks by priority (high first), then shorter first ----
+  // ---- Sort undated tasks: earliest deadline first (hard constraint),
+  // then priority (high first), then shorter first ----
   const queue = getUndatedTasks(allTasks).sort((a, b) => {
+    const ad = a.deadline ? new Date(a.deadline).getTime() : Number.POSITIVE_INFINITY;
+    const bd = b.deadline ? new Date(b.deadline).getTime() : Number.POSITIVE_INFINITY;
+    if (ad !== bd) return ad - bd;
     const pd = getPriorityWeight(b.priority) - getPriorityWeight(a.priority);
     if (pd !== 0) return pd;
     const ah = a.estimatedHours ?? cfg.defaultEstimateMinutes / 60;
@@ -348,6 +352,9 @@ export const scheduleWithTimeBlocks = (
       ? Math.max(15, Math.round(task.estimatedHours * 60))
       : cfg.defaultEstimateMinutes;
 
+    // Hard deadline constraint: never schedule a block that ends after `deadline`.
+    const deadlineMs = task.deadline ? new Date(task.deadline).getTime() : Number.POSITIVE_INFINITY;
+
     let placed = false;
     for (let d = 0; d < cfg.daysAhead && !placed; d++) {
       const day = addDays(startOfDay(earliest), d);
@@ -358,12 +365,19 @@ export const scheduleWithTimeBlocks = (
       dayStart.setHours(cfg.workStartHour, 0, 0, 0);
       const dayEnd = new Date(day);
       dayEnd.setHours(cfg.workEndHour, 0, 0, 0);
+      // Clamp the day's window by the hard deadline.
+      const cappedDayEnd = Math.min(dayEnd.getTime(), deadlineMs);
+      if (cappedDayEnd <= dayStart.getTime()) {
+        // This day is already past the deadline — stop searching further days.
+        if (dayStart.getTime() >= deadlineMs) break;
+        continue;
+      }
 
       const after = d === 0 ? Math.max(earliest.getTime(), dayStart.getTime()) : dayStart.getTime();
       const key = format(day, 'yyyy-MM-dd');
       const busy = mergeBusy(dayBusy.get(key) ?? []);
 
-      const slot = findSlot(busy, after, durMin, dayStart.getTime(), dayEnd.getTime());
+      const slot = findSlot(busy, after, durMin, dayStart.getTime(), cappedDayEnd);
       if (!slot) continue;
 
       const startDate = new Date(slot.start);
