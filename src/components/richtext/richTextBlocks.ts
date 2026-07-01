@@ -688,5 +688,8 @@ export const hydrateImageMediaIn = (root: HTMLElement | null) => {
         openLightbox(img.src, img.alt || '', collectGallery());
       }
     });
+  });
+};
+
 
 
