@@ -570,56 +570,28 @@ export const CameraScannerScreen = ({
     toast(`Mode: ${label}`, { duration: 900 });
   }, [requirePro]);
 
-  const handleOverlayPointerDownCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const chip = (e.target as Element | null)?.closest?.('[data-scanner-mode]') as HTMLElement | null;
-    if (chip && e.currentTarget.contains(chip)) {
-      chipTapRef.current = {
-        mode: (chip.dataset.scannerMode || 'note') as ScannerMode,
-        label: chip.dataset.scannerLabel || 'Scan Note',
-        locked: chip.dataset.scannerLocked === 'true',
-        x: e.clientX,
-        y: e.clientY,
-        cancelled: false,
-      };
-    } else {
-      chipTapRef.current = null;
-    }
-    e.stopPropagation();
-  }, []);
-
-  const handleOverlayPointerMoveCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const tap = chipTapRef.current;
-    if (!tap) return;
-    const dx = Math.abs(e.clientX - tap.x);
-    const dy = Math.abs(e.clientY - tap.y);
-    if (dx > 18 && dx > dy * 1.5) tap.cancelled = true;
-  }, []);
-
-  const handleOverlayPointerUpCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    const tap = chipTapRef.current;
-    if (!tap) return;
-    chipTapRef.current = null;
-    e.stopPropagation();
-    if (tap.cancelled) return;
-    e.preventDefault();
-    selectScannerMode(tap.mode, tap.label, tap.locked);
-  }, [selectScannerMode]);
+  // NOTE: Previously we called e.stopPropagation() during the CAPTURE phase on
+  // the overlay. That silently killed every child button's onPointerDown /
+  // onPointerUp handler (including the Barcode/Objects chips), because React
+  // stops synthetic-event dispatch to descendants once stopPropagation runs in
+  // capture. Now we ONLY stop propagation in the bubble phase, so the buttons'
+  // handlers run first and the outer Radix Sheet still doesn't see the event.
 
   if (!isOpen) return null;
+
+  const stopBubble = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
 
   const overlay = (
     <div
       className="fixed inset-0 z-[300] bg-black text-white flex flex-col select-none"
-      // Scanner is portal'd to <body> but lives inside a Radix Sheet. Without
-      // stopping propagation here, every pointer-down inside the scanner is
-      // treated as "outside the sheet" and closes the parent — which was
-      // making the flash button and Barcode/Objects chips close the whole scanner.
-      onPointerDownCapture={handleOverlayPointerDownCapture}
-      onPointerMoveCapture={handleOverlayPointerMoveCapture}
-      onPointerUpCapture={handleOverlayPointerUpCapture}
-      onPointerDown={(e) => e.stopPropagation()}
-      onMouseDownCapture={(e) => e.stopPropagation()}
-      onTouchStartCapture={(e) => e.stopPropagation()}
+      style={{ isolation: 'isolate', pointerEvents: 'auto' }}
+      // Bubble phase only — after child buttons handle their own pointer events.
+      onPointerDown={stopBubble}
+      onPointerUp={stopBubble}
+      onMouseDown={stopBubble}
+      onTouchStart={stopBubble}
     >
       {/* Live camera feed (hidden while reviewing a frozen result) */}
       {!objReviewFrame && !receiptReviewFrame && (
