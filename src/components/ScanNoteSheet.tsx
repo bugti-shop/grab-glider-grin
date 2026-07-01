@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { captureImageForAI } from '@/utils/imageCaptureForAI';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeForDisplay } from '@/lib/sanitize';
+import { cn } from '@/lib/utils';
+
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { acquireAiLock, getAiBusyMessage, releaseAllAiLocks } from '@/utils/aiConcurrencyLock';
 import { ensureSignedInForAi } from '@/utils/aiAccessGuard';
