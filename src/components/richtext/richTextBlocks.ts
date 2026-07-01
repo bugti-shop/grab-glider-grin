@@ -394,3 +394,218 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, threshold = 600) => 
   });
 };
 
+/* ────────────────────────────────────────────────────────────── */
+/* Code block hydration: language selector + copy + line numbers  */
+/* highlight.js is dynamically imported so it doesn't inflate the */
+/* Quick-Add / cold-open bundle.                                  */
+/* ────────────────────────────────────────────────────────────── */
+
+let hljsLoader: Promise<any> | null = null;
+const loadHljs = () => {
+  if (!hljsLoader) hljsLoader = import('highlight.js').then((m) => m.default ?? m);
+  return hljsLoader;
+};
+
+export const hydrateCodeBlocksIn = (root: HTMLElement | null) => {
+  if (!root) return;
+  const blocks = root.querySelectorAll<HTMLPreElement>('pre.rt-codeblock');
+  blocks.forEach((pre) => {
+    if ((pre as any).__rtCodeHydrated) return;
+    (pre as any).__rtCodeHydrated = true;
+
+    const lang = pre.getAttribute('data-lang') || 'plaintext';
+    const code = pre.querySelector('code');
+    if (!code) return;
+
+    // Ensure the code element is editable but the wrapper chrome is not.
+    pre.setAttribute('contenteditable', 'false');
+    code.setAttribute('contenteditable', 'true');
+    code.setAttribute('spellcheck', 'false');
+    code.setAttribute('data-role', 'code');
+
+    // Chrome: language selector + copy button.
+    const chrome = document.createElement('div');
+    chrome.className = 'rt-codeblock-chrome';
+    chrome.setAttribute('contenteditable', 'false');
+
+    const select = document.createElement('select');
+    select.className = 'rt-codeblock-lang';
+    select.setAttribute('contenteditable', 'false');
+    (CODE_BLOCK_LANGS as readonly string[]).forEach((l) => {
+      const opt = document.createElement('option');
+      opt.value = l; opt.textContent = l;
+      if (l === lang) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'rt-codeblock-copy';
+    copyBtn.setAttribute('contenteditable', 'false');
+    copyBtn.textContent = 'Copy';
+
+    chrome.appendChild(select);
+    chrome.appendChild(copyBtn);
+    pre.insertBefore(chrome, pre.firstChild);
+
+    const relayout = async () => {
+      const raw = code.innerText.replace(/\n$/, '');
+      const currentLang = pre.getAttribute('data-lang') || 'plaintext';
+      try {
+        const hljs = await loadHljs();
+        const r = currentLang && currentLang !== 'plaintext' && hljs.getLanguage(currentLang)
+          ? hljs.highlight(raw, { language: currentLang, ignoreIllegals: true })
+          : hljs.highlightAuto(raw);
+        code.innerHTML = r.value || raw.replace(/</g, '&lt;');
+      } catch {
+        code.textContent = raw;
+      }
+
+      // Line numbers as a decorative gutter (contenteditable=false).
+      const lines = raw.split('\n');
+      let gutter = pre.querySelector<HTMLElement>('.rt-codeblock-gutter');
+      if (!gutter) {
+        gutter = document.createElement('div');
+        gutter.className = 'rt-codeblock-gutter';
+        gutter.setAttribute('contenteditable', 'false');
+        pre.insertBefore(gutter, code);
+      }
+      gutter.innerHTML = lines.map((_, i) => `<span>${i + 1}</span>`).join('');
+    };
+
+    select.addEventListener('change', () => {
+      pre.setAttribute('data-lang', select.value);
+      relayout();
+    });
+    select.addEventListener('mousedown', (e) => e.stopPropagation());
+    select.addEventListener('click', (e) => e.stopPropagation());
+
+    copyBtn.addEventListener('click', async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(code.innerText);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
+      } catch {
+        copyBtn.textContent = 'Failed';
+        setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
+      }
+    });
+
+    // Re-highlight when the user pauses typing.
+    let t: number | undefined;
+    code.addEventListener('input', () => {
+      window.clearTimeout(t);
+      t = window.setTimeout(relayout, 250) as unknown as number;
+    });
+
+    relayout();
+  });
+};
+
+/* ────────────────────────────────────────────────────────────── */
+/* Image essentials: caption, alt text, click-to-lightbox         */
+/* Works on top of the existing .resizable-image-wrapper chrome.  */
+/* ────────────────────────────────────────────────────────────── */
+
+const openLightbox = (src: string, alt: string) => {
+  const existing = document.querySelector('.rt-lightbox');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'rt-lightbox';
+  overlay.innerHTML =
+    `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" />` +
+    `<button type="button" class="rt-lightbox-close" aria-label="Close">×</button>`;
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || (e.target as HTMLElement).classList.contains('rt-lightbox-close')) close();
+  });
+  document.addEventListener('keydown', function esc(ev) {
+    if (ev.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+  });
+  document.body.appendChild(overlay);
+};
+
+export const hydrateImageMediaIn = (root: HTMLElement | null) => {
+  if (!root) return;
+  const wrappers = root.querySelectorAll<HTMLElement>('.resizable-image-wrapper');
+  wrappers.forEach((wrap) => {
+    if ((wrap as any).__rtMediaHydrated) return;
+    (wrap as any).__rtMediaHydrated = true;
+    const img = wrap.querySelector<HTMLImageElement>('img');
+    if (!img) return;
+
+    // Alt-text edit + full-width toggle live inside the alignment toolbar.
+    const toolbar = wrap.querySelector<HTMLElement>('.image-align-toolbar');
+    if (toolbar && !toolbar.querySelector('.image-align-full')) {
+      const fullBtn = document.createElement('button');
+      fullBtn.type = 'button';
+      fullBtn.className = 'image-align-full';
+      fullBtn.textContent = '↔';
+      fullBtn.title = 'Full width';
+      Object.assign(fullBtn.style, {
+        width: '28px', height: '28px', border: 'none', borderRadius: '4px',
+        background: 'transparent', cursor: 'pointer', color: 'hsl(var(--foreground))',
+      } as CSSStyleDeclaration);
+      fullBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isFull = wrap.getAttribute('data-image-align') === 'full';
+        if (isFull) {
+          wrap.setAttribute('data-image-align', 'left');
+          wrap.style.width = 'fit-content';
+          img.style.width = (wrap.getAttribute('data-image-width') || '300') + 'px';
+        } else {
+          wrap.setAttribute('data-image-align', 'full');
+          wrap.style.width = '100%';
+          wrap.style.marginLeft = '0';
+          wrap.style.marginRight = '0';
+          img.style.width = '100%';
+        }
+        wrap.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      toolbar.appendChild(fullBtn);
+
+      const altBtn = document.createElement('button');
+      altBtn.type = 'button';
+      altBtn.className = 'image-alt-btn';
+      altBtn.textContent = 'Alt';
+      altBtn.title = 'Edit alt text';
+      Object.assign(altBtn.style, {
+        width: '36px', height: '28px', border: 'none', borderRadius: '4px',
+        background: 'transparent', cursor: 'pointer', color: 'hsl(var(--foreground))',
+        fontSize: '12px', fontWeight: '600',
+      } as CSSStyleDeclaration);
+      altBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const next = window.prompt('Image alt text (for accessibility):', img.alt || '');
+        if (next !== null) {
+          img.alt = next;
+          wrap.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+      toolbar.appendChild(altBtn);
+    }
+
+    // Caption: editable <figcaption> rendered below the image.
+    if (!wrap.querySelector('.rt-image-caption')) {
+      const cap = document.createElement('div');
+      cap.className = 'rt-image-caption';
+      cap.setAttribute('contenteditable', 'true');
+      cap.setAttribute('data-placeholder', 'Add a caption…');
+      cap.textContent = wrap.getAttribute('data-image-caption') || '';
+      cap.addEventListener('input', () => {
+        wrap.setAttribute('data-image-caption', cap.textContent || '');
+      });
+      wrap.appendChild(cap);
+    }
+
+    // Click-to-lightbox: double click opens fullscreen viewer.
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('dblclick', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      openLightbox(img.src, img.alt || '');
+    });
+  });
+};
+
+
