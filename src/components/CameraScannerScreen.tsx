@@ -197,12 +197,19 @@ export const CameraScannerScreen = ({
       }).catch(() => raw);
 
       if (mode === 'barcode') {
-        // Barcode decoding not implemented — hand the image off for now so the
-        // caller (AI extraction) can still try to read printed text.
-        toast.message('Barcode scanning is coming soon — sending as image');
+        // If native decoder is available, try one more sync decode on this frame.
+        const decoded = await decodeBarcodeFromCanvas(canvas).catch(() => null);
+        if (decoded && onBarcode) {
+          setLastBarcode(decoded.rawValue);
+          onBarcode(decoded.rawValue, decoded.format);
+          onClose();
+          return;
+        }
+        toast.message('No barcode detected — sending as image');
       }
       onCapture(compressed);
       onClose();
+
     } catch (e) {
       console.error('[CameraScannerScreen] shutter error', e);
       toast.error('Could not capture image');
