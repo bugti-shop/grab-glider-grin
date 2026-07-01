@@ -411,10 +411,26 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
     const subtasks = pendingSubtasksRef.current;
     pendingSubtasksRef.current = undefined;
 
+    // ---- Validation: the three dates are independent but must be coherent ----
+    // Rule: scheduledDate <= deadline, and dueDate <= deadline (deadline is hard).
+    if (deadline) {
+      if (scheduledDate && scheduledDate.getTime() > deadline.getTime()) {
+        setDateValidationError(t('taskInput.errors.scheduledAfterDeadline', { defaultValue: 'Scheduled date must be on or before the deadline.' }));
+        return;
+      }
+      if (finalDueDate && new Date(finalDueDate).getTime() > deadline.getTime()) {
+        setDateValidationError(t('taskInput.errors.dueAfterDeadline', { defaultValue: 'Due date cannot be later than the deadline.' }));
+        return;
+      }
+    }
+    setDateValidationError(null);
+
     const mainTask: Omit<TodoItem, 'id' | 'completed'> = {
       text: finalText,
       priority: finalPriority,
       dueDate: finalDueDate,
+      scheduledDate,
+      deadline,
       reminderTime: finalReminderTime,
       repeatType: finalRepeatType,
       repeatDays: finalRepeatDays,
@@ -431,11 +447,6 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       estimatedHours: finalEstimatedHours,
       isUrgent: isUrgent || undefined,
     };
-
-    // If deadline is set, store it in dueDate
-    if (deadline) {
-      mainTask.dueDate = deadline;
-    }
 
     // Add task first
     onAddTask(mainTask);
