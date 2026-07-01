@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launcher-level Quick Add dialog. The root FrameLayout is fully transparent
+    (activity theme is translucent) so the user's launcher wallpaper stays
+    visible behind a dim scrim, and the inner card floats like a system dialog.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Tap-outside-to-dismiss scrim -->
+    <View
+        android:id="@+id/quick_add_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#99000000" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:orientation="vertical"
+        android:padding="18dp"
+        android:background="@drawable/widget_bg"
+        android:elevation="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Quick add task"
+            android:textColor="#111827"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
+
+        <EditText
+            android:id="@+id/quick_add_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="e.g. Buy groceries tomorrow at 5pm"
+            android:textColorHint="#9CA3AF"
+            android:textColor="#111827"
+            android:textSize="15sp"
+            android:padding="12dp"
+            android:background="@drawable/widget_chip_unselected"
+            android:inputType="textCapSentences|textAutoCorrect"
+            android:imeOptions="actionDone"
+            android:maxLines="4" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginTop="14dp">
+
+            <Button
+                android:id="@+id/quick_add_cancel"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cancel"
+                android:textColor="#6B7280"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/quick_add_save"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="Add task"
+                android:textColor="#FFFFFF"
+                android:textAllCaps="false"
+                android:background="@drawable/widget_quick_add_bg" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
