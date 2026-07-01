@@ -344,6 +344,72 @@ function pickMeta(doc: Document, names: string[]): string {
   return "";
 }
 
+/** Robust author extraction. Tries (in order):
+ *   1. JSON-LD schema (Article.author.name / Person.name)
+ *   2. Meta tags (author, article:author, byl, twitter:creator, parsely-author)
+ *   3. Semantic DOM: <a rel="author">, [itemprop="author"], .author, .byline,
+ *      .post-author, .article-author, .writer, [data-testid*="author"]
+ *   4. Text following "By " prefix inside header/article regions.
+ * Ensures we always paste the author name even when the primary selector fails. */
+function extractAuthor(doc: Document): string {
+  // 1. JSON-LD
+  try {
+    const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+    for (const s of Array.from(scripts) as any[]) {
+      const raw = s.textContent || "";
+      if (!raw.trim()) continue;
+      let json: any;
+      try { json = JSON.parse(raw); } catch { continue; }
+      const nodes = Array.isArray(json) ? json : (json["@graph"] ? json["@graph"] : [json]);
+      for (const node of nodes) {
+        const a = node?.author;
+        if (!a) continue;
+        if (typeof a === "string" && a.trim()) return a.trim();
+        if (Array.isArray(a)) {
+          const names = a.map((x: any) => (typeof x === "string" ? x : x?.name)).filter(Boolean);
+          if (names.length) return names.join(", ").trim();
+        }
+        if (a?.name && typeof a.name === "string") return a.name.trim();
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 2. Meta tags (already handled by caller via pickMeta, but do it here too as safety net)
+  const meta = pickMeta(doc, ["author", "article:author", "byl", "twitter:creator", "parsely-author", "sailthru.author"]);
+  if (meta && !/^https?:/i.test(meta)) return meta;
+
+  // 3. Semantic DOM selectors
+  const selectors = [
+    'a[rel="author"]',
+    '[itemprop="author"] [itemprop="name"]',
+    '[itemprop="author"]',
+    '[data-testid*="author" i]',
+    '[data-testid*="byline" i]',
+    '.author-name', '.byline-name', '.post-author', '.article-author',
+    '.author', '.byline', '.c-byline', '.writer', '.entry-author',
+  ];
+  for (const sel of selectors) {
+    try {
+      const el = doc.querySelector(sel);
+      const txt = (el?.textContent || "").trim().replace(/\s+/g, " ");
+      if (txt && txt.length >= 2 && txt.length <= 120) {
+        return txt.replace(/^by\s+/i, "").trim();
+      }
+    } catch { /* ignore */ }
+  }
+
+  // 4. "By …" prefix in header/article
+  try {
+    const region = doc.querySelector("header, article, main") || doc.body;
+    const text = (region?.textContent || "").slice(0, 4000);
+    const m = text.match(/\bBy\s+([A-Z][\p{L}'’.-]+(?:\s+[A-Z][\p{L}'’.-]+){0,3})/u);
+    if (m) return m[1].trim();
+  } catch { /* ignore */ }
+
+  return "";
+}
+
+
 function escapeHtml(s: string): string {
   return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -530,8 +596,9 @@ Deno.serve(async (req) => {
       return b ? (b as any).innerHTML : "";
     };
 
+    const domAuthor = extractAuthor(document as any);
     const title = (article?.title || metaTitle || target.hostname).trim();
-    const byline = (article?.byline || metaAuthor || "").trim();
+    const byline = (article?.byline || metaAuthor || domAuthor || "").trim();
     const siteName = (article?.siteName || metaSite || "").trim();
     const excerpt = (article?.excerpt || metaDescription || "").trim();
     const content = article?.content || bodyFallback();
