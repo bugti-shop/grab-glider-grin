@@ -179,6 +179,8 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   const [showTagSheet, setShowTagSheet] = useState(false);
   const [deadline, setDeadline] = useState<Date | undefined>();
   const [deadlineReminderTime, setDeadlineReminderTime] = useState<Date | undefined>();
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
+  const [dateValidationError, setDateValidationError] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const descriptionPreview = useMemo(() => stripHtml(description).replace(/\s+/g, ' ').trim(), [description]);
