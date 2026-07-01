@@ -78,6 +78,7 @@ export const ImageTaskExtractorSheet = ({
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [hasRun, setHasRun] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const captureLockRef = useRef(false);
 
   // Reset on close
@@ -87,6 +88,7 @@ export const ImageTaskExtractorSheet = ({
       setItems([]);
       setIsExtracting(false);
       setHasRun(false);
+      setShowCamera(false);
       captureLockRef.current = false;
       releaseAllAiLocks();
     }
