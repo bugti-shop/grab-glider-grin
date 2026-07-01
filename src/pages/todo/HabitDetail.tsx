@@ -459,6 +459,18 @@ const HabitDetail = () => {
             After: {parentHabit.emoji || '✨'} {parentHabit.name}
           </p>
         )}
+        {activePause && (
+          <div className="mt-3 mx-auto max-w-sm rounded-full bg-white/20 backdrop-blur px-4 py-2 flex items-center justify-center gap-2 text-white text-[13px] font-medium">
+            <Palmtree className="h-4 w-4" />
+            <span>{pauseLabel(activePause)}</span>
+            <button
+              onClick={resumeNow}
+              className="ml-1 underline text-white/90 hover:text-white"
+            >
+              End
+            </button>
+          </div>
+        )}
         {(habit.goalDays ?? 0) > 0 && (
           <div className="mt-4 max-w-sm mx-auto">
             <Progress value={Math.min(100, Math.round((totalCheckins / (habit.goalDays || 1)) * 100))} className="h-2 bg-white/30" />
