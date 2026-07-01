@@ -130,7 +130,7 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
 
   const text = textBeforeCaretInBlock(block).replace(/\u00A0/g, ' ');
   // Only convert if the token is *all* that's typed so far on this line.
-  const match = text.match(/^(#{1,4}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>)$/i);
+  const match = text.match(/^(#{1,4}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>|```)$/i);
   if (!match) return false;
   const token = match[1];
 
@@ -236,6 +236,26 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
     const bq = document.createElement('blockquote');
     bq.innerHTML = '<br>';
     replaceBlockWith(block, bq, root);
+    return true;
+  }
+
+  // Code block ----------------------------------------------------------
+  if (token === '```') {
+    const pre = document.createElement('pre');
+    pre.className = 'rt-codeblock';
+    pre.setAttribute('data-lang', 'text');
+    const code = document.createElement('code');
+    code.appendChild(document.createTextNode('\u200B'));
+    pre.appendChild(code);
+    replaceBlockWith(block, pre, root);
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      range.setStart(code.firstChild || code, 1);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
     return true;
   }
 
@@ -422,11 +442,11 @@ export function markdownPasteToHtml(text: string): string | null {
     }
 
     // Checklists
-    if (/^\s*[-*+]\s+\[[ xX]\]\s+/.test(line)) {
+    if (/^\s*(?:[-*+]\s+)?\[(?: |x|X)?\]\s+/.test(line)) {
       out.push('<ul class="checklist">');
-      while (i < lines.length && /^\s*[-*+]\s+\[[ xX]\]\s+/.test(lines[i])) {
-        const m = /^\s*[-*+]\s+\[([ xX])\]\s+(.*)$/.exec(lines[i])!;
-        const checked = m[1].toLowerCase() === 'x';
+      while (i < lines.length && /^\s*(?:[-*+]\s+)?\[(?: |x|X)?\]\s+/.test(lines[i])) {
+        const m = /^\s*(?:[-*+]\s+)?\[([ xX]?)\]\s+(.*)$/.exec(lines[i])!;
+        const checked = (m[1] || '').toLowerCase() === 'x';
         out.push(
           `<li class="checklist-item"${checked ? ' checked="true"' : ''}>` +
           `<input type="checkbox" class="checklist-checkbox"${checked ? ' checked' : ''}/>` +
@@ -472,7 +492,7 @@ export function markdownPasteToHtml(text: string): string | null {
     // Paragraph: consume until blank line
     const buf: string[] = [];
     while (i < lines.length && lines[i].trim() !== '' &&
-           !/^(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|---$|\*\*\*$|___$)/.test(lines[i])) {
+           !/^(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|\[\s?[xX]?\]\s|```|---$|\*\*\*$|___$)/.test(lines[i])) {
       buf.push(applyInline(escapeHtml(lines[i])));
       i++;
     }

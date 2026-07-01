@@ -1204,11 +1204,31 @@ export const RichTextEditor = ({
     loadSmartDetectionSettings();
   }, []);
   
-  const handleInput = () => {
+  const handleInput = (event?: React.FormEvent<HTMLDivElement>) => {
     try {
       if (editorRef.current) {
         // Mark that this change came from user input
         isUserInputRef.current = true;
+        const inputType = (event?.nativeEvent as InputEvent | undefined)?.inputType || '';
+
+        // Safety net for mobile/browser paste paths that bypass onPaste and
+        // insert raw plaintext markdown directly into the contenteditable.
+        if (
+          notesSettings.markdownShortcuts !== false &&
+          inputType === 'insertFromPaste' &&
+          !isInsideCode(editorRef.current)
+        ) {
+          const pastedText = editorRef.current.innerText || '';
+          const converted = markdownPasteToHtml(pastedText);
+          const hasRichBlocks = !!editorRef.current.querySelector(
+            'h1,h2,h3,h4,h5,h6,ul,ol,blockquote,hr,pre,code,strong,em,del,.checklist'
+          );
+          if (converted && !hasRichBlocks) {
+            editorRef.current.innerHTML = converted;
+            hydrateSynced();
+          }
+        }
+
         const rawHtml = editorRef.current.innerHTML;
         const newContent = isFindReplaceOpen ? stripFindHighlights(rawHtml) : rawHtml;
         
@@ -1532,16 +1552,15 @@ export const RichTextEditor = ({
     }
   }, []);
 
-  // Paste handler: convert Markdown → HTML when the clipboard is plain text
-  // and Markdown shortcuts are enabled. Falls back to default paste otherwise.
+  // Paste handler: convert Markdown → HTML whenever the plain-text clipboard
+  // payload clearly looks like markdown. Mobile browsers/chat apps often expose
+  // both text/plain and text/html; previously the text/html presence made us
+  // skip conversion, leaving raw #, [], **bold**, etc. in the note.
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     if (notesSettings.markdownShortcuts === false) return;
     if (isInsideCode(editorRef.current)) return; // preserve raw paste inside code blocks
     const cd = e.clipboardData;
     if (!cd) return;
-    const html = cd.getData('text/html');
-    // Only intercept plain-text pastes so we don't mangle real HTML from other editors.
-    if (html && html.trim()) return;
     const text = cd.getData('text/plain');
     if (!text) return;
     const converted = markdownPasteToHtml(text);
