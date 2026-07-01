@@ -279,16 +279,9 @@ export const CameraScannerScreen = ({
     if (capturing) return;
     setCapturing(true);
     try {
-      // Only the Gallery action opens the OS picker. Shutter should never
-      // unexpectedly launch Gallery just because the camera is still warming up.
-      if (mode === 'gallery') {
-        const dataUrl = await captureImageForAI('gallery');
-        if (dataUrl) {
-          onCapture(dataUrl);
-          onClose();
-        }
-        return;
-      }
+      // Shutter ALWAYS captures the live camera frame. Gallery is only opened
+      // by the explicit Gallery chip or the small gallery button.
+      if (mode === 'gallery') setMode('note');
       if (!ready) {
         toast.error('Camera not ready yet');
         return;
@@ -479,8 +472,11 @@ export const CameraScannerScreen = ({
                 key={id}
                 type="button"
                 onClick={() => {
+                  if (id === 'gallery') {
+                    openGallery();
+                    return;
+                  }
                   setMode(id);
-                  if (id === 'gallery') openGallery();
                 }}
                 className={cn(
                   'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95',
