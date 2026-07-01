@@ -608,6 +608,15 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
       // Save version history (only on "full" save)
       saveNoteVersion(savedNote, note ? 'edit' : 'create');
+
+      // Bridge checklist items inside the note to the global task list
+      syncNoteChecklistToTasks(savedNote)
+        .then((rewritten) => {
+          if (rewritten && rewritten !== savedNote.content) {
+            setContentState(rewritten);
+          }
+        })
+        .catch((e) => console.warn('[NoteEditor] task sync failed', e));
     }
 
     persistNoteToIndexedDB(savedNote);
