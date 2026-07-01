@@ -508,22 +508,92 @@ export const hydrateCodeBlocksIn = (root: HTMLElement | null) => {
 /* Works on top of the existing .resizable-image-wrapper chrome.  */
 /* ────────────────────────────────────────────────────────────── */
 
-const openLightbox = (src: string, alt: string) => {
+const openLightbox = (
+  src: string,
+  alt: string,
+  gallery: { src: string; alt: string }[] = [{ src, alt }],
+) => {
   const existing = document.querySelector('.rt-lightbox');
   if (existing) existing.remove();
+
+  const items = gallery.length ? gallery : [{ src, alt }];
+  let index = Math.max(0, items.findIndex((it) => it.src === src));
+  if (index < 0) index = 0;
+
   const overlay = document.createElement('div');
   overlay.className = 'rt-lightbox';
-  overlay.innerHTML =
-    `<img src="${src}" alt="${alt.replace(/"/g, '&quot;')}" />` +
-    `<button type="button" class="rt-lightbox-close" aria-label="Close">×</button>`;
-  const close = () => overlay.remove();
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.innerHTML = `
+    <button type="button" class="rt-lightbox-close" aria-label="Close">×</button>
+    <button type="button" class="rt-lightbox-nav rt-lightbox-prev" aria-label="Previous">‹</button>
+    <div class="rt-lightbox-stage">
+      <img alt="" />
+      <div class="rt-lightbox-counter" aria-live="polite"></div>
+    </div>
+    <button type="button" class="rt-lightbox-nav rt-lightbox-next" aria-label="Next">›</button>
+  `;
+
+  const imgEl = overlay.querySelector<HTMLImageElement>('img')!;
+  const counter = overlay.querySelector<HTMLElement>('.rt-lightbox-counter')!;
+  const prevBtn = overlay.querySelector<HTMLElement>('.rt-lightbox-prev')!;
+  const nextBtn = overlay.querySelector<HTMLElement>('.rt-lightbox-next')!;
+
+  const render = () => {
+    const cur = items[index];
+    imgEl.src = cur.src;
+    imgEl.alt = cur.alt || '';
+    counter.textContent = items.length > 1 ? `${index + 1} / ${items.length}` : '';
+    const multi = items.length > 1;
+    prevBtn.style.display = multi ? '' : 'none';
+    nextBtn.style.display = multi ? '' : 'none';
+  };
+
+  const go = (delta: number) => {
+    if (items.length < 2) return;
+    index = (index + delta + items.length) % items.length;
+    render();
+  };
+
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+    document.body.style.overflow = prevOverflow;
+  };
+
+  const onKey = (ev: KeyboardEvent) => {
+    if (ev.key === 'Escape') close();
+    else if (ev.key === 'ArrowRight') go(1);
+    else if (ev.key === 'ArrowLeft') go(-1);
+  };
+
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay || (e.target as HTMLElement).classList.contains('rt-lightbox-close')) close();
+    const t = e.target as HTMLElement;
+    if (t === overlay || t.classList.contains('rt-lightbox-stage')) close();
+    else if (t.closest('.rt-lightbox-close')) close();
+    else if (t.closest('.rt-lightbox-prev')) go(-1);
+    else if (t.closest('.rt-lightbox-next')) go(1);
   });
-  document.addEventListener('keydown', function esc(ev) {
-    if (ev.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+
+  // Swipe navigation (touch).
+  let startX = 0, startY = 0, tracking = false;
+  overlay.addEventListener('touchstart', (e) => {
+    const t = e.touches[0]; if (!t) return;
+    startX = t.clientX; startY = t.clientY; tracking = true;
+  }, { passive: true });
+  overlay.addEventListener('touchend', (e) => {
+    if (!tracking) return; tracking = false;
+    const t = e.changedTouches[0]; if (!t) return;
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
+    else if (dy > 80 && Math.abs(dy) > Math.abs(dx)) close();
   });
+
+  document.addEventListener('keydown', onKey);
+  const prevOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
   document.body.appendChild(overlay);
+  render();
 };
 
 export const hydrateImageMediaIn = (root: HTMLElement | null) => {
