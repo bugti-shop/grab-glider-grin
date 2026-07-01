@@ -329,6 +329,48 @@ const HabitDetail = () => {
     setFocusOpen(true);
   };
 
+  const activePause = habit ? getActivePause(habit) : null;
+
+  const openPauseDialog = () => {
+    setPauseDays(7);
+    setPauseReason('vacation');
+    setPauseNote('');
+    setPauseOpen(true);
+  };
+
+  const applyPause = async () => {
+    if (!habit) return;
+    const updated = pauseHabit(habit, {
+      days: pauseDays,
+      reason: pauseReason,
+      note: pauseNote.trim() || undefined,
+    });
+    setHabit(updated);
+    setPauseOpen(false);
+    try {
+      await saveHabit(updated);
+      toast.success(
+        `${pauseReason === 'sick' ? 'Sick day' : pauseReason === 'other' ? 'Paused' : 'Vacation'} set for ${pauseDays} day${pauseDays === 1 ? '' : 's'}`
+      );
+    } catch {
+      toast.error('Could not save. Please try again.');
+    }
+  };
+
+  const resumeNow = async () => {
+    if (!habit) return;
+    const updated = endActivePause(habit);
+    setHabit(updated);
+    try {
+      await saveHabit(updated);
+      toast.success('Back on track — pause ended');
+    } catch {
+      toast.error('Could not save. Please try again.');
+    }
+  };
+
+
+
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: headerColor }}>
