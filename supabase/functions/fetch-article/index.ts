@@ -250,12 +250,16 @@ function extractEmbeds(doc: Document, base: string): string[] {
     const src = el.getAttribute("src");
     if (!src) return;
     const abs = absolutize(src, base);
-    if (!isEmbedAllowed(abs)) return;
+    const title = (el.getAttribute("title") || "Embedded content").replace(/"/g, "&quot;");
+    if (!isEmbedAllowed(abs)) {
+      // Unsupported embed → link-card fallback so users still get a click-through.
+      push(embedFallback(abs, title), abs);
+      return;
+    }
     const w = el.getAttribute("width") || "560";
     const h = el.getAttribute("height") || "315";
-    const title = (el.getAttribute("title") || "Embedded content").replace(/"/g, "&quot;");
     push(
-      `<p><iframe src="${abs}" width="${w}" height="${h}" title="${title}" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></p>`,
+      `<p><iframe src="${abs}" width="${w}" height="${h}" title="${title}" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"></iframe></p>`,
       abs,
     );
   });
@@ -271,6 +275,12 @@ function extractEmbeds(doc: Document, base: string): string[] {
     });
     const key = src || sources[0] || poster || "";
     if (!key) return;
+    const hasPlayable = !!src || sources.length > 0;
+    if (!hasPlayable) {
+      // No playable source (DRM / blob-only). Emit thumbnail fallback.
+      push(embedFallback(absolutize(key, base), "Video", poster ? absolutize(poster, base) : undefined), key);
+      return;
+    }
     push(
       `<p><video controls${poster ? ` poster="${absolutize(poster, base)}"` : ""}${src ? ` src="${absolutize(src, base)}"` : ""} style="max-width:100%">${sources.join("")}</video></p>`,
       key,
