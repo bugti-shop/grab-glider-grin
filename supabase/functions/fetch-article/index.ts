@@ -250,6 +250,8 @@ function absolutizeDoc(doc: Document, base: string) {
       );
     }
     if (!fig.getAttribute("style")) fig.setAttribute("style", "margin:1em 0");
+  });
+
 
   doc.querySelectorAll("a").forEach((a: any) => {
     const href = a.getAttribute("href");
