@@ -210,10 +210,24 @@ export const CameraScannerScreen = ({
   const [receiptReviewLoading, setReceiptReviewLoading] = useState(false);
   const [receiptReviewResult, setReceiptReviewResult] = useState<any>(null);
   const [receiptReviewError, setReceiptReviewError] = useState<string | null>(null);
+  const modeRef = useRef<ScannerMode>(initialMode);
+  const chipTapRef = useRef<{
+    mode: ScannerMode;
+    label: string;
+    locked: boolean;
+    x: number;
+    y: number;
+    cancelled: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
 
   useEffect(() => {
     if (isOpen) {
       setMode(initialMode);
+      modeRef.current = initialMode;
       setObjReviewFrame(null);
       setObjReviewResult(null);
       setObjReviewLoading(false);
@@ -544,6 +558,53 @@ export const CameraScannerScreen = ({
     [mode],
   );
 
+  const selectScannerMode = useCallback((id: ScannerMode, label: string, locked: boolean) => {
+    console.log('[Scanner] mode selected', id);
+    if (locked) {
+      requirePro('receipt');
+      return;
+    }
+    if (modeRef.current === id) return;
+    modeRef.current = id;
+    setMode(id);
+    toast(`Mode: ${label}`, { duration: 900 });
+  }, [requirePro]);
+
+  const handleOverlayPointerDownCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const chip = (e.target as Element | null)?.closest?.('[data-scanner-mode]') as HTMLElement | null;
+    if (chip && e.currentTarget.contains(chip)) {
+      chipTapRef.current = {
+        mode: (chip.dataset.scannerMode || 'note') as ScannerMode,
+        label: chip.dataset.scannerLabel || 'Scan Note',
+        locked: chip.dataset.scannerLocked === 'true',
+        x: e.clientX,
+        y: e.clientY,
+        cancelled: false,
+      };
+    } else {
+      chipTapRef.current = null;
+    }
+    e.stopPropagation();
+  }, []);
+
+  const handleOverlayPointerMoveCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const tap = chipTapRef.current;
+    if (!tap) return;
+    const dx = Math.abs(e.clientX - tap.x);
+    const dy = Math.abs(e.clientY - tap.y);
+    if (dx > 18 && dx > dy * 1.5) tap.cancelled = true;
+  }, []);
+
+  const handleOverlayPointerUpCapture = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const tap = chipTapRef.current;
+    if (!tap) return;
+    chipTapRef.current = null;
+    e.stopPropagation();
+    if (tap.cancelled) return;
+    e.preventDefault();
+    selectScannerMode(tap.mode, tap.label, tap.locked);
+  }, [selectScannerMode]);
+
   if (!isOpen) return null;
 
   const overlay = (
@@ -553,7 +614,9 @@ export const CameraScannerScreen = ({
       // stopping propagation here, every pointer-down inside the scanner is
       // treated as "outside the sheet" and closes the parent — which was
       // making the flash button and Barcode/Objects chips close the whole scanner.
-      onPointerDownCapture={(e) => e.stopPropagation()}
+      onPointerDownCapture={handleOverlayPointerDownCapture}
+      onPointerMoveCapture={handleOverlayPointerMoveCapture}
+      onPointerUpCapture={handleOverlayPointerUpCapture}
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDownCapture={(e) => e.stopPropagation()}
       onTouchStartCapture={(e) => e.stopPropagation()}
@@ -811,14 +874,11 @@ export const CameraScannerScreen = ({
                 key={id}
                 active={active}
                 onSelect={() => {
-                  console.log('[Scanner] mode selected', id);
-                  if (locked) {
-                    requirePro('receipt');
-                    return;
-                  }
-                  setMode(id);
-                  toast(`Mode: ${label}`, { duration: 900 });
+                  selectScannerMode(id, label, locked);
                 }}
+                data-scanner-mode={id}
+                data-scanner-label={label}
+                data-scanner-locked={locked ? 'true' : 'false'}
               >
                 <Icon className="h-4 w-4" />
                 {label}
@@ -1071,7 +1131,8 @@ const ChipButton = ({
   active,
   onSelect,
   children,
-}: {
+  ...buttonProps
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   active: boolean;
   onSelect: () => void;
   children: React.ReactNode;
@@ -1089,14 +1150,17 @@ const ChipButton = ({
   };
   return (
     <button
+      {...buttonProps}
       type="button"
       onPointerDown={(e) => {
+        buttonProps.onPointerDown?.(e);
         e.stopPropagation();
         startRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
         cancelledRef.current = false;
         firedRef.current = false;
       }}
       onPointerMove={(e) => {
+        buttonProps.onPointerMove?.(e);
         const s = startRef.current;
         if (!s) return;
         const dx = Math.abs(e.clientX - s.x);
@@ -1105,6 +1169,7 @@ const ChipButton = ({
         if (dx > 18 && dx > dy * 1.5) cancelledRef.current = true;
       }}
       onPointerUp={(e) => {
+        buttonProps.onPointerUp?.(e);
         // Fire on pointerup regardless of whether the browser later dispatches
         // click — some Android WebViews swallow click inside scroll containers.
         const s = startRef.current;
@@ -1115,6 +1180,7 @@ const ChipButton = ({
         fire(e);
       }}
       onClick={(e) => {
+        buttonProps.onClick?.(e);
         // Fallback for mouse / desktop; guarded by firedRef to avoid double-trigger.
         fire(e);
       }}
