@@ -529,18 +529,36 @@ export const CameraScannerScreen = ({
         <div className="text-sm font-semibold tracking-wide bg-white/10 backdrop-blur-xl border border-white/15 rounded-full px-4 py-1.5">
           {title}
         </div>
-        <button
-          onClick={toggleTorch}
-          disabled={!torchSupported}
-          className={cn(
-            'w-10 h-10 rounded-full backdrop-blur-xl border border-white/15 flex items-center justify-center active:scale-95 transition',
-            torchOn ? 'bg-amber-400/90 text-black border-amber-200' : 'bg-white/10',
-            !torchSupported && 'opacity-40',
-          )}
-          aria-label="Toggle flash"
-        >
-          {torchOn ? <Zap className="h-5 w-5" /> : <ZapOff className="h-5 w-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setBurstOn((v) => !v);
+              toast(burstOn ? 'Burst mode off' : 'Burst mode on · 3 shots, sharpest wins', { duration: 1100 });
+            }}
+            className={cn(
+              'h-10 px-3 rounded-full backdrop-blur-xl border flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition',
+              burstOn
+                ? 'bg-white text-black border-white shadow-[0_6px_18px_rgba(255,255,255,0.35)]'
+                : 'bg-white/10 border-white/15 text-white',
+            )}
+            aria-label="Toggle burst mode"
+          >
+            <Layers className="h-4 w-4" />
+            Burst
+          </button>
+          <button
+            onClick={toggleTorch}
+            disabled={!torchSupported}
+            className={cn(
+              'w-10 h-10 rounded-full backdrop-blur-xl border border-white/15 flex items-center justify-center active:scale-95 transition',
+              torchOn ? 'bg-amber-400/90 text-black border-amber-200' : 'bg-white/10',
+              !torchSupported && 'opacity-40',
+            )}
+            aria-label="Toggle flash"
+          >
+            {torchOn ? <Zap className="h-5 w-5" /> : <ZapOff className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Scanner frame */}
