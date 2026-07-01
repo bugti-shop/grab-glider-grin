@@ -8,6 +8,7 @@ import { useSettingsPageState } from '@/hooks/useSettingsPageState';
 import { SettingsDialogs } from '@/components/settings/SettingsDialogs';
 import { SettingsSheets } from '@/components/settings/SettingsSheets';
 import { FeedbackDialog } from '@/components/FeedbackDialog';
+import { HeaderOffsetSheet } from '@/components/settings/HeaderOffsetSheet';
 
 // Keys for one-time coachmarks shown across the app. Add new keys here so
 // "Show tips again" resets them all in one place.
@@ -31,6 +32,7 @@ const Settings = () => {
   const { t, navigate, isProSub, requireFeature, isBackingUp, hasAdminAccess } = state;
   const { openPaywall } = useSubscription();
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [showHeaderOffsetSheet, setShowHeaderOffsetSheet] = useState(false);
 
   // Unified row style component
   const SettingsRow = ({ label, onClick, showCrown }: { label: React.ReactNode; onClick: () => void; showCrown?: boolean }) => (
@@ -90,6 +92,7 @@ const Settings = () => {
             <SettingsRow label={t('settings.notesSettings', 'Notes Settings')} showCrown onClick={() => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); }} />
             <SettingsRow label={t('settings.tasksSettings', 'Tasks Settings')} showCrown onClick={() => { if (requireFeature('tasks_settings')) state.setShowTasksSettingsSheet(true); }} />
             <SettingsRow label={t('settings.customizeNavigation', 'Customize Navigation')} showCrown onClick={() => state.setShowCustomizeNavigationSheet(true)} />
+            <SettingsRow label={t('settings.headerOffset', 'Header Offset (Status Bar)')} onClick={() => setShowHeaderOffsetSheet(true)} />
           </div>
 
           {/* Security Section */}
@@ -207,6 +210,7 @@ const Settings = () => {
       />
       
       <FeedbackDialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog} />
+      <HeaderOffsetSheet isOpen={showHeaderOffsetSheet} onClose={() => setShowHeaderOffsetSheet(false)} />
     </div>
   );
 };
