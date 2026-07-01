@@ -487,10 +487,38 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
       remainingSec: sessionRef.current?.remainingSec ?? remaining,
     });
     if (!backgrounded) {
-      // visible: ensure bar is hidden
+      // visible: ensure bar is hidden AND cancel the ongoing native notification
       clearFocusBgState();
+      void hideFocusOngoing();
+    } else if (active) {
+      // Post/update the persistent Android ongoing notification so the user
+      // can see the timer from the notification shade until they Exit.
+      void showFocusOngoing({
+        taskTitle: sessionRef.current?.taskTitle,
+        remainingSec: remaining,
+        endAtMs: sessionRef.current?.endAt,
+        running,
+      });
     }
   }, [open, backgrounded, running, remaining]);
+
+  // While backgrounded, refresh the ongoing notification every 15s so remaining
+  // time stays fresh without flooding the notification system.
+  useEffect(() => {
+    if (!backgrounded || !running) return;
+    const id = setInterval(() => {
+      void showFocusOngoing({
+        taskTitle: sessionRef.current?.taskTitle,
+        remainingSec: sessionRef.current?.endAt
+          ? Math.max(0, Math.floor((sessionRef.current.endAt - Date.now()) / 1000))
+          : remaining,
+        endAtMs: sessionRef.current?.endAt,
+        running: true,
+      });
+    }, 15000);
+    return () => clearInterval(id);
+  }, [backgrounded, running]);
+
 
   useEffect(() => {
     return onFocusBgCommand((cmd) => {
