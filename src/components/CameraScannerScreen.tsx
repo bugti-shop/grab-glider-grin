@@ -556,7 +556,11 @@ export const CameraScannerScreen = ({
               <ChipButton
                 key={id}
                 active={active}
-                onSelect={() => setMode(id)}
+                onSelect={() => {
+                  console.log('[Scanner] mode selected', id);
+                  setMode(id);
+                  toast(`Mode: ${label}`, { duration: 900 });
+                }}
               >
                 <Icon className="h-4 w-4" />
                 {label}
