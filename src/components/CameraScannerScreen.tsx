@@ -66,17 +66,24 @@ export const CameraScannerScreen = ({
   isOpen,
   onClose,
   onCapture,
+  onBarcode,
   title = 'Scan',
   initialMode = 'note',
+  status = null,
 }: Props) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const barcodeLoopRef = useRef<number | null>(null);
+  const barcodeHandledRef = useRef(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
   const [mode, setMode] = useState<ScannerMode>(initialMode);
   const [capturing, setCapturing] = useState(false);
+  const [barcodeSupported, setBarcodeSupported] = useState(true);
+  const [lastBarcode, setLastBarcode] = useState<string | null>(null);
+
 
   const stopStream = useCallback(() => {
     const s = streamRef.current;
