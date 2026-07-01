@@ -211,14 +211,10 @@ export const CameraScannerScreen = ({
   const [receiptReviewResult, setReceiptReviewResult] = useState<any>(null);
   const [receiptReviewError, setReceiptReviewError] = useState<string | null>(null);
   const modeRef = useRef<ScannerMode>(initialMode);
-  const chipTapRef = useRef<{
-    mode: ScannerMode;
-    label: string;
-    locked: boolean;
-    x: number;
-    y: number;
-    cancelled: boolean;
-  } | null>(null);
+  // On-screen tap trace (visible over the camera) — helps verify chip taps
+  // are actually reaching the handlers on real devices.
+  const [tapTrace, setTapTrace] = useState<string>('');
+
 
   useEffect(() => {
     modeRef.current = mode;
