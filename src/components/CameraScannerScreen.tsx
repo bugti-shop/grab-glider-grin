@@ -632,8 +632,8 @@ export const CameraScannerScreen = ({
         </div>
       </div>
 
-      {/* Bottom frosted control bar — hidden during object-count review */}
-      {!objReviewFrame && (
+      {/* Bottom frosted control bar — hidden during any review overlay */}
+      {!objReviewFrame && !receiptReviewFrame && (
       <div
         className="relative z-10 px-4 pt-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
