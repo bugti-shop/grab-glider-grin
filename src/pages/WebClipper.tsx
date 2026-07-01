@@ -56,6 +56,12 @@ const WebClipper = () => {
   const [previewHtml, setPreviewHtml] = useState('');
   const contentEditorRef = useRef<HTMLDivElement>(null);
 
+  // Hydrate web-clip cards (adds expand/collapse toggle for long clips)
+  // whenever the preview HTML changes.
+  useEffect(() => {
+    if (previewReady && contentEditorRef.current) hydrateWebClipsIn(contentEditorRef.current);
+  }, [previewReady, previewHtml]);
+
   // Sanitize incoming params (URL ?title=… &url=… &content=… &selection=… &mode=…).
   // The Share-intent hook and the desktop browser extension both hit this same route.
   const title = sanitizeParam(searchParams.get('title'), MAX_LENGTHS.title) || 'Untitled Clip';
