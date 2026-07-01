@@ -79,6 +79,8 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { TagManagementSheet } from './TagManagementSheet';
+import PublishNoteSheet from './PublishNoteSheet';
+import { syncNoteChecklistToTasks } from '@/utils/syncNoteTasks';
 
 interface NoteEditorProps {
   note: Note | null;
@@ -194,6 +196,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   // Tag state
   const [noteTagIds, setNoteTagIds] = useState<string[]>([]);
   const [showTagSheet, setShowTagSheet] = useState(false);
+  const [showPublishSheet, setShowPublishSheet] = useState(false);
   const [newFolderColor, setNewFolderColor] = useState('#3B82F6');
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [isNoteLinkingOpen, setIsNoteLinkingOpen] = useState(false);
