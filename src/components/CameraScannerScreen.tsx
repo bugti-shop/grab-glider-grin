@@ -707,32 +707,40 @@ const ChipButton = ({
   onSelect: () => void;
   children: React.ReactNode;
 }) => {
-  const startRef = useRef<{ x: number; y: number } | null>(null);
-  const movedRef = useRef(false);
+  const startRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const cancelledRef = useRef(false);
   return (
     <button
       type="button"
       onPointerDown={(e) => {
-        startRef.current = { x: e.clientX, y: e.clientY };
-        movedRef.current = false;
+        startRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+        cancelledRef.current = false;
       }}
       onPointerMove={(e) => {
         const s = startRef.current;
         if (!s) return;
-        if (Math.abs(e.clientX - s.x) > 8 || Math.abs(e.clientY - s.y) > 8) {
-          movedRef.current = true;
+        // Only treat as a scroll if horizontal movement is significant AND
+        // dominates vertical — this keeps taps working even with small finger tremor.
+        const dx = Math.abs(e.clientX - s.x);
+        const dy = Math.abs(e.clientY - s.y);
+        if (dx > 16 && dx > dy) {
+          cancelledRef.current = true;
         }
       }}
+      onPointerCancel={() => {
+        cancelledRef.current = true;
+      }}
       onClick={(e) => {
-        if (movedRef.current) {
+        if (cancelledRef.current) {
           e.preventDefault();
           e.stopPropagation();
           return;
         }
+        e.stopPropagation();
         onSelect();
       }}
       className={cn(
-        'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95',
+        'flex-shrink-0 h-11 px-4 rounded-2xl border flex items-center gap-2 text-xs font-semibold backdrop-blur-xl transition active:scale-95 touch-manipulation',
         active
           ? 'bg-white text-black border-white shadow-[0_8px_30px_rgba(255,255,255,0.25)]'
           : 'bg-white/10 text-white border-white/15',
