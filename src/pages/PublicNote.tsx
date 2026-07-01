@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { sanitizeForDisplay } from '@/lib/sanitize';
-import { format } from 'date-fns';
-import { Loader2, ArrowLeft, ExternalLink } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { Loader2, ArrowLeft, ExternalLink, Eye, Lock, Smartphone } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 interface PublicNoteRow {
   id: string;
@@ -14,13 +15,32 @@ interface PublicNoteRow {
   published_at: string;
   updated_at: string;
   view_count: number;
+  last_viewed_at: string | null;
 }
+
 
 export default function PublicNote() {
   const { slug } = useParams<{ slug: string }>();
   const [note, setNote] = useState<PublicNoteRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const isNative = Capacitor.isNativePlatform();
+  const isMobileBrowser =
+    !isNative &&
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  // Try to hand off to the installed Flowist app on mobile web via the
+  // custom scheme. Universal / App Links usually intercept the https URL
+  // before we even render, but this covers browsers (in-app WebViews,
+  // Firefox etc.) where the OS lets the page load first.
+  useEffect(() => {
+    if (!slug || isNative || !isMobileBrowser) return;
+    const already = sessionStorage.getItem(`p:handoff:${slug}`);
+    if (already) return;
+    sessionStorage.setItem(`p:handoff:${slug}`, '1');
+    window.location.href = `flowist://p/${slug}`;
+  }, [slug, isNative, isMobileBrowser]);
 
   useEffect(() => {
     if (!slug) return;
@@ -39,6 +59,18 @@ export default function PublicNote() {
       }
       setNote(data as PublicNoteRow);
       setLoading(false);
+      // Fire-and-forget view analytics — bumps view_count + last_viewed_at
+      // via SECURITY DEFINER RPC so anonymous visitors count too.
+      supabase.rpc('record_public_note_view', { p_slug: slug }).then(({ data: v }) => {
+        const row = Array.isArray(v) ? v[0] : v;
+        if (!cancelled && row) {
+          setNote((prev) =>
+            prev
+              ? { ...prev, view_count: row.view_count ?? prev.view_count, last_viewed_at: row.last_viewed_at ?? prev.last_viewed_at }
+              : prev,
+          );
+        }
+      });
     })();
     return () => {
       cancelled = true;
@@ -50,6 +82,7 @@ export default function PublicNote() {
       document.title = `${note.title} · Flowist`;
     }
   }, [note?.title]);
+
 
   if (loading) {
     return (
