@@ -204,6 +204,7 @@ export const RichTextEditor = ({
   const hydrateSynced = useCallback(() => {
     if (syncedUnsubRef.current) { syncedUnsubRef.current(); syncedUnsubRef.current = null; }
     syncedUnsubRef.current = hydrateSyncedIn(editorRef.current, { editable: true });
+    hydrateWebClipsIn(editorRef.current);
   }, []);
   useEffect(() => () => { syncedUnsubRef.current?.(); }, []);
 
