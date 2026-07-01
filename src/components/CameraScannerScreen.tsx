@@ -956,7 +956,7 @@ async function decodeBarcodeWithZxing(
   if (!rawValue) return null;
   const barcodeFormat = result.getBarcodeFormat?.();
   const format = typeof barcodeFormat === 'number'
-    ? String((BarcodeFormat as any)[barcodeFormat] || barcodeFormat).toLowerCase()
+    ? String(barcodeFormat).toLowerCase()
     : String(barcodeFormat || 'unknown');
   return { rawValue, format };
 }
