@@ -51,6 +51,11 @@ import {
   FONT_WEIGHTS, FONT_SIZES, LETTER_SPACINGS, LINE_HEIGHTS,
 } from './richtext/richTextConstants';
 import { applySmartDetection, SmartDetectionSettings } from './richtext/richTextDetection';
+import {
+  tryMarkdownBlockShortcut,
+  tryMarkdownEnterShortcut,
+  tryMarkdownInlineShortcut,
+} from './richtext/markdownShortcuts';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
 import {
   reattachTableListenersOnElement,
