@@ -587,24 +587,54 @@ const Notes = () => {
 
         {/* Search Bar */}
         <div className="mb-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder={t('notes.searchNotes')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 pl-10 rounded-lg border-none bg-secondary text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder={semanticMode ? 'Ask in plain language…' : t('notes.searchNotes')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-2 pl-10 pr-9 rounded-lg border-none bg-secondary text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+              />
+              {semanticLoading ? (
+                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary animate-spin" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              )}
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setSemanticMode((v) => !v)}
+              title={semanticMode ? 'Semantic AI search on' : 'Turn on semantic AI search'}
+              className={cn(
+                'h-9 px-2.5 rounded-lg text-xs font-medium inline-flex items-center gap-1 transition-colors shrink-0',
+                semanticMode
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              AI
+            </button>
+            <button
+              onClick={() => setAskOpen(true)}
+              title="Ask your notes"
+              className="h-9 px-2.5 rounded-lg text-xs font-medium inline-flex items-center gap-1 bg-secondary hover:bg-accent text-foreground shrink-0"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              Ask
+            </button>
           </div>
+          {semanticMode && deferredSearchQuery.trim() && !semanticLoading && semanticHits && semanticHits.length === 0 && (
+            <p className="text-xs text-muted-foreground mt-2">No semantically related notes found.</p>
+          )}
           <div className="h-[1px] bg-border mt-3" />
         </div>
 
