@@ -555,7 +555,10 @@ export const CameraScannerScreen = ({
   );
 
   const selectScannerMode = useCallback((id: ScannerMode, label: string, locked: boolean) => {
-    console.log('[Scanner] mode selected →', id, { label, locked });
+    const ts = new Date().toLocaleTimeString();
+    console.log('[Scanner] mode selected →', id, { label, locked, ts });
+    setTapTrace(`${ts} · tap → ${label}${locked ? ' (locked)' : ''}`);
+
     if (locked) {
       toast.info(`${label} is a Pro feature`, { duration: 1200 });
       requirePro('receipt');
