@@ -1190,6 +1190,18 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <FileText className="h-4 w-4 mr-2" />
                   {metaDescription ? t('editor.editMetaDescription') : t('editor.addMetaDescription')}
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    // Ensure latest content is saved before opening publish sheet
+                    await handleSaveRef.current?.();
+                    setShowPublishSheet(true);
+                  }}
+                >
+                  <Globe className="h-4 w-4 mr-2 text-primary" />
+                  <span className="font-medium">
+                    {t('editor.publishToWeb', 'Publish to web')}
+                  </span>
+                </DropdownMenuItem>
 
 
 
