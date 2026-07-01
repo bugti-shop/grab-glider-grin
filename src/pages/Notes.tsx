@@ -907,6 +907,15 @@ const Notes = () => {
         onOpenChange={setShowTagManager}
       />
 
+      <AskNotesDialog
+        open={askOpen}
+        onOpenChange={setAskOpen}
+        onOpenNote={(noteId) => {
+          setAskOpen(false);
+          navigate(`/notes?openNote=${noteId}`);
+        }}
+      />
+
       <div className="md:hidden">
         <BottomNavigation />
       </div>
