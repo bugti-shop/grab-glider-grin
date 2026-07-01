@@ -437,6 +437,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
     setRunning(false);
     setRemaining(0);
     noise.stop();
+    void hideFocusOngoing();
     toast.success('Focus session complete 🎯');
     notifyFocus(prefs.notifications, 'complete', { taskTitle: completedTaskTitle, durationMin: completedDurationMin });
     onComplete?.();
