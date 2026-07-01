@@ -73,6 +73,11 @@ import { migrateNotesToIndexedDB } from "./utils/noteStorage";
 import { initializeProtectionSettings } from "./utils/noteProtection";
 import { configureStatusBar } from "./utils/statusBar";
 import { initializeTaskOrder } from "./utils/taskOrderStorage";
+import { initSafeTopCalibration } from "./utils/safeTopCalibration";
+
+// Auto-calibrate header safe-top as early as possible so the very first paint
+// uses the measured notch/status-bar inset (plus any user offset).
+initSafeTopCalibration();
 
 // One-time cache clear
 const CACHE_CLEAR_KEY = 'nota_cache_cleared_v3';
