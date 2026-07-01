@@ -94,14 +94,13 @@ export async function syncNoteChecklistToTasks(note: Note): Promise<string> {
   const nowIso = new Date();
   await Promise.all(
     items.map(async (item) => {
-      const task: TodoItem = {
+      const task = {
         id: item.taskId,
         text: item.text,
         completed: item.completed,
-        priority: 'low',
+        priority: 'low' as const,
         description: `From note: ${note.title || 'Untitled'}`,
         tags: ['from-note'],
-        // @ts-expect-error — freeform metadata bridging note → task list
         sourceNoteId: note.id,
         createdAt: nowIso,
         updatedAt: nowIso,

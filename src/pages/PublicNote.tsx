@@ -39,8 +39,6 @@ export default function PublicNote() {
       }
       setNote(data as PublicNoteRow);
       setLoading(false);
-      // Best-effort view increment (RLS allows anon update? No — skip silently.)
-      supabase.rpc('noop').catch(() => {});
     })();
     return () => {
       cancelled = true;
