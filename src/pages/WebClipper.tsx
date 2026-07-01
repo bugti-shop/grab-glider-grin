@@ -49,6 +49,12 @@ const WebClipper = () => {
   const abortRef = useRef<AbortController | null>(null);
   const canceledRef = useRef(false);
 
+  // Editable preview state — populated by prepareClip(), committed by commitClip().
+  const [previewReady, setPreviewReady] = useState(false);
+  const [previewTitle, setPreviewTitle] = useState('');
+  const [previewHtml, setPreviewHtml] = useState('');
+  const contentEditorRef = useRef<HTMLDivElement>(null);
+
   // Sanitize incoming params (URL ?title=… &url=… &content=… &selection=… &mode=…).
   // The Share-intent hook and the desktop browser extension both hit this same route.
   const title = sanitizeParam(searchParams.get('title'), MAX_LENGTHS.title) || 'Untitled Clip';
@@ -61,14 +67,14 @@ const WebClipper = () => {
     rawAttachmentType === 'image' || rawAttachmentType === 'pdf' ? rawAttachmentType : null;
   const initialMode = parseClipMode(searchParams.get('mode'));
 
-  // Explicit mode OR an attachment payload auto-saves immediately (no picker).
+  // Explicit mode OR an attachment payload auto-prepares immediately (no picker).
   const explicitMode = searchParams.has('mode') || !!attachment;
   const [mode, setMode] = useState<ClipMode>(initialMode);
   const [picking, setPicking] = useState(!explicitMode);
 
   useEffect(() => {
-    if (!picking && (title || url || content || selection || attachment)) {
-      void handleSaveClip(mode);
+    if (!picking && !previewReady && (title || url || content || selection || attachment)) {
+      void prepareClip(mode);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picking]);
