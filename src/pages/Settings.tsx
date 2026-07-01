@@ -8,6 +8,7 @@ import { useSettingsPageState } from '@/hooks/useSettingsPageState';
 import { SettingsDialogs } from '@/components/settings/SettingsDialogs';
 import { SettingsSheets } from '@/components/settings/SettingsSheets';
 import { FeedbackDialog } from '@/components/FeedbackDialog';
+import { HeaderOffsetSheet } from '@/components/settings/HeaderOffsetSheet';
 
 // Keys for one-time coachmarks shown across the app. Add new keys here so
 // "Show tips again" resets them all in one place.
