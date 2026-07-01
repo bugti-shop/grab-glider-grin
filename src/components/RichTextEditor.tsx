@@ -1532,16 +1532,15 @@ export const RichTextEditor = ({
     }
   }, []);
 
-  // Paste handler: convert Markdown → HTML when the clipboard is plain text
-  // and Markdown shortcuts are enabled. Falls back to default paste otherwise.
+  // Paste handler: convert Markdown → HTML whenever the plain-text clipboard
+  // payload clearly looks like markdown. Mobile browsers/chat apps often expose
+  // both text/plain and text/html; previously the text/html presence made us
+  // skip conversion, leaving raw #, [], **bold**, etc. in the note.
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     if (notesSettings.markdownShortcuts === false) return;
     if (isInsideCode(editorRef.current)) return; // preserve raw paste inside code blocks
     const cd = e.clipboardData;
     if (!cd) return;
-    const html = cd.getData('text/html');
-    // Only intercept plain-text pastes so we don't mangle real HTML from other editors.
-    if (html && html.trim()) return;
     const text = cd.getData('text/plain');
     if (!text) return;
     const converted = markdownPasteToHtml(text);
