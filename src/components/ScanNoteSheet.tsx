@@ -239,6 +239,17 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           )}
         </div>
       </SheetContent>
+      <CameraScannerScreen
+        isOpen={showCamera}
+        onClose={() => setShowCamera(false)}
+        title={t('scanNote.title', 'Scan page to note')}
+        initialMode="note"
+        onCapture={async (dataUrl) => {
+          setShowCamera(false);
+          setImageDataUrl(dataUrl);
+          await runExtraction(dataUrl);
+        }}
+      />
     </Sheet>
   );
 };
