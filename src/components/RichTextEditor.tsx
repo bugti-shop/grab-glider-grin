@@ -1535,6 +1535,39 @@ export const RichTextEditor = ({
       return;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Markdown auto-format shortcuts (Notion/Bear-style).
+    // Block conversions fire on Space when the line contains just a token:
+    //   #, ##, ### → headings   -, *, + → bullet   1. → numbered
+    //   [], [ ], [x] → checklist   > → blockquote
+    // `---` + Enter → divider.
+    // Inline: **bold**, *italic*, _italic_, `code`, ~~strike~~ collapse
+    // when the closing marker is typed.
+    // Skip while slash / mention menus are showing so their own handling wins.
+    // ─────────────────────────────────────────────────────────────
+    if (!slashMenu.open && !mentionMenu.open) {
+      if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (tryMarkdownBlockShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        if (tryMarkdownEnterShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
+      } else if ((e.key === '*' || e.key === '_' || e.key === '`' || e.key === '~') && !e.ctrlKey && !e.metaKey) {
+        if (tryMarkdownInlineShortcut(e.key, editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
+      }
+    }
+
+
     // Slash / mention menu keyboard navigation
     if (slashMenu.open || mentionMenu.open) {
       const isMention = mentionMenu.open;
