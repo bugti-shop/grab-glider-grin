@@ -7,6 +7,7 @@ import { addPomodoroSession } from '@/utils/pomodoroStorage';
 import { addNotification } from '@/utils/notificationStore';
 import { sendWebNotification, requestNotificationPermission } from '@/utils/webNotifications';
 import { setFocusBgState, clearFocusBgState, onFocusBgCommand } from '@/utils/focusBackgroundState';
+import { showFocusOngoing, hideFocusOngoing } from '@/utils/focusPersistentNotification';
 import { SoundLibrary } from '@/components/focus/SoundLibrary';
 import { FocusFlipClock } from '@/components/focus/FocusFlipClock';
 import { findTrack, FocusTrack } from '@/components/focus/FocusSounds';
