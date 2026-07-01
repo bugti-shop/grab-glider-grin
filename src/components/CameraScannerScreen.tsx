@@ -26,6 +26,9 @@ import {
   Boxes,
   Receipt,
   Layers,
+  Files,
+  Undo2,
+  Check,
 } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
