@@ -295,7 +295,11 @@ const WebClipper = () => {
           parts.push(`<blockquote>${sanitizeForDisplay(selection)}</blockquote>`);
         }
         parts.push(articleHtml);
-        if (articleEmbeds.length) {
+        // Embeds are inlined into `articleHtml` at their original DOM position
+        // so their order relative to headings/images is preserved. Only fall
+        // back to an appended section for legacy payloads that still send
+        // embeds separately.
+        if (articleEmbeds.length && !articleEmbeds.every((e) => articleHtml.includes(e))) {
           parts.push(`<h3>${sanitizeForDisplay(t('webClipper.embedsHeading', 'Embedded media'))}</h3>`);
           parts.push(articleEmbeds.join('\n'));
         }
