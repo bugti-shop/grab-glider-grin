@@ -474,7 +474,65 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           setImageDataUrl(dataUrl);
           await runExtraction(dataUrl);
         }}
+        onBatchNote={async (pages) => {
+          if (!pages.length) return;
+          if (!(await ensureScannerAccess())) return;
+          setShowCamera(false);
+          setImageDataUrl(pages[0]);
+          setIsExtracting(true);
+          setHasRun(false);
+          setHtml('');
+          setSuggestedTitle('');
+          setErrorLabel(null);
+          setPhase('processing');
+          const parts: string[] = [];
+          const titles: string[] = [];
+          let firstError: string | null = null;
+          for (let i = 0; i < pages.length; i++) {
+            const pageNum = i + 1;
+            try {
+              toast.loading(`Reading page ${pageNum} of ${pages.length}…`, { id: 'batch-scan' });
+              const { data, error } = await supabase.functions.invoke(
+                'ai-extract-note-from-image',
+                {
+                  body: {
+                    imageBase64: pages[i],
+                    languageCode: (i18n.language || 'en').split('-')[0],
+                    languageName: 'auto',
+                    webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
+                  },
+                  timeout: AI_SCAN_TIMEOUT_MS,
+                },
+              );
+              if (error) throw error;
+              if ((data as any)?.error) throw new Error((data as any).error);
+              const pageHtml = String((data as any)?.html || '').trim();
+              const pageTitle = String((data as any)?.title || '').trim();
+              if (pageTitle) titles.push(pageTitle);
+              parts.push(
+                `<h2>Page ${pageNum}${pageTitle ? ` · ${escapeHtml(pageTitle)}` : ''}</h2>${pageHtml || '<p><em>No readable text</em></p>'}`,
+              );
+            } catch (e: any) {
+              console.error('[scan note batch] page failed', pageNum, e);
+              if (!firstError) firstError = e?.message || 'Extraction failed';
+              parts.push(`<h2>Page ${pageNum}</h2><p><em>Could not read this page</em></p>`);
+            }
+          }
+          toast.dismiss('batch-scan');
+          const combined = parts.join('<hr/>');
+          setHtml(combined);
+          setSuggestedTitle(titles[0] || `Scanned notes · ${pages.length} pages`);
+          setHasRun(true);
+          setPhase('done');
+          setIsExtracting(false);
+          if (firstError) {
+            toast.warning(`Combined ${pages.length} pages · some pages had issues`);
+          } else {
+            toast.success(`Combined ${pages.length} pages into one note`);
+          }
+        }}
       />
+
 
     </Sheet>
   );

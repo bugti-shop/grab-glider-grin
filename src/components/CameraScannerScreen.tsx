@@ -26,6 +26,9 @@ import {
   Boxes,
   Receipt,
   Layers,
+  Files,
+  Undo2,
+  Check,
 } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
@@ -80,6 +83,12 @@ interface Props {
     merchant: string; total: number; currency: string; date: string;
     html: string; title: string;
   }) => void;
+  /**
+   * Called when the user finishes a multi-page batch scan in Note mode.
+   * Receives every captured page in order. Parent should OCR each page
+   * and combine them into a single note with page separators.
+   */
+  onBatchNote?: (dataUrls: string[]) => Promise<void> | void;
   /**
    * Called when a barcode is decoded in `barcode` mode. If omitted, decoded
    * barcodes are surfaced as a toast and the raw frame is still sent via
@@ -141,6 +150,7 @@ export const CameraScannerScreen = ({
   onConfirmObjectCount,
   onReceipt,
   onConfirmReceipt,
+  onBatchNote,
   onBarcode,
   title = 'Scan',
   initialMode = 'note',
@@ -161,6 +171,10 @@ export const CameraScannerScreen = ({
   const [lastBarcode, setLastBarcode] = useState<string | null>(null);
   // Burst mode: capture 3 frames and auto-pick the sharpest.
   const [burstOn, setBurstOn] = useState(false);
+  // Multi-page batch scan (Note mode): capture N pages, save as one combined note.
+  const [batchOn, setBatchOn] = useState(false);
+  const [batchPages, setBatchPages] = useState<string[]>([]);
+  const [batchProcessing, setBatchProcessing] = useState(false);
   // Object-count review state.
   const [objReviewFrame, setObjReviewFrame] = useState<string | null>(null);
   const [objReviewLoading, setObjReviewLoading] = useState(false);
@@ -432,6 +446,16 @@ export const CameraScannerScreen = ({
         return;
       }
 
+      // Batch mode (Note only): accumulate the page and stay on the camera view.
+      if (mode === 'note' && batchOn && onBatchNote) {
+        setBatchPages((prev) => {
+          const next = [...prev, compressed];
+          toast.success(`📄 Page ${next.length} added · tap Done to combine`, { duration: 1200 });
+          return next;
+        });
+        return;
+      }
+
       onCapture(compressed);
       onClose();
     } catch (e) {
@@ -440,7 +464,39 @@ export const CameraScannerScreen = ({
     } finally {
       setCapturing(false);
     }
-  }, [burstOn, capturing, mode, onBarcode, onCapture, onClose, onObjectCount, onReceipt, ready]);
+  }, [batchOn, burstOn, capturing, mode, onBarcode, onBatchNote, onCapture, onClose, onObjectCount, onReceipt, ready]);
+
+  // Reset batch when the scanner closes.
+  useEffect(() => {
+    if (!isOpen) {
+      setBatchPages([]);
+      setBatchOn(false);
+      setBatchProcessing(false);
+    }
+  }, [isOpen]);
+
+  const finishBatch = useCallback(async () => {
+    if (!onBatchNote || batchPages.length === 0 || batchProcessing) return;
+    setBatchProcessing(true);
+    try {
+      await onBatchNote(batchPages);
+      setBatchPages([]);
+      // Parent typically closes the scanner after saving; if not, we stay open.
+    } catch (e: any) {
+      console.error('[Scanner] batch finish error', e);
+      toast.error(e?.message || 'Could not combine pages');
+    } finally {
+      setBatchProcessing(false);
+    }
+  }, [batchPages, batchProcessing, onBatchNote]);
+
+  const undoLastBatchPage = useCallback(() => {
+    setBatchPages((prev) => {
+      if (prev.length === 0) return prev;
+      toast(`Removed page ${prev.length}`, { duration: 900 });
+      return prev.slice(0, -1);
+    });
+  }, []);
 
   const openGallery = useCallback(async () => {
     console.log('[Scanner] gallery opened via explicit gallery button');
@@ -549,6 +605,30 @@ export const CameraScannerScreen = ({
           {title}
         </div>
         <div className="flex items-center gap-2">
+          {mode === 'note' && onBatchNote && (
+            <button
+              onClick={() => {
+                setBatchOn((v) => {
+                  const next = !v;
+                  toast(next
+                    ? 'Batch scan on · capture pages, tap Done to combine'
+                    : 'Batch scan off', { duration: 1200 });
+                  if (!next) setBatchPages([]);
+                  return next;
+                });
+              }}
+              className={cn(
+                'h-10 px-3 rounded-full backdrop-blur-xl border flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition',
+                batchOn
+                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_6px_18px_hsl(var(--primary)/0.35)]'
+                  : 'bg-white/10 border-white/15 text-white',
+              )}
+              aria-label="Toggle batch scan"
+            >
+              <Files className="h-4 w-4" />
+              Batch{batchPages.length > 0 ? ` · ${batchPages.length}` : ''}
+            </button>
+          )}
           <button
             onClick={() => {
               setBurstOn((v) => !v);
@@ -631,6 +711,60 @@ export const CameraScannerScreen = ({
 
         </div>
       </div>
+
+      {/* Batch scan tray — appears above the bottom bar as pages accumulate */}
+      {batchOn && batchPages.length > 0 && !objReviewFrame && !receiptReviewFrame && (
+        <div className="relative z-20 px-4 pb-2">
+          <div className="rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)]">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-semibold tracking-wide text-white/90">
+                {batchPages.length} page{batchPages.length === 1 ? '' : 's'} captured
+              </div>
+              <div className="text-[10px] text-white/60 uppercase tracking-wider">
+                One combined note
+              </div>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+              {batchPages.map((src, i) => (
+                <div
+                  key={i}
+                  className="relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-white/20 bg-black/40"
+                >
+                  <img src={src} alt={`Page ${i + 1}`} className="w-full h-full object-cover" />
+                  <span className="absolute bottom-0 right-0 text-[10px] px-1 rounded-tl bg-black/70 text-white font-bold">
+                    {i + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onPointerDownCapture={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); undoLastBatchPage(); }}
+                disabled={batchProcessing}
+                className="flex-1 h-10 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold text-white active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <Undo2 className="h-4 w-4" />
+                Undo last
+              </button>
+              <button
+                type="button"
+                onPointerDownCapture={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); finishBatch(); }}
+                disabled={batchProcessing}
+                className="flex-[1.4] h-10 rounded-xl bg-primary text-primary-foreground text-xs font-bold active:scale-95 transition disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-[0_6px_18px_hsl(var(--primary)/0.4)]"
+              >
+                {batchProcessing ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Combining {batchPages.length} pages…</>
+                ) : (
+                  <><Check className="h-4 w-4" /> Done · Save {batchPages.length} pages</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom frosted control bar — hidden during any review overlay */}
       {!objReviewFrame && !receiptReviewFrame && (
