@@ -8,4 +8,5 @@
     android:initialLayout="@layout/widget_habits_list"
     android:previewLayout="@layout/widget_habits_list"
     android:resizeMode="horizontal|vertical"
+    android:description="@string/widget_habits_list_desc"
     android:widgetCategory="home_screen" />
