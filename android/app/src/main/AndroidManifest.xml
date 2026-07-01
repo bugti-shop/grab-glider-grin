@@ -130,22 +130,6 @@
 
         </activity>
 
-        <!-- ============ Launcher-level Quick Add ============
-             Translucent dialog activity launched by the AddTaskWidget.
-             Renders directly over the user's launcher so tasks can be
-             added WITHOUT opening the main Flowist app. Typed text is
-             queued into Capacitor Preferences (widget_pending_new_tasks)
-             and drained by the React app on next launch. -->
-        <activity
-            android:name=".widgets.QuickAddActivity"
-            android:theme="@style/QuickAddDialogTheme"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:launchMode="singleInstance"
-            android:taskAffinity=""
-            android:exported="true" />
-
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -156,28 +140,49 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
-        <!-- ============= Home Screen Widgets ============= -->
-        <receiver android:name=".widgets.AddTaskWidget" android:exported="true">
+        <!-- ============= Home Screen Widgets =============
+             Each receiver's android:label is the name shown in the launcher's
+             widget picker; the previewLayout referenced from each widget-info
+             XML renders a real preview thumbnail in the same picker. -->
+        <receiver
+            android:name=".widgets.AddTaskWidget"
+            android:label="@string/widget_add_task_label"
+            android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_add_task_info" />
         </receiver>
-        <receiver android:name=".widgets.StickyNoteWidget" android:exported="true">
+        <receiver
+            android:name=".widgets.StickyNoteWidget"
+            android:label="@string/widget_sticky_note_label"
+            android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_sticky_note_info" />
         </receiver>
-        <receiver android:name=".widgets.LinedNoteWidget" android:exported="true">
+        <receiver
+            android:name=".widgets.LinedNoteWidget"
+            android:label="@string/widget_lined_note_label"
+            android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_lined_note_info" />
         </receiver>
-        <receiver android:name=".widgets.RegularNoteWidget" android:exported="true">
+        <receiver
+            android:name=".widgets.RegularNoteWidget"
+            android:label="@string/widget_regular_note_label"
+            android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_regular_note_info" />
         </receiver>
-        <receiver android:name=".widgets.SketchNoteWidget" android:exported="true">
+        <receiver
+            android:name=".widgets.SketchNoteWidget"
+            android:label="@string/widget_sketch_note_label"
+            android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_sketch_note_info" />
         </receiver>
-        <receiver android:name=".widgets.TasksListWidget" android:exported="true">
+        <receiver
+            android:name=".widgets.TasksListWidget"
+            android:label="@string/widget_tasks_list_label"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="nota.npd.com.widgets.TASKS_LIST_REFRESH" />
@@ -190,7 +195,10 @@
             android:exported="false" />
 
         <!-- Habits list widget: today's progress + tap-to-check-in rows. -->
-        <receiver android:name=".widgets.HabitsListWidget" android:exported="true">
+        <receiver
+            android:name=".widgets.HabitsListWidget"
+            android:label="@string/widget_habits_list_label"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="nota.npd.com.widgets.HABITS_LIST_REFRESH" />
