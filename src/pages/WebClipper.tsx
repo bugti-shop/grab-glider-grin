@@ -346,30 +346,13 @@ const WebClipper = () => {
       }
 
 
-      const newNote: Note = {
-        id: crypto.randomUUID(),
-        type: 'regular',
-        title: finalTitle,
-        content: noteContent,
-        voiceRecordings: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      setStage('saving');
-      setProgressLabel(t('webClipper.stageSaving', 'Saving to notes…'));
-      const existingNotes = await loadNotesFromDB();
-      await saveNotesToDB([newNote, ...existingNotes]);
-
-      setSaved(true);
+      // Hand off to the editable preview — user can tweak title + content
+      // before we persist. Nothing hits the DB until commitClip() runs.
+      setPreviewTitle(finalTitle);
+      setPreviewHtml(noteContent);
+      setPreviewReady(true);
       setStage('idle');
       setProgress(null);
-      toast({
-        title: t('toasts.webClipSaved', 'Web clip saved'),
-        description: t('toasts.clipSavedDesc', { title, defaultValue: `Saved "${title}" to your notes` }),
-      });
-
-      setTimeout(() => navigate('/notesdashboard'), 1200);
     } catch (error) {
       if (canceledRef.current || (error as Error)?.name === 'AbortError') {
         failWith(
@@ -377,7 +360,7 @@ const WebClipper = () => {
           'webClipper.canceledDesc', 'Stopped before the note was saved.',
         );
       } else {
-        console.error('Error saving clip:', error);
+        console.error('Error preparing clip:', error);
         failWith(
           'toasts.errorSavingClip', 'Could not save clip',
           'toasts.somethingWentWrong', 'Something went wrong',
@@ -385,6 +368,48 @@ const WebClipper = () => {
       }
     } finally {
       abortRef.current = null;
+      setSaving(false);
+    }
+  };
+
+  /**
+   * Persist the (possibly-edited) preview to the notes DB.
+   * Reads the live HTML from the contentEditable div so any user edits
+   * — including deletes, re-orders, and inline tweaks — are captured.
+   */
+  const commitClip = async () => {
+    try {
+      setSaving(true);
+      setStage('saving');
+      setProgressLabel(t('webClipper.stageSaving', 'Saving to notes…'));
+      const liveHtml = contentEditorRef.current?.innerHTML ?? previewHtml;
+      const cleanHtml = sanitizeClippedArticle(liveHtml);
+      const cleanTitle = (previewTitle || 'Untitled Clip').substring(0, MAX_LENGTHS.title);
+      const newNote: Note = {
+        id: crypto.randomUUID(),
+        type: 'regular',
+        title: cleanTitle,
+        content: cleanHtml,
+        voiceRecordings: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      const existingNotes = await loadNotesFromDB();
+      await saveNotesToDB([newNote, ...existingNotes]);
+      setSaved(true);
+      setStage('idle');
+      toast({
+        title: t('toasts.webClipSaved', 'Web clip saved'),
+        description: t('toasts.clipSavedDesc', { title: cleanTitle, defaultValue: `Saved "${cleanTitle}" to your notes` }),
+      });
+      setTimeout(() => navigate('/notesdashboard'), 900);
+    } catch (err) {
+      console.error('Error saving clip:', err);
+      failWith(
+        'toasts.errorSavingClip', 'Could not save clip',
+        'toasts.somethingWentWrong', 'Something went wrong',
+      );
+    } finally {
       setSaving(false);
     }
   };
