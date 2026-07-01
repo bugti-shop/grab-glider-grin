@@ -298,7 +298,7 @@ export const NotesCalendarView = ({
 
           // ---------- Apple-Calendar style cell with colored chips ----------
           if (chipsEnabled) {
-            const chips = getDayChips!(day) || [];
+            const chips = (chipsByDay ? chipsByDay.get(day) : getDayChips!(day)) || [];
             const visible = chips.slice(0, maxChipsPerDay);
             const extra = chips.length - visible.length;
 
