@@ -423,7 +423,17 @@ export const CameraScannerScreen = ({
   if (!isOpen) return null;
 
   const overlay = (
-    <div className="fixed inset-0 z-[300] bg-black text-white flex flex-col select-none">
+    <div
+      className="fixed inset-0 z-[300] bg-black text-white flex flex-col select-none"
+      // Scanner is portal'd to <body> but lives inside a Radix Sheet. Without
+      // stopping propagation here, every pointer-down inside the scanner is
+      // treated as "outside the sheet" and closes the parent — which was
+      // making the flash button and Barcode/Objects chips close the whole scanner.
+      onPointerDownCapture={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDownCapture={(e) => e.stopPropagation()}
+      onTouchStartCapture={(e) => e.stopPropagation()}
+    >
       {/* Live camera feed (hidden while reviewing an object-count result) */}
       {!objReviewFrame && (
         <video
