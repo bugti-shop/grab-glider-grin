@@ -517,4 +517,23 @@ const CornerBracket = ({
   );
 };
 
+async function decodeBarcodeFromCanvas(
+  canvas: HTMLCanvasElement,
+): Promise<{ rawValue: string; format: string } | null> {
+  const AnyBarcodeDetector = (window as any).BarcodeDetector;
+  if (!AnyBarcodeDetector) return null;
+  try {
+    const detector = new AnyBarcodeDetector();
+    const results = await detector.detect(canvas);
+    if (results && results.length > 0) {
+      return {
+        rawValue: String(results[0].rawValue ?? ''),
+        format: String(results[0].format ?? 'unknown'),
+      };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 export default CameraScannerScreen;
+
