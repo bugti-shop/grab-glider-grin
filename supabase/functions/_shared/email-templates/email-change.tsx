@@ -37,9 +37,9 @@ export const EmailChangeEmail = ({ confirmationUrl }: Props) => (
           Click the link below to confirm your new email address:
         </Text>
 
-        <Text style={styles.text}>
-          <Link href={confirmationUrl} style={styles.link}>Confirm email</Link>
-        </Text>
+        <Section style={styles.buttonWrap}>
+          <Button href={confirmationUrl} style={styles.button}>Confirm email</Button>
+        </Section>
 
         <Text style={styles.text}>
           This link will expire 30 minutes after this email was sent.
