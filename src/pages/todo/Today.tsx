@@ -194,6 +194,7 @@ const Today = () => {
 
   // ── All state from extracted hook ──
   const state = useTodayState();
+  const [inputDefaultDate, setInputDefaultDate] = useState<Date | undefined>(undefined);
   const {
     tasksSettings, getPriorityColor, getPriorityName, requireFeature, isPro, allGlobalTags,
     items, setItems, folders, setFolders, sections, setSections,
