@@ -613,7 +613,10 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { url, mode: rawMode } = body || {};
     const mode = String(rawMode || "").toLowerCase();
-    const wantFullPage = mode === "fullpage" || mode === "full-page" || mode === "full" || mode === "raw";
+    // HARD OVERRIDE — Web Clipper must always return the complete start-to-end
+    // HTML document. Readability trimming and metadata-only responses are
+    // forbidden. `selection` is the only escape hatch (user-highlighted text).
+    const wantFullPage = mode !== "selection";
     if (!url || typeof url !== "string") {
       return new Response(JSON.stringify({ error: "url required", code: "bad_input" }), {
         status: 400,
