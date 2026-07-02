@@ -68,6 +68,17 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     }
   }, [isOpen]);
 
+  // Auto-open the camera scanner directly when the sheet opens (skip intermediate UI).
+  useEffect(() => {
+    if (!isOpen) return;
+    if (showCamera || imageDataUrl || isExtracting || hasRun) return;
+    (async () => {
+      if (!(await ensureScannerAccess())) { onClose(); return; }
+      setShowCamera(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   const runCapture = async () => {
     if (captureLockRef.current) return;
     if (!(await ensureScannerAccess())) return;
