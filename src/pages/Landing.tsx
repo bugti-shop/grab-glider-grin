@@ -497,6 +497,104 @@ export default function Landing() {
         </section>
 
 
+        {/* Flowist vs Evernote comparison */}
+        <section className="bg-white py-16 sm:py-24">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6">
+            <div className="mb-10 text-center sm:mb-14">
+              <p className="mb-3 text-sm font-bold uppercase tracking-wider" style={{ color: BLUE }}>
+                Flowist vs Evernote
+              </p>
+              <h2 className="text-[28px] font-extrabold leading-tight tracking-tight text-slate-900 sm:text-[40px]">
+                Everything Evernote does — sharper.
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-[15px] leading-relaxed text-slate-600 sm:text-base">
+                Notebooks, OCR, and Web Clipper — rebuilt with AI. Plus tasks, habits, and focus that Evernote never had.
+              </p>
+            </div>
+
+            {/* Head-to-head cards */}
+            <div className="grid gap-4 sm:grid-cols-3 sm:gap-5">
+              {[
+                {
+                  title: 'Notebooks & Organization',
+                  flowist: '3D fanned covers, colors, long-press rename/recolor/delete, folders + tags + sections.',
+                  evernote: 'Flat list, limited visual hierarchy.',
+                },
+                {
+                  title: 'OCR & Scanner',
+                  flowist: 'Gemini-powered extraction, auto-crop, multi-page batch, fully editable preview.',
+                  evernote: 'Basic OCR, struggles with handwriting and low-light scans.',
+                },
+                {
+                  title: 'Web Clipper',
+                  flowist: 'Filtered clean-article mode, ads/nav stripped, editable preview before save.',
+                  evernote: 'Clips full page bloat — ads, nav, sidebars often included.',
+                },
+              ].map((row) => (
+                <article
+                  key={row.title}
+                  className="flex h-full flex-col rounded-[20px] border border-slate-200 bg-white p-5 shadow-[0_2px_8px_-4px_rgba(15,23,42,0.08)] sm:p-6"
+                >
+                  <h3 className="mb-4 text-[16px] font-extrabold tracking-tight text-slate-900 sm:text-[17px]">
+                    {row.title}
+                  </h3>
+                  <div className="mb-3 rounded-xl p-3" style={{ backgroundColor: `${BLUE}0f` }}>
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-wider" style={{ color: BLUE }}>
+                      Flowist
+                    </p>
+                    <p className="text-[13px] leading-relaxed text-slate-700 sm:text-[14px]">
+                      {row.flowist}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-3">
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      Evernote
+                    </p>
+                    <p className="text-[13px] leading-relaxed text-slate-600 sm:text-[14px]">
+                      {row.evernote}
+                    </p>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {/* Beyond Evernote */}
+            <div className="mt-10 rounded-[24px] p-6 sm:mt-14 sm:p-10" style={{ backgroundColor: `${BLUE}0a` }}>
+              <h3 className="text-center text-[20px] font-extrabold tracking-tight text-slate-900 sm:text-[24px]">
+                And what Evernote <span style={{ color: BLUE }}>doesn't</span> have
+              </h3>
+              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+                {[
+                  'AI Extract Tasks from images',
+                  'Semantic search + Ask Notes',
+                  'Focus Mode with ambient sounds',
+                  'Bi-directional note ↔ task sync',
+                  'Native share intent (Android/iOS)',
+                  'Quick Add widget on launcher',
+                  'Habits & Eisenhower matrix',
+                  'Realtime cross-device sync',
+                  'Rich markdown shortcuts',
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-start gap-2 rounded-xl bg-white p-3 shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
+                  >
+                    <span
+                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                      style={{ backgroundColor: BLUE }}
+                    >
+                      ✓
+                    </span>
+                    <span className="text-[13px] font-medium leading-snug text-slate-800 sm:text-[14px]">
+                      {item}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
 
         {/* FAQ */}
         <section id="faq" className="bg-slate-50 py-20 sm:py-28">
