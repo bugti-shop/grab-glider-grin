@@ -183,6 +183,12 @@ const WebClipper = () => {
       console.warn('[webClipper] prepareClip already in flight — ignoring duplicate call');
       return;
     }
+    const dedupeKey = clipKey(clipMode, url || '', attachment || '');
+    if (completedClipKeys.has(dedupeKey)) {
+      console.warn('[webClipper] clip already completed this session — ignoring', dedupeKey);
+      return;
+    }
+    inFlightClipKeys.add(dedupeKey);
     prepareStartedRef.current = true;
     setSaving(true);
     setError(null);
