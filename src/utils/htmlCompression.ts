@@ -32,7 +32,7 @@ async function streamThrough(
   bytes: Uint8Array,
   transform: ReadableWritablePair<Uint8Array, Uint8Array>,
 ): Promise<Uint8Array> {
-  const stream = new Blob([bytes]).stream().pipeThrough(transform as any);
+  const stream = new Blob([bytes as unknown as BlobPart]).stream().pipeThrough(transform as any);
   const buf = await new Response(stream as any).arrayBuffer();
   return new Uint8Array(buf);
 }
