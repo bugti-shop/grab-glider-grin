@@ -124,15 +124,17 @@ export function ChangeEmailSheet({ open, currentEmail, onClose, onEmailChanged }
     if (cooldown > 0 || loading) return;
     setLoading(true); setOtpError(null);
     try {
-      await resendEmailChangeOtp(newEmail.trim().toLowerCase());
-      setCooldown(45);
+      const { cooldownSeconds } = await resendEmailChangeOtp(newEmail.trim().toLowerCase());
+      setCooldown(cooldownSeconds); // server-authoritative cooldown
       toast({
         title: t('emailAuth.otpResent', 'New code sent'),
         description: t('emailAuth.otpResentDesc', 'Check your inbox for the latest 6-digit code.'),
       });
     } catch (err: any) {
       const info = classifyOtpError(err);
-      if (info.code === 'cooldown' && info.retryAfter) setCooldown(info.retryAfter);
+      // Always sync any server-provided retryAfter into the countdown so the
+      // user can't spam and always sees the real remaining time.
+      if (info.retryAfter && info.retryAfter > 0) setCooldown(info.retryAfter);
       toast({
         title:
           info.code === 'cooldown' ? t('emailAuth.tooSoon', 'Please wait')
@@ -145,6 +147,7 @@ export function ChangeEmailSheet({ open, currentEmail, onClose, onEmailChanged }
       setLoading(false);
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-[400] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={close}>
