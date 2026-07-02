@@ -1641,6 +1641,13 @@ export const TaskDetailPage = ({
         onComplete={() => { if (task && !task.completed) handleMarkAsDone(); }}
       />
 
+      <ShareProjectSheet
+        isOpen={showShareSheet}
+        onClose={() => setShowShareSheet(false)}
+        projectId={task.projectId ?? null}
+      />
+
     </div>
   );
+
 };
