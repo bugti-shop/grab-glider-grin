@@ -768,16 +768,8 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
             <p className="text-[26px] font-black mt-2" style={{ color: '#fff' }}>${TEAM_PER_SEAT_MONTHLY.toFixed(2)}</p>
             <p className="text-[11px]" style={{ color: '#9a9a9a' }}>per month / member · billed annually</p>
 
-            <div className="mt-3 flex items-center justify-center gap-3">
-              <button onClick={() => setTeamSeats(s => Math.max(TEAM_MIN_SEATS, s - 1))}
-                className="w-8 h-8 rounded-full text-white font-bold" style={{ background: '#262626' }}>−</button>
-              <div className="text-white text-[14px] font-bold">{teamSeats} seats</div>
-              <button onClick={() => setTeamSeats(s => Math.min(TEAM_MAX_SEATS, s + 1))}
-                className="w-8 h-8 rounded-full text-white font-bold" style={{ background: '#262626' }}>+</button>
-            </div>
-            <p className="text-[11px] mt-2" style={{ color: '#bdbdbd' }}>
-              Total: <span className="font-bold text-white">${teamAnnualTotal}/yr</span>
-            </p>
+            <p className="text-[10.5px] mt-2" style={{ color: '#7c7c7c' }}>Team seats are managed from your dashboard after subscribing.</p>
+
           </div>
         )}
 
