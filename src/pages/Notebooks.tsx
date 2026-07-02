@@ -171,16 +171,16 @@ const Notebooks = () => {
                   <div className="relative w-full h-full">
                     {/* Fanned paper bundle — full width, edge-to-edge with cover */}
                     <div className="absolute left-0 right-0 top-0 bottom-[-6%] pointer-events-none">
-                      {/* Sheet 1 — back */}
+                      {/* Sheet 1 — back (right side only) */}
                       <div
-                        className="absolute left-0 right-0 top-[9%] bottom-[3%] rounded-r-lg rounded-l-[4px] bg-[#fdfaf1] shadow-[0_2px_3px_rgba(0,0,0,0.15)]"
+                        className="absolute left-[18%] right-0 top-[9%] bottom-[3%] rounded-r-lg bg-[#fdfaf1] shadow-[0_2px_3px_rgba(0,0,0,0.15)]"
                       />
-                      {/* Sheet 2 — middle */}
+                      {/* Sheet 2 — middle (right side only) */}
                       <div
-                        className="absolute left-0 right-0 top-[7%] bottom-[1.5%] rounded-r-lg rounded-l-[4px] bg-white shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
+                        className="absolute left-[18%] right-0 top-[7%] bottom-[1.5%] rounded-r-lg bg-white shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
                       />
-                      {/* Sheet 3 — front, flush with cover edges */}
-                      <div className="absolute left-0 right-0 top-[5%] bottom-0 rounded-r-lg rounded-l-[4px] bg-white shadow-[0_3px_5px_-1px_rgba(0,0,0,0.2)]">
+                      {/* Sheet 3 — front (right side only, spine hidden on left) */}
+                      <div className="absolute left-[18%] right-0 top-[5%] bottom-0 rounded-r-lg bg-white shadow-[0_3px_5px_-1px_rgba(0,0,0,0.2)]">
                         {/* ruled hint */}
                         <div className="absolute inset-x-2 bottom-1 space-y-[2px]">
                           <div className="h-px bg-black/10" />
@@ -197,20 +197,20 @@ const Notebooks = () => {
                         backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 55%, ${color}99 100%)`,
                       }}
                     >
-                      {/* Spine shadow */}
+                      {/* Spine shadow — wider */}
                       <div
-                        className="absolute inset-y-0 left-0 w-[10%]"
+                        className="absolute inset-y-0 left-0 w-[18%]"
                         style={{
                           background:
-                            'linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 60%, rgba(255,255,255,0.15) 100%)',
+                            'linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 70%, rgba(255,255,255,0.15) 100%)',
                         }}
                       />
-                      {/* Rings on spine */}
-                      <div className="absolute inset-y-0 left-0 w-[10%] flex flex-col justify-around py-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
+                      {/* Rings on spine — more rings, wider band */}
+                      <div className="absolute inset-y-0 left-0 w-[18%] flex flex-col justify-around py-1.5">
+                        {Array.from({ length: 7 }).map((_, i) => (
                           <span
                             key={i}
-                            className="mx-auto h-[3px] w-[3px] rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
+                            className="mx-auto h-[4px] w-[4px] rounded-full bg-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.3)]"
                           />
                         ))}
                       </div>
