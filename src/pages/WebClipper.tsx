@@ -82,10 +82,17 @@ const WebClipper = () => {
   const [mode, setMode] = useState<ClipMode>(initialMode);
   const [picking, setPicking] = useState(!explicitMode);
 
+  // Guard against React StrictMode double-invocation and any re-render that
+  // could otherwise fire prepareClip() 2–3× for the same URL, producing
+  // duplicate copies of the fetched article.
+  const prepareStartedRef = useRef(false);
   useEffect(() => {
-    if (!picking && !previewReady && (title || url || content || selection || attachment)) {
-      void prepareClip(mode);
-    }
+    if (picking) return;
+    if (prepareStartedRef.current) return;
+    if (previewReady) return;
+    if (!(title || url || content || selection || attachment)) return;
+    prepareStartedRef.current = true;
+    void prepareClip(mode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picking]);
 
@@ -128,6 +135,14 @@ const WebClipper = () => {
    * Does NOT save to the DB — commitClip() does that when the user hits Save.
    */
   const prepareClip = async (clipMode: ClipMode) => {
+    // Belt-and-braces: if a prepare pass is already running, don't kick off
+    // another one on top. Duplicate concurrent fetches were creating 2–3
+    // copies of the same article until the app was closed.
+    if (abortRef.current) {
+      console.warn('[webClipper] prepareClip already in flight — ignoring duplicate call');
+      return;
+    }
+    prepareStartedRef.current = true;
     setSaving(true);
     setError(null);
     canceledRef.current = false;
@@ -635,7 +650,7 @@ const WebClipper = () => {
                       type="button"
                       size="sm"
                       variant="secondary"
-                      onClick={() => { setError(null); void prepareClip(mode); }}
+                      onClick={() => { setError(null); prepareStartedRef.current = false; abortRef.current = null; void prepareClip(mode); }}
                     >
                       <Loader2 className="h-3.5 w-3.5 mr-1.5" />
                       {t('webClipper.retry', 'Try again')}

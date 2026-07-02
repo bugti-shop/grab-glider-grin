@@ -358,37 +358,17 @@ export const persistSyncedFrom = (root: HTMLElement | null) => {
  * - Adds a collapse/expand toggle when the body word-count exceeds threshold.
  * - Idempotent: safe to call on every render.
  */
-export const hydrateWebClipsIn = (root: HTMLElement | null, threshold = 600) => {
+export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) => {
   if (!root) return;
   const clips = root.querySelectorAll<HTMLElement>('.flowist-web-clip');
   clips.forEach((clip) => {
     if (clip.dataset.hydrated === '1') return;
     const body = clip.querySelector<HTMLElement>('.flowist-web-clip-body[data-role="body"]');
-    if (!body) { clip.dataset.hydrated = '1'; return; }
-    const words = (body.textContent || '').trim().split(/\s+/).filter(Boolean).length;
-    if (words > threshold) {
-      body.setAttribute('data-collapsed', '1');
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'flowist-web-clip-toggle';
-      btn.setAttribute('contenteditable', 'false');
-      btn.setAttribute('data-role', 'toggle');
-      const setLabel = () => {
-        const collapsed = body.getAttribute('data-collapsed') === '1';
-        btn.textContent = collapsed
-          ? `▾ Read full clip (${words.toLocaleString()} words)`
-          : '▴ Collapse clip';
-      };
-      setLabel();
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const collapsed = body.getAttribute('data-collapsed') === '1';
-        if (collapsed) body.removeAttribute('data-collapsed');
-        else body.setAttribute('data-collapsed', '1');
-        setLabel();
-      });
-      body.insertAdjacentElement('afterend', btn);
+    if (body) {
+      // Always render the full clip expanded — no "Read full clip" toggle.
+      body.removeAttribute('data-collapsed');
+      // Remove any pre-existing toggle button left over from older clips.
+      clip.querySelectorAll('button.flowist-web-clip-toggle[data-role="toggle"]').forEach((el) => el.remove());
     }
     clip.dataset.hydrated = '1';
   });
@@ -455,16 +435,10 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, threshold = 600) => 
 
     const btn = fig.querySelector<HTMLButtonElement>('button[data-role="fullpage-open"]');
     if (!btn) return;
-    btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (fig.querySelector('iframe.flowist-web-clip-fullpage-frame')) {
-        // Already open — collapse again.
-        fig.querySelector('iframe.flowist-web-clip-fullpage-frame')?.remove();
-        btn.textContent = btn.dataset.originalLabel || btn.textContent || 'View snapshot';
-        return;
-      }
-      btn.dataset.originalLabel = btn.textContent || '';
+
+    const openSnapshot = async () => {
+      if (fig.querySelector('iframe.flowist-web-clip-fullpage-frame')) return;
+      btn.dataset.originalLabel = btn.dataset.originalLabel || btn.textContent || 'View snapshot';
       btn.textContent = 'Loading snapshot…';
       btn.setAttribute('disabled', 'true');
       try {
@@ -472,9 +446,6 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, threshold = 600) => 
         const { decompressHtml } = await import('@/utils/htmlCompression');
         let html = await decompressHtml(gz);
 
-        // Inject a <base href> pointing at the original page so any relative
-        // asset/link URLs left in the captured document resolve against the
-        // source site rather than the Flowist app origin.
         if (originalUrl) {
           const safeBase = originalUrl.replace(/"/g, '&quot;');
           const baseTag = `<base href="${safeBase}" target="_blank">`;
@@ -491,8 +462,6 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, threshold = 600) => 
 
         const iframe = document.createElement('iframe');
         iframe.className = 'flowist-web-clip-fullpage-frame';
-        // Allow scripts + popups so interactive captured pages render, but
-        // omit allow-same-origin to keep the snapshot isolated from Flowist.
         iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox');
         iframe.setAttribute('referrerpolicy', 'no-referrer');
         iframe.setAttribute('loading', 'lazy');
@@ -509,7 +478,23 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, threshold = 600) => 
       } finally {
         btn.removeAttribute('disabled');
       }
+    };
+
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const existing = fig.querySelector('iframe.flowist-web-clip-fullpage-frame');
+      if (existing) {
+        existing.remove();
+        btn.textContent = btn.dataset.originalLabel || 'View snapshot';
+        return;
+      }
+      void openSnapshot();
     });
+
+    // Auto-expand snapshot on first hydration so the user sees the full clip
+    // immediately without having to click "View snapshot".
+    void openSnapshot();
   });
 };
 
