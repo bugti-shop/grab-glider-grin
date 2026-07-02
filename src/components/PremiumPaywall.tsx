@@ -138,34 +138,14 @@ function usePaywallLogic() {
     planOverride?: string,
     _extras?: { quantity?: number },
   ) => {
-    const planType = planOverride ?? selectedPlan;
+    const planType = (planOverride ?? selectedPlan) as ProductType;
     setIsPurchasing(true);
     setAdminError('');
     try {
       const isNative = Capacitor.isNativePlatform();
 
-      // Family / Team are native-only (iOS + Android)
-      if (planType === 'family' || planType === 'team') {
-        if (!isNative) {
-          setAdminError('Family and Team plans are available on the iOS and Android apps only. Please subscribe from your phone.');
-          setTimeout(() => setAdminError(''), 6000);
-          return;
-        }
-        const cfg = (BILLING_CONFIG as any)[planType];
-        const ok = await purchaseNativeByProductId(cfg.productId);
-        if (ok) {
-          try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}
-          closePaywall();
-        } else {
-          setAdminError(t('onboarding.paywall.purchaseCancelled'));
-          setTimeout(() => setAdminError(''), 4000);
-        }
-        return;
-      }
-
-      // Individual (weekly/monthly/yearly)
       if (isNative && (planType === 'weekly' || planType === 'monthly' || planType === 'yearly')) {
-        const success = await purchase(planType as ProductType);
+        const success = await purchase(planType);
         if (success) {
           try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}
           closePaywall();
@@ -174,7 +154,7 @@ function usePaywallLogic() {
           setTimeout(() => setAdminError(''), 4000);
         }
       } else {
-        // Web: Stripe checkout for individual plans
+        // Web: Stripe checkout
         const { data: { session } } = await supabase.auth.getSession();
         const headers: Record<string, string> = {};
         if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
