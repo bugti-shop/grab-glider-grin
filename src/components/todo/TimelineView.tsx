@@ -47,17 +47,14 @@ export const TimelineView = ({
   onAddForDate,
 }: TimelineViewProps) => {
   const { t } = useTranslation();
-  const today = startOfDay(new Date());
+  const tz = getUserTimeZone();
 
   const dayGroups = Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(today, i);
-    const id = `timeline-day-${format(date, 'yyyy-MM-dd')}`;
-    const label =
-      i === 0 ? t('grouping.today', 'Today')
-      : i === 1 ? t('grouping.tomorrow', 'Tomorrow')
-      : format(date, 'EEEE');
+    const date = startOfZonedDay(i, new Date(), tz);
+    const id = `timeline-day-${zonedDayKey(date, tz)}`;
+    const label = zonedDayLabel(date, i, t as (k: string, f?: string) => string, tz);
     const tasks = uncompletedItems.filter(item =>
-      item.dueDate && isSameDay(new Date(item.dueDate), date)
+      item.dueDate && isSameZonedDay(new Date(item.dueDate), date, tz)
     );
     const color =
       i === 0 ? '#3b82f6'
