@@ -41,6 +41,7 @@ const WebClipper = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { isAdminBypass } = useSubscription();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [stage, setStage] = useState<Stage>('idle');
