@@ -714,7 +714,10 @@ Deno.serve(async (req) => {
     ]);
 
     // Inline embeds into the DOM (preserves order vs. headings/images).
-    inlineEmbeds(document as any, base);
+    // Skip in full-page mode — user wants the raw page as-is.
+    if (!wantFullPage) {
+      inlineEmbeds(document as any, base);
+    }
 
     // FULL-PAGE MODE — return the entire raw HTML (start-to-end) without
     // Readability trimming. Icons, ads, everything the page shipped.
