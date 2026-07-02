@@ -28,7 +28,7 @@ export const MagicLinkEmail = ({ confirmationUrl }: Props) => (
     <Body style={styles.main}>
       <Container style={styles.container}>
         <Section style={styles.header}>
-          <Img src={BRAND.logoUrl} width="56" height="56" alt={BRAND.name} style={styles.logo} />
+          <Img src={BRAND.logoUrl} width="96" height="96" alt={BRAND.name} style={styles.logo} />
           <Text style={styles.brandName}>{BRAND.name}</Text>
           <Text style={styles.brandTag}>{BRAND.tagline}</Text>
         </Section>
