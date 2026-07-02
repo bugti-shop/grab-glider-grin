@@ -207,15 +207,36 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
   const [showToc, setShowToc] = useState(false);
+  const [tocMaxLevel, setTocMaxLevel] = useState<number>(6);
+  const currentNoteId = getCurrentNoteId();
   useEffect(() => {
-    getSetting<boolean>('noteEditor.showToc', false).then(setShowToc).catch(() => {});
+    // Per-note visibility, falling back to the global default when the note has no saved value.
+    let cancelled = false;
+    (async () => {
+      const globalDefault = await getSetting<boolean>('noteEditor.showToc', false).catch(() => false);
+      const perNote = await getSetting<boolean | null>(`noteEditor.showToc.${currentNoteId}`, null as any).catch(() => null);
+      if (cancelled) return;
+      setShowToc(typeof perNote === 'boolean' ? perNote : !!globalDefault);
+    })();
+    return () => { cancelled = true; };
+  }, [currentNoteId]);
+  useEffect(() => {
+    getSetting<number>('noteEditor.tocMaxLevel', 6).then(v => setTocMaxLevel(Math.min(6, Math.max(1, Number(v) || 6)))).catch(() => {});
   }, []);
   const toggleToc = useCallback(() => {
     setShowToc(prev => {
       const next = !prev;
+      // Persist per note so opening the same note again keeps the preference.
+      setSetting(`noteEditor.showToc.${currentNoteId}`, next).catch(() => {});
+      // Also update the global default so brand-new notes match the last choice.
       setSetting('noteEditor.showToc', next).catch(() => {});
       return next;
     });
+  }, [currentNoteId]);
+  const changeTocMaxLevel = useCallback((level: number) => {
+    const clamped = Math.min(6, Math.max(1, level));
+    setTocMaxLevel(clamped);
+    setSetting('noteEditor.tocMaxLevel', clamped).catch(() => {});
   }, []);
   const [metaDescription, setMetaDescription] = useState<string>('');
   const [customColor, setCustomColor] = useState<string | undefined>(undefined);
