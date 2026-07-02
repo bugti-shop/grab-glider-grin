@@ -209,7 +209,10 @@ export const TaskDetailPage = ({
     priority: 'sheet',
   });
 
+  const [showShareSheet, setShowShareSheet] = useState(false);
+
   if (!isOpen || !task) return null;
+
 
   const currentFolder = folders.find(f => f.id === task.folderId);
 
