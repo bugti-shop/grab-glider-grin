@@ -3,6 +3,7 @@ import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
 import { TodoItem, Priority, RepeatType, Folder, VoiceRecording, LocationReminder, TaskAttachment } from '@/types/note';
 import { TagManagementSheet } from '@/components/TagManagementSheet';
+import { TaskProjectAssignPicker } from '@/components/TaskProjectAssignPicker';
 import { useGlobalTags } from '@/hooks/useGlobalTags';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -168,6 +169,8 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   const [repeatDays, setRepeatDays] = useState<number[]>([]);
   const [folderId, setFolderId] = useState<string | undefined>();
   const [sectionId, setSectionId] = useState<string | undefined>();
+  const [projectId, setProjectId] = useState<string | undefined>();
+  const [assigneeId, setAssigneeId] = useState<string | undefined>();
   const [showDateTimePage, setShowDateTimePage] = useState(false);
   const [showDeadlinePage, setShowDeadlinePage] = useState(false);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
@@ -475,6 +478,8 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       attachments: attachments.length > 0 ? attachments : undefined,
       estimatedHours: finalEstimatedHours,
       isUrgent: isUrgent || undefined,
+      projectId,
+      assigneeId,
     };
 
     // Add task first
@@ -1478,6 +1483,8 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
                 );
               }
 
+
+
               if (action.id === 'image') {
                 return (
                   <button
@@ -1616,6 +1623,13 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
               return null;
             })}
 
+            {/* Team project + assignee picker */}
+            <TaskProjectAssignPicker
+              projectId={projectId}
+              assigneeId={assigneeId}
+              onChange={(p) => { setProjectId(p.projectId); setAssigneeId(p.assigneeId); }}
+            />
+
             {/* Edit Actions Button - always last */}
             <button
               className="relative flex items-center gap-1.5 px-3 py-2 rounded-md border border-border bg-card hover:bg-muted transition-all whitespace-nowrap"
@@ -1624,6 +1638,7 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
               <Settings2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span className="text-sm text-muted-foreground whitespace-nowrap">{t('taskInput.editActions')}</span>
             </button>
+
 
             <input
               ref={imageInputRef}

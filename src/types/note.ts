@@ -196,6 +196,10 @@ export interface TodoItem {
   completedAt?: Date;
   /** Set when the task was auto-created from a `.checklist-item` inside a note. */
   sourceNoteId?: string;
+  /** Team project this task belongs to (optional — task can be personal). */
+  projectId?: string;
+  /** User this task is assigned to (member of the project, or self). */
+  assigneeId?: string;
 }
 
 export interface TaskTemplate {

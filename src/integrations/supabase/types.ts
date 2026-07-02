@@ -834,6 +834,112 @@ export type Database = {
         }
         Relationships: []
       }
+      project_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          project_id: string
+          role: Database["public"]["Enums"]["project_role"]
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          project_id: string
+          role?: Database["public"]["Enums"]["project_role"]
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          project_id?: string
+          role?: Database["public"]["Enums"]["project_role"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_members: {
+        Row: {
+          joined_at: string
+          project_id: string
+          role: Database["public"]["Enums"]["project_role"]
+          user_id: string
+        }
+        Insert: {
+          joined_at?: string
+          project_id: string
+          role?: Database["public"]["Enums"]["project_role"]
+          user_id: string
+        }
+        Update: {
+          joined_at?: string
+          project_id?: string
+          role?: Database["public"]["Enums"]["project_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          color: string | null
+          created_at: string
+          emoji: string | null
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          emoji?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       public_notes: {
         Row: {
           content: string
@@ -1046,6 +1152,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          assignee_id: string | null
           completed_at: string | null
           created_at: string
           due_date: string | null
@@ -1059,6 +1166,7 @@ export type Database = {
           parent_task_id: string | null
           payload: Json
           priority: number
+          project_id: string | null
           reminder_at: string | null
           section_id: string | null
           title: string
@@ -1066,6 +1174,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assignee_id?: string | null
           completed_at?: string | null
           created_at?: string
           due_date?: string | null
@@ -1079,6 +1188,7 @@ export type Database = {
           parent_task_id?: string | null
           payload?: Json
           priority?: number
+          project_id?: string | null
           reminder_at?: string | null
           section_id?: string | null
           title: string
@@ -1086,6 +1196,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assignee_id?: string | null
           completed_at?: string | null
           created_at?: string
           due_date?: string | null
@@ -1099,6 +1210,7 @@ export type Database = {
           parent_task_id?: string | null
           payload?: Json
           priority?: number
+          project_id?: string | null
           reminder_at?: string | null
           section_id?: string | null
           title?: string
@@ -1125,6 +1237,13 @@ export type Database = {
             columns: ["parent_task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -1318,6 +1437,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_edit_project: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       decrement_ai_usage: {
         Args: {
           p_feature: string
@@ -1349,6 +1472,10 @@ export type Database = {
           new_count: number
         }[]
       }
+      is_project_member: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       match_note_chunks: {
         Args: {
           match_count?: number
@@ -1372,6 +1499,10 @@ export type Database = {
         }
         Returns: number
       }
+      project_role_of: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: Database["public"]["Enums"]["project_role"]
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -1389,7 +1520,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      project_role: "owner" | "editor" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1516,6 +1647,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      project_role: ["owner", "editor", "viewer"],
+    },
   },
 } as const
