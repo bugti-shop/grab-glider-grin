@@ -41,7 +41,19 @@ const WebClipper = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { isAdminBypass } = useSubscription();
+  const { isAdminBypass, isPro } = useSubscription();
+  // Free users see a monthly quota bar; Pro users (or admin bypass) see nothing.
+  // isPro flips instantly when RevenueCat / user_entitlements Realtime fires,
+  // so upgrading unlocks unlimited clipping without a page refresh.
+  const showQuota = !isPro && !isAdminBypass;
+  const quota = useWebClipperQuota(showQuota);
+  // Re-poll the counter after every successful (or failed) fetch so the bar
+  // reflects server-side increments the edge function just applied.
+  useEffect(() => {
+    if (!showQuota) return;
+    if (stage === 'idle') void quota.refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, showQuota, saved, isPro]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [stage, setStage] = useState<Stage>('idle');
