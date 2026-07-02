@@ -259,6 +259,3 @@ const Notebooks = () => {
 };
 
 export default Notebooks;
-
-
-export default Notebooks;
