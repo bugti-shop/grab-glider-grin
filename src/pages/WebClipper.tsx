@@ -249,7 +249,7 @@ const WebClipper = () => {
           setProgress(null);
           setProgressLabel(t('webClipper.stageFetching', 'Fetching full page…'));
           const { data, error } = await supabase.functions.invoke('fetch-article', {
-            body: { url, mode: 'article' },
+            body: { url, mode: 'article', webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined },
           });
           if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
           if (error) {
