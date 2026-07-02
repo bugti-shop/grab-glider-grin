@@ -18,12 +18,14 @@ import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock, LayoutG
 import { createPortal } from 'react-dom';
 import { useSubscription, ProductType, FREE_CAPACITY_LIMITS, SOFT_FREE_LIMITS, CAPACITY_LABELS } from '@/contexts/SubscriptionContext';
 import { Capacitor } from '@capacitor/core';
-import { PurchasesPackage, PACKAGE_TYPE } from '@revenuecat/purchases-capacitor';
+import { Purchases, PurchasesPackage, PACKAGE_TYPE } from '@revenuecat/purchases-capacitor';
+import { BILLING_CONFIG } from '@/lib/billing';
 import { triggerTripleHeavyHaptic } from '@/utils/haptics';
 import { supabase } from '@/lib/supabase';
 import { getLocalLifetimeMax } from '@/utils/lifetimeCountersCloud';
 import { loadTasksFromDB, updateTaskInDB } from '@/utils/taskStorage';
 import { format, formatDistanceToNow, isToday, isTomorrow } from 'date-fns';
+
 
 
 
