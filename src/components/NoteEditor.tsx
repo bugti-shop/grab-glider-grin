@@ -32,6 +32,7 @@ import { TemplateSelector } from './TemplateSelector';
 import { NoteVersionHistorySheet } from './NoteVersionHistorySheet';
 import { NoteLinkingSheet } from './NoteLinkingSheet';
 import { injectHeadingIds } from './NoteTableOfContents';
+import { TableOfContents } from './richtext/TableOfContents';
 import { InputSheetPage } from './InputSheetPage';
 import { VoiceRecordingSheet } from './VoiceRecordingSheet';
 import { NoteAttachmentsSection } from './NoteAttachmentsSection';
@@ -205,6 +206,17 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [showStats, setShowStats] = useState(false);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
+  const [showToc, setShowToc] = useState(false);
+  useEffect(() => {
+    getSetting<boolean>('noteEditor.showToc', false).then(setShowToc).catch(() => {});
+  }, []);
+  const toggleToc = useCallback(() => {
+    setShowToc(prev => {
+      const next = !prev;
+      setSetting('noteEditor.showToc', next).catch(() => {});
+      return next;
+    });
+  }, []);
   const [metaDescription, setMetaDescription] = useState<string>('');
   const [customColor, setCustomColor] = useState<string | undefined>(undefined);
   
@@ -1211,6 +1223,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   {isReadingMode ? t('editor.exitReadingMode') : t('editor.enterReadingMode')}
                   {!isPro && !isReadingMode && <Crown className="h-3 w-3 ml-auto text-amber-500" />}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleToc}>
+                  <ListFilter className="h-4 w-4 mr-2" />
+                  {showToc ? t('editor.hideToc', 'Hide Table of Contents') : t('editor.showToc', 'Show Table of Contents')}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsFindReplaceOpen(true)}>
                   <Search className="h-4 w-4 mr-2" />
                   {t('editor.findReplace')}
@@ -1986,7 +2002,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
               </div>
             </div>
           ) : (
-            <div className="relative flex-1 min-h-0">
+            <div className="relative flex-1 min-h-0 flex flex-col">
+              {showToc && (
+                <TableOfContents content={content} editorRef={editorRef} />
+              )}
               <RichTextEditor
                 content={content}
                 onChange={setContent}

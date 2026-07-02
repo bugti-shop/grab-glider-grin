@@ -5,6 +5,38 @@
 
 import { TodoItem, Note, Priority, Folder, TaskAttachment, TaskSection } from '@/types/note';
 import { saveTaskMedia } from '@/utils/taskMediaStorage';
+import { getAllTags, createTag, incrementTagUsage, TAG_COLORS, type AppTag } from '@/utils/tagStorage';
+
+/**
+ * Evernote-like tag sync: match external tag names against the user's existing
+ * global tags (case-insensitive). Matched names reuse the existing tag id and
+ * bump usageCount; unknown names create a new global AppTag. Returns the
+ * resolved list of tagIds for the note.
+ */
+const syncExternalTagsToGlobal = async (
+  names: string[],
+  existing: AppTag[],
+  byName: Map<string, AppTag>,
+): Promise<string[]> => {
+  const out: string[] = [];
+  for (const raw of names) {
+    const name = (raw || '').trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    let tag = byName.get(key);
+    if (!tag) {
+      const color = TAG_COLORS[existing.length % TAG_COLORS.length];
+      tag = await createTag(name, color);
+      existing.push(tag);
+      byName.set(key, tag);
+    } else {
+      // fire-and-forget usage bump — don't block import on it
+      incrementTagUsage(tag.id).catch(() => {});
+    }
+    if (!out.includes(tag.id)) out.push(tag.id);
+  }
+  return out;
+};
 
 export type ImportSource = 'todoist' | 'ticktick' | 'notion' | 'evernote' | 'csv-tasks' | 'csv-notes' | 'json';
 
@@ -745,6 +777,14 @@ const parseEvernoteExport = async (
       return notebookFolder;
     };
 
+    // Load global tags once so we can match/sync Evernote tags into the app's
+    // existing tag system (Evernote-like import: reuse existing tag ids and
+    // create + register any new names as global AppTags).
+    const existingTags = await getAllTags();
+    const tagsByName = new Map<string, AppTag>(
+      existingTags.map(t => [t.name.trim().toLowerCase(), t]),
+    );
+
     if (text.includes('<en-export') || text.includes('<note>')) {
       const noteMatches = text.match(/<note>([\s\S]*?)<\/note>/g) || [];
       const total = noteMatches.length;
@@ -835,12 +875,16 @@ const parseEvernoteExport = async (
             : new Date();
 
           const folder = ensureFolder();
+          const resolvedTagIds = tagMatches.length
+            ? await syncExternalTagsToGlobal(tagMatches, existingTags, tagsByName)
+            : [];
           notes.push({
             id: generateId(),
             type: 'regular',
             title,
             content: inner,
             tags: tagMatches.length ? tagMatches : undefined,
+            tagIds: resolvedTagIds.length ? resolvedTagIds : undefined,
             folderId: folder.id,
             voiceRecordings: [],
             attachments: noteAttachments.length ? noteAttachments : undefined,
