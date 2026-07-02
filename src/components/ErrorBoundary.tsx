@@ -60,6 +60,18 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    try {
+      // Persist last error so we can inspect it on next reload
+      sessionStorage.setItem(
+        'lastBoundaryError',
+        JSON.stringify({
+          message: error?.message || String(error),
+          stack: (error?.stack || '').slice(0, 2000),
+          componentStack: (errorInfo?.componentStack || '').slice(0, 2000),
+          at: new Date().toISOString(),
+        }),
+      );
+    } catch {}
     this.props.onError?.(error, errorInfo);
     this.setState(prev => ({ errorCount: prev.errorCount + 1 }));
 
@@ -115,6 +127,15 @@ export class ErrorBoundary extends Component<Props, State> {
               ? t('errorBoundary.repeatedError', 'This error keeps occurring. Try clearing the cache or going back to home.')
               : t('errorBoundary.unexpectedError', 'An unexpected error occurred. Please try again.')}
           </p>
+
+          {this.state.error?.message && (
+            <details className="mb-4 text-left max-w-sm w-full">
+              <summary className="text-xs text-muted-foreground cursor-pointer">Details</summary>
+              <pre className="mt-2 text-[10px] leading-snug whitespace-pre-wrap break-all bg-muted/50 rounded p-2 max-h-40 overflow-auto">
+                {this.state.error.message}
+              </pre>
+            </details>
+          )}
 
           <div className="flex flex-col gap-3 w-full max-w-xs">
             <Button onClick={this.handleRetry} variant="default" className="w-full gap-2">
