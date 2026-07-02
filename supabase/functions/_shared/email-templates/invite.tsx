@@ -36,9 +36,9 @@ export const InviteEmail = ({ confirmationUrl }: Props) => (
           Click the link below to accept your invitation:
         </Text>
 
-        <Text style={styles.text}>
-          <Link href={confirmationUrl} style={styles.link}>Accept invitation</Link>
-        </Text>
+        <Section style={styles.buttonWrap}>
+          <Button href={confirmationUrl} style={styles.button}>Accept invitation</Button>
+        </Section>
 
         <Text style={styles.text}>
           This link will expire 30 minutes after this email was sent.
