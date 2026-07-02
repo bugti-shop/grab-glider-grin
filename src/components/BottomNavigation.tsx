@@ -18,6 +18,7 @@ const ICON_COMPONENTS: Record<string, React.ComponentType<{ className?: string }
   Calendar,
   Settings,
   User,
+  Book,
 };
 
 // Prefetch all lazy routes when browser is idle
