@@ -481,9 +481,11 @@ export const CameraScannerScreen = ({
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="text-sm font-semibold tracking-wide bg-white/10 backdrop-blur-xl border border-white/15 rounded-full px-4 py-1.5">
-          {title}
-        </div>
+        {title ? (
+          <div className="text-sm font-semibold tracking-wide bg-white/10 backdrop-blur-xl border border-white/15 rounded-full px-4 py-1.5">
+            {title}
+          </div>
+        ) : <div />}
         <div className="flex items-center gap-2">
           {mode === 'note' && onBatchNote && (
             <button
