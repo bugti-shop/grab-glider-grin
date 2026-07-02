@@ -435,16 +435,10 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
 
     const btn = fig.querySelector<HTMLButtonElement>('button[data-role="fullpage-open"]');
     if (!btn) return;
-    btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (fig.querySelector('iframe.flowist-web-clip-fullpage-frame')) {
-        // Already open — collapse again.
-        fig.querySelector('iframe.flowist-web-clip-fullpage-frame')?.remove();
-        btn.textContent = btn.dataset.originalLabel || btn.textContent || 'View snapshot';
-        return;
-      }
-      btn.dataset.originalLabel = btn.textContent || '';
+
+    const openSnapshot = async () => {
+      if (fig.querySelector('iframe.flowist-web-clip-fullpage-frame')) return;
+      btn.dataset.originalLabel = btn.dataset.originalLabel || btn.textContent || 'View snapshot';
       btn.textContent = 'Loading snapshot…';
       btn.setAttribute('disabled', 'true');
       try {
@@ -452,9 +446,6 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
         const { decompressHtml } = await import('@/utils/htmlCompression');
         let html = await decompressHtml(gz);
 
-        // Inject a <base href> pointing at the original page so any relative
-        // asset/link URLs left in the captured document resolve against the
-        // source site rather than the Flowist app origin.
         if (originalUrl) {
           const safeBase = originalUrl.replace(/"/g, '&quot;');
           const baseTag = `<base href="${safeBase}" target="_blank">`;
@@ -471,8 +462,6 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
 
         const iframe = document.createElement('iframe');
         iframe.className = 'flowist-web-clip-fullpage-frame';
-        // Allow scripts + popups so interactive captured pages render, but
-        // omit allow-same-origin to keep the snapshot isolated from Flowist.
         iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox');
         iframe.setAttribute('referrerpolicy', 'no-referrer');
         iframe.setAttribute('loading', 'lazy');
@@ -489,7 +478,23 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
       } finally {
         btn.removeAttribute('disabled');
       }
+    };
+
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const existing = fig.querySelector('iframe.flowist-web-clip-fullpage-frame');
+      if (existing) {
+        existing.remove();
+        btn.textContent = btn.dataset.originalLabel || 'View snapshot';
+        return;
+      }
+      void openSnapshot();
     });
+
+    // Auto-expand snapshot on first hydration so the user sees the full clip
+    // immediately without having to click "View snapshot".
+    void openSnapshot();
   });
 };
 
