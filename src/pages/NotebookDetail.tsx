@@ -202,21 +202,81 @@ const NotebookDetail = () => {
           setSelectedNote(null);
         }}
         onSave={handleSaveNote}
-        defaultType={'regular' as NoteType}
+        defaultType={defaultType}
         defaultFolderId={id}
         returnTo={`/notebook/${id}`}
       />
 
       {!isEditorOpen && (
-        <Button
-          className="fixed left-4 right-4 z-50 h-12 text-base font-semibold md:hidden"
-          style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
-          size="lg"
-          onClick={handleCreateNote}
-        >
-          <Plus className="h-5 w-5" />
-          New note
-        </Button>
+        visibleTypes.length === 1 ? (
+          <Button
+            className="fixed left-4 right-4 z-50 h-12 text-base font-semibold md:hidden"
+            style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
+            size="lg"
+            onClick={() => { triggerHaptic('heavy'); handleCreateNote(visibleTypes[0]); }}
+          >
+            <Plus className="h-5 w-5" />
+            New note
+          </Button>
+        ) : (
+          <DropdownMenu open={noteTypeSelectorOpen} onOpenChange={setNoteTypeSelectorOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                className="fixed left-4 right-4 z-50 h-12 text-base font-semibold md:hidden"
+                style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
+                size="lg"
+                onClick={() => triggerHaptic('heavy')}
+              >
+                <Plus className="h-5 w-5" />
+                New note
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="mb-2 w-48 bg-card">
+              {isTypeVisible('sticky') && (
+                <DropdownMenuItem onClick={() => { triggerHaptic('medium'); handleCreateNote('sticky'); setNoteTypeSelectorOpen(false); }} className="gap-2">
+                  <StickyNote className="h-4 w-4 text-warning" />
+                  Sticky
+                </DropdownMenuItem>
+              )}
+              {isTypeVisible('sticky') && isTypeVisible('lined') && <DropdownMenuSeparator />}
+              {isTypeVisible('lined') && (
+                <DropdownMenuItem onClick={() => { triggerHaptic('medium'); handleCreateNote('lined'); setNoteTypeSelectorOpen(false); }} className="gap-2">
+                  <FileText className="h-4 w-4 text-info" />
+                  Lined
+                </DropdownMenuItem>
+              )}
+              {isTypeVisible('lined') && isTypeVisible('regular') && <DropdownMenuSeparator />}
+              {isTypeVisible('regular') && (
+                <DropdownMenuItem onClick={() => { triggerHaptic('medium'); handleCreateNote('regular'); setNoteTypeSelectorOpen(false); }} className="gap-2">
+                  <FileEdit className="h-4 w-4 text-success" />
+                  Regular
+                </DropdownMenuItem>
+              )}
+              {isTypeVisible('regular') && isTypeVisible('code') && <DropdownMenuSeparator />}
+              {isTypeVisible('code') && (
+                <DropdownMenuItem onClick={() => { triggerHaptic('medium'); handleCreateNote('code'); setNoteTypeSelectorOpen(false); }} className="gap-2">
+                  <FileCode className="h-4 w-4 text-streak" />
+                  Code
+                </DropdownMenuItem>
+              )}
+              {isTypeVisible('code') && isTypeVisible('sketch') && <DropdownMenuSeparator />}
+              {isTypeVisible('sketch') && (
+                <DropdownMenuItem onClick={() => { triggerHaptic('medium'); handleCreateNote('sketch'); setNoteTypeSelectorOpen(false); }} className="gap-2">
+                  <PenTool className="h-4 w-4 text-teal-500" />
+                  Sketch
+                </DropdownMenuItem>
+              )}
+              {isTypeVisible('sketch') && isTypeVisible('linkedin') && <DropdownMenuSeparator />}
+              {isTypeVisible('linkedin') && (
+                <DropdownMenuItem onClick={() => { triggerHaptic('medium'); handleCreateNote('linkedin'); setNoteTypeSelectorOpen(false); }} className="gap-2">
+                  <Type className="h-4 w-4 text-info" />
+                  <span className="flex-1">LinkedIn Formatter</span>
+                  <Crown className="h-3.5 w-3.5 ml-auto" fill="#FFD700" color="#FFD700" />
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
       )}
 
       <BottomNavigation />
