@@ -142,22 +142,31 @@ export function useProjectMembers(projectId: string | null | undefined) {
 
   const removeMember = useCallback(async (userId: string) => {
     if (!projectId) return;
-    const { error } = await supabase.from('project_members').delete()
-      .eq('project_id', projectId).eq('user_id', userId);
-    if (error) throw error;
-  }, [projectId]);
+    // Server-enforced: only owners can remove, cannot remove other owners,
+    // and the task-assignment cleanup happens transactionally.
+    const { data, error } = await supabase.functions.invoke('manage-project-member', {
+      body: { action: 'remove', projectId, userId },
+    });
+    if (error) throw new Error((data as any)?.error ?? error.message);
+    if ((data as any)?.error) throw new Error((data as any).error);
+    await refresh();
+  }, [projectId, refresh]);
 
   const changeRole = useCallback(async (userId: string, role: ProjectRole) => {
     if (!projectId) return;
-    const { error } = await supabase.from('project_members').update({ role })
-      .eq('project_id', projectId).eq('user_id', userId);
-    if (error) throw error;
-  }, [projectId]);
+    const { data, error } = await supabase.functions.invoke('manage-project-member', {
+      body: { action: 'change_role', projectId, userId, role },
+    });
+    if (error) throw new Error((data as any)?.error ?? error.message);
+    if ((data as any)?.error) throw new Error((data as any).error);
+    await refresh();
+  }, [projectId, refresh]);
 
   const cancelInvite = useCallback(async (inviteId: string) => {
     const { error } = await supabase.from('project_invitations').delete().eq('id', inviteId);
     if (error) throw error;
-  }, []);
+    await refresh();
+  }, [refresh]);
 
   return { members, invitations, myRole, loading, refresh, invite, removeMember, changeRole, cancelInvite };
 }

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { TodoItem, Priority, Folder, Note, RepeatType, ColoredTag, TimeTracking, TaskStatus, LocationReminder, TaskAttachment, EscalationTiming } from '@/types/note';
 import { TaskProjectAssignPicker } from '@/components/TaskProjectAssignPicker';
 import { ShareProjectSheet } from '@/components/ShareProjectSheet';
+import { TaskComments } from '@/components/TaskComments';
 import { Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1481,8 +1482,14 @@ export const TaskDetailPage = ({
             }}
           />
 
+          {/* Comments (with @mentions when task is in a project) */}
+          <div className="border-t border-border pt-4">
+            <TaskComments taskId={task.id} projectId={task.projectId ?? null} />
+          </div>
+
           {/* Task Timestamps Section - Premium */}
           <div className="space-y-2 border-t border-border pt-4">
+
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
               <Clock className="h-4 w-4" />
               {t('taskDetail.taskHistory')}
