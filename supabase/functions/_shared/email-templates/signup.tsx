@@ -24,9 +24,10 @@ interface SignupEmailProps {
   token?: string
 }
 
+const FLOWIST_SITE_NAME = 'Flowist'
+const FLOWIST_SITE_URL = 'https://flowist.me'
+
 export const SignupEmail = ({
-  siteName,
-  siteUrl,
   recipient,
   confirmationUrl,
   token,
@@ -37,12 +38,12 @@ export const SignupEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Section style={brandRow}>
-          <Heading style={brand}>Flowist</Heading>
+          <Heading style={brand}>{FLOWIST_SITE_NAME}</Heading>
         </Section>
 
         <Heading style={h1}>Verify your email</Heading>
         <Text style={text}>
-          Welcome to <strong>{siteName || 'Flowist'}</strong>! Use the 6-digit
+          Welcome to <strong>{FLOWIST_SITE_NAME}</strong>! Use the 6-digit
           code below to finish creating your account for{' '}
           <Link href={`mailto:${recipient}`} style={link}>{recipient}</Link>.
         </Text>
@@ -69,7 +70,7 @@ export const SignupEmail = ({
           nothing will happen without the code above.
         </Text>
         <Text style={footerLink}>
-          <Link href={siteUrl} style={link}>{siteUrl}</Link>
+          <Link href={FLOWIST_SITE_URL} style={link}>{FLOWIST_SITE_URL}</Link>
         </Text>
       </Container>
     </Body>
