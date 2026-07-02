@@ -197,20 +197,20 @@ const Notebooks = () => {
                         backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 55%, ${color}99 100%)`,
                       }}
                     >
-                      {/* Spine shadow */}
+                      {/* Spine shadow — wider */}
                       <div
-                        className="absolute inset-y-0 left-0 w-[10%]"
+                        className="absolute inset-y-0 left-0 w-[18%]"
                         style={{
                           background:
-                            'linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 60%, rgba(255,255,255,0.15) 100%)',
+                            'linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 70%, rgba(255,255,255,0.15) 100%)',
                         }}
                       />
-                      {/* Rings on spine */}
-                      <div className="absolute inset-y-0 left-0 w-[10%] flex flex-col justify-around py-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
+                      {/* Rings on spine — more rings, wider band */}
+                      <div className="absolute inset-y-0 left-0 w-[18%] flex flex-col justify-around py-1.5">
+                        {Array.from({ length: 7 }).map((_, i) => (
                           <span
                             key={i}
-                            className="mx-auto h-[3px] w-[3px] rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
+                            className="mx-auto h-[4px] w-[4px] rounded-full bg-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.3)]"
                           />
                         ))}
                       </div>
