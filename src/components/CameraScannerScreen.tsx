@@ -60,7 +60,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   /** Called with a JPEG data URL when the user captures a frame. */
-  onCapture: (dataUrl: string) => void;
+  onCapture: (dataUrl: string, opts?: { handwriting?: boolean }) => void;
   /**
    * Called when Object Counting mode captures a frame. Should invoke the AI
    * and RESOLVE with the counted result. The scanner will then show a review
