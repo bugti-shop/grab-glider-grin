@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect } from 'react';
-import { Home, FileText, Calendar, User, Settings } from 'lucide-react';
+import { Home, FileText, Calendar, User, Settings, Book } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/utils/haptics';
@@ -18,6 +18,7 @@ const ICON_COMPONENTS: Record<string, React.ComponentType<{ className?: string }
   Calendar,
   Settings,
   User,
+  Book,
 };
 
 // Prefetch all lazy routes when browser is idle

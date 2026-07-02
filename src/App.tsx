@@ -70,6 +70,7 @@ if (!__IS_QUICK_ADD_BOOT__) {
 
 // Lazy load everything else - they load in background after first paint
 const Notes = lazy(() => import("./pages/Notes"));
+const Notebooks = lazy(() => import("./pages/Notebooks"));
 const NotesCalendar = lazy(() => import("./pages/NotesCalendar"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -452,6 +453,7 @@ const AppRoutes = () => {
             <Route path="/" element={<RootRedirect />} />
             <Route path="/notesdashboard" element={<Index />} />
             <Route path="/notes" element={<Notes />} />
+            <Route path="/notebooks" element={<Notebooks />} />
             <Route path="/calendar" element={<NotesCalendar />} />
             <Route path="/clip" element={<WebClipper />} />
             <Route path="/webclipper" element={<WebClipper />} />
