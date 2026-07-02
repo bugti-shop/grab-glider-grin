@@ -9,7 +9,9 @@ import {
   resendEmailChangeOtp,
   verifyEmailChangeOtp,
   classifyOtpError,
+  checkOtpCooldown,
 } from '@/utils/emailAuth';
+
 
 interface Props {
   open: boolean;
@@ -65,8 +67,15 @@ export function ChangeEmailSheet({ open, currentEmail, onClose, onEmailChanged }
         title: t('changeEmail.codeSent', 'Verification code sent'),
         description: t('changeEmail.codeSentDesc', 'Enter the 6-digit code we sent to {{email}}.', { email: target }),
       });
-      setOtp(''); setOtpError(null); setCooldown(45);
+      setOtp(''); setOtpError(null);
       setStep('verify');
+      // Sync initial cooldown from backend (Supabase just sent an email so a
+      // server-side cooldown is already active). Fall back to 45s optimistically.
+      setCooldown(45);
+      try {
+        const { retryAfter, cooldownSeconds } = await checkOtpCooldown(target, 'email_change');
+        setCooldown(retryAfter > 0 ? retryAfter : cooldownSeconds);
+      } catch { /* keep optimistic value */ }
     } catch (err: any) {
       const info = classifyOtpError(err);
       toast({
@@ -78,6 +87,7 @@ export function ChangeEmailSheet({ open, currentEmail, onClose, onEmailChanged }
       setLoading(false);
     }
   };
+
 
   const handleVerify = async () => {
     if (otp.length < 6) {
@@ -114,15 +124,17 @@ export function ChangeEmailSheet({ open, currentEmail, onClose, onEmailChanged }
     if (cooldown > 0 || loading) return;
     setLoading(true); setOtpError(null);
     try {
-      await resendEmailChangeOtp(newEmail.trim().toLowerCase());
-      setCooldown(45);
+      const { cooldownSeconds } = await resendEmailChangeOtp(newEmail.trim().toLowerCase());
+      setCooldown(cooldownSeconds); // server-authoritative cooldown
       toast({
         title: t('emailAuth.otpResent', 'New code sent'),
         description: t('emailAuth.otpResentDesc', 'Check your inbox for the latest 6-digit code.'),
       });
     } catch (err: any) {
       const info = classifyOtpError(err);
-      if (info.code === 'cooldown' && info.retryAfter) setCooldown(info.retryAfter);
+      // Always sync any server-provided retryAfter into the countdown so the
+      // user can't spam and always sees the real remaining time.
+      if (info.retryAfter && info.retryAfter > 0) setCooldown(info.retryAfter);
       toast({
         title:
           info.code === 'cooldown' ? t('emailAuth.tooSoon', 'Please wait')
@@ -135,6 +147,7 @@ export function ChangeEmailSheet({ open, currentEmail, onClose, onEmailChanged }
       setLoading(false);
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-[400] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={close}>

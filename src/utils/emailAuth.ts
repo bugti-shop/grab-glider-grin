@@ -59,19 +59,33 @@ export const startEmailSignup = async (
  * Resend the signup confirmation OTP, throttled server-side (45s min interval,
  * max 5 per 15 minutes) via the `otp-resend` edge function.
  */
-export const resendSignupOtp = async (email: string): Promise<void> => {
-  await callOtpResend(email, 'signup');
+export const resendSignupOtp = async (email: string): Promise<{ cooldownSeconds: number }> => {
+  return await callOtpResend(email, 'signup');
+};
+
+/** Ask the backend for the current cooldown without sending an OTP. */
+export const checkOtpCooldown = async (
+  email: string,
+  type: 'signup' | 'email_change',
+): Promise<{ retryAfter: number; cooldownSeconds: number }> => {
+  const { data, error } = await supabase.functions.invoke('otp-resend', {
+    body: { email, type, check: true },
+  });
+  if (error || !data) return { retryAfter: 0, cooldownSeconds: 45 };
+  return {
+    retryAfter: (data as any).retryAfter ?? 0,
+    cooldownSeconds: (data as any).cooldownSeconds ?? 45,
+  };
 };
 
 const callOtpResend = async (
   email: string,
   type: 'signup' | 'email_change',
-): Promise<void> => {
+): Promise<{ cooldownSeconds: number }> => {
   const { data, error } = await supabase.functions.invoke('otp-resend', {
     body: { email, type },
   });
   if (error) {
-    // supabase-js surfaces non-2xx as FunctionsHttpError; try to extract JSON.
     let payload: any = null;
     try { payload = (error as any).context ? await (error as any).context.json() : null; } catch {}
     const msg = payload?.message || error.message || 'Could not resend code';
@@ -86,7 +100,9 @@ const callOtpResend = async (
     err.retryAfter = (data as any).retryAfter;
     throw err;
   }
+  return { cooldownSeconds: (data as any)?.cooldownSeconds ?? 45 };
 };
+
 
 /**
  * Human-friendly error mapping for OTP verify + resend failures.
@@ -208,9 +224,10 @@ export const startEmailChange = async (newEmail: string): Promise<void> => {
 /**
  * Resend the email-change OTP (server-side throttled).
  */
-export const resendEmailChangeOtp = async (newEmail: string): Promise<void> => {
-  await callOtpResend(newEmail, 'email_change');
+export const resendEmailChangeOtp = async (newEmail: string): Promise<{ cooldownSeconds: number }> => {
+  return await callOtpResend(newEmail, 'email_change');
 };
+
 
 /**
  * Step 2 of changing email — verify the 6-digit OTP that was sent to the NEW

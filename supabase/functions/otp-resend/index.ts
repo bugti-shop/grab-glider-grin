@@ -20,7 +20,9 @@ const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 interface Body {
   email?: string;
   type?: 'signup' | 'email_change';
+  check?: boolean; // if true, only report remaining cooldown without sending
 }
+
 
 const jsonResponse = (status: number, body: unknown, extraHeaders: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {
@@ -36,9 +38,11 @@ Deno.serve(async (req) => {
 
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   const type = body.type === 'email_change' ? 'email_change' : 'signup';
+  const checkOnly = body.check === true;
   if (!email || email.length > 254 || !email.includes('@')) {
     return jsonResponse(400, { error: 'invalid_email' });
   }
+
 
   const now = new Date();
   const nowMs = now.getTime();
@@ -55,30 +59,47 @@ Deno.serve(async (req) => {
     return jsonResponse(500, { error: 'server_error' });
   }
 
-  if (existing) {
+  const computeState = () => {
+    if (!existing) return { retryAfter: 0, windowRemaining: 0, sendCount: 0 };
     const lastMs = new Date(existing.last_sent_at).getTime();
     const winStartMs = new Date(existing.window_started_at).getTime();
     const sinceLast = nowMs - lastMs;
+    const retryAfter = sinceLast < MIN_INTERVAL_MS ? Math.ceil((MIN_INTERVAL_MS - sinceLast) / 1000) : 0;
+    const withinWindow = nowMs - winStartMs < WINDOW_MS;
+    const windowRemaining = withinWindow ? Math.ceil((WINDOW_MS - (nowMs - winStartMs)) / 1000) : 0;
+    return { retryAfter, windowRemaining, sendCount: withinWindow ? existing.send_count : 0 };
+  };
 
-    if (sinceLast < MIN_INTERVAL_MS) {
-      const retryAfter = Math.ceil((MIN_INTERVAL_MS - sinceLast) / 1000);
+  const state = computeState();
+
+  if (checkOnly) {
+    return jsonResponse(200, {
+      ok: true,
+      retryAfter: state.retryAfter,
+      windowRemaining: state.windowRemaining,
+      sendCount: state.sendCount,
+      maxPerWindow: MAX_PER_WINDOW,
+      cooldownSeconds: MIN_INTERVAL_MS / 1000,
+    });
+  }
+
+  if (existing) {
+    if (state.retryAfter > 0) {
       return jsonResponse(
         429,
-        { error: 'cooldown', retryAfter, message: `Please wait ${retryAfter}s before requesting another code.` },
-        { 'Retry-After': String(retryAfter) },
+        { error: 'cooldown', retryAfter: state.retryAfter, message: `Please wait ${state.retryAfter}s before requesting another code.` },
+        { 'Retry-After': String(state.retryAfter) },
       );
     }
-
-    const withinWindow = nowMs - winStartMs < WINDOW_MS;
-    if (withinWindow && existing.send_count >= MAX_PER_WINDOW) {
-      const retryAfter = Math.ceil((WINDOW_MS - (nowMs - winStartMs)) / 1000);
+    if (state.windowRemaining > 0 && state.sendCount >= MAX_PER_WINDOW) {
       return jsonResponse(
         429,
-        { error: 'too_many_requests', retryAfter, message: 'Too many code requests. Try again later.' },
-        { 'Retry-After': String(retryAfter) },
+        { error: 'too_many_requests', retryAfter: state.windowRemaining, message: 'Too many code requests. Try again later.' },
+        { 'Retry-After': String(state.windowRemaining) },
       );
     }
   }
+
 
   // Perform the resend using the anon client (Supabase enforces its own signup rules).
   const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
