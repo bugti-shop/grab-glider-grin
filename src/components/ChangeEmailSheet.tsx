@@ -9,7 +9,9 @@ import {
   resendEmailChangeOtp,
   verifyEmailChangeOtp,
   classifyOtpError,
+  checkOtpCooldown,
 } from '@/utils/emailAuth';
+
 
 interface Props {
   open: boolean;
