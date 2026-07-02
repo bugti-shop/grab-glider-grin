@@ -171,18 +171,16 @@ const Notebooks = () => {
                   <div className="relative w-full h-full">
                     {/* Fanned paper bundle — full width, edge-to-edge with cover */}
                     <div className="absolute left-0 right-0 top-0 bottom-[-6%] pointer-events-none">
-                      {/* Sheet 1 — tilted left */}
+                      {/* Sheet 1 — back */}
                       <div
-                        className="absolute left-0 right-0 top-[8%] bottom-0 rounded-sm bg-[#fdfaf1] border border-black/10 shadow-[0_2px_3px_rgba(0,0,0,0.15)] origin-bottom"
-                        style={{ transform: 'rotate(-2deg)' }}
+                        className="absolute left-0 right-0 top-[9%] bottom-[3%] rounded-sm bg-[#fdfaf1] border border-black/10 shadow-[0_2px_3px_rgba(0,0,0,0.15)]"
                       />
-                      {/* Sheet 2 — tilted right */}
+                      {/* Sheet 2 — middle */}
                       <div
-                        className="absolute left-0 right-0 top-[7%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_2px_4px_rgba(0,0,0,0.18)] origin-bottom"
-                        style={{ transform: 'rotate(1.5deg)' }}
+                        className="absolute left-0 right-0 top-[7%] bottom-[1.5%] rounded-sm bg-white border border-black/10 shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
                       />
-                      {/* Sheet 3 — center, spans full cover width */}
-                      <div className="absolute left-0 right-0 top-[6%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_3px_5px_-1px_rgba(0,0,0,0.2)]">
+                      {/* Sheet 3 — front, flush with cover edges */}
+                      <div className="absolute left-0 right-0 top-[5%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_3px_5px_-1px_rgba(0,0,0,0.2)]">
                         {/* ruled hint */}
                         <div className="absolute inset-x-2 bottom-1 space-y-[2px]">
                           <div className="h-px bg-black/10" />
