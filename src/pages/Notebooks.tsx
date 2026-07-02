@@ -49,6 +49,78 @@ const Notebooks = () => {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState<string>(NOTEBOOK_COLORS[0]);
 
+  // Long-press action sheet state
+  const [actionFor, setActionFor] = useState<FolderType | null>(null);
+  const [renameFor, setRenameFor] = useState<FolderType | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [colorFor, setColorFor] = useState<FolderType | null>(null);
+  const [deleteFor, setDeleteFor] = useState<FolderType | null>(null);
+  const pressTimer = useRef<number | null>(null);
+  const longPressedRef = useRef(false);
+
+  const startPress = (folder: FolderType) => {
+    longPressedRef.current = false;
+    if (pressTimer.current) window.clearTimeout(pressTimer.current);
+    pressTimer.current = window.setTimeout(() => {
+      longPressedRef.current = true;
+      try {
+        if ('vibrate' in navigator) navigator.vibrate?.(30);
+      } catch {}
+      setActionFor(folder);
+    }, 450);
+  };
+  const cancelPress = () => {
+    if (pressTimer.current) {
+      window.clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  };
+
+  const persistFolders = async (next: FolderType[]) => {
+    setFolders(next);
+    await setSetting('folders', next);
+    window.dispatchEvent(new Event('foldersUpdated'));
+  };
+
+  const doRename = async () => {
+    if (!renameFor) return;
+    const name = renameValue.trim();
+    if (!name) return;
+    if (
+      folders.some(
+        (f) => f.id !== renameFor.id && f.name.toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      toast.error('A notebook with this name already exists');
+      return;
+    }
+    const next = folders.map((f) => (f.id === renameFor.id ? { ...f, name } : f));
+    await persistFolders(next);
+    setRenameFor(null);
+    toast.success('Notebook renamed');
+  };
+
+  const doChangeColor = async (color: string) => {
+    if (!colorFor) return;
+    const next = folders.map((f) => (f.id === colorFor.id ? { ...f, color } : f));
+    await persistFolders(next);
+    setColorFor(null);
+    toast.success('Color updated');
+  };
+
+  const doDelete = async () => {
+    if (!deleteFor) return;
+    if (deleteFor.isDefault) {
+      toast.error("Default notebook can't be deleted");
+      setDeleteFor(null);
+      return;
+    }
+    const next = folders.filter((f) => f.id !== deleteFor.id);
+    await persistFolders(next);
+    setDeleteFor(null);
+    toast.success('Notebook deleted');
+  };
+
   useEffect(() => {
     const load = async () => {
       const saved = await getSetting<FolderType[] | null>('folders', null);
