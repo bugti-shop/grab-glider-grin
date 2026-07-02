@@ -206,6 +206,17 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [showStats, setShowStats] = useState(false);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
+  const [showToc, setShowToc] = useState(false);
+  useEffect(() => {
+    getSetting<boolean>('noteEditor.showToc', false).then(setShowToc).catch(() => {});
+  }, []);
+  const toggleToc = useCallback(() => {
+    setShowToc(prev => {
+      const next = !prev;
+      setSetting('noteEditor.showToc', next).catch(() => {});
+      return next;
+    });
+  }, []);
   const [metaDescription, setMetaDescription] = useState<string>('');
   const [customColor, setCustomColor] = useState<string | undefined>(undefined);
   
