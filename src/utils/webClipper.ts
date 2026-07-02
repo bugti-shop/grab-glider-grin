@@ -125,7 +125,8 @@ export function parseClipMode(value: string | null | undefined): ClipMode {
   if (v === 'fullpage' || v === 'full-page' || v === 'full_page') return 'fullpage';
   if (v === 'image' || v === 'img') return 'image';
   if (v === 'pdf') return 'pdf';
-  return 'article';
+  // Default to full-page capture — users want everything, not metadata stubs.
+  return 'fullpage';
 }
 
 const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|bmp|heic|heif|avif|svg)(\?|#|$)/i;
