@@ -223,7 +223,7 @@ const WebClipper = () => {
           setProgress(null);
           setProgressLabel(t('webClipper.stageFetching', 'Fetching full article…'));
           const { data, error } = await supabase.functions.invoke('fetch-article', {
-            body: { url },
+            body: { url, mode: clipMode === 'fullpage' ? 'fullpage' : 'article' },
           });
           if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
           if (error) {

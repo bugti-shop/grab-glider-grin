@@ -27,6 +27,7 @@ const corsHeaders = {
 
 const MAX_HTML_BYTES = 5 * 1024 * 1024; // 5MB page cap
 const MAX_CONTENT_HTML_BYTES = 500 * 1024; // 500KB cap on returned clip HTML
+const MAX_FULLPAGE_HTML_BYTES = 4 * 1024 * 1024; // 4MB cap for full-page raw HTML
 const FETCH_TIMEOUT_MS = 20_000;
 
 /** Extract safe, reachable absolute image URLs from an HTML string.
@@ -609,7 +610,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { url } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { url, mode: rawMode } = body || {};
+    const mode = String(rawMode || "").toLowerCase();
+    const wantFullPage = mode === "fullpage" || mode === "full-page" || mode === "full" || mode === "raw";
     if (!url || typeof url !== "string") {
       return new Response(JSON.stringify({ error: "url required", code: "bad_input" }), {
         status: 400,
@@ -710,9 +714,59 @@ Deno.serve(async (req) => {
     ]);
 
     // Inline embeds into the DOM (preserves order vs. headings/images).
-    inlineEmbeds(document as any, base);
+    // Skip in full-page mode — user wants the raw page as-is.
+    if (!wantFullPage) {
+      inlineEmbeds(document as any, base);
+    }
 
-    let article: any = null;
+    // FULL-PAGE MODE — return the entire raw HTML (start-to-end) without
+    // Readability trimming. Icons, ads, everything the page shipped.
+    if (wantFullPage) {
+      const domAuthor = extractAuthor(document as any);
+      const title = (metaTitle || target.hostname).trim();
+      const byline = (metaAuthor || domAuthor || "").trim();
+      const siteName = (metaSite || "").trim();
+      const leadImage = metaImage ? absolutize(metaImage, base) : "";
+      const bodyHtml =
+        (document.body as any)?.innerHTML ||
+        (document.documentElement as any)?.innerHTML ||
+        html;
+      const capped = capHtml(String(bodyHtml || ""), MAX_FULLPAGE_HTML_BYTES);
+      const images = extractImageUrls(capped.html);
+      return new Response(
+        JSON.stringify({
+          url: base,
+          title,
+          byline,
+          author: byline,
+          siteName,
+          excerpt: (metaDescription || "").trim(),
+          leadImage,
+          publishedTime: metaPublished,
+          content: capped.html,
+          contentHtml: capped.html,
+          rawHtml: capped.html,
+          images,
+          textContent: "",
+          length: capped.html.length,
+          truncated: capped.truncated,
+          fallback: false,
+          embeds: [] as string[],
+          importantLinks: [] as Array<{ href: string; text: string }>,
+          mode: "fullpage",
+        }),
+        {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "content-type": "application/json",
+            "cache-control": "public, max-age=300",
+          },
+        },
+      );
+    }
+
+
     try {
       const reader = new Readability(document as any, {
         charThreshold: 200,
