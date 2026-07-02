@@ -610,7 +610,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { url } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { url, mode: rawMode } = body || {};
+    const mode = String(rawMode || "").toLowerCase();
+    const wantFullPage = mode === "fullpage" || mode === "full-page" || mode === "full" || mode === "raw";
     if (!url || typeof url !== "string") {
       return new Response(JSON.stringify({ error: "url required", code: "bad_input" }), {
         status: 400,
