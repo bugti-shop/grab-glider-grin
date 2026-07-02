@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Plus, Book, BookOpen } from 'lucide-react';
+import { ArrowLeft, Plus, Book, BookOpen, StickyNote, FileText, FileEdit, FileCode, PenTool, Type, Crown } from 'lucide-react';
 import { Folder as FolderType, Note, NoteType } from '@/types/note';
 import { getSetting } from '@/utils/settingsStorage';
 import { useNotes } from '@/contexts/NotesContext';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { NoteCard } from '@/components/NoteCard';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -17,6 +24,9 @@ import {
 } from '@/utils/noteStorage';
 import { genId } from '@/utils/genId';
 import { logActivity } from '@/utils/activityLogger';
+import { useNoteTypeVisibility } from '@/hooks/useNoteTypeVisibility';
+import { triggerHaptic } from '@/utils/haptics';
+
 
 const NotebookDetail = () => {
   const navigate = useNavigate();
