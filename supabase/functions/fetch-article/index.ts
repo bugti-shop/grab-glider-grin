@@ -81,6 +81,266 @@ function capHtml(html: string, maxBytes: number): { html: string; truncated: boo
   return { html: html.slice(0, lastGt > 0 ? lastGt + 1 : cut), truncated: true };
 }
 
+/* ------------------------------------------------------------------ */
+/* Asset inlining — inline CSS, JS, images, fonts, and favicons into  */
+/* the captured document as data: URIs so it renders offline without  */
+/* any network access.                                                */
+/* ------------------------------------------------------------------ */
+
+const INLINE_ASSET_TIMEOUT_MS = 6_000;
+const INLINE_PER_ASSET_MAX = 2 * 1024 * 1024; // 2 MB per asset
+const INLINE_TOTAL_BUDGET = 15 * 1024 * 1024; // 15 MB total inlined
+const INLINE_CONCURRENCY = 8;
+
+function u8ToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK)) as any);
+  }
+  return btoa(bin);
+}
+
+function guessMimeFromUrl(u: string, fallback = "application/octet-stream"): string {
+  const ext = (u.split("?")[0].split("#")[0].split(".").pop() || "").toLowerCase();
+  switch (ext) {
+    case "css": return "text/css";
+    case "js": case "mjs": return "application/javascript";
+    case "png": return "image/png";
+    case "jpg": case "jpeg": return "image/jpeg";
+    case "webp": return "image/webp";
+    case "avif": return "image/avif";
+    case "gif": return "image/gif";
+    case "svg": return "image/svg+xml";
+    case "ico": return "image/x-icon";
+    case "woff": return "font/woff";
+    case "woff2": return "font/woff2";
+    case "ttf": return "font/ttf";
+    case "otf": return "font/otf";
+    case "eot": return "application/vnd.ms-fontobject";
+    default: return fallback;
+  }
+}
+
+type FetchedAsset = { mime: string; bytes: Uint8Array; text?: string };
+
+async function fetchAsset(u: string): Promise<FetchedAsset | null> {
+  try {
+    const c = new AbortController();
+    const t = setTimeout(() => c.abort(), INLINE_ASSET_TIMEOUT_MS);
+    const res = await fetch(u, {
+      signal: c.signal,
+      redirect: "follow",
+      headers: {
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Flowist-Clipper/1.0",
+        "accept": "*/*",
+      },
+    }).catch(() => null);
+    clearTimeout(t);
+    if (!res || !res.ok) return null;
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > INLINE_PER_ASSET_MAX) return null;
+    const mime = (res.headers.get("content-type") || "").split(";")[0].trim() || guessMimeFromUrl(u);
+    return { mime, bytes: new Uint8Array(buf) };
+  } catch { return null; }
+}
+
+async function fetchTextAsset(u: string): Promise<FetchedAsset | null> {
+  const a = await fetchAsset(u);
+  if (!a) return null;
+  try { a.text = new TextDecoder("utf-8").decode(a.bytes); } catch { /* ignore */ }
+  return a;
+}
+
+function toDataUri(a: FetchedAsset): string {
+  return `data:${a.mime};base64,${u8ToBase64(a.bytes)}`;
+}
+
+/** Inline url(...) and @import references inside a stylesheet body. */
+async function inlineCssUrls(
+  css: string,
+  cssBase: string,
+  budget: { remaining: number },
+  cache: Map<string, string>,
+): Promise<string> {
+  // @import "…"; / @import url(…);
+  const importRe = /@import\s+(?:url\(\s*)?["']?([^"')\s]+)["']?\s*\)?\s*;?/gi;
+  const imports: Array<{ match: string; url: string }> = [];
+  let m: RegExpExecArray | null;
+  while ((m = importRe.exec(css)) !== null) imports.push({ match: m[0], url: m[1] });
+  for (const imp of imports) {
+    if (budget.remaining <= 0) break;
+    const abs = absolutize(imp.url, cssBase);
+    let inlined = cache.get(abs);
+    if (inlined === undefined) {
+      const sub = await fetchTextAsset(abs);
+      if (sub && sub.text) {
+        const nested = await inlineCssUrls(sub.text, abs, budget, cache);
+        inlined = nested;
+        budget.remaining -= nested.length;
+      } else {
+        inlined = "";
+      }
+      cache.set(abs, inlined);
+    }
+    css = css.split(imp.match).join(inlined);
+  }
+
+  // url(...) — fonts, images, backgrounds
+  const urlRe = /url\(\s*(["']?)([^"')]+)\1\s*\)/gi;
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  while ((m = urlRe.exec(css)) !== null) {
+    const raw = m[2].trim();
+    if (!raw || raw.startsWith("data:") || raw.startsWith("#")) continue;
+    if (seen.has(raw)) continue;
+    seen.add(raw);
+    urls.push(raw);
+  }
+  const replacements = new Map<string, string>();
+  for (const raw of urls) {
+    if (budget.remaining <= 0) break;
+    const abs = absolutize(raw, cssBase);
+    let uri = cache.get(abs);
+    if (uri === undefined) {
+      const sub = await fetchAsset(abs);
+      uri = sub ? toDataUri(sub) : abs;
+      if (sub) budget.remaining -= sub.bytes.length;
+      cache.set(abs, uri);
+    }
+    replacements.set(raw, uri);
+  }
+  if (replacements.size) {
+    css = css.replace(/url\(\s*(["']?)([^"')]+)\1\s*\)/gi, (full, q, raw) => {
+      const rep = replacements.get(raw.trim());
+      return rep ? `url(${q}${rep}${q})` : full;
+    });
+  }
+  return css;
+}
+
+/** Inline ALL external stylesheets, scripts, images, and favicons into the
+ *  document so the captured HTML renders fully offline. Budget-capped and
+ *  best-effort: any asset that fails to fetch is left with its absolute URL
+ *  so the snapshot degrades gracefully rather than breaking. */
+async function inlineAllAssets(doc: Document, base: string): Promise<void> {
+  const budget = { remaining: INLINE_TOTAL_BUDGET };
+  const cache = new Map<string, string>();
+
+  const runLimited = async <T>(tasks: Array<() => Promise<T>>, limit: number) => {
+    let i = 0;
+    const workers: Array<Promise<void>> = [];
+    for (let w = 0; w < Math.min(limit, tasks.length); w++) {
+      workers.push((async () => {
+        while (i < tasks.length) {
+          const idx = i++;
+          try { await tasks[idx](); } catch { /* ignore per-task */ }
+        }
+      })());
+    }
+    await Promise.all(workers);
+  };
+
+  // 1) Stylesheets — <link rel~="stylesheet" href="...">
+  const linkNodes = Array.from(doc.querySelectorAll('link[rel~="stylesheet"][href]')) as any[];
+  await runLimited(linkNodes.map((link) => async () => {
+    if (budget.remaining <= 0) return;
+    const href = link.getAttribute("href");
+    if (!href) return;
+    const abs = absolutize(href, base);
+    const asset = await fetchTextAsset(abs);
+    if (!asset || !asset.text) return;
+    const css = await inlineCssUrls(asset.text, abs, budget, cache);
+    budget.remaining -= css.length;
+    const style = doc.createElement("style");
+    const media = link.getAttribute("media");
+    if (media) style.setAttribute("media", media);
+    style.setAttribute("data-flowist-inlined-from", abs);
+    style.textContent = css;
+    link.parentNode?.replaceChild(style, link);
+  }), INLINE_CONCURRENCY);
+
+  // 1b) Existing inline <style> blocks — still need url() inlining.
+  const inlineStyles = Array.from(doc.querySelectorAll("style")) as any[];
+  await runLimited(inlineStyles.map((style) => async () => {
+    if (budget.remaining <= 0) return;
+    const src = style.textContent || "";
+    if (!src || !/url\(|@import/i.test(src)) return;
+    const rewritten = await inlineCssUrls(src, base, budget, cache);
+    style.textContent = rewritten;
+  }), INLINE_CONCURRENCY);
+
+  // 2) Scripts — <script src="...">. Keep type/attributes; drop src.
+  const scriptNodes = Array.from(doc.querySelectorAll("script[src]")) as any[];
+  await runLimited(scriptNodes.map((script) => async () => {
+    if (budget.remaining <= 0) return;
+    const src = script.getAttribute("src");
+    if (!src) return;
+    const abs = absolutize(src, base);
+    const asset = await fetchTextAsset(abs);
+    if (!asset || !asset.text) return;
+    budget.remaining -= asset.text.length;
+    script.removeAttribute("src");
+    script.setAttribute("data-flowist-inlined-from", abs);
+    // Neutralise any </script> inside the code that would prematurely close the tag.
+    script.textContent = asset.text.replace(/<\/script/gi, "<\\/script");
+  }), INLINE_CONCURRENCY);
+
+  // 3) Images + favicons + preloads → data: URIs.
+  const inlineImg = async (el: any, attr: string) => {
+    if (budget.remaining <= 0) return;
+    const raw = el.getAttribute(attr);
+    if (!raw || raw.startsWith("data:")) return;
+    const abs = absolutize(raw, base);
+    let uri = cache.get(abs);
+    if (uri === undefined) {
+      const sub = await fetchAsset(abs);
+      uri = sub ? toDataUri(sub) : "";
+      if (sub) budget.remaining -= sub.bytes.length;
+      cache.set(abs, uri);
+    }
+    if (uri) el.setAttribute(attr, uri);
+  };
+
+  const imgTasks: Array<() => Promise<void>> = [];
+  doc.querySelectorAll("img[src]").forEach((el: any) => imgTasks.push(() => inlineImg(el, "src")));
+  doc.querySelectorAll('link[rel~="icon"][href], link[rel="apple-touch-icon"][href], link[rel="mask-icon"][href]')
+    .forEach((el: any) => imgTasks.push(() => inlineImg(el, "href")));
+  doc.querySelectorAll("source[src]").forEach((el: any) => imgTasks.push(() => inlineImg(el, "src")));
+  await runLimited(imgTasks, INLINE_CONCURRENCY);
+
+  // 3b) <img srcset> and <source srcset> — inline each candidate.
+  const rewriteSrcset = async (el: any) => {
+    if (budget.remaining <= 0) return;
+    const ss = el.getAttribute("srcset");
+    if (!ss) return;
+    const parts = ss.split(",").map((p: string) => p.trim()).filter(Boolean);
+    const out: string[] = [];
+    for (const part of parts) {
+      const [u, d] = part.split(/\s+/, 2);
+      if (!u || u.startsWith("data:")) { out.push(part); continue; }
+      const abs = absolutize(u, base);
+      let uri = cache.get(abs);
+      if (uri === undefined) {
+        const sub = await fetchAsset(abs);
+        uri = sub ? toDataUri(sub) : abs;
+        if (sub) budget.remaining -= sub.bytes.length;
+        cache.set(abs, uri);
+      }
+      out.push(d ? `${uri} ${d}` : uri);
+    }
+    el.setAttribute("srcset", out.join(", "));
+  };
+  const ssTasks: Array<() => Promise<void>> = [];
+  doc.querySelectorAll("img[srcset], source[srcset]").forEach((el: any) => ssTasks.push(() => rewriteSrcset(el)));
+  await runLimited(ssTasks, INLINE_CONCURRENCY);
+
+  // 4) Neutralize <base> tags — after inlining, all URLs are absolute or data:
+  //    and we don't want a stray <base href> to interfere in the sandboxed iframe.
+  doc.querySelectorAll("base").forEach((b: any) => b.parentNode?.removeChild(b));
+}
+
 // Attributes commonly used by lazy-load libraries (LazySizes, Lozad,
 // WordPress, Medium, Substack, Ghost, etc.) to hold the *real* image URL.
 const LAZY_SRC_ATTRS = [
