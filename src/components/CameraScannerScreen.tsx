@@ -356,7 +356,7 @@ export const CameraScannerScreen = ({
     } finally {
       setBatchProcessing(false);
     }
-  }, [batchPages, batchProcessing, onBatchNote]);
+  }, [batchPages, batchProcessing, handwritingOn, onBatchNote]);
 
   const undoLastBatchPage = useCallback(() => {
     setBatchPages((prev) => {
