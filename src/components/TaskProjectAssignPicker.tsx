@@ -23,10 +23,13 @@ interface Props {
  * Compact chip-style picker used inside TaskInputSheet + TaskDetailPage.
  * Lets the user pick which team project a task belongs to and who it's assigned to.
  */
-export function TaskProjectAssignPicker({ projectId, assigneeId, onChange, compact }: Props) {
+export function TaskProjectAssignPicker({ projectId, assigneeId, onChange, compact, gateAssignBehindTeamPlan }: Props) {
   const { projects, createProject } = useProjects();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const hasTeamPlan = useHasTeamPlan();
+  const navigate = useNavigate();
+  const assignLocked = !!gateAssignBehindTeamPlan && !hasTeamPlan;
 
   const currentProject = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
   const { members } = useProjectMembers(projectId ?? null);
