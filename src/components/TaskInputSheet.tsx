@@ -288,7 +288,19 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
     onClose();
   };
 
+  // Auto-open the AI image scanner when requested (e.g. resuming after sign-in).
+  const autoOpenFiredRef = useRef(false);
+  useEffect(() => {
+    if (!isOpen) { autoOpenFiredRef.current = false; return; }
+    if (!autoOpenScanner || autoOpenFiredRef.current) return;
+    autoOpenFiredRef.current = true;
+    const id = setTimeout(() => { openImageExtractor(); }, 120);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, autoOpenScanner]);
+
   const folderColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
 
   // Natural language parsing - real-time preview
   const parsedTask = useMemo(() => {
