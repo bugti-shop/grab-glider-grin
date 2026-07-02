@@ -27,6 +27,7 @@ import {
   ATTACHMENT_LIMITS,
 } from '@/utils/webClipper';
 import { compressHtml, formatBytesShort } from '@/utils/htmlCompression';
+import { useWebClipperQuota } from '@/hooks/useWebClipperQuota';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
   { id: 'article',   icon: FileText, titleKey: 'webClipper.modeArticle',   descKey: 'webClipper.modeArticleDesc',   fallbackTitle: 'Article',     fallbackDesc: 'Save the readable article body' },
@@ -41,7 +42,12 @@ const WebClipper = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { isAdminBypass } = useSubscription();
+  const { isAdminBypass, isPro } = useSubscription();
+  // Free users see a monthly quota bar; Pro users (or admin bypass) see nothing.
+  // isPro flips instantly when RevenueCat / user_entitlements Realtime fires,
+  // so upgrading unlocks unlimited clipping without a page refresh.
+  const showQuota = !isPro && !isAdminBypass;
+  const quota = useWebClipperQuota(showQuota);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [stage, setStage] = useState<Stage>('idle');
@@ -66,6 +72,14 @@ const WebClipper = () => {
   useEffect(() => {
     if (previewReady && contentEditorRef.current) hydrateWebClipsIn(contentEditorRef.current);
   }, [previewReady, previewHtml]);
+
+  // Re-poll the monthly counter after each fetch settles (so the bar reflects
+  // the server-side increment) and whenever Pro state flips.
+  useEffect(() => {
+    if (!showQuota) return;
+    if (stage === 'idle') void quota.refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, saved, showQuota]);
 
   // Sanitize incoming params (URL ?title=… &url=… &content=… &selection=… &mode=…).
   // The Share-intent hook and the desktop browser extension both hit this same route.
@@ -546,6 +560,42 @@ const WebClipper = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {showQuota && !saved && (
+            <div
+              className={cn(
+                'space-y-1.5 rounded-lg border p-3',
+                quota.remaining === 0
+                  ? 'border-destructive/40 bg-destructive/5'
+                  : 'border-border bg-muted/30',
+              )}
+              aria-label={t('webClipper.quotaAria', 'Monthly Web Clipper usage')}
+            >
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium">
+                  {t('webClipper.quotaLabel', 'Free monthly clips')}
+                </span>
+                <span className="tabular-nums text-muted-foreground">
+                  {quota.used} / {quota.limit}
+                </span>
+              </div>
+              <Progress
+                value={quota.percent}
+                className={cn('h-1.5', quota.remaining === 0 && '[&>div]:bg-destructive')}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {quota.remaining === 0
+                  ? t(
+                      'webClipper.quotaExhausted',
+                      'You’ve used all free clips this month. Upgrade to Pro for unlimited clipping.',
+                    )
+                  : t('webClipper.quotaRemaining', {
+                      count: quota.remaining,
+                      defaultValue: `${quota.remaining} clips left this month · Upgrade to Pro for unlimited.`,
+                    })}
+              </p>
+            </div>
+          )}
+
           {(title || url) && (
             <div className="space-y-2">
               <p className="font-medium text-sm text-muted-foreground">
