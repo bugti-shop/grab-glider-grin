@@ -10,7 +10,7 @@ import android.net.Uri;
 import android.widget.RemoteViews;
 
 import nota.npd.com.MainActivity;
-import nota.npd.com.QuickAddActivity;
+import nota.npd.com.QuickAddOverlayActivity;
 import nota.npd.com.R;
 
 /**
