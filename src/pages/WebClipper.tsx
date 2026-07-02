@@ -73,6 +73,14 @@ const WebClipper = () => {
     if (previewReady && contentEditorRef.current) hydrateWebClipsIn(contentEditorRef.current);
   }, [previewReady, previewHtml]);
 
+  // Re-poll the monthly counter after each fetch settles (so the bar reflects
+  // the server-side increment) and whenever Pro state flips.
+  useEffect(() => {
+    if (!showQuota) return;
+    if (stage === 'idle') void quota.refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, saved, showQuota]);
+
   // Sanitize incoming params (URL ?title=… &url=… &content=… &selection=… &mode=…).
   // The Share-intent hook and the desktop browser extension both hit this same route.
   const title = sanitizeParam(searchParams.get('title'), MAX_LENGTHS.title) || 'Untitled Clip';
