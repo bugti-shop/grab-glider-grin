@@ -14,6 +14,8 @@ interface TableOfContentsProps {
   /** Ref to the contenteditable div — used to scroll to the actual heading. */
   editorRef: React.RefObject<HTMLDivElement>;
   className?: string;
+  /** Deepest heading level to include (1–6). Defaults to 6 (all). */
+  maxLevel?: number;
 }
 
 /**
