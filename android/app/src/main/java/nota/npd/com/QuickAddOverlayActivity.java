@@ -27,13 +27,22 @@ public class QuickAddOverlayActivity extends BridgeActivity {
         registerPlugin(QuickAddOverlayPlugin.class);
         super.onCreate(savedInstanceState);
 
-        // Navigate directly to the dedicated lightweight route. The React
-        // Router is already initialized at "/" by Capacitor; replace it with
-        // "/quick-add" so the overlay doesn't flash the main app first.
+        // BridgeActivity's default load points the WebView at "/" which briefly
+        // renders the full app (AppContent) before React Router can redirect —
+        // producing the "opens full app instead of overlay" flash users see.
+        // Stop the in-flight default load and immediately swap in "/quick-add"
+        // so App.tsx's `isQuickAddBoot` branch renders QuickAddShell from the
+        // very first paint. `post()` guarantees this runs on the WebView's
+        // handler thread after the bridge finishes its own setup.
         try {
-            String base = getBridge().getLocalUrl(); // e.g. https://localhost
+            final android.webkit.WebView wv = getBridge().getWebView();
+            String base = getBridge().getLocalUrl();
             if (base == null || base.isEmpty()) base = "https://localhost";
-            getBridge().getWebView().loadUrl(base + "/quick-add");
+            final String target = base + "/quick-add";
+            wv.stopLoading();
+            wv.post(new Runnable() {
+                @Override public void run() { wv.loadUrl(target); }
+            });
         } catch (Throwable ignored) {
             // If anything goes wrong we fall back to the default page — the
             // React RootRedirect will still show something, never a crash.

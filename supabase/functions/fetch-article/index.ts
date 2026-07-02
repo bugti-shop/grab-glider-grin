@@ -13,7 +13,10 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { Readability } from "https://esm.sh/@mozilla/readability@0.5.0";
-import { parseHTML } from "https://esm.sh/linkedom@0.18.5";
+// Use linkedom's `worker` entry — it ships without the `canvas` dep that
+// otherwise fails to bundle inside the edge runtime with a "canvas.node not
+// found" error, blocking deploys of this whole function.
+import { parseHTML } from "https://esm.sh/linkedom@0.18.5/worker";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
