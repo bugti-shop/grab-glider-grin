@@ -455,6 +455,7 @@ const AppRoutes = () => {
             <Route path="/notesdashboard" element={<Index />} />
             <Route path="/notes" element={<Notes />} />
             <Route path="/notebooks" element={<Notebooks />} />
+            <Route path="/notebook/:id" element={<NotebookDetail />} />
             <Route path="/calendar" element={<NotesCalendar />} />
             <Route path="/clip" element={<WebClipper />} />
             <Route path="/webclipper" element={<WebClipper />} />
