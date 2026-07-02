@@ -25,6 +25,7 @@ import {
   formatBytes,
   ATTACHMENT_LIMITS,
 } from '@/utils/webClipper';
+import { compressHtml, formatBytesShort } from '@/utils/htmlCompression';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
   { id: 'article',   icon: FileText, titleKey: 'webClipper.modeArticle',   descKey: 'webClipper.modeArticleDesc',   fallbackTitle: 'Article',     fallbackDesc: 'Save the readable article body' },
