@@ -666,74 +666,102 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
 
 
 
+        {/* ── Plan Tabs ── */}
         <h2 className="text-[17px] font-bold mb-2 mt-6" style={{ color: PRO_BLUE, fontFamily: "'Nunito', sans-serif" }}>
           Select Your Plan
         </h2>
-        <div className="grid grid-cols-3 gap-2">
-          {PLANS.map((plan) => {
-            const active = selectedPlan === plan.id;
+        <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl mb-3" style={{ background: '#141414', border: '1px solid #262626' }}>
+          {([
+            { id: 'individual', label: 'Individual' },
+            { id: 'family', label: 'Family' },
+            { id: 'team', label: 'Team' },
+          ] as { id: PaywallTab; label: string }[]).map((tab) => {
+            const active = activeTab === tab.id;
             return (
-              <button key={plan.id} onClick={() => { triggerTripleHeavyHaptic(); setSelectedPlan(plan.id); }}
-                className="relative rounded-xl p-2.5 text-center transition-all"
+              <button key={tab.id} onClick={() => { triggerTripleHeavyHaptic(); setActiveTab(tab.id); }}
+                className="rounded-lg py-2 text-[12.5px] font-bold transition-all"
                 style={{
-                  background: active ? `${PRO_BLUE}1a` : '#141414',
-                  border: `1.5px solid ${active ? PRO_BLUE : '#262626'}`,
+                  background: active ? PRO_BLUE : 'transparent',
+                  color: active ? '#fff' : '#9a9a9a',
                 }}>
-                {plan.badgeKey && (
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap"
-                    style={{ background: PRO_BLUE, color: '#fff' }}>
-                    {t(plan.badgeKey)}
-                  </span>
-                )}
-                <p className="text-[12px] font-bold text-white">{t(plan.labelKey)}</p>
-                <p className="text-[10.5px] mt-0.5" style={{ color: active ? PRO_BLUE : '#9a9a9a' }}>{plan.price}</p>
-                {active && (
-                  <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center" style={{ background: PRO_BLUE }}>
-                    <Check size={9} color="#fff" />
-                  </div>
-                )}
+                {tab.label}
               </button>
             );
           })}
         </div>
 
-        {(!hasUsedTrial && currentPlan.hasTrial) && (() => {
+        {/* ── Individual ── */}
+        {activeTab === 'individual' && (
+          <div className="rounded-xl p-4 text-center" style={{ background: `${PRO_BLUE}12`, border: `1.5px solid ${PRO_BLUE}` }}>
+            <p className="text-[13px] font-bold text-white">Individual</p>
+            <p className="text-[11.5px] mt-0.5" style={{ color: '#bdbdbd' }}>Every Premium feature, just for you</p>
+            <p className="text-[26px] font-black mt-2" style={{ color: '#fff' }}>{yearlyPlan?.price ?? '$39.99/yr'}</p>
+            <p className="text-[11px]" style={{ color: '#9a9a9a' }}>billed annually</p>
+          </div>
+        )}
+
+        {/* ── Family ── */}
+        {activeTab === 'family' && (
+          <div className="rounded-xl p-4 text-center" style={{ background: `${PRO_BLUE}12`, border: `1.5px solid ${PRO_BLUE}` }}>
+            <p className="text-[13px] font-bold text-white">Family</p>
+            <p className="text-[11.5px] mt-0.5" style={{ color: '#bdbdbd' }}>For families who want to easily manage their household</p>
+            <p className="text-[26px] font-black mt-2" style={{ color: '#fff' }}>${FAMILY_MONTHLY_EQUIV.toFixed(2)}</p>
+            <p className="text-[11px]" style={{ color: '#9a9a9a' }}>per month for 4 members · billed annually (${FAMILY_ANNUAL_TOTAL.toFixed(2)}/yr)</p>
+          </div>
+        )}
+
+        {/* ── Team ── */}
+        {activeTab === 'team' && (
+          <div className="rounded-xl p-4 text-center" style={{ background: `${PRO_BLUE}12`, border: `1.5px solid ${PRO_BLUE}` }}>
+            <p className="text-[13px] font-bold text-white">Team</p>
+            <p className="text-[11.5px] mt-0.5" style={{ color: '#bdbdbd' }}>Collaborate with your entire team on any project or task all in one place</p>
+            <p className="text-[26px] font-black mt-2" style={{ color: '#fff' }}>${TEAM_PER_SEAT_MONTHLY.toFixed(2)}</p>
+            <p className="text-[11px]" style={{ color: '#9a9a9a' }}>per month / member · billed annually</p>
+
+            <div className="mt-3 flex items-center justify-center gap-3">
+              <button onClick={() => setTeamSeats(s => Math.max(TEAM_MIN_SEATS, s - 1))}
+                className="w-8 h-8 rounded-full text-white font-bold" style={{ background: '#262626' }}>−</button>
+              <div className="text-white text-[14px] font-bold">{teamSeats} seats</div>
+              <button onClick={() => setTeamSeats(s => Math.min(TEAM_MAX_SEATS, s + 1))}
+                className="w-8 h-8 rounded-full text-white font-bold" style={{ background: '#262626' }}>+</button>
+            </div>
+            <p className="text-[11px] mt-2" style={{ color: '#bdbdbd' }}>
+              Total: <span className="font-bold text-white">${teamAnnualTotal}/yr</span>
+            </p>
+          </div>
+        )}
+
+        {/* ── Trial terms (Individual only, when eligible) ── */}
+        {activeTab === 'individual' && !hasUsedTrial && (() => {
           const trialEnd = new Date();
           trialEnd.setDate(trialEnd.getDate() + 3);
           const endStr = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-          const period = currentPlan.labelKey.includes('yearly') ? 'yearly' : currentPlan.labelKey.includes('monthly') ? 'monthly' : 'weekly';
-          const platform = Capacitor.getPlatform(); // 'ios' | 'android' | 'web'
+          const platform = Capacitor.getPlatform();
           const isIOS = platform === 'ios';
           const storeName = isIOS ? 'App Store (Apple ID)' : 'Google Play';
+          const renewPrice = yearlyPlan?.price ?? '$39.99/yr';
           return (
             <div className="mt-4 rounded-xl p-3.5" style={{ background: '#111', border: `1px solid ${PRO_BLUE}55` }}>
-              <p className="text-[12.5px] font-bold mb-2" style={{ color: PRO_BLUE }}>
-                Free trial terms
-              </p>
+              <p className="text-[12.5px] font-bold mb-2" style={{ color: PRO_BLUE }}>Free trial terms</p>
               <ul className="space-y-1.5 text-[11.5px] leading-snug" style={{ color: '#cfcfcf' }}>
                 <li>• 3-day free trial — you pay <span className="font-bold text-white">$0.00 today</span>.</li>
-                <li>• Trial ends on <span className="font-bold text-white">{endStr}</span>. After the trial, your {period} subscription auto-renews at <span className="font-bold text-white">{currentPlan.price}</span> (renewal amount: <span className="font-bold text-white">{currentPlan.price}</span>) until cancelled.</li>
-                <li>• Payment is charged to your {storeName} account on the renewal date. Prices may vary by country and applicable taxes. No cancellation fee.</li>
+                <li>• Trial ends on <span className="font-bold text-white">{endStr}</span>. After the trial, your yearly subscription auto-renews at <span className="font-bold text-white">{renewPrice}</span> until cancelled.</li>
+                <li>• Payment is charged to your {storeName} account on the renewal date. Prices may vary by country and applicable taxes.</li>
               </ul>
-
               <p className="text-[12px] font-bold mt-3 mb-1.5" style={{ color: PRO_BLUE }}>
-                How to cancel your free trial ({isIOS ? 'App Store' : 'Google Play'})
+                How to cancel ({isIOS ? 'App Store' : 'Google Play'})
               </p>
               {isIOS ? (
                 <ol className="space-y-1 text-[11.5px] leading-snug list-decimal pl-4" style={{ color: '#cfcfcf' }}>
-                  <li>Open the <span className="font-semibold text-white">Settings</span> app on your iPhone or iPad.</li>
-                  <li>Tap your <span className="font-semibold text-white">name</span> (top) → <span className="font-semibold text-white">Subscriptions</span>.</li>
-                  <li>Select <span className="font-semibold text-white">Flowist</span> from the list of active subscriptions.</li>
-                  <li>Tap <span className="font-semibold text-white">Cancel Subscription</span> (or <span className="font-semibold text-white">Cancel Free Trial</span>) and confirm.</li>
-                  <li>Cancel <span className="font-bold text-white">at least 24 hours before {endStr}</span> to avoid being charged. You'll keep Premium access until the trial ends.</li>
+                  <li>Open <span className="font-semibold text-white">Settings</span> → tap your name → <span className="font-semibold text-white">Subscriptions</span>.</li>
+                  <li>Select <span className="font-semibold text-white">Flowist</span> and tap <span className="font-semibold text-white">Cancel Subscription</span>.</li>
+                  <li>Cancel <span className="font-bold text-white">at least 24 hours before {endStr}</span> to avoid being charged.</li>
                 </ol>
               ) : (
                 <ol className="space-y-1 text-[11.5px] leading-snug list-decimal pl-4" style={{ color: '#cfcfcf' }}>
-                  <li>Open the <span className="font-semibold text-white">Google Play Store</span> app on the device used to subscribe.</li>
-                  <li>Tap your <span className="font-semibold text-white">profile icon</span> (top-right) → <span className="font-semibold text-white">Payments &amp; subscriptions</span> → <span className="font-semibold text-white">Subscriptions</span>.</li>
-                  <li>Select <span className="font-semibold text-white">Flowist</span> from the list of subscriptions.</li>
-                  <li>Tap <span className="font-semibold text-white">Cancel subscription</span> and confirm.</li>
-                  <li>Cancel <span className="font-bold text-white">at least 24 hours before {endStr}</span> to avoid being charged. You'll keep Premium access until the trial ends.</li>
+                  <li>Open <span className="font-semibold text-white">Google Play Store</span> → profile icon → <span className="font-semibold text-white">Payments &amp; subscriptions</span> → <span className="font-semibold text-white">Subscriptions</span>.</li>
+                  <li>Select <span className="font-semibold text-white">Flowist</span> and tap <span className="font-semibold text-white">Cancel subscription</span>.</li>
+                  <li>Cancel <span className="font-bold text-white">at least 24 hours before {endStr}</span> to avoid being charged.</li>
                 </ol>
               )}
             </div>
@@ -776,20 +804,30 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           background: 'linear-gradient(to top, #000 70%, rgba(0,0,0,0))',
         }}>
           {(() => {
+            const ctaLabel = isPurchasing
+              ? t('onboarding.paywall.processing')
+              : activeTab === 'individual'
+                ? (hasUsedTrial ? `Subscribe · ${yearlyPlan?.price ?? '$39.99/yr'}` : 'Try for $0.00 Today')
+                : activeTab === 'family'
+                  ? `Get Family · $${FAMILY_ANNUAL_TOTAL.toFixed(2)}/yr`
+                  : `Get Team · $${teamAnnualTotal}/yr`;
+
+            const onCta = () => {
+              triggerTripleHeavyHaptic();
+              if (activeTab === 'individual') handlePurchase('yearly');
+              else if (activeTab === 'family') handlePurchase('family');
+              else handlePurchase('team', { quantity: teamSeats });
+            };
+
             return (
-              <>
-                <button onClick={() => { triggerTripleHeavyHaptic(); handlePurchase(); }} disabled={isPurchasing}
-                  className="w-full rounded-xl py-3 text-[14px] font-bold active:scale-[0.99] transition disabled:opacity-50"
-                  style={{ background: PRO_BLUE, color: '#fff', boxShadow: `0 6px 20px ${PRO_BLUE}55` }}>
-                  {isPurchasing
-                    ? t('onboarding.paywall.processing')
-                    : `Try for $0.00 Today`}
-                </button>
-              </>
-
+              <button onClick={onCta} disabled={isPurchasing}
+                className="w-full rounded-xl py-3 text-[14px] font-bold active:scale-[0.99] transition disabled:opacity-50"
+                style={{ background: PRO_BLUE, color: '#fff', boxShadow: `0 6px 20px ${PRO_BLUE}55` }}>
+                {ctaLabel}
+              </button>
             );
-
           })()}
+
 
 
       </div>
