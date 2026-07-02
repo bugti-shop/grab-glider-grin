@@ -2025,7 +2025,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           ) : (
             <div className="relative flex-1 min-h-0 flex flex-col">
               {showToc && (
-                <TableOfContents content={content} editorRef={editorRef} />
+                <TableOfContents content={content} editorRef={editorRef} maxLevel={tocMaxLevel} />
               )}
               <RichTextEditor
                 content={content}
