@@ -44,6 +44,21 @@ const Upcoming = () => {
   const [allItems, setAllItems] = useState<TodoItem[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [isInputOpen, setIsInputOpen] = useState(false);
+  const [resumeScannerOnOpen, setResumeScannerOnOpen] = useState(false);
+  // Detect the ?resumeScan=tasks flag set after post-sign-in redirect and
+  // reopen the task sheet with the camera scanner armed.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('resumeScan') === 'tasks') {
+      params.delete('resumeScan');
+      const nextSearch = params.toString();
+      const nextUrl = window.location.pathname + (nextSearch ? `?${nextSearch}` : '') + window.location.hash;
+      window.history.replaceState(null, '', nextUrl);
+      setResumeScannerOnOpen(true);
+      setIsInputOpen(true);
+    }
+  }, []);
   const [groupBy, setGroupBy] = useState<'week' | 'month'>('week');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedTask, setSelectedTask] = useState<TodoItem | null>(null);
@@ -647,11 +662,12 @@ const Upcoming = () => {
 
       <TaskInputSheet
         isOpen={isInputOpen}
-        onClose={() => setIsInputOpen(false)}
+        onClose={() => { setIsInputOpen(false); setResumeScannerOnOpen(false); }}
         onAddTask={handleAddTask}
         folders={folders}
         selectedFolderId={null}
         onCreateFolder={handleCreateFolder}
+        autoOpenScanner={resumeScannerOnOpen}
       />
       
       <TaskDetailPage

@@ -60,7 +60,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { TaskDateTimePage, RepeatSettings } from './TaskDateTimePage';
 import { parseNaturalLanguageTask, hasNaturalLanguagePatterns } from '@/utils/naturalLanguageParser';
 import { supabase } from '@/integrations/supabase/client';
-import { Sparkles as SparklesIcon, ScanLine } from 'lucide-react';
+import { Sparkles as SparklesIcon, ScanLine, Loader2 } from 'lucide-react';
 import { ImageTaskExtractorSheet } from './ImageTaskExtractorSheet';
 import { TextTaskExtractorSheet } from './TextTaskExtractorSheet';
 import { SafeComponent } from './ErrorBoundary';
@@ -88,9 +88,11 @@ interface TaskInputSheetProps {
   selectedSectionId?: string | null;
   defaultDate?: Date; // New prop for calendar auto-assignment
   preventBackdropClose?: boolean;
+  /** When true and the sheet opens, immediately launch the AI image scanner. */
+  autoOpenScanner?: boolean;
 }
 
-export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFolderId, onCreateFolder, sections = [], selectedSectionId, defaultDate, preventBackdropClose = false }: TaskInputSheetProps) => {
+export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFolderId, onCreateFolder, sections = [], selectedSectionId, defaultDate, preventBackdropClose = false, autoOpenScanner = false }: TaskInputSheetProps) => {
   const { t } = useTranslation();
 
 
@@ -244,16 +246,31 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   const [showImageExtractor, setShowImageExtractor] = useState(false);
   const [showTextExtractor, setShowTextExtractor] = useState(false);
   const [showScanCoachmark, setShowScanCoachmark] = useState(false);
+  const [isOpeningScanner, setIsOpeningScanner] = useState(false);
+  const openScannerLockRef = useRef(false);
   const SCAN_COACHMARK_KEY = 'scanTasksCoachmarkSeen_v1';
-  const openImageExtractor = () => {
-    if (!requireFeature('ai_dictation')) return;
-    const seen = typeof window !== 'undefined' && localStorage.getItem(SCAN_COACHMARK_KEY) === '1';
-    if (!seen) {
-      setShowScanCoachmark(true);
-      try { localStorage.setItem(SCAN_COACHMARK_KEY, '1'); } catch {}
-      return;
+  const openImageExtractor = async () => {
+    // Guard against rapid re-taps while the camera is initialising.
+    if (openScannerLockRef.current || showImageExtractor) return;
+    openScannerLockRef.current = true;
+    setIsOpeningScanner(true);
+    try {
+      const { ensureSignedInForAi } = await import('@/utils/aiAccessGuard');
+      if (!(await ensureSignedInForAi({ intent: 'scan-tasks' }))) return;
+      if (!requireFeature('ai_dictation')) return;
+      const seen = typeof window !== 'undefined' && localStorage.getItem(SCAN_COACHMARK_KEY) === '1';
+      if (!seen) {
+        setShowScanCoachmark(true);
+        try { localStorage.setItem(SCAN_COACHMARK_KEY, '1'); } catch {}
+        return;
+      }
+      setShowImageExtractor(true);
+    } finally {
+      setIsOpeningScanner(false);
+      // Release the lock shortly after — long enough to swallow double-taps,
+      // short enough to not block a legitimate retry.
+      setTimeout(() => { openScannerLockRef.current = false; }, 600);
     }
-    setShowImageExtractor(true);
   };
   const openTextExtractor = () => {
     if (!requireFeature('ai_dictation')) return;
@@ -271,7 +288,19 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
     onClose();
   };
 
+  // Auto-open the AI image scanner when requested (e.g. resuming after sign-in).
+  const autoOpenFiredRef = useRef(false);
+  useEffect(() => {
+    if (!isOpen) { autoOpenFiredRef.current = false; return; }
+    if (!autoOpenScanner || autoOpenFiredRef.current) return;
+    autoOpenFiredRef.current = true;
+    const id = setTimeout(() => { openImageExtractor(); }, 120);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, autoOpenScanner]);
+
   const folderColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
 
   // Natural language parsing - real-time preview
   const parsedTask = useMemo(() => {
@@ -922,11 +951,15 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
                   <PopoverTrigger asChild>
                     <button
                       onClick={openImageExtractor}
-                      className="w-10 h-10 rounded-lg bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors relative"
+                      disabled={isOpeningScanner || showImageExtractor}
+                      className="w-10 h-10 rounded-lg bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors relative disabled:opacity-60 disabled:cursor-wait"
                       aria-label={t('tasks.aiScanImage', 'Scan tasks from photo')}
+                      aria-busy={isOpeningScanner}
                       title={t('tasks.aiScanImageHint', 'Scan a paper or sticky-note board to add tasks')}
                     >
-                      <ScanLine className="h-5 w-5 text-primary" />
+                      {isOpeningScanner
+                        ? <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                        : <ScanLine className="h-5 w-5 text-primary" />}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent

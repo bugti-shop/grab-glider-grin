@@ -213,6 +213,16 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showScanNote, setShowScanNote] = useState(false);
   const [showExtractTasks, setShowExtractTasks] = useState(false);
+  // Auto-resume note scanner after sign-in redirect (?resumeScan=note).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('resumeScan') !== 'note') return;
+    params.delete('resumeScan');
+    const next = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (next ? `?${next}` : '') + window.location.hash);
+    setShowScanNote(true);
+  }, []);
   
   
   const [showSketchLibrary, setShowSketchLibrary] = useState(false);
@@ -2006,7 +2016,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 onLineHeightChange={setLineHeight}
                 onInsertNoteLink={() => setIsNoteLinkingOpen(true)}
                 onVoiceRecord={() => setShowVoiceRecorder(true)}
-                onScan={() => { if (requireFeature('ai_dictation')) setShowScanNote(true); }}
+                onScan={() => { if (showScanNote) return; if (requireFeature('ai_dictation')) setShowScanNote(true); }}
                 externalEditorRef={editorRef}
                 isFindReplaceOpen={isFindReplaceOpen}
                 onFloatingImageUpload={(noteType === 'regular' || noteType === 'sticky' || noteType === 'textformat') ? () => floatingImageRef.current?.triggerAdd() : undefined}
@@ -2032,12 +2042,15 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           <div className="absolute bottom-20 right-3 z-30 flex flex-col gap-2 items-end pointer-events-auto">
             <button
               type="button"
+              disabled={showScanNote}
               onClick={() => {
+                if (showScanNote) return;
                 if (!requireFeature('ai_dictation')) return;
                 setShowScanNote(true);
               }}
-              className="group relative h-14 pl-4 pr-5 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center gap-2 hover:scale-105 active:scale-95 transition-transform ring-2 ring-primary/20"
+              className="group relative h-14 pl-4 pr-5 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center gap-2 hover:scale-105 active:scale-95 transition-transform ring-2 ring-primary/20 disabled:opacity-60 disabled:cursor-wait"
               aria-label={t('scanNote.tooltip', 'Scan a handwritten or printed page — AI converts it into a formatted note')}
+              aria-busy={showScanNote}
               title={t('scanNote.tooltip', 'Scan a handwritten or printed page — AI converts it into a formatted note')}
             >
               <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping opacity-60 pointer-events-none" />

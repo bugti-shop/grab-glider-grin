@@ -134,7 +134,7 @@ export const ImageTaskExtractorSheet = ({
   };
 
   const ensureScannerAccess = async () => {
-    if (!(await ensureSignedInForAi())) return false;
+    if (!(await ensureSignedInForAi({ intent: 'scan-tasks' }))) return false;
     if (!hasPaidAi) {
       requireFeature('ai_dictation');
       return false;
@@ -422,7 +422,7 @@ export const ImageTaskExtractorSheet = ({
         <SheetHeader className="px-4 pt-4 pb-2">
           <SheetTitle className="flex items-center gap-2 text-left">
             <Sparkles className="h-5 w-5 text-primary" />
-            {t('imageExtract.title', 'Scan tasks from paper')}
+            {t('imageExtract.reviewTitle', 'Review extracted tasks')}
           </SheetTitle>
           <SheetDescription className="sr-only">
             {t('imageExtract.description', 'Choose a photo and extract tasks with AI.')}
