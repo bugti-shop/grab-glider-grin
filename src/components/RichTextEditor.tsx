@@ -2354,10 +2354,10 @@ export const RichTextEditor = ({
 
       {toolbarPosition === 'bottom' && (
         <div
-          className="fixed left-0 right-0 z-50 bg-background border-t"
+          className="fixed left-0 right-0 z-50 pointer-events-none"
           style={{ bottom: isAndroidNativeEditor ? '0px' : 'calc(var(--safe-bottom, 0px) + var(--keyboard-inset, 0px))' }}
         >
-          {toolbar}
+          <div className="pointer-events-auto">{toolbar}</div>
         </div>
       )}
 
