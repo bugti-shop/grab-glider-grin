@@ -289,6 +289,9 @@ const WebClipper = () => {
           bad_url:        { titleKey: 'webClipper.errBadUrlTitle',    titleFallback: 'Invalid URL',                   descKey: 'webClipper.errBadUrlDesc',    descFallback: 'That URL is not reachable.' },
           upstream_error: { titleKey: 'webClipper.errUpstreamTitle',  titleFallback: 'Source site returned an error', descKey: 'webClipper.errUpstreamDesc',  descFallback: fetchFailure.status ? `The site replied with HTTP ${fetchFailure.status}.` : 'The site did not respond properly.' },
           network:        { titleKey: 'webClipper.errNetworkTitle',   titleFallback: 'Could not reach article',       descKey: 'webClipper.errNetworkDesc',   descFallback: 'Network trouble fetching this page. Check your connection and retry.' },
+          monthly_limit_reached: { titleKey: 'webClipper.errLimitTitle', titleFallback: 'Monthly clip limit reached', descKey: 'webClipper.errLimitDesc', descFallback: fetchFailure.message || 'Free plan is limited to 10 web clips per month. Upgrade to Pro for unlimited clipping.' },
+          auth_required:  { titleKey: 'webClipper.errAuthTitle',      titleFallback: 'Sign in required',              descKey: 'webClipper.errAuthDesc',      descFallback: 'Please sign in to use the Web Clipper.' },
+          gate_error:     { titleKey: 'webClipper.errGateTitle',      titleFallback: 'Subscription check failed',     descKey: 'webClipper.errGateDesc',      descFallback: 'We could not verify your subscription. Please retry in a moment.' },
           internal:       { titleKey: 'webClipper.errInternalTitle',  titleFallback: 'Clipper hit an error',          descKey: 'webClipper.errInternalDesc',  descFallback: 'Something went wrong on our side while parsing the page.' },
         };
         const info = map[fetchFailure.code] || map.internal;
