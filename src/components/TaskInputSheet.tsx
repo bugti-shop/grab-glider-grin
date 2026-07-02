@@ -1483,7 +1483,6 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
                 );
               }
 
-              if (action.id === 'folder' as any && false) { /* placeholder to keep formatter happy */ }
 
 
               if (action.id === 'image') {
