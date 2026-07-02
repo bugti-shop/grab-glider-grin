@@ -55,6 +55,8 @@ const WebClipper = () => {
   const [previewReady, setPreviewReady] = useState(false);
   const [previewTitle, setPreviewTitle] = useState('');
   const [previewHtml, setPreviewHtml] = useState('');
+  /** Full-page raw HTML snapshot (compressed) — carried from prepareClip to commitClip. */
+  const [fullPageSnapshot, setFullPageSnapshot] = useState<Note['fullPageSnapshot'] | null>(null);
   const contentEditorRef = useRef<HTMLDivElement>(null);
 
   // Hydrate web-clip cards (adds expand/collapse toggle for long clips)
