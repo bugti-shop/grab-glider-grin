@@ -405,7 +405,15 @@ export default function Profile() {
             </button>
           </div>
           {user?.email && (
-            <p className="text-sm text-foreground/80 mt-1 break-all">{user.email}</p>
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
+              <p className="text-sm text-foreground/80 break-all">{user.email}</p>
+              <button
+                onClick={() => setShowChangeEmail(true)}
+                className="text-[11px] font-semibold text-primary underline underline-offset-2 hover:opacity-80"
+              >
+                {t('profile.changeEmail', 'Change')}
+              </button>
+            </div>
           )}
           {user && (
             <p className="text-xs text-muted-foreground mt-0.5">{getJoinedDate()}</p>
