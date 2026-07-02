@@ -725,8 +725,12 @@ const WebClipper = () => {
                 />
                 <p className="text-[11px] text-muted-foreground">
                   {t('webClipper.previewHint', 'Everything the clipper found — images, videos, links, text — is above. Delete or edit anything before saving.')}
-                </p>
               </div>
+              <ClipCostEstimator
+                snapshotBytes={fullPageSnapshot?.bytes ?? null}
+                previewHtmlLength={previewHtml.length}
+              />
+
               <div className="flex gap-2 pt-1">
                 <Button onClick={commitClip} disabled={saving} className="flex-1">
                   <Save className="h-4 w-4 mr-1.5" />
