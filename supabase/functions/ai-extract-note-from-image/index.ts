@@ -14,6 +14,13 @@ interface ExtractRequest {
   languageCode?: string;
   languageName?: string;
   webUnlockCode?: string;
+  /**
+   * When true, the extractor uses a stronger vision model + handwriting-tuned
+   * prompt: cursive letters, ambiguous glyphs, cross-outs, margin notes,
+   * arrows/callouts, and mixed print+cursive. Killer feature to beat
+   * Evernote's Penultimate/Scannable OCR moat.
+   */
+  handwriting?: boolean;
 }
 
 const AI_GATEWAY_TIMEOUT_MS = 40_000;
