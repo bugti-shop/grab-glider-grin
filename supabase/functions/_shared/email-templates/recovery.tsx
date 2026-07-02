@@ -36,9 +36,9 @@ export const RecoveryEmail = ({ confirmationUrl }: Props) => (
           Click the link below to reset your password:
         </Text>
 
-        <Text style={styles.text}>
-          <Link href={confirmationUrl} style={styles.link}>Reset password</Link>
-        </Text>
+        <Section style={styles.buttonWrap}>
+          <Button href={confirmationUrl} style={styles.button}>Reset password</Button>
+        </Section>
 
         <Text style={styles.text}>
           This link will expire 30 minutes after this email was sent.
