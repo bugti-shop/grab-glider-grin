@@ -516,7 +516,7 @@ export const CameraScannerScreen = ({
           {mode === 'note' && (
             <button
               onClick={() => {
-                if (!requirePro('burst')) return;
+                if (!requirePro('batch')) return;
                 setHandwritingOn((v) => {
                   const next = !v;
                   toast(
@@ -542,7 +542,6 @@ export const CameraScannerScreen = ({
               {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
             </button>
           )}
-          {/* Burst mode removed per product decision. */}
           <button
             onClick={toggleTorch}
             disabled={!torchSupported}

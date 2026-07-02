@@ -110,7 +110,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   };
 
   const ensureScannerAccess = async () => {
-    if (!(await ensureSignedInForAi())) return false;
+    if (!(await ensureSignedInForAi({ intent: 'scan-note' }))) return false;
     if (!hasPaidAi) {
       requireFeature('ai_dictation');
       return false;
