@@ -224,9 +224,10 @@ export const startEmailChange = async (newEmail: string): Promise<void> => {
 /**
  * Resend the email-change OTP (server-side throttled).
  */
-export const resendEmailChangeOtp = async (newEmail: string): Promise<void> => {
-  await callOtpResend(newEmail, 'email_change');
+export const resendEmailChangeOtp = async (newEmail: string): Promise<{ cooldownSeconds: number }> => {
+  return await callOtpResend(newEmail, 'email_change');
 };
+
 
 /**
  * Step 2 of changing email — verify the 6-digit OTP that was sent to the NEW
