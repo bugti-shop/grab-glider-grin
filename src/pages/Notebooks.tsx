@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Book, BookOpen, ChevronRight, Plus, Search, ArrowLeft, Check } from 'lucide-react';
+import { Book, BookOpen, ChevronRight, Plus, Search, ArrowLeft, Check, Pencil, Palette, Trash2 } from 'lucide-react';
 import { Folder as FolderType } from '@/types/note';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { useNotes } from '@/contexts/NotesContext';
@@ -15,6 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
