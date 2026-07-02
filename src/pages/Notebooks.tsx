@@ -165,24 +165,24 @@ const Notebooks = () => {
                 onClick={() => openNotebook(f.id)}
                 className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform"
               >
-                {/* Notebook wrapper — cover on top, small reserved space for pages peek */}
-                <div className="relative w-[78%] aspect-[3/4] pb-[5%]">
+                {/* Notebook wrapper — smaller cover, stack spans full width */}
+                <div className="relative w-[64%] aspect-[3/4] pb-[5%]">
                   {/* Cover box (fills the top area, leaves pb for stack) */}
                   <div className="relative w-full h-full">
-                    {/* Fanned paper bundle — barely peeks below cover */}
+                    {/* Fanned paper bundle — full width, edge-to-edge with cover */}
                     <div className="absolute left-0 right-0 top-0 bottom-[-6%] pointer-events-none">
                       {/* Sheet 1 — tilted left */}
                       <div
-                        className="absolute left-[6%] right-[6%] top-[8%] bottom-0 rounded-sm bg-[#fdfaf1] border border-black/10 shadow-[0_2px_3px_rgba(0,0,0,0.15)] origin-bottom"
-                        style={{ transform: 'rotate(-2.5deg)' }}
+                        className="absolute left-0 right-0 top-[8%] bottom-0 rounded-sm bg-[#fdfaf1] border border-black/10 shadow-[0_2px_3px_rgba(0,0,0,0.15)] origin-bottom"
+                        style={{ transform: 'rotate(-2deg)' }}
                       />
                       {/* Sheet 2 — tilted right */}
                       <div
-                        className="absolute left-[6%] right-[6%] top-[7%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_2px_4px_rgba(0,0,0,0.18)] origin-bottom"
-                        style={{ transform: 'rotate(2deg)' }}
+                        className="absolute left-0 right-0 top-[7%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_2px_4px_rgba(0,0,0,0.18)] origin-bottom"
+                        style={{ transform: 'rotate(1.5deg)' }}
                       />
-                      {/* Sheet 3 — center, peeks below */}
-                      <div className="absolute left-[4%] right-[4%] top-[6%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_3px_5px_-1px_rgba(0,0,0,0.2)]">
+                      {/* Sheet 3 — center, spans full cover width */}
+                      <div className="absolute left-0 right-0 top-[6%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_3px_5px_-1px_rgba(0,0,0,0.2)]">
                         {/* ruled hint */}
                         <div className="absolute inset-x-2 bottom-1 space-y-[2px]">
                           <div className="h-px bg-black/10" />
