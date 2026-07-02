@@ -1251,6 +1251,23 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <ListFilter className="h-4 w-4 mr-2" />
                   {showToc ? t('editor.hideToc', 'Hide Table of Contents') : t('editor.showToc', 'Show Table of Contents')}
                 </DropdownMenuItem>
+                {showToc && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <ListFilter className="h-4 w-4 mr-2 opacity-70" />
+                      {t('editor.tocLevels', 'TOC heading levels')}
+                      <span className="ml-auto text-xs text-muted-foreground">H1–H{tocMaxLevel}</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {[1, 2, 3, 4, 5, 6].map((lvl) => (
+                        <DropdownMenuItem key={lvl} onClick={() => changeTocMaxLevel(lvl)}>
+                          <span className="mr-2 w-4 text-center">{tocMaxLevel === lvl ? '✓' : ''}</span>
+                          {lvl === 1 ? 'H1 only' : `H1–H${lvl}`}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )}
                 <DropdownMenuItem onClick={() => setIsFindReplaceOpen(true)}>
                   <Search className="h-4 w-4 mr-2" />
                   {t('editor.findReplace')}
