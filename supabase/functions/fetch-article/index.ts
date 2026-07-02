@@ -326,7 +326,7 @@ function cleanArticleDom(doc: Document): void {
     '[class*="author-bio" i]', '[class*="tags" i][class*="list" i]',
   ];
   for (const sel of noiseSelectors) {
-    try { doc.querySelectorAll(sel).forEach((el: any) => el.remove()); } catch { /* invalid selector — skip */ }
+    try { doc.querySelectorAll(sel).forEach((el: any) => { if (!isProtected(el)) el.remove(); }); } catch { /* invalid selector — skip */ }
   }
 
   // 4) Cut everything after a "Related / Read next / More stories / You may
