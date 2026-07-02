@@ -78,6 +78,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import { TagManagementSheet } from './TagManagementSheet';
 import PublishNoteSheet from './PublishNoteSheet';
@@ -207,15 +210,36 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
   const [showToc, setShowToc] = useState(false);
+  const [tocMaxLevel, setTocMaxLevel] = useState<number>(6);
+  const currentNoteId = getCurrentNoteId();
   useEffect(() => {
-    getSetting<boolean>('noteEditor.showToc', false).then(setShowToc).catch(() => {});
+    // Per-note visibility, falling back to the global default when the note has no saved value.
+    let cancelled = false;
+    (async () => {
+      const globalDefault = await getSetting<boolean>('noteEditor.showToc', false).catch(() => false);
+      const perNote = await getSetting<boolean | null>(`noteEditor.showToc.${currentNoteId}`, null as any).catch(() => null);
+      if (cancelled) return;
+      setShowToc(typeof perNote === 'boolean' ? perNote : !!globalDefault);
+    })();
+    return () => { cancelled = true; };
+  }, [currentNoteId]);
+  useEffect(() => {
+    getSetting<number>('noteEditor.tocMaxLevel', 6).then(v => setTocMaxLevel(Math.min(6, Math.max(1, Number(v) || 6)))).catch(() => {});
   }, []);
   const toggleToc = useCallback(() => {
     setShowToc(prev => {
       const next = !prev;
+      // Persist per note so opening the same note again keeps the preference.
+      setSetting(`noteEditor.showToc.${currentNoteId}`, next).catch(() => {});
+      // Also update the global default so brand-new notes match the last choice.
       setSetting('noteEditor.showToc', next).catch(() => {});
       return next;
     });
+  }, [currentNoteId]);
+  const changeTocMaxLevel = useCallback((level: number) => {
+    const clamped = Math.min(6, Math.max(1, level));
+    setTocMaxLevel(clamped);
+    setSetting('noteEditor.tocMaxLevel', clamped).catch(() => {});
   }, []);
   const [metaDescription, setMetaDescription] = useState<string>('');
   const [customColor, setCustomColor] = useState<string | undefined>(undefined);
@@ -1227,6 +1251,23 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <ListFilter className="h-4 w-4 mr-2" />
                   {showToc ? t('editor.hideToc', 'Hide Table of Contents') : t('editor.showToc', 'Show Table of Contents')}
                 </DropdownMenuItem>
+                {showToc && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <ListFilter className="h-4 w-4 mr-2 opacity-70" />
+                      {t('editor.tocLevels', 'TOC heading levels')}
+                      <span className="ml-auto text-xs text-muted-foreground">H1–H{tocMaxLevel}</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {[1, 2, 3, 4, 5, 6].map((lvl) => (
+                        <DropdownMenuItem key={lvl} onClick={() => changeTocMaxLevel(lvl)}>
+                          <span className="mr-2 w-4 text-center">{tocMaxLevel === lvl ? '✓' : ''}</span>
+                          {lvl === 1 ? 'H1 only' : `H1–H${lvl}`}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )}
                 <DropdownMenuItem onClick={() => setIsFindReplaceOpen(true)}>
                   <Search className="h-4 w-4 mr-2" />
                   {t('editor.findReplace')}
@@ -2004,7 +2045,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           ) : (
             <div className="relative flex-1 min-h-0 flex flex-col">
               {showToc && (
-                <TableOfContents content={content} editorRef={editorRef} />
+                <TableOfContents content={content} editorRef={editorRef} maxLevel={tocMaxLevel} />
               )}
               <RichTextEditor
                 content={content}

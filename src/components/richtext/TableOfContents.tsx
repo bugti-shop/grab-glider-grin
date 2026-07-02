@@ -14,6 +14,8 @@ interface TableOfContentsProps {
   /** Ref to the contenteditable div — used to scroll to the actual heading. */
   editorRef: React.RefObject<HTMLDivElement>;
   className?: string;
+  /** Deepest heading level to include (1–6). Defaults to 6 (all). */
+  maxLevel?: number;
 }
 
 /**
@@ -21,25 +23,31 @@ interface TableOfContentsProps {
  * Re-parses `content` on every change, so headings stay in sync.
  * Clicking an item scrolls to the matching heading in the live editor DOM.
  */
-export const TableOfContents = ({ content, editorRef, className }: TableOfContentsProps) => {
+export const TableOfContents = ({ content, editorRef, className, maxLevel = 6 }: TableOfContentsProps) => {
   const [collapsed, setCollapsed] = useState(false);
+  const cap = Math.min(6, Math.max(1, maxLevel));
 
   const items = useMemo<TocItem[]>(() => {
     if (!content) return [];
     try {
       const doc = new DOMParser().parseFromString(`<div>${content}</div>`, 'text/html');
-      const nodes = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      const selector = Array.from({ length: cap }, (_, i) => `h${i + 1}`).join(', ');
+      const nodes = doc.querySelectorAll(selector);
+      // Also index all headings so scroll target matches editor DOM order regardless of filter.
+      const allNodes = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      const indexMap = new Map<Element, number>();
+      allNodes.forEach((n, i) => indexMap.set(n, i));
       const out: TocItem[] = [];
-      nodes.forEach((n, i) => {
+      nodes.forEach((n) => {
         const text = (n.textContent || '').trim();
         if (!text) return;
-        out.push({ level: Number(n.tagName.substring(1)), text, index: i });
+        out.push({ level: Number(n.tagName.substring(1)), text, index: indexMap.get(n) ?? 0 });
       });
       return out;
     } catch {
       return [];
     }
-  }, [content]);
+  }, [content, cap]);
 
   // Auto-hide entirely if there are no headings
   if (items.length === 0) {
