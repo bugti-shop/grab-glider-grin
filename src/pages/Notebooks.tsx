@@ -316,15 +316,8 @@ const Notebooks = () => {
                       <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-black/25 backdrop-blur-sm text-[9px] font-semibold text-white flex items-center justify-center tabular-nums">
                         {count}
                       </span>
-                      {/* Corner icon */}
-                      <div className="absolute bottom-1 right-1 text-white/85">
-                        {f.isDefault ? (
-                          <BookOpen className="h-3 w-3" />
-                        ) : (
-                          <Book className="h-3 w-3" />
-                        )}
-                      </div>
                     </div>
+
                   </div>
                 </div>
                 {/* Name */}
