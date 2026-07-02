@@ -8,17 +8,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Stripe Price IDs. Family/Team read from env so you can rotate without redeploy.
-const PRICE_IDS: Record<string, string | undefined> = {
+// Stripe Price IDs (Individual plans only — Family/Team are native iOS/Android)
+const PRICE_IDS: Record<string, string> = {
   weekly: "price_1TRbliFAPtKh08jGPKXWPcPG",
   monthly: "price_1TR6SoFAPtKh08jGW4lfGDYt",
   yearly: "price_1TRbljFAPtKh08jGGf1qg42c",
-  family: Deno.env.get("STRIPE_FAMILY_PRICE_ID"),
-  team: Deno.env.get("STRIPE_TEAM_PRICE_ID"),
 };
 
-// Which plans support quantity (per-seat)
-const QUANTITY_PLANS = new Set(["team"]);
 
 
 // Free trial is handled through checkout for eligible monthly/yearly plans.
@@ -30,22 +26,14 @@ serve(async (req) => {
 
   try {
     // Parse request body
-    const { planType, quantity } = await req.json();
-    if (!planType || !(planType in PRICE_IDS)) {
+    const { planType } = await req.json();
+    if (!planType || !PRICE_IDS[planType]) {
       throw new Error(`Invalid plan type: ${planType}. Must be one of: ${Object.keys(PRICE_IDS).join(", ")}`);
     }
     const priceId = PRICE_IDS[planType];
-    if (!priceId) {
-      throw new Error(`${planType} plan is not configured yet. Please contact support.`);
-    }
-    let seatQty = 1;
-    if (QUANTITY_PLANS.has(planType)) {
-      const n = Number(quantity);
-      if (!Number.isFinite(n) || n < 2 || n > 100) {
-        throw new Error("Team plan requires a seat quantity between 2 and 100.");
-      }
-      seatQty = Math.floor(n);
-    }
+    const seatQty = 1;
+
+
 
 
     // Initialize Stripe

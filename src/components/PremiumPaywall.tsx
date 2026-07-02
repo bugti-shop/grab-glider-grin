@@ -18,12 +18,14 @@ import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock, LayoutG
 import { createPortal } from 'react-dom';
 import { useSubscription, ProductType, FREE_CAPACITY_LIMITS, SOFT_FREE_LIMITS, CAPACITY_LABELS } from '@/contexts/SubscriptionContext';
 import { Capacitor } from '@capacitor/core';
-import { PurchasesPackage, PACKAGE_TYPE } from '@revenuecat/purchases-capacitor';
+import { Purchases, PurchasesPackage, PACKAGE_TYPE } from '@revenuecat/purchases-capacitor';
+import { BILLING_CONFIG } from '@/lib/billing';
 import { triggerTripleHeavyHaptic } from '@/utils/haptics';
 import { supabase } from '@/lib/supabase';
 import { getLocalLifetimeMax } from '@/utils/lifetimeCountersCloud';
 import { loadTasksFromDB, updateTaskInDB } from '@/utils/taskStorage';
 import { format, formatDistanceToNow, isToday, isTomorrow } from 'date-fns';
+
 
 
 
@@ -104,15 +106,65 @@ function usePaywallLogic() {
     } catch { return false; }
   }, []);
 
+  const purchaseNativeByProductId = async (productId: string): Promise<boolean> => {
+    // Look up product via RevenueCat offerings first (preferred) then direct
+    const offeringsNow = await Purchases.getOfferings();
+    const allPackages: PurchasesPackage[] = [];
+    if (offeringsNow?.current?.availablePackages) allPackages.push(...offeringsNow.current.availablePackages);
+    if (offeringsNow?.all) {
+      Object.values(offeringsNow.all).forEach((offering: any) => {
+        offering?.availablePackages?.forEach((p: PurchasesPackage) => {
+          if (!allPackages.find(e => e.identifier === p.identifier)) allPackages.push(p);
+        });
+      });
+    }
+    const shortId = productId.split(':')[0];
+    const pkg = allPackages.find(p => p.product?.identifier === productId)
+      || allPackages.find(p => p.product?.identifier === shortId)
+      || allPackages.find(p => p.product?.identifier?.startsWith(shortId));
+    if (pkg) {
+      const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
+      return !!customerInfo?.entitlements?.active && Object.keys(customerInfo.entitlements.active).length > 0;
+    }
+    // Fallback: direct store product
+    const { products } = await Purchases.getProducts({ productIdentifiers: [productId, shortId] });
+    const storeProduct = products.find(p => p.identifier === productId) || products.find(p => p.identifier === shortId) || products[0];
+    if (!storeProduct) throw new Error(`Product ${productId} not found. Add it in App Store Connect / Play Console and RevenueCat.`);
+    const { customerInfo } = await Purchases.purchaseStoreProduct({ product: storeProduct });
+    return !!customerInfo?.entitlements?.active && Object.keys(customerInfo.entitlements.active).length > 0;
+  };
+
   const handlePurchase = async (
     planOverride?: string,
-    extras?: { quantity?: number },
+    _extras?: { quantity?: number },
   ) => {
     const planType = planOverride ?? selectedPlan;
     setIsPurchasing(true);
     setAdminError('');
     try {
-      if (Capacitor.isNativePlatform() && (planType === 'weekly' || planType === 'monthly' || planType === 'yearly')) {
+      const isNative = Capacitor.isNativePlatform();
+
+      // Family / Team are native-only (iOS + Android)
+      if (planType === 'family' || planType === 'team') {
+        if (!isNative) {
+          setAdminError('Family and Team plans are available on the iOS and Android apps only. Please subscribe from your phone.');
+          setTimeout(() => setAdminError(''), 6000);
+          return;
+        }
+        const cfg = (BILLING_CONFIG as any)[planType];
+        const ok = await purchaseNativeByProductId(cfg.productId);
+        if (ok) {
+          try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}
+          closePaywall();
+        } else {
+          setAdminError(t('onboarding.paywall.purchaseCancelled'));
+          setTimeout(() => setAdminError(''), 4000);
+        }
+        return;
+      }
+
+      // Individual (weekly/monthly/yearly)
+      if (isNative && (planType === 'weekly' || planType === 'monthly' || planType === 'yearly')) {
         const success = await purchase(planType as ProductType);
         if (success) {
           try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}
@@ -122,15 +174,13 @@ function usePaywallLogic() {
           setTimeout(() => setAdminError(''), 4000);
         }
       } else {
-        // Web / Family / Team: use Stripe checkout via edge function
+        // Web: Stripe checkout for individual plans
         const { data: { session } } = await supabase.auth.getSession();
         const headers: Record<string, string> = {};
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
-        }
+        if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
 
         const { data, error } = await supabase.functions.invoke('create-checkout', {
-          body: { planType, quantity: extras?.quantity },
+          body: { planType },
           headers,
         });
 
@@ -140,7 +190,6 @@ function usePaywallLogic() {
           setTimeout(() => setAdminError(''), 5000);
           return;
         }
-
         window.location.href = data.url;
       }
     } catch (error: any) {
@@ -153,6 +202,7 @@ function usePaywallLogic() {
       setIsPurchasing(false);
     }
   };
+
 
 
   const [restoreEmail, setRestoreEmail] = useState('');
@@ -544,24 +594,21 @@ type PaywallTab = 'individual' | 'family' | 'team';
 const FAMILY_MONTHLY_EQUIV = 8.99; // per family (up to 4 members)
 const FAMILY_ANNUAL_TOTAL = 107.88; // 8.99 * 12
 const TEAM_PER_SEAT_MONTHLY = 3.99;
-const TEAM_MIN_SEATS = 2;
-const TEAM_MAX_SEATS = 50;
-const TEAM_DEFAULT_SEATS = 5;
 
 function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> }) {
   const { t, selectedPlan, setSelectedPlan, isPurchasing, PLANS, currentPlan, handlePurchase, hasUsedTrial, closePaywall, handleRestore, isRestoring, adminError, capacityMessage } = logic;
 
   const [activeTab, setActiveTab] = useState<PaywallTab>('individual');
-  const [teamSeats, setTeamSeats] = useState<number>(TEAM_DEFAULT_SEATS);
 
   // Individual tab always uses the yearly plan
   useEffect(() => {
     if (activeTab === 'individual') setSelectedPlan('yearly');
   }, [activeTab, setSelectedPlan]);
 
+
   const yearlyPlan = PLANS.find(p => p.id === 'yearly') ?? PLANS[PLANS.length - 1];
 
-  const teamAnnualTotal = (TEAM_PER_SEAT_MONTHLY * 12 * teamSeats).toFixed(2);
+  
 
 
   const current = HERO_SLIDES[0];
@@ -718,16 +765,8 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
             <p className="text-[26px] font-black mt-2" style={{ color: '#fff' }}>${TEAM_PER_SEAT_MONTHLY.toFixed(2)}</p>
             <p className="text-[11px]" style={{ color: '#9a9a9a' }}>per month / member · billed annually</p>
 
-            <div className="mt-3 flex items-center justify-center gap-3">
-              <button onClick={() => setTeamSeats(s => Math.max(TEAM_MIN_SEATS, s - 1))}
-                className="w-8 h-8 rounded-full text-white font-bold" style={{ background: '#262626' }}>−</button>
-              <div className="text-white text-[14px] font-bold">{teamSeats} seats</div>
-              <button onClick={() => setTeamSeats(s => Math.min(TEAM_MAX_SEATS, s + 1))}
-                className="w-8 h-8 rounded-full text-white font-bold" style={{ background: '#262626' }}>+</button>
-            </div>
-            <p className="text-[11px] mt-2" style={{ color: '#bdbdbd' }}>
-              Total: <span className="font-bold text-white">${teamAnnualTotal}/yr</span>
-            </p>
+            <p className="text-[10.5px] mt-2" style={{ color: '#7c7c7c' }}>Team seats are managed from your dashboard after subscribing.</p>
+
           </div>
         )}
 
@@ -810,14 +849,15 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
                 ? (hasUsedTrial ? `Subscribe · ${yearlyPlan?.price ?? '$39.99/yr'}` : 'Try for $0.00 Today')
                 : activeTab === 'family'
                   ? `Get Family · $${FAMILY_ANNUAL_TOTAL.toFixed(2)}/yr`
-                  : `Get Team · $${teamAnnualTotal}/yr`;
+                  : `Get Team · $${TEAM_PER_SEAT_MONTHLY.toFixed(2)}/mo per member`;
 
             const onCta = () => {
               triggerTripleHeavyHaptic();
               if (activeTab === 'individual') handlePurchase('yearly');
               else if (activeTab === 'family') handlePurchase('family');
-              else handlePurchase('team', { quantity: teamSeats });
+              else handlePurchase('team');
             };
+
 
             return (
               <button onClick={onCta} disabled={isPurchasing}
