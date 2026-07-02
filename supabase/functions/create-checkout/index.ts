@@ -94,20 +94,21 @@ serve(async (req) => {
     const sessionConfig: any = {
       customer: customerId,
       customer_email: customerId ? undefined : userEmail,
-      line_items: [{ price: PRICE_IDS[planType], quantity: 1 }],
+      line_items: [{ price: priceId, quantity: seatQty }],
       mode: "subscription",
       payment_method_collection: "always",
       allow_promotion_codes: true,
       success_url: `${origin}/?stripe_success=true&plan=${planType}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/`,
-      metadata: { user_id: userId || "anonymous", plan_type: planType },
+      metadata: { user_id: userId || "anonymous", plan_type: planType, seats: String(seatQty) },
       subscription_data: {},
     };
 
-    // Only offer trial to monthly/yearly plans, NOT weekly — and only to new customers
-    if (!hadPreviousSubscription && planType !== 'weekly') {
+    // Only offer trial to individual monthly/yearly plans — not weekly, family, or team
+    if (!hadPreviousSubscription && (planType === "monthly" || planType === "yearly")) {
       sessionConfig.subscription_data.trial_period_days = 3;
     }
+
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
