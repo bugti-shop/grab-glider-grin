@@ -20,7 +20,9 @@ const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 interface Body {
   email?: string;
   type?: 'signup' | 'email_change';
+  check?: boolean; // if true, only report remaining cooldown without sending
 }
+
 
 const jsonResponse = (status: number, body: unknown, extraHeaders: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {
