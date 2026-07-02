@@ -24,7 +24,7 @@ export const styles = {
     padding: '32px 28px 40px',
   } as const,
   header: {
-    textAlign: 'right' as const,
+    textAlign: 'left' as const,
     margin: '0 0 28px',
   },
   logo: {
@@ -54,4 +54,18 @@ export const styles = {
     fontSize: '16px',
     fontWeight: 600 as const,
   },
+  button: {
+    display: 'inline-block',
+    backgroundColor: BRAND.ink,
+    color: '#ffffff',
+    fontSize: '16px',
+    fontWeight: 600 as const,
+    textDecoration: 'none',
+    padding: '14px 28px',
+    borderRadius: '10px',
+    margin: '4px 0 20px',
+  } as const,
+  buttonWrap: {
+    margin: '4px 0 22px',
+  } as const,
 }
