@@ -38,9 +38,11 @@ Deno.serve(async (req) => {
 
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   const type = body.type === 'email_change' ? 'email_change' : 'signup';
+  const checkOnly = body.check === true;
   if (!email || email.length > 254 || !email.includes('@')) {
     return jsonResponse(400, { error: 'invalid_email' });
   }
+
 
   const now = new Date();
   const nowMs = now.getTime();
