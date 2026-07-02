@@ -1623,6 +1623,13 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
               return null;
             })}
 
+            {/* Team project + assignee picker */}
+            <TaskProjectAssignPicker
+              projectId={projectId}
+              assigneeId={assigneeId}
+              onChange={(p) => { setProjectId(p.projectId); setAssigneeId(p.assigneeId); }}
+            />
+
             {/* Edit Actions Button - always last */}
             <button
               className="relative flex items-center gap-1.5 px-3 py-2 rounded-md border border-border bg-card hover:bg-muted transition-all whitespace-nowrap"
@@ -1631,6 +1638,7 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
               <Settings2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span className="text-sm text-muted-foreground whitespace-nowrap">{t('taskInput.editActions')}</span>
             </button>
+
 
             <input
               ref={imageInputRef}
