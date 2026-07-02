@@ -1,17 +1,22 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, Plus, Check, User as UserIcon } from 'lucide-react';
+import { Users, Plus, Check, User as UserIcon, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjects, useProjectMembers } from '@/hooks/useProjects';
+import { useHasTeamPlan } from '@/hooks/useHasTeamPlan';
+import { toast } from 'sonner';
 
 interface Props {
   projectId?: string;
   assigneeId?: string;
   onChange: (patch: { projectId?: string; assigneeId?: string }) => void;
   compact?: boolean;
+  /** When true, assignment requires Teams/Family plan. Triggers upsell otherwise. */
+  gateAssignBehindTeamPlan?: boolean;
 }
 
 /**
