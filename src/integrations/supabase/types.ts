@@ -783,6 +783,27 @@ export type Database = {
         }
         Relationships: []
       }
+      otp_resend_log: {
+        Row: {
+          email: string
+          last_sent_at: string
+          send_count: number
+          window_started_at: string
+        }
+        Insert: {
+          email: string
+          last_sent_at?: string
+          send_count?: number
+          window_started_at?: string
+        }
+        Update: {
+          email?: string
+          last_sent_at?: string
+          send_count?: number
+          window_started_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
