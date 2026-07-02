@@ -36,9 +36,9 @@ export const SignupEmail = ({ confirmationUrl }: Props) => (
           Click the link below to verify your email address:
         </Text>
 
-        <Text style={styles.text}>
-          <Link href={confirmationUrl} style={styles.link}>Verify email</Link>
-        </Text>
+        <Section style={styles.buttonWrap}>
+          <Button href={confirmationUrl} style={styles.button}>Verify email</Button>
+        </Section>
 
         <Text style={styles.text}>
           This link will expire 30 minutes after this email was sent.
