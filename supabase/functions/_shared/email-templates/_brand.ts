@@ -36,7 +36,12 @@ export const styles = {
   logo: {
     display: 'block',
     margin: '0 auto 10px',
-    borderRadius: '14px',
+    borderRadius: '18px',
+    objectFit: 'cover' as const,
+    objectPosition: 'center' as const,
+    width: '96px',
+    height: '96px',
+    aspectRatio: '1 / 1' as const,
   },
   brandName: {
     fontSize: '18px',
