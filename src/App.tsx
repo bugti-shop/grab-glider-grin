@@ -629,6 +629,23 @@ const AppContent = () => {
       if (session?.user) {
         try { localStorage.setItem('flowist_user_engaged', 'true'); } catch {}
         setShowLanding(false);
+
+        // Resume a pending AI intent (e.g. the scanner the user tapped before sign-in).
+        if (event === 'SIGNED_IN') {
+          try {
+            // Lazy-load to avoid a static import cycle with the guard util.
+            import('@/utils/pendingAiIntent').then(({ consumePendingAiIntent, RESUME_SCAN_PARAM }) => {
+              const intent = consumePendingAiIntent();
+              if (!intent) return;
+              const kindParam = intent.kind === 'scan-tasks' ? 'tasks' : 'note';
+              const url = new URL(intent.path || '/', window.location.origin);
+              url.searchParams.set(RESUME_SCAN_PARAM, kindParam);
+              // Navigate back to where the user was — the destination page
+              // reads the query flag and reopens the scanner instantly.
+              window.location.assign(url.pathname + url.search);
+            });
+          } catch { /* noop */ }
+        }
       } else if (event === 'SIGNED_OUT') {
         try {
           localStorage.removeItem('flowist_user_engaged');
