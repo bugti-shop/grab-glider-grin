@@ -23,7 +23,7 @@ export interface NavItem {
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: 'home', label: 'Home', icon: 'Home', path: '/notesdashboard', visible: true },
-  { id: 'notes', label: 'Notes', icon: 'FileText', path: '/notes', visible: true },
+  { id: 'notebooks', label: 'Notebooks', icon: 'Book', path: '/notebooks', visible: true },
   { id: 'profile', label: 'Profile', icon: 'User', path: '/profile', visible: true },
   { id: 'calendar', label: 'Calendar', icon: 'Calendar', path: '/calendar', visible: true },
   { id: 'settings', label: 'Settings', icon: 'Settings', path: '/settings', visible: true },
@@ -35,7 +35,16 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Calendar: <Calendar className="h-5 w-5" />,
   Settings: <Settings className="h-5 w-5" />,
   User: <User className="h-5 w-5" />,
+  Book: <Book className="h-5 w-5" />,
 };
+
+/** Migrate any legacy saved 'notes' nav item to the new 'notebooks' id. */
+const migrateSavedNavItems = (saved: NavItem[]): NavItem[] =>
+  saved.map((it) =>
+    it.id === 'notes'
+      ? { ...it, id: 'notebooks', label: 'Notebooks', icon: 'Book', path: '/notebooks' }
+      : it,
+  );
 
 interface CustomizeNavigationSheetProps {
   isOpen: boolean;
