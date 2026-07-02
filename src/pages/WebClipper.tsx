@@ -208,11 +208,14 @@ const WebClipper = () => {
       let articleLinks: Array<{ href: string; text: string }> = [];
       let articleIsFallback = false;
       let fetchFailure: { code: string; status?: number; message?: string } | null = null;
+      // Always pull the full article when we have a URL in article/fullpage
+      // mode. Share intents on mobile sometimes ship a large snippet of the
+      // page metadata that used to short-circuit this fetch, leaving the
+      // note as "metadata only". A URL is authoritative — trust it.
       const shouldFetchFull =
         !attachment &&
         !!url &&
-        (clipMode === 'article' || clipMode === 'fullpage') &&
-        (content || '').length < 2048;
+        (clipMode === 'article' || clipMode === 'fullpage');
 
       if (shouldFetchFull) {
         try {
