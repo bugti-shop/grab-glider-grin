@@ -12,6 +12,7 @@ import { Check, Loader2, ExternalLink, FileText, Quote, Globe, Image as ImageIco
 import { saveNoteToDBSingle } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { sanitizeForDisplay, sanitizeClippedArticle } from '@/lib/sanitize';
 import { hydrateWebClipsIn } from '@/components/richtext/richTextBlocks';
 import {
