@@ -120,6 +120,8 @@ export const mappers = {
         reminder_at: iso((t as any).reminderTime),
         folder_id: isUuid((t as any).folderId) ? (t as any).folderId : null,
         section_id: isUuid((t as any).sectionId) ? (t as any).sectionId : null,
+        project_id: isUuid((t as any).projectId) ? (t as any).projectId : null,
+        assignee_id: isUuid((t as any).assigneeId) ? (t as any).assigneeId : null,
         payload: t,
         is_deleted: !!(t as any).isDeleted,
         created_at: iso((t as any).createdAt),
@@ -142,6 +144,8 @@ export const mappers = {
         reminderTime: r.reminder_at ? new Date(r.reminder_at) : (local as any)?.reminderTime,
         folderId: r.folder_id ?? (payload as any)?.folderId ?? (local as any)?.folderId,
         sectionId: r.section_id ?? (payload as any)?.sectionId ?? (local as any)?.sectionId,
+        projectId: r.project_id ?? (payload as any)?.projectId ?? (local as any)?.projectId,
+        assigneeId: r.assignee_id ?? (payload as any)?.assigneeId ?? (local as any)?.assigneeId,
         isDeleted: !!r.is_deleted,
         modifiedAt: new Date(r.updated_at ?? Date.now()),
       } as Partial<TodoItem> & { id: string };

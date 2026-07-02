@@ -1,5 +1,23 @@
 project_id = "hbkzstxquviwxbgntozl"
 
+[functions.send-transactional-email]
+verify_jwt = true
+
+[functions.preview-transactional-email]
+verify_jwt = false
+
+[functions.handle-email-unsubscribe]
+verify_jwt = false
+
+[functions.handle-email-suppression]
+verify_jwt = false
+
+[functions.send-project-invite]
+verify_jwt = true
+
+[functions.accept-project-invite]
+verify_jwt = false
+
 [functions]
   [functions.auth-email-hook]
     verify_jwt = false
