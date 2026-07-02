@@ -123,6 +123,15 @@ const WebClipper = () => {
     if (prepareStartedRef.current) return;
     if (previewReady) return;
     if (!(title || url || content || selection || attachment)) return;
+    // Session-scoped dedupe: never re-fetch the same URL+mode+attachment,
+    // even if this component remounts (StrictMode, back-nav, share-intent replay).
+    const key = clipKey(mode, url || '', attachment || '');
+    if (inFlightClipKeys.has(key) || completedClipKeys.has(key)) {
+      console.warn('[webClipper] duplicate clip suppressed for key', key);
+      prepareStartedRef.current = true;
+      clearClipperQuery();
+      return;
+    }
     prepareStartedRef.current = true;
     void prepareClip(mode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
