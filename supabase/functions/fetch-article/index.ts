@@ -220,6 +220,95 @@ async function inlineCssUrls(
   return css;
 }
 
+/** Aggressively strip ads, navigation, footers, share bars, "related
+ *  stories", newsletter/subscribe prompts, comments, and inline icons from
+ *  the parsed document. Runs BEFORE Readability so the readability scorer
+ *  sees a clean article tree and doesn't grade noisy nav blocks as content.
+ *  Preserves: article body, headings, images (+ <figcaption>), links,
+ *  blockquotes, lists, tables, references, code, embedded video/iframes. */
+function cleanArticleDom(doc: Document): void {
+  // 1) Element types that are almost always chrome/noise.
+  const purgeTags = [
+    "script", "style", "noscript", "template", "svg", "canvas",
+    "nav", "header", "footer", "aside", "form", "button", "dialog",
+    "ins", // adsense
+  ];
+  for (const tag of purgeTags) {
+    doc.querySelectorAll(tag).forEach((el: any) => el.remove());
+  }
+
+  // 2) Iframes that aren't legitimate media embeds (youtube/vimeo/etc.).
+  const mediaHostsRe = /(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com|player\.vimeo\.com|dailymotion\.com|twitch\.tv|soundcloud\.com|spotify\.com|scribd\.com|slideshare\.net|codepen\.io|codesandbox\.io|jsfiddle\.net|gist\.github\.com|twitter\.com\/.+\/status|x\.com\/.+\/status|instagram\.com\/p\/|tiktok\.com\/@/)/i;
+  doc.querySelectorAll("iframe").forEach((el: any) => {
+    const src = String(el.getAttribute("src") || "");
+    if (!src || !mediaHostsRe.test(src)) el.remove();
+  });
+
+  // 3) Selector-based purge for common ad/nav/related/social patterns.
+  const noiseSelectors = [
+    // Ads
+    '[id*="ad" i][id*="-" i]', '[class*="advert" i]', '[class*="ad-slot" i]',
+    '[class*="adsense" i]', '[class*="adunit" i]', '[class*="sponsor" i]',
+    '[data-ad]', '[data-ad-slot]', '[data-testid*="ad-" i]',
+    '[aria-label*="advert" i]',
+    // Share / social
+    '[class*="share" i]', '[class*="social" i]', '[class*="follow" i]',
+    '[aria-label*="share" i]', '[data-testid*="share" i]',
+    // Related / recommended / more stories
+    '[class*="related" i]', '[class*="recommend" i]', '[class*="more-stor" i]',
+    '[class*="read-next" i]', '[class*="read-more" i]', '[class*="you-may" i]',
+    '[class*="popular" i]', '[class*="trending" i]', '[class*="promo" i]',
+    '[data-testid*="related" i]', '[data-testid*="recommend" i]',
+    // Newsletter / subscribe / paywall UI
+    '[class*="newsletter" i]', '[class*="subscribe" i]', '[class*="signup" i]',
+    '[class*="paywall" i]', '[class*="metered" i]',
+    // Comments
+    '[id*="comment" i]', '[class*="comment" i]', '[class*="disqus" i]',
+    // Cookies / consent / banners
+    '[class*="cookie" i]', '[class*="consent" i]', '[id*="cookie" i]',
+    '[class*="banner" i]', '[class*="modal" i]', '[class*="popup" i]',
+    // Menus / breadcrumbs / toolbars
+    '[class*="menu" i]', '[class*="breadcrumb" i]', '[class*="toolbar" i]',
+    '[class*="sidebar" i]', '[class*="masthead" i]',
+    // Site chrome
+    '[role="navigation"]', '[role="banner"]', '[role="contentinfo"]',
+    '[role="complementary"]', '[role="search"]', '[role="dialog"]',
+    // Icon-only spans (font-awesome / material)
+    '[class*="icon-" i]:empty', 'i[class*="fa-" i]', 'i[class*="material-icons" i]',
+    // Print / email / bookmark widgets
+    '[class*="print" i]', '[class*="email-friend" i]', '[class*="bookmark" i]',
+    // Author bio / tag lists that live outside the article
+    '[class*="author-bio" i]', '[class*="tags" i][class*="list" i]',
+  ];
+  for (const sel of noiseSelectors) {
+    try { doc.querySelectorAll(sel).forEach((el: any) => el.remove()); } catch { /* invalid selector — skip */ }
+  }
+
+  // 4) Cut everything after a "Related / Read next / More stories / You may
+  //    also like / Comments" heading — those sections precede pure noise.
+  const cutHeadingRe = /^\s*(related( stories| articles| posts)?|read (next|more)|more (stories|from)|you (may|might) (also )?(like|enjoy)|recommended (for you|reading)?|up next|latest news|popular|trending|comments?|newsletter|subscribe)\b/i;
+  const headings = Array.from(doc.querySelectorAll("h1, h2, h3, h4")) as any[];
+  for (const h of headings) {
+    const text = (h.textContent || "").trim();
+    if (!cutHeadingRe.test(text)) continue;
+    // Remove the heading itself and every sibling that follows it.
+    let sib: any = h.nextSibling;
+    while (sib) {
+      const next = sib.nextSibling;
+      sib.parentNode?.removeChild(sib);
+      sib = next;
+    }
+    h.parentNode?.removeChild(h);
+  }
+
+  // 5) Drop empty anchors/spans/divs left behind after icon stripping.
+  doc.querySelectorAll("a, span, div, p").forEach((el: any) => {
+    const hasMedia = el.querySelector && el.querySelector("img, picture, video, iframe, figure, svg");
+    const text = (el.textContent || "").replace(/\s+/g, "");
+    if (!text && !hasMedia) el.remove();
+  });
+}
+
 /** Inline ALL external stylesheets, scripts, images, and favicons into the
  *  document so the captured HTML renders fully offline. Budget-capped and
  *  best-effort: any asset that fails to fetch is left with its absolute URL
