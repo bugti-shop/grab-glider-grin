@@ -43,6 +43,7 @@ export const EmailChangeEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Section style={brandRow}>
+          <Img src={FLOWIST_LOGO_URL} alt="Flowist" width="40" height="40" style={logo} />
           <Heading style={brand}>{FLOWIST_SITE_NAME}</Heading>
         </Section>
 
