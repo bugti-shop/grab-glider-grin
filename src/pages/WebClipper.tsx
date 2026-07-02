@@ -517,6 +517,9 @@ const WebClipper = () => {
       }
     } finally {
       abortRef.current = null;
+      // Release the in-flight lock. If the run succeeded, completedClipKeys
+      // already blocks re-runs; if it failed, releasing lets the user retry.
+      inFlightClipKeys.delete(dedupeKey);
       setSaving(false);
     }
   };
