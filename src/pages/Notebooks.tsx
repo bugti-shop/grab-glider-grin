@@ -154,7 +154,7 @@ const Notebooks = () => {
 
       {/* Notebook grid — colorful covers with fanned paper bundle */}
       <div className="px-3 pt-5">
-        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-x-2 gap-y-7 max-w-3xl mx-auto">
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-x-2 gap-y-8 max-w-3xl mx-auto">
           {filtered.map((f) => {
             const count = counts.get(f.id) ?? 0;
             const color = f.color || '#3b82f6';
@@ -165,74 +165,76 @@ const Notebooks = () => {
                 onClick={() => openNotebook(f.id)}
                 className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform"
               >
-                {/* Notebook wrapper — reserves ~18% below cover for fanned pages */}
-                <div className="relative w-[78%] aspect-[3/4]">
-                  {/* Fanned paper bundle (scales with card via % + em-free rotates) */}
-                  <div className="absolute left-0 right-0 top-0 bottom-0 pointer-events-none">
-                    {/* Sheet 1 — tilted left */}
-                    <div
-                      className="absolute left-[4%] right-[4%] top-[4%] bottom-[-6%] rounded-sm bg-[#fdfaf1] border border-black/10 shadow-[0_2px_3px_rgba(0,0,0,0.12)] origin-bottom"
-                      style={{ transform: 'rotate(-4deg)' }}
-                    />
-                    {/* Sheet 2 — tilted right */}
-                    <div
-                      className="absolute left-[4%] right-[4%] top-[3%] bottom-[-7%] rounded-sm bg-white border border-black/10 shadow-[0_3px_4px_rgba(0,0,0,0.14)] origin-bottom"
-                      style={{ transform: 'rotate(3deg)' }}
-                    />
-                    {/* Sheet 3 — center, peeks below */}
-                    <div className="absolute left-[3%] right-[3%] top-[2%] bottom-[-9%] rounded-sm bg-white border border-black/10 shadow-[0_4px_6px_rgba(0,0,0,0.16)]">
-                      {/* horizontal lines to hint ruled pages */}
-                      <div className="absolute inset-x-2 bottom-1 space-y-[2px]">
-                        <div className="h-px bg-black/10" />
-                        <div className="h-px bg-black/10" />
-                        <div className="h-px bg-black/10" />
+                {/* Notebook wrapper — cover on top, real reserved space (pb-[12%]) for pages below so stack never overlaps or gets hidden */}
+                <div className="relative w-[78%] aspect-[3/4] pb-[12%]">
+                  {/* Cover box (fills the top area, leaves pb for stack) */}
+                  <div className="relative w-full h-full">
+                    {/* Fanned paper bundle — sits inside cover box but extends downward into the reserved pb space */}
+                    <div className="absolute left-0 right-0 top-0 bottom-[-14%] pointer-events-none">
+                      {/* Sheet 1 — tilted left */}
+                      <div
+                        className="absolute left-[5%] right-[5%] top-[6%] bottom-0 rounded-sm bg-[#fdfaf1] border border-black/10 shadow-[0_6px_10px_-2px_rgba(0,0,0,0.35)] origin-bottom"
+                        style={{ transform: 'rotate(-4deg)' }}
+                      />
+                      {/* Sheet 2 — tilted right */}
+                      <div
+                        className="absolute left-[5%] right-[5%] top-[5%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_8px_12px_-3px_rgba(0,0,0,0.4)] origin-bottom"
+                        style={{ transform: 'rotate(3deg)' }}
+                      />
+                      {/* Sheet 3 — center, peeks below */}
+                      <div className="absolute left-[3%] right-[3%] top-[4%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_10px_16px_-4px_rgba(0,0,0,0.45)]">
+                        {/* ruled hint */}
+                        <div className="absolute inset-x-2 bottom-1 space-y-[2px]">
+                          <div className="h-px bg-black/10" />
+                          <div className="h-px bg-black/10" />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Notebook cover — sits on top of the bundle */}
-                  <div
-                    className="relative w-full h-full rounded-r-lg rounded-l-[4px] overflow-hidden shadow-[0_6px_10px_-2px_rgba(0,0,0,0.35)]"
-                    style={{
-                      backgroundColor: color,
-                      backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 55%, ${color}99 100%)`,
-                    }}
-                  >
-                    {/* Spine shadow */}
+                    {/* Notebook cover — sits on top of the bundle */}
                     <div
-                      className="absolute inset-y-0 left-0 w-[10%]"
+                      className="relative w-full h-full rounded-r-lg rounded-l-[4px] overflow-hidden shadow-[0_6px_10px_-2px_rgba(0,0,0,0.35)]"
                       style={{
-                        background:
-                          'linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 60%, rgba(255,255,255,0.15) 100%)',
+                        backgroundColor: color,
+                        backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 55%, ${color}99 100%)`,
                       }}
-                    />
-                    {/* Rings on spine */}
-                    <div className="absolute inset-y-0 left-0 w-[10%] flex flex-col justify-around py-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <span
-                          key={i}
-                          className="mx-auto h-[3px] w-[3px] rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
-                        />
-                      ))}
-                    </div>
-                    {/* Glossy highlight */}
-                    <div className="absolute top-0 bottom-0 left-[14%] w-[2px] bg-white/25" />
-                    {/* Count badge */}
-                    <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-black/25 backdrop-blur-sm text-[9px] font-semibold text-white flex items-center justify-center tabular-nums">
-                      {count}
-                    </span>
-                    {/* Corner icon */}
-                    <div className="absolute bottom-1 right-1 text-white/85">
-                      {f.isDefault ? (
-                        <BookOpen className="h-3 w-3" />
-                      ) : (
-                        <Book className="h-3 w-3" />
-                      )}
+                    >
+                      {/* Spine shadow */}
+                      <div
+                        className="absolute inset-y-0 left-0 w-[10%]"
+                        style={{
+                          background:
+                            'linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 60%, rgba(255,255,255,0.15) 100%)',
+                        }}
+                      />
+                      {/* Rings on spine */}
+                      <div className="absolute inset-y-0 left-0 w-[10%] flex flex-col justify-around py-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <span
+                            key={i}
+                            className="mx-auto h-[3px] w-[3px] rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
+                          />
+                        ))}
+                      </div>
+                      {/* Glossy highlight */}
+                      <div className="absolute top-0 bottom-0 left-[14%] w-[2px] bg-white/25" />
+                      {/* Count badge */}
+                      <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-black/25 backdrop-blur-sm text-[9px] font-semibold text-white flex items-center justify-center tabular-nums">
+                        {count}
+                      </span>
+                      {/* Corner icon */}
+                      <div className="absolute bottom-1 right-1 text-white/85">
+                        {f.isDefault ? (
+                          <BookOpen className="h-3 w-3" />
+                        ) : (
+                          <Book className="h-3 w-3" />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
                 {/* Name */}
-                <span className="block w-full text-[13px] font-semibold text-foreground truncate px-0.5 leading-tight mt-1">
+                <span className="block w-full text-[15px] font-semibold text-foreground truncate px-0.5 leading-tight mt-1.5">
                   {f.name}
                 </span>
               </button>
