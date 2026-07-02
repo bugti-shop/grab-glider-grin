@@ -10,6 +10,7 @@ import {
   verifySignupOtp,
   signInWithEmailPassword,
   sendPasswordReset,
+  classifyOtpError,
 } from '@/utils/emailAuth';
 import type { GoogleUser } from '@/utils/googleAuth';
 
