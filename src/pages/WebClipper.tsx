@@ -560,6 +560,42 @@ const WebClipper = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {showQuota && !saved && (
+            <div
+              className={cn(
+                'space-y-1.5 rounded-lg border p-3',
+                quota.remaining === 0
+                  ? 'border-destructive/40 bg-destructive/5'
+                  : 'border-border bg-muted/30',
+              )}
+              aria-label={t('webClipper.quotaAria', 'Monthly Web Clipper usage')}
+            >
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium">
+                  {t('webClipper.quotaLabel', 'Free monthly clips')}
+                </span>
+                <span className="tabular-nums text-muted-foreground">
+                  {quota.used} / {quota.limit}
+                </span>
+              </div>
+              <Progress
+                value={quota.percent}
+                className={cn('h-1.5', quota.remaining === 0 && '[&>div]:bg-destructive')}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {quota.remaining === 0
+                  ? t(
+                      'webClipper.quotaExhausted',
+                      'You’ve used all free clips this month. Upgrade to Pro for unlimited clipping.',
+                    )
+                  : t('webClipper.quotaRemaining', {
+                      count: quota.remaining,
+                      defaultValue: `${quota.remaining} clips left this month · Upgrade to Pro for unlimited.`,
+                    })}
+              </p>
+            </div>
+          )}
+
           {(title || url) && (
             <div className="space-y-2">
               <p className="font-medium text-sm text-muted-foreground">
