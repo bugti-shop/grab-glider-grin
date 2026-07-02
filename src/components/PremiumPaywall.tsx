@@ -104,14 +104,17 @@ function usePaywallLogic() {
     } catch { return false; }
   }, []);
 
-  const handlePurchase = async () => {
+  const handlePurchase = async (
+    planOverride?: string,
+    extras?: { quantity?: number },
+  ) => {
+    const planType = planOverride ?? selectedPlan;
     setIsPurchasing(true);
     setAdminError('');
     try {
-      if (Capacitor.isNativePlatform()) {
-        const success = await purchase(selectedPlan);
+      if (Capacitor.isNativePlatform() && (planType === 'weekly' || planType === 'monthly' || planType === 'yearly')) {
+        const success = await purchase(planType as ProductType);
         if (success) {
-          // Mark trial as used on this device
           try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}
           closePaywall();
         } else {
@@ -119,7 +122,7 @@ function usePaywallLogic() {
           setTimeout(() => setAdminError(''), 4000);
         }
       } else {
-        // Web: use Supabase edge function for Stripe checkout (works with or without auth)
+        // Web / Family / Team: use Stripe checkout via edge function
         const { data: { session } } = await supabase.auth.getSession();
         const headers: Record<string, string> = {};
         if (session?.access_token) {
@@ -127,7 +130,7 @@ function usePaywallLogic() {
         }
 
         const { data, error } = await supabase.functions.invoke('create-checkout', {
-          body: { planType: selectedPlan },
+          body: { planType, quantity: extras?.quantity },
           headers,
         });
 
@@ -138,9 +141,6 @@ function usePaywallLogic() {
           return;
         }
 
-        // Do NOT mark trial as used here — only after successful payment
-        // Redirect to Stripe checkout — do NOT close paywall here
-        // If user presses back without paying, paywall must remain visible
         window.location.href = data.url;
       }
     } catch (error: any) {
@@ -153,6 +153,7 @@ function usePaywallLogic() {
       setIsPurchasing(false);
     }
   };
+
 
   const [restoreEmail, setRestoreEmail] = useState('');
   const [showRestoreEmail, setShowRestoreEmail] = useState(false);
