@@ -213,19 +213,19 @@ const Notebooks = () => {
                       </div>
                     </div>
 
-                    {/* Spine + rings — extend down to match back sheet bottom (-3%) */}
+                    {/* Spine + rings — tinted with notebook color, extends above cover top and below to paper stack */}
                     <div
-                      className="absolute top-0 bottom-[-3%] left-0 w-[18%] rounded-l-[4px] pointer-events-none"
+                      className="absolute top-[-4%] bottom-[-3%] left-0 w-[18%] rounded-[4px] pointer-events-none"
                       style={{
-                        background:
-                          'linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 70%, rgba(255,255,255,0.15) 100%)',
+                        background: `linear-gradient(90deg, ${color} 0%, ${color}cc 60%, ${color}88 100%)`,
+                        boxShadow: 'inset -2px 0 4px rgba(0,0,0,0.25), inset 1px 0 2px rgba(255,255,255,0.2)',
                       }}
                     />
-                    <div className="absolute top-0 bottom-[-3%] left-0 w-[18%] flex flex-col justify-around py-1.5 pointer-events-none">
-                      {Array.from({ length: 8 }).map((_, i) => (
+                    <div className="absolute top-[-4%] bottom-[-3%] left-0 w-[18%] flex flex-col justify-around py-2 pointer-events-none">
+                      {Array.from({ length: 9 }).map((_, i) => (
                         <span
                           key={i}
-                          className="mx-auto h-[4px] w-[4px] rounded-full bg-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.3)]"
+                          className="mx-auto h-[5px] w-[5px] rounded-full bg-white shadow-[inset_0_1px_1px_rgba(0,0,0,0.25),0_0_0_1px_rgba(0,0,0,0.15)]"
                         />
                       ))}
                     </div>
