@@ -32,6 +32,7 @@ import { TemplateSelector } from './TemplateSelector';
 import { NoteVersionHistorySheet } from './NoteVersionHistorySheet';
 import { NoteLinkingSheet } from './NoteLinkingSheet';
 import { injectHeadingIds } from './NoteTableOfContents';
+import { TableOfContents } from './richtext/TableOfContents';
 import { InputSheetPage } from './InputSheetPage';
 import { VoiceRecordingSheet } from './VoiceRecordingSheet';
 import { NoteAttachmentsSection } from './NoteAttachmentsSection';
