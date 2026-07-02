@@ -542,25 +542,7 @@ export const CameraScannerScreen = ({
               {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
             </button>
           )}
-          <button
-            onClick={() => {
-              if (!requirePro('burst')) return;
-              setBurstOn((v) => !v);
-              toast(burstOn ? 'Burst mode off' : 'Burst mode on · 3 shots, sharpest wins', { duration: 1100 });
-            }}
-            className={cn(
-              'h-10 px-3 rounded-full backdrop-blur-xl border flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition',
-              burstOn
-                ? 'bg-white text-black border-white shadow-[0_6px_18px_rgba(255,255,255,0.35)]'
-                : 'bg-white/10 border-white/15 text-white',
-            )}
-            aria-label="Toggle burst mode"
-          >
-            <Layers className="h-4 w-4" />
-            Burst
-            {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
-          </button>
-          <button
+          {/* Burst mode removed per product decision. */}
             onClick={toggleTorch}
             disabled={!torchSupported}
             className={cn(
