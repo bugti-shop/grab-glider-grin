@@ -3,8 +3,8 @@
 
 export const BRAND = {
   name: 'Flowist',
-  tagline: 'Notes, tasks & habits — everywhere',
-  logoUrl: 'https://flowist.me/icon-512.png',
+  tagline: 'Focus, Notes, Tasks & Habits',
+  logoUrl: 'https://flowist.me/email-logo.webp',
   siteUrl: 'https://flowist.me',
   primary: '#3c78f0',
   primaryDark: '#2c5fc9',

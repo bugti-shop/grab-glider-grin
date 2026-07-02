@@ -3,6 +3,7 @@
 import * as React from 'npm:react@18.3.1'
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
@@ -16,47 +17,54 @@ import {
 import { BRAND, styles } from './_brand.ts'
 
 interface Props {
-  token: string
+  token?: string
+  confirmationUrl?: string
 }
 
-export const ReauthenticationEmail = ({ token }: Props) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Your {BRAND.name} verification code</Preview>
-    <Body style={styles.main}>
-      <Container style={styles.container}>
-        <Section style={styles.header}>
-          <Img src={BRAND.logoUrl} width="56" height="56" alt={BRAND.name} style={styles.logo} />
-          <Text style={styles.brandName}>{BRAND.name}</Text>
-          <Text style={styles.brandTag}>{BRAND.tagline}</Text>
-        </Section>
-
-        <Section style={styles.card}>
-          <Heading style={styles.h1}>Verify it's you</Heading>
-          <Text style={styles.text}>
-            Enter this code in {BRAND.name} to confirm your identity:
-          </Text>
-          <Section style={{ textAlign: 'center' }}>
-            <Text style={styles.code}>{token}</Text>
+export const ReauthenticationEmail = ({ token, confirmationUrl }: Props) => {
+  const actionUrl = confirmationUrl || `${BRAND.siteUrl}/auth/callback${token ? `?token=${token}` : ''}`
+  return (
+    <Html lang="en" dir="ltr">
+      <Head />
+      <Preview>Confirm it's you on {BRAND.name}</Preview>
+      <Body style={styles.main}>
+        <Container style={styles.container}>
+          <Section style={styles.header}>
+            <Img src={BRAND.logoUrl} width="56" height="56" alt={BRAND.name} style={styles.logo} />
+            <Text style={styles.brandName}>{BRAND.name}</Text>
+            <Text style={styles.brandTag}>{BRAND.tagline}</Text>
           </Section>
-          <Text style={styles.hint}>
-            This code expires shortly. Never share it with anyone — the {BRAND.name} team
-            will never ask you for this code.
-          </Text>
-        </Section>
 
-        <Section style={styles.footer}>
-          <Text style={styles.footerText}>
-            Didn't request this code? You can safely ignore this email.
-          </Text>
-          <Text style={styles.footerText}>
-            © {new Date().getFullYear()} {BRAND.name} ·{' '}
-            <Link href={BRAND.siteUrl} style={styles.footerLink}>flowist.me</Link>
-          </Text>
-        </Section>
-      </Container>
-    </Body>
-  </Html>
-)
+          <Section style={styles.card}>
+            <Heading style={styles.h1}>Confirm your email</Heading>
+            <Text style={styles.text}>
+              Tap the button below to confirm it's you and continue securely in {BRAND.name}.
+            </Text>
+            <Section style={styles.buttonWrap}>
+              <Button style={styles.button} href={actionUrl}>
+                Confirm my email
+              </Button>
+            </Section>
+            <Text style={styles.hint}>
+              Or paste this link into your browser:
+              <br />
+              <Link href={actionUrl} style={styles.link}>{actionUrl}</Link>
+            </Text>
+          </Section>
+
+          <Section style={styles.footer}>
+            <Text style={styles.footerText}>
+              Didn't request this? You can safely ignore this email.
+            </Text>
+            <Text style={styles.footerText}>
+              © {new Date().getFullYear()} {BRAND.name} ·{' '}
+              <Link href={BRAND.siteUrl} style={styles.footerLink}>flowist.me</Link>
+            </Text>
+          </Section>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default ReauthenticationEmail
