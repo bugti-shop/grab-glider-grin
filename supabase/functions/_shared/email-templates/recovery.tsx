@@ -3,7 +3,6 @@
 import * as React from 'npm:react@18.3.1'
 import {
   Body,
-  Button,
   Container,
   Head,
   Heading,
@@ -17,7 +16,7 @@ import {
 import { BRAND, styles } from './_brand.ts'
 
 interface Props {
-  siteName?: string
+  recipient?: string
   confirmationUrl: string
 }
 
@@ -28,38 +27,26 @@ export const RecoveryEmail = ({ confirmationUrl }: Props) => (
     <Body style={styles.main}>
       <Container style={styles.container}>
         <Section style={styles.header}>
-          <Img src={BRAND.logoUrl} width="96" height="96" alt={BRAND.name} style={styles.logo} />
-          <Text style={styles.brandName}>{BRAND.name}</Text>
-          <Text style={styles.brandTag}>{BRAND.tagline}</Text>
+          <Img src={BRAND.logoUrl} width="32" height="32" alt={BRAND.name} style={styles.logo} />
         </Section>
 
-        <Section style={styles.card}>
-          <Heading style={styles.h1}>Reset your password</Heading>
-          <Text style={styles.text}>
-            We received a request to reset the password for your {BRAND.name} account.
-            Tap the button below to choose a new one.
-          </Text>
-          <Section style={styles.buttonWrap}>
-            <Button style={styles.button} href={confirmationUrl}>
-              Reset password
-            </Button>
-          </Section>
-          <Text style={styles.hint}>
-            Or paste this link into your browser:
-            <br />
-            <Link href={confirmationUrl} style={styles.link}>{confirmationUrl}</Link>
-          </Text>
-        </Section>
+        <Heading style={styles.h1}>Reset password</Heading>
 
-        <Section style={styles.footer}>
-          <Text style={styles.footerText}>
-            Didn't request a password reset? You can ignore this email — your password won't change.
-          </Text>
-          <Text style={styles.footerText}>
-            © {new Date().getFullYear()} {BRAND.name} ·{' '}
-            <Link href={BRAND.siteUrl} style={styles.footerLink}>flowist.me</Link>
-          </Text>
-        </Section>
+        <Text style={styles.text}>
+          Click the link below to reset your password:
+        </Text>
+
+        <Text style={styles.text}>
+          <Link href={confirmationUrl} style={styles.link}>Reset password</Link>
+        </Text>
+
+        <Text style={styles.text}>
+          This link will expire 30 minutes after this email was sent.
+        </Text>
+
+        <Text style={styles.text}>
+          If you did not make this request, you can ignore this email.
+        </Text>
       </Container>
     </Body>
   </Html>
