@@ -8,12 +8,18 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Stripe Price IDs
-const PRICE_IDS: Record<string, string> = {
+// Stripe Price IDs. Family/Team read from env so you can rotate without redeploy.
+const PRICE_IDS: Record<string, string | undefined> = {
   weekly: "price_1TRbliFAPtKh08jGPKXWPcPG",
   monthly: "price_1TR6SoFAPtKh08jGW4lfGDYt",
   yearly: "price_1TRbljFAPtKh08jGGf1qg42c",
+  family: Deno.env.get("STRIPE_FAMILY_PRICE_ID"),
+  team: Deno.env.get("STRIPE_TEAM_PRICE_ID"),
 };
+
+// Which plans support quantity (per-seat)
+const QUANTITY_PLANS = new Set(["team"]);
+
 
 // Free trial is handled through checkout for eligible monthly/yearly plans.
 
@@ -24,10 +30,23 @@ serve(async (req) => {
 
   try {
     // Parse request body
-    const { planType } = await req.json();
-    if (!planType || !PRICE_IDS[planType]) {
+    const { planType, quantity } = await req.json();
+    if (!planType || !(planType in PRICE_IDS)) {
       throw new Error(`Invalid plan type: ${planType}. Must be one of: ${Object.keys(PRICE_IDS).join(", ")}`);
     }
+    const priceId = PRICE_IDS[planType];
+    if (!priceId) {
+      throw new Error(`${planType} plan is not configured yet. Please contact support.`);
+    }
+    let seatQty = 1;
+    if (QUANTITY_PLANS.has(planType)) {
+      const n = Number(quantity);
+      if (!Number.isFinite(n) || n < 2 || n > 100) {
+        throw new Error("Team plan requires a seat quantity between 2 and 100.");
+      }
+      seatQty = Math.floor(n);
+    }
+
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -75,20 +94,21 @@ serve(async (req) => {
     const sessionConfig: any = {
       customer: customerId,
       customer_email: customerId ? undefined : userEmail,
-      line_items: [{ price: PRICE_IDS[planType], quantity: 1 }],
+      line_items: [{ price: priceId, quantity: seatQty }],
       mode: "subscription",
       payment_method_collection: "always",
       allow_promotion_codes: true,
       success_url: `${origin}/?stripe_success=true&plan=${planType}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/`,
-      metadata: { user_id: userId || "anonymous", plan_type: planType },
+      metadata: { user_id: userId || "anonymous", plan_type: planType, seats: String(seatQty) },
       subscription_data: {},
     };
 
-    // Only offer trial to monthly/yearly plans, NOT weekly — and only to new customers
-    if (!hadPreviousSubscription && planType !== 'weekly') {
+    // Only offer trial to individual monthly/yearly plans — not weekly, family, or team
+    if (!hadPreviousSubscription && (planType === "monthly" || planType === "yearly")) {
       sessionConfig.subscription_data.trial_period_days = 3;
     }
+
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
@@ -99,7 +119,9 @@ serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("create-checkout error:", message);
-    const safe = message.startsWith("Invalid plan type") ? message : "An unexpected error occurred";
+    const safe = (message.startsWith("Invalid plan type") || message.includes("plan is not configured") || message.includes("Team plan requires"))
+      ? message : "An unexpected error occurred";
+
     return new Response(JSON.stringify({ error: safe }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
