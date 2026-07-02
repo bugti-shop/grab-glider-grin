@@ -965,9 +965,10 @@ const Today = () => {
       {/* All sheets/dialogs extracted to TodaySheets */}
       <Suspense fallback={null}><TodaySheets
         isInputOpen={isInputOpen}
+        inputDefaultDate={inputDefaultDate}
         preventInputBackdropClose={widgetMode}
         onCloseInput={() => {
-          setIsInputOpen(false); setInputSectionId(null);
+          setIsInputOpen(false); setInputSectionId(null); setInputDefaultDate(undefined);
           if (widgetModeRef.current) {
             widgetModeRef.current = false;
             setWidgetMode(false);
