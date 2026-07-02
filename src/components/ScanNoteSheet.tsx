@@ -445,7 +445,10 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       </SheetContent>
       <CameraScannerScreen
         isOpen={showCamera}
-        onClose={() => setShowCamera(false)}
+        onClose={() => {
+          setShowCamera(false);
+          if (!imageDataUrl && !isExtracting && !hasRun) onClose();
+        }}
         title={t('scanNote.title', 'Scan page to note')}
         initialMode="note"
         onBarcode={handleBarcode}
