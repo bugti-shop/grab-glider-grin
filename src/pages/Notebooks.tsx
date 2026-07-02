@@ -395,6 +395,126 @@ const Notebooks = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Long-press action sheet */}
+      <Dialog open={!!actionFor} onOpenChange={(o) => !o && setActionFor(null)}>
+        <DialogContent className="sm:max-w-xs p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-4 pt-4 pb-2">
+            <DialogTitle className="text-base truncate">{actionFor?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col">
+            <button
+              type="button"
+              className="flex items-center gap-3 px-4 py-3 text-left hover:bg-muted transition-colors"
+              onClick={() => {
+                if (!actionFor) return;
+                setRenameValue(actionFor.name);
+                setRenameFor(actionFor);
+                setActionFor(null);
+              }}
+            >
+              <Pencil className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">Rename</span>
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-3 px-4 py-3 text-left hover:bg-muted transition-colors border-t"
+              onClick={() => {
+                if (!actionFor) return;
+                setColorFor(actionFor);
+                setActionFor(null);
+              }}
+            >
+              <Palette className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">Change color</span>
+            </button>
+            <button
+              type="button"
+              disabled={actionFor?.isDefault}
+              className="flex items-center gap-3 px-4 py-3 text-left hover:bg-muted transition-colors border-t text-destructive disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={() => {
+                if (!actionFor) return;
+                setDeleteFor(actionFor);
+                setActionFor(null);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="text-sm">Delete</span>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename dialog */}
+      <Dialog open={!!renameFor} onOpenChange={(o) => !o && setRenameFor(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Rename notebook</DialogTitle>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && doRename()}
+            maxLength={60}
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRenameFor(null)}>
+              Cancel
+            </Button>
+            <Button onClick={doRename} disabled={!renameValue.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change color dialog */}
+      <Dialog open={!!colorFor} onOpenChange={(o) => !o && setColorFor(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Change color</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-wrap gap-2 py-2">
+            {NOTEBOOK_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => doChangeColor(c)}
+                aria-label={`Color ${c}`}
+                className="h-10 w-10 rounded-full flex items-center justify-center transition-transform active:scale-95"
+                style={{
+                  backgroundColor: c,
+                  boxShadow: colorFor?.color === c ? `0 0 0 3px ${c}55` : 'none',
+                }}
+              >
+                {colorFor?.color === c && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <AlertDialog open={!!deleteFor} onOpenChange={(o) => !o && setDeleteFor(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{deleteFor?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the notebook. Notes inside won't be deleted but will lose their notebook.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={doDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Add Notebook button — bottom fixed, matches Home's New note button */}
       <Button
         className="fixed left-4 right-4 z-50 h-12 text-base font-semibold md:hidden"
