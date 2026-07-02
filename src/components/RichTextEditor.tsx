@@ -1614,9 +1614,27 @@ export const RichTextEditor = ({
     const data = ie.data || '';
 
     // Space typed → try block shortcuts (#, -, 1., [], >, etc.)
-    if (type === 'insertText' && data === ' ') {
+    if ((type === 'insertText' || type === 'insertReplacementText') && data === ' ') {
       if (tryMarkdownBlockShortcut(editorRef.current)) {
         e.preventDefault();
+        handleInput();
+      }
+      return;
+    }
+    // Android GBoard / Samsung keyboard often batch the trigger token AND
+    // the trailing space into a single insertText event (e.g. data === "## "
+    // or an autocorrect "insertReplacementText" of "# something"). Detect
+    // that: if the batched insertion ends with a space, insert only the
+    // token first so the shortcut sees the exact caret state a plain
+    // Space keypress would produce.
+    if ((type === 'insertText' || type === 'insertReplacementText') && data.length > 1 && data.endsWith(' ')) {
+      const token = data.slice(0, -1);
+      e.preventDefault();
+      document.execCommand('insertText', false, token);
+      if (tryMarkdownBlockShortcut(editorRef.current)) {
+        handleInput();
+      } else {
+        document.execCommand('insertText', false, ' ');
         handleInput();
       }
       return;
@@ -1636,6 +1654,18 @@ export const RichTextEditor = ({
           e.preventDefault();
           handleInput();
         }
+      }
+      return;
+    }
+    // Handle batched "**" / "~~" from IMEs that merge fast keystrokes.
+    if (type === 'insertText' && (data === '**' || data === '~~')) {
+      e.preventDefault();
+      document.execCommand('insertText', false, data[0]);
+      if (tryMarkdownInlineShortcut(data[1], editorRef.current)) {
+        handleInput();
+      } else {
+        document.execCommand('insertText', false, data[1]);
+        handleInput();
       }
     }
   }, [notesSettings.markdownShortcuts, slashMenu.open, mentionMenu.open]);
