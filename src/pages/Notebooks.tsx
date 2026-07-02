@@ -259,55 +259,6 @@ const Notebooks = () => {
 };
 
 export default Notebooks;
-          <Input
-            autoFocus
-            placeholder="Notebook name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleCreate();
-            }}
-            maxLength={60}
-          />
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Pick a color</p>
-            <div className="flex flex-wrap gap-2">
-              {NOTEBOOK_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setNewColor(c)}
-                  aria-label={`Color ${c}`}
-                  className="h-8 w-8 rounded-full flex items-center justify-center transition-transform active:scale-95"
-                  style={{
-                    backgroundColor: c,
-                    boxShadow: newColor === c ? `0 0 0 3px ${c}55` : 'none',
-                  }}
-                >
-                  {newColor === c && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
-                </button>
-              ))}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setAddOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={!newName.trim()}
-              style={{ backgroundColor: newColor }}
-              className="text-white hover:opacity-90"
-            >
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      <BottomNavigation />
-    </div>
-  );
-};
 
 export default Notebooks;
