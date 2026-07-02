@@ -467,6 +467,7 @@ const WebClipper = () => {
         title: cleanTitle,
         content: cleanHtml,
         voiceRecordings: [],
+        ...(fullPageSnapshot ? { fullPageSnapshot } : {}),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
