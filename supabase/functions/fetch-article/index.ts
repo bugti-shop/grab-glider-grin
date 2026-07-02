@@ -990,10 +990,19 @@ Deno.serve(async (req) => {
       const byline = (metaAuthor || domAuthor || "").trim();
       const siteName = (metaSite || "").trim();
       const leadImage = metaImage ? absolutize(metaImage, base) : "";
+      // Inline every referenced asset (CSS, JS, images, fonts, favicons) into
+      // the document as data: URIs so the captured page renders fully offline
+      // without any network access. Best-effort + budget-capped; failed fetches
+      // fall back to absolute URLs so nothing breaks.
+      try {
+        await inlineAllAssets(document as any, base);
+      } catch (inlineErr) {
+        console.warn("[fetch-article] asset inlining failed", inlineErr);
+      }
       // Serialize the ENTIRE document — DOCTYPE, <html>, <head> (title, meta,
       // links, icons), and <body> (all elements, ads, scripts-as-text). This
-      // matches the raw HTML the browser rendered, with URLs absolutized so
-      // the offline snapshot loads assets correctly.
+      // matches the raw HTML the browser rendered, with assets bundled inline
+      // so the offline snapshot loads without hitting the network.
       const docEl = document.documentElement as any;
       const outerHtml: string =
         (docEl && typeof docEl.outerHTML === "string" && docEl.outerHTML) ||
