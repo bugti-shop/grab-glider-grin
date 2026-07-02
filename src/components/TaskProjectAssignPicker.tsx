@@ -93,6 +93,19 @@ export function TaskProjectAssignPicker({ projectId, assigneeId, onChange, compa
       </Popover>
 
       {projectId && (
+        assignLocked ? (
+          <button
+            type="button"
+            onClick={() => {
+              toast.info('Assigning tasks is a Teams/Family plan feature.');
+              navigate('/premium');
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100/70 transition-all whitespace-nowrap"
+          >
+            <Lock className="h-3.5 w-3.5" />
+            <span className="text-sm">Assign · Teams</span>
+          </button>
+        ) : (
         <Popover>
           <PopoverTrigger asChild>
             <button className={cn(
