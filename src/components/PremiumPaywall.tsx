@@ -608,7 +608,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
 
   const yearlyPlan = PLANS.find(p => p.id === 'yearly') ?? PLANS[PLANS.length - 1];
 
-  const teamAnnualTotal = (TEAM_PER_SEAT_MONTHLY * 12 * teamSeats).toFixed(2);
+  
 
 
   const current = HERO_SLIDES[0];
