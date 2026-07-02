@@ -49,11 +49,11 @@ describe('webClipper.parseClipMode', () => {
   it('normalises known modes', () => {
     expect(parseClipMode('selection')).toBe('selection');
     expect(parseClipMode('full-page')).toBe('fullpage');
-    expect(parseClipMode('article')).toBe('article');
+    expect(parseClipMode('article')).toBe('fullpage');
   });
-  it('defaults to article for unknown/empty', () => {
-    expect(parseClipMode('garbage')).toBe('article');
-    expect(parseClipMode(null)).toBe('article');
+  it('defaults to fullpage for unknown/empty', () => {
+    expect(parseClipMode('garbage')).toBe('fullpage');
+    expect(parseClipMode(null)).toBe('fullpage');
   });
 });
 
