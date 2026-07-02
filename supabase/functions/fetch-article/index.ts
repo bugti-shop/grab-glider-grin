@@ -27,6 +27,7 @@ const corsHeaders = {
 
 const MAX_HTML_BYTES = 5 * 1024 * 1024; // 5MB page cap
 const MAX_CONTENT_HTML_BYTES = 500 * 1024; // 500KB cap on returned clip HTML
+const MAX_FULLPAGE_HTML_BYTES = 4 * 1024 * 1024; // 4MB cap for full-page raw HTML
 const FETCH_TIMEOUT_MS = 20_000;
 
 /** Extract safe, reachable absolute image URLs from an HTML string.
