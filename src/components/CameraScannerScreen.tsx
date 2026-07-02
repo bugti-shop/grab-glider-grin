@@ -151,6 +151,9 @@ export const CameraScannerScreen = ({
   const [lastBarcode, setLastBarcode] = useState<string | null>(null);
   // Burst mode: capture 3 frames and auto-pick the sharpest.
   const [burstOn, setBurstOn] = useState(false);
+  // Handwriting mode: routes extraction to a stronger vision model with a
+  // handwriting-tuned prompt (cursive, cross-outs, margin notes, callouts).
+  const [handwritingOn, setHandwritingOn] = useState(false);
   // Multi-page batch scan (Note mode): capture N pages, save as one combined note.
   const [batchOn, setBatchOn] = useState(false);
   const [batchPages, setBatchPages] = useState<string[]>([]);
