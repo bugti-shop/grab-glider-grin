@@ -165,24 +165,24 @@ const Notebooks = () => {
                 onClick={() => openNotebook(f.id)}
                 className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform"
               >
-                {/* Notebook wrapper — cover on top, real reserved space (pb-[12%]) for pages below so stack never overlaps or gets hidden */}
-                <div className="relative w-[78%] aspect-[3/4] pb-[12%]">
+                {/* Notebook wrapper — cover on top, small reserved space for pages peek */}
+                <div className="relative w-[78%] aspect-[3/4] pb-[5%]">
                   {/* Cover box (fills the top area, leaves pb for stack) */}
                   <div className="relative w-full h-full">
-                    {/* Fanned paper bundle — sits inside cover box but extends downward into the reserved pb space */}
-                    <div className="absolute left-0 right-0 top-0 bottom-[-14%] pointer-events-none">
+                    {/* Fanned paper bundle — barely peeks below cover */}
+                    <div className="absolute left-0 right-0 top-0 bottom-[-6%] pointer-events-none">
                       {/* Sheet 1 — tilted left */}
                       <div
-                        className="absolute left-[5%] right-[5%] top-[6%] bottom-0 rounded-sm bg-[#fdfaf1] border border-black/10 shadow-[0_6px_10px_-2px_rgba(0,0,0,0.35)] origin-bottom"
-                        style={{ transform: 'rotate(-4deg)' }}
+                        className="absolute left-[6%] right-[6%] top-[8%] bottom-0 rounded-sm bg-[#fdfaf1] border border-black/10 shadow-[0_2px_3px_rgba(0,0,0,0.15)] origin-bottom"
+                        style={{ transform: 'rotate(-2.5deg)' }}
                       />
                       {/* Sheet 2 — tilted right */}
                       <div
-                        className="absolute left-[5%] right-[5%] top-[5%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_8px_12px_-3px_rgba(0,0,0,0.4)] origin-bottom"
-                        style={{ transform: 'rotate(3deg)' }}
+                        className="absolute left-[6%] right-[6%] top-[7%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_2px_4px_rgba(0,0,0,0.18)] origin-bottom"
+                        style={{ transform: 'rotate(2deg)' }}
                       />
                       {/* Sheet 3 — center, peeks below */}
-                      <div className="absolute left-[3%] right-[3%] top-[4%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_10px_16px_-4px_rgba(0,0,0,0.45)]">
+                      <div className="absolute left-[4%] right-[4%] top-[6%] bottom-0 rounded-sm bg-white border border-black/10 shadow-[0_3px_5px_-1px_rgba(0,0,0,0.2)]">
                         {/* ruled hint */}
                         <div className="absolute inset-x-2 bottom-1 space-y-[2px]">
                           <div className="h-px bg-black/10" />
@@ -193,7 +193,7 @@ const Notebooks = () => {
 
                     {/* Notebook cover — sits on top of the bundle */}
                     <div
-                      className="relative w-full h-full rounded-r-lg rounded-l-[4px] overflow-hidden shadow-[0_6px_10px_-2px_rgba(0,0,0,0.35)]"
+                      className="relative w-full h-full rounded-r-lg rounded-l-[4px] overflow-hidden shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
                       style={{
                         backgroundColor: color,
                         backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 55%, ${color}99 100%)`,
