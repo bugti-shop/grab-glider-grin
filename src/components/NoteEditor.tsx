@@ -213,6 +213,16 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showScanNote, setShowScanNote] = useState(false);
   const [showExtractTasks, setShowExtractTasks] = useState(false);
+  // Auto-resume note scanner after sign-in redirect (?resumeScan=note).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('resumeScan') !== 'note') return;
+    params.delete('resumeScan');
+    const next = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (next ? `?${next}` : '') + window.location.hash);
+    setShowScanNote(true);
+  }, []);
   
   
   const [showSketchLibrary, setShowSketchLibrary] = useState(false);
