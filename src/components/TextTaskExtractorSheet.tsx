@@ -74,7 +74,7 @@ export const TextTaskExtractorSheet = ({
   const { isPro, isAdminBypass, requireFeature } = useSubscription();
   const hasPaidAi = isPro || isAdminBypass;
 
-  const [mode, setMode] = useState<SourceMode>(initialMode || 'text');
+  const [mode, setMode] = useState<SourceMode>('text');
   const [text, setText] = useState(initialText || '');
   const [pdfName, setPdfName] = useState<string | null>(null);
   const [pdfText, setPdfText] = useState('');
@@ -87,7 +87,7 @@ export const TextTaskExtractorSheet = ({
   useEffect(() => {
     if (isOpen) {
       // Re-apply initial values whenever the sheet opens (e.g. opening from a different note)
-      setMode(initialMode || 'text');
+      setMode('text');
       setText(initialText || '');
     } else {
       setMode('text'); setText(''); setPdfName(null); setPdfText('');
@@ -266,98 +266,23 @@ export const TextTaskExtractorSheet = ({
           <SheetHeader className="px-4 pt-4 pb-2">
             <SheetTitle className="flex items-center gap-2 text-left">
               <Sparkles className="h-5 w-5 text-primary" />
-              {titleOverride || t('textExtract.title', 'Extract tasks from text, email or PDF')}
+              {titleOverride || t('textExtract.titleTextOnly', 'Extract tasks from text')}
             </SheetTitle>
             <SheetDescription className="sr-only">
-              {t('textExtract.description', 'Paste text or upload a PDF and AI will extract tasks.')}
+              {t('textExtract.descriptionTextOnly', 'Paste text and AI will extract tasks.')}
             </SheetDescription>
           </SheetHeader>
 
           <div className="px-4 pb-6 space-y-4">
-            {/* Mode tabs */}
-            <div className="grid grid-cols-3 gap-2">
-              {([
-                { id: 'text', label: t('textExtract.modeText', 'Text'), icon: TypeIcon },
-                { id: 'email', label: t('textExtract.modeEmail', 'Email'), icon: Mail },
-                { id: 'pdf', label: t('textExtract.modePdf', 'PDF'), icon: FileText },
-              ] as const).map((m) => {
-                const Icon = m.icon;
-                const active = mode === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setMode(m.id)}
-                    className={cn(
-                      'h-11 rounded-xl border flex items-center justify-center gap-1.5 text-sm font-medium transition-colors',
-                      active ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground',
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {m.label}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Input area (text only) */}
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={t('textExtract.placeholderText', 'Paste meeting notes, a message, or any text. AI will pull out tasks with dates, priorities, and more.')}
+              className="min-h-[180px] text-sm"
+              disabled={isExtracting}
+            />
 
-            {/* Input area */}
-            {mode !== 'pdf' && (
-              <Textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={
-                  mode === 'email'
-                    ? t('textExtract.placeholderEmail', 'Paste the full email here — From, Subject, body and signature…')
-                    : t('textExtract.placeholderText', 'Paste meeting notes, a message, or any text. AI will pull out tasks with dates, priorities, and more.')
-                }
-                className="min-h-[180px] text-sm"
-                disabled={isExtracting}
-              />
-            )}
-
-            {mode === 'pdf' && (
-              <div className="space-y-3">
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePdfUpload(f); e.target.value = ''; }}
-                />
-                {!pdfName ? (
-                  <Button
-                    onClick={() => fileRef.current?.click()}
-                    disabled={isParsingPdf}
-                    className="h-14 w-full gap-2"
-                    variant="outline"
-                  >
-                    {isParsingPdf ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileUp className="h-5 w-5" />}
-                    <span className="text-sm">
-                      {isParsingPdf
-                        ? t('textExtract.parsingPdf', 'Reading PDF…')
-                        : t('textExtract.choosePdf', 'Choose a PDF file')}
-                    </span>
-                  </Button>
-                ) : (
-                  <div className="flex items-start gap-3 p-3 rounded-xl border bg-card">
-                    <FileText className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{pdfName}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {t('textExtract.pdfChars', '{{count}} characters extracted', { count: pdfText.length })}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setPdfName(null); setPdfText(''); }}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Extract button */}
             <Button

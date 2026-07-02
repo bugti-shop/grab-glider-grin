@@ -430,36 +430,7 @@ export const ImageTaskExtractorSheet = ({
         </SheetHeader>
 
         <div className="px-4 pb-6 space-y-4">
-          {/* Capture buttons (only when no image yet) */}
-          {!imageDataUrl && (
-            <div className="space-y-3 pt-2">
-              <p className="text-sm text-muted-foreground">
-                {t(
-                  'imageExtract.helper',
-                  'Snap a photo of your sticky notes, whiteboard, or handwritten to-do list. AI will extract each task.',
-                )}
-              </p>
-              <Button
-                onClick={openScanner}
-                className="h-14 w-full gap-2"
-              >
-                <Camera className="h-5 w-5" />
-                <span className="text-sm">
-                  {t('imageExtract.openCamera', 'Open camera scanner')}
-                </span>
-              </Button>
-              <Button
-                onClick={runCapture}
-                variant="outline"
-                className="h-12 w-full gap-2"
-              >
-                <ImageIcon className="h-5 w-5" />
-                <span className="text-sm">
-                  {t('imageExtract.fromGallery', 'From gallery')}
-                </span>
-              </Button>
-            </div>
-          )}
+          {/* Capture buttons removed — scanner opens automatically. */}
 
           {/* Image preview */}
           {imageDataUrl && (
