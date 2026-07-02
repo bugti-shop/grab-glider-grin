@@ -34,6 +34,7 @@ import { useCertificateToasts } from "@/hooks/useCertificateToasts";
 import { useSubscriptionExpiry } from "@/hooks/useSubscriptionExpiry";
 const AppLockScreen = lazy(() => import("@/components/AppLockScreen").then(m => ({ default: m.AppLockScreen })));
 import { useNotificationListener } from "@/hooks/useNotificationListener";
+import { useMentionNotifications } from "@/hooks/useMentionNotifications";
 import { widgetDataSync } from "@/utils/widgetDataSync";
 import { useGlobalShortcuts } from "@/hooks/useGlobalShortcuts";
 import { useShareIntent } from "@/hooks/useShareIntent";
@@ -768,6 +769,7 @@ const AppContent = () => {
   
   // In-app notification listener — captures events from all sources
   useNotificationListener();
+  useMentionNotifications();
 
   // Share-target listener is mounted inside <BrowserRouter> (see ShareIntentBridge
   // in AppRoutes) because useShareIntent uses useNavigate, which requires Router context.
