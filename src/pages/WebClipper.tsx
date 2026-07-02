@@ -493,6 +493,9 @@ const WebClipper = () => {
       setPreviewTitle(finalTitle);
       setPreviewHtml(noteContent);
       setPreviewReady(true);
+      // Mark this URL+mode as fully clipped so any later remount or share-intent
+      // replay is a no-op instead of re-hitting fetch-article.
+      completedClipKeys.add(dedupeKey);
       // Once the editable preview is built, consume the one-shot URL payload.
       // This prevents mobile Activity/webview restores from reopening the same
       // /webclipper?url=… route and fetching/saving duplicate copies later.
