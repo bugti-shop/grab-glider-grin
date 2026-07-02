@@ -746,7 +746,11 @@ export const ImageTaskExtractorSheet = ({
 
       <CameraScannerScreen
         isOpen={showCamera}
-        onClose={() => setShowCamera(false)}
+        onClose={() => {
+          setShowCamera(false);
+          // If user cancelled without capturing, dismiss the whole flow too.
+          if (!imageDataUrl && !isExtracting && !hasRun) onClose();
+        }}
         title={t('imageExtract.title', 'Scan tasks from paper')}
         initialMode="note"
         onBarcode={handleBarcode}
