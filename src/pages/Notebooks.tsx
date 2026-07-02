@@ -152,9 +152,9 @@ const Notebooks = () => {
       </header>
 
 
-      {/* Notebook grid — colorful covers */}
-      <div className="px-4 pt-5">
-        <div className="grid grid-cols-4 sm:grid-cols-5 gap-x-3 gap-y-6 max-w-2xl mx-auto">
+      {/* Notebook grid — colorful covers with fanned paper bundle */}
+      <div className="px-3 pt-5">
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-x-2 gap-y-7 max-w-3xl mx-auto">
           {filtered.map((f) => {
             const count = counts.get(f.id) ?? 0;
             const color = f.color || '#3b82f6';
@@ -163,45 +163,66 @@ const Notebooks = () => {
                 key={f.id}
                 type="button"
                 onClick={() => openNotebook(f.id)}
-                className="group flex flex-col items-center gap-2 text-center active:scale-95 transition-transform"
+                className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform"
               >
-                {/* Notebook with pages bundle underneath */}
-                <div className="relative w-full aspect-[3/4] pb-1.5">
-                  {/* Pages peeking from the bottom (paper stack) */}
-                  <div className="absolute bottom-0 left-[6%] right-[6%] h-[10%] rounded-b-[3px] bg-white shadow-sm border border-black/10" />
-                  <div className="absolute bottom-[3px] left-[10%] right-[10%] h-[8%] rounded-b-[2px] bg-[#f5f2ea] border border-black/10" />
-                  <div className="absolute bottom-[6px] left-[14%] right-[14%] h-[6%] rounded-b-[2px] bg-[#ece8dc] border border-black/10" />
+                {/* Notebook wrapper — reserves ~18% below cover for fanned pages */}
+                <div className="relative w-[78%] aspect-[3/4]">
+                  {/* Fanned paper bundle (scales with card via % + em-free rotates) */}
+                  <div className="absolute left-0 right-0 top-0 bottom-0 pointer-events-none">
+                    {/* Sheet 1 — tilted left */}
+                    <div
+                      className="absolute left-[4%] right-[4%] top-[4%] bottom-[-6%] rounded-sm bg-[#fdfaf1] border border-black/10 shadow-[0_2px_3px_rgba(0,0,0,0.12)] origin-bottom"
+                      style={{ transform: 'rotate(-4deg)' }}
+                    />
+                    {/* Sheet 2 — tilted right */}
+                    <div
+                      className="absolute left-[4%] right-[4%] top-[3%] bottom-[-7%] rounded-sm bg-white border border-black/10 shadow-[0_3px_4px_rgba(0,0,0,0.14)] origin-bottom"
+                      style={{ transform: 'rotate(3deg)' }}
+                    />
+                    {/* Sheet 3 — center, peeks below */}
+                    <div className="absolute left-[3%] right-[3%] top-[2%] bottom-[-9%] rounded-sm bg-white border border-black/10 shadow-[0_4px_6px_rgba(0,0,0,0.16)]">
+                      {/* horizontal lines to hint ruled pages */}
+                      <div className="absolute inset-x-2 bottom-1 space-y-[2px]">
+                        <div className="h-px bg-black/10" />
+                        <div className="h-px bg-black/10" />
+                        <div className="h-px bg-black/10" />
+                      </div>
+                    </div>
+                  </div>
 
-                  {/* Notebook cover */}
+                  {/* Notebook cover — sits on top of the bundle */}
                   <div
-                    className="relative w-full h-full rounded-r-md rounded-l-[3px] overflow-hidden shadow-md"
+                    className="relative w-full h-full rounded-r-lg rounded-l-[4px] overflow-hidden shadow-[0_6px_10px_-2px_rgba(0,0,0,0.35)]"
                     style={{
                       backgroundColor: color,
-                      backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 60%, ${color}aa 100%)`,
+                      backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 55%, ${color}99 100%)`,
                     }}
                   >
-                    {/* Spine */}
+                    {/* Spine shadow */}
                     <div
-                      className="absolute inset-y-0 left-0 w-1.5"
-                      style={{ backgroundColor: 'rgba(0,0,0,0.25)' }}
+                      className="absolute inset-y-0 left-0 w-[10%]"
+                      style={{
+                        background:
+                          'linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 60%, rgba(255,255,255,0.15) 100%)',
+                      }}
                     />
                     {/* Rings on spine */}
-                    <div className="absolute inset-y-0 left-0 w-1.5 flex flex-col justify-around py-1.5">
+                    <div className="absolute inset-y-0 left-0 w-[10%] flex flex-col justify-around py-1">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <span
                           key={i}
-                          className="mx-auto h-[3px] w-[3px] rounded-full bg-white/80"
+                          className="mx-auto h-[3px] w-[3px] rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
                         />
                       ))}
                     </div>
-                    {/* Highlight */}
-                    <div className="absolute inset-y-1.5 left-2 w-px bg-white/25" />
+                    {/* Glossy highlight */}
+                    <div className="absolute top-0 bottom-0 left-[14%] w-[2px] bg-white/25" />
                     {/* Count badge */}
-                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white/25 backdrop-blur-sm text-[9px] font-semibold text-white flex items-center justify-center tabular-nums">
+                    <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-black/25 backdrop-blur-sm text-[9px] font-semibold text-white flex items-center justify-center tabular-nums">
                       {count}
                     </span>
                     {/* Corner icon */}
-                    <div className="absolute bottom-1 right-1 text-white/80">
+                    <div className="absolute bottom-1 right-1 text-white/85">
                       {f.isDefault ? (
                         <BookOpen className="h-3 w-3" />
                       ) : (
@@ -211,7 +232,7 @@ const Notebooks = () => {
                   </div>
                 </div>
                 {/* Name */}
-                <span className="block w-full text-[11px] font-medium text-foreground truncate px-0.5 leading-tight">
+                <span className="block w-full text-[13px] font-semibold text-foreground truncate px-0.5 leading-tight mt-1">
                   {f.name}
                 </span>
               </button>
