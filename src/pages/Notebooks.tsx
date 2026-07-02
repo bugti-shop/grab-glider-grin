@@ -154,7 +154,7 @@ const Notebooks = () => {
 
       {/* Notebook grid — colorful covers */}
       <div className="px-4 pt-5">
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-4 gap-y-6">
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-x-3 gap-y-6 max-w-2xl mx-auto">
           {filtered.map((f) => {
             const count = counts.get(f.id) ?? 0;
             const color = f.color || '#3b82f6';
@@ -165,51 +165,60 @@ const Notebooks = () => {
                 onClick={() => openNotebook(f.id)}
                 className="group flex flex-col items-center gap-2 text-center active:scale-95 transition-transform"
               >
-                {/* Notebook cover */}
-                <div
-                  className="relative w-full aspect-[3/4] rounded-r-lg rounded-l-sm overflow-hidden shadow-md"
-                  style={{
-                    backgroundColor: color,
-                    backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 60%, ${color}aa 100%)`,
-                  }}
-                >
-                  {/* Spine (left binding) */}
+                {/* Notebook with pages bundle underneath */}
+                <div className="relative w-full aspect-[3/4] pb-1.5">
+                  {/* Pages peeking from the bottom (paper stack) */}
+                  <div className="absolute bottom-0 left-[6%] right-[6%] h-[10%] rounded-b-[3px] bg-white shadow-sm border border-black/10" />
+                  <div className="absolute bottom-[3px] left-[10%] right-[10%] h-[8%] rounded-b-[2px] bg-[#f5f2ea] border border-black/10" />
+                  <div className="absolute bottom-[6px] left-[14%] right-[14%] h-[6%] rounded-b-[2px] bg-[#ece8dc] border border-black/10" />
+
+                  {/* Notebook cover */}
                   <div
-                    className="absolute inset-y-0 left-0 w-2"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.22)' }}
-                  />
-                  {/* Rings on spine */}
-                  <div className="absolute inset-y-0 left-0 w-2 flex flex-col justify-around py-2">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className="mx-auto h-1 w-1 rounded-full bg-white/70"
-                      />
-                    ))}
-                  </div>
-                  {/* Highlight */}
-                  <div className="absolute inset-y-2 left-3 w-px bg-white/25" />
-                  {/* Count badge */}
-                  <span className="absolute top-2 right-2 min-w-[22px] h-[22px] px-1.5 rounded-full bg-white/25 backdrop-blur-sm text-[11px] font-semibold text-white flex items-center justify-center tabular-nums">
-                    {count}
-                  </span>
-                  {/* Corner icon */}
-                  <div className="absolute bottom-2 right-2 text-white/80">
-                    {f.isDefault ? (
-                      <BookOpen className="h-4 w-4" />
-                    ) : (
-                      <Book className="h-4 w-4" />
-                    )}
+                    className="relative w-full h-full rounded-r-md rounded-l-[3px] overflow-hidden shadow-md"
+                    style={{
+                      backgroundColor: color,
+                      backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 60%, ${color}aa 100%)`,
+                    }}
+                  >
+                    {/* Spine */}
+                    <div
+                      className="absolute inset-y-0 left-0 w-1.5"
+                      style={{ backgroundColor: 'rgba(0,0,0,0.25)' }}
+                    />
+                    {/* Rings on spine */}
+                    <div className="absolute inset-y-0 left-0 w-1.5 flex flex-col justify-around py-1.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span
+                          key={i}
+                          className="mx-auto h-[3px] w-[3px] rounded-full bg-white/80"
+                        />
+                      ))}
+                    </div>
+                    {/* Highlight */}
+                    <div className="absolute inset-y-1.5 left-2 w-px bg-white/25" />
+                    {/* Count badge */}
+                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white/25 backdrop-blur-sm text-[9px] font-semibold text-white flex items-center justify-center tabular-nums">
+                      {count}
+                    </span>
+                    {/* Corner icon */}
+                    <div className="absolute bottom-1 right-1 text-white/80">
+                      {f.isDefault ? (
+                        <BookOpen className="h-3 w-3" />
+                      ) : (
+                        <Book className="h-3 w-3" />
+                      )}
+                    </div>
                   </div>
                 </div>
                 {/* Name */}
-                <span className="block w-full text-xs font-medium text-foreground truncate px-0.5">
+                <span className="block w-full text-[11px] font-medium text-foreground truncate px-0.5 leading-tight">
                   {f.name}
                 </span>
               </button>
             );
           })}
         </div>
+
         {filtered.length === 0 && (
           <div className="py-16 text-center text-sm text-muted-foreground">
             No notebooks found
