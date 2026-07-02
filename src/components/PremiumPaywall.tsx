@@ -106,15 +106,65 @@ function usePaywallLogic() {
     } catch { return false; }
   }, []);
 
+  const purchaseNativeByProductId = async (productId: string): Promise<boolean> => {
+    // Look up product via RevenueCat offerings first (preferred) then direct
+    const offeringsNow = await Purchases.getOfferings();
+    const allPackages: PurchasesPackage[] = [];
+    if (offeringsNow?.current?.availablePackages) allPackages.push(...offeringsNow.current.availablePackages);
+    if (offeringsNow?.all) {
+      Object.values(offeringsNow.all).forEach((offering: any) => {
+        offering?.availablePackages?.forEach((p: PurchasesPackage) => {
+          if (!allPackages.find(e => e.identifier === p.identifier)) allPackages.push(p);
+        });
+      });
+    }
+    const shortId = productId.split(':')[0];
+    const pkg = allPackages.find(p => p.product?.identifier === productId)
+      || allPackages.find(p => p.product?.identifier === shortId)
+      || allPackages.find(p => p.product?.identifier?.startsWith(shortId));
+    if (pkg) {
+      const { customerInfo } = await Purchases.purchasePackage({ aPackage: pkg });
+      return !!customerInfo?.entitlements?.active && Object.keys(customerInfo.entitlements.active).length > 0;
+    }
+    // Fallback: direct store product
+    const { products } = await Purchases.getProducts({ productIdentifiers: [productId, shortId] });
+    const storeProduct = products.find(p => p.identifier === productId) || products.find(p => p.identifier === shortId) || products[0];
+    if (!storeProduct) throw new Error(`Product ${productId} not found. Add it in App Store Connect / Play Console and RevenueCat.`);
+    const { customerInfo } = await Purchases.purchaseStoreProduct({ product: storeProduct });
+    return !!customerInfo?.entitlements?.active && Object.keys(customerInfo.entitlements.active).length > 0;
+  };
+
   const handlePurchase = async (
     planOverride?: string,
-    extras?: { quantity?: number },
+    _extras?: { quantity?: number },
   ) => {
     const planType = planOverride ?? selectedPlan;
     setIsPurchasing(true);
     setAdminError('');
     try {
-      if (Capacitor.isNativePlatform() && (planType === 'weekly' || planType === 'monthly' || planType === 'yearly')) {
+      const isNative = Capacitor.isNativePlatform();
+
+      // Family / Team are native-only (iOS + Android)
+      if (planType === 'family' || planType === 'team') {
+        if (!isNative) {
+          setAdminError('Family and Team plans are available on the iOS and Android apps only. Please subscribe from your phone.');
+          setTimeout(() => setAdminError(''), 6000);
+          return;
+        }
+        const cfg = (BILLING_CONFIG as any)[planType];
+        const ok = await purchaseNativeByProductId(cfg.productId);
+        if (ok) {
+          try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}
+          closePaywall();
+        } else {
+          setAdminError(t('onboarding.paywall.purchaseCancelled'));
+          setTimeout(() => setAdminError(''), 4000);
+        }
+        return;
+      }
+
+      // Individual (weekly/monthly/yearly)
+      if (isNative && (planType === 'weekly' || planType === 'monthly' || planType === 'yearly')) {
         const success = await purchase(planType as ProductType);
         if (success) {
           try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}
@@ -124,15 +174,13 @@ function usePaywallLogic() {
           setTimeout(() => setAdminError(''), 4000);
         }
       } else {
-        // Web / Family / Team: use Stripe checkout via edge function
+        // Web: Stripe checkout for individual plans
         const { data: { session } } = await supabase.auth.getSession();
         const headers: Record<string, string> = {};
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
-        }
+        if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
 
         const { data, error } = await supabase.functions.invoke('create-checkout', {
-          body: { planType, quantity: extras?.quantity },
+          body: { planType },
           headers,
         });
 
@@ -142,7 +190,6 @@ function usePaywallLogic() {
           setTimeout(() => setAdminError(''), 5000);
           return;
         }
-
         window.location.href = data.url;
       }
     } catch (error: any) {
@@ -155,6 +202,7 @@ function usePaywallLogic() {
       setIsPurchasing(false);
     }
   };
+
 
 
   const [restoreEmail, setRestoreEmail] = useState('');
