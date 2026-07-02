@@ -725,7 +725,9 @@ const WebClipper = () => {
                 />
                 <p className="text-[11px] text-muted-foreground">
                   {t('webClipper.previewHint', 'Everything the clipper found — images, videos, links, text — is above. Delete or edit anything before saving.')}
+                </p>
               </div>
+
               <ClipCostEstimator
                 snapshotBytes={fullPageSnapshot?.bytes ?? null}
                 previewHtmlLength={previewHtml.length}
