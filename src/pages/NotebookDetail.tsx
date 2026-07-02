@@ -35,6 +35,9 @@ const NotebookDetail = () => {
   const [folder, setFolder] = useState<FolderType | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [defaultType, setDefaultType] = useState<NoteType>('regular');
+  const [noteTypeSelectorOpen, setNoteTypeSelectorOpen] = useState(false);
+  const { visibleTypes, isTypeVisible } = useNoteTypeVisibility();
 
   useEffect(() => {
     const load = async () => {
