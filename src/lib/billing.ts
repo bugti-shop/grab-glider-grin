@@ -18,12 +18,6 @@ export const BILLING_CONFIG = IS_IOS ? {
   yearly: {
     productId: 'com.flowist.app.year',
   },
-  family: {
-    productId: 'com.flowist.app.family.year',
-  },
-  team: {
-    productId: 'com.flowist.app.team.year',
-  },
 } as const : {
   weekly: {
     productId: 'nnppd_weekly:nnnpd-weekly',
@@ -38,14 +32,6 @@ export const BILLING_CONFIG = IS_IOS ? {
     productId: 'npd_yr:npd-yearly-plan',
     basePlanId: 'npd-yearly-plan',
     trialOfferId: 'npd-yearly-trial',
-  },
-  family: {
-    productId: 'flowist_family_year:family-year',
-    basePlanId: 'family-year',
-  },
-  team: {
-    productId: 'flowist_team_year:team-year',
-    basePlanId: 'team-year',
   },
 } as const;
 
@@ -80,9 +66,9 @@ export const STRIPE_PRICE_IDS: Partial<Record<PlanType, string>> = {
 // Pricing display (for UI only - actual pricing comes from RevenueCat/Store)
 export const PRICING_DISPLAY = {
   weekly: {
-    price: '$1.49',
+    price: '$1.99',
     period: 'week',
-    displayPrice: '$1.49/wk',
+    displayPrice: '$1.99/wk',
   },
   monthly: {
     price: '$3.99',
@@ -90,9 +76,9 @@ export const PRICING_DISPLAY = {
     displayPrice: '$3.99/mo',
   },
   yearly: {
-    price: '$35.99',
+    price: '$39.99',
     period: 'year',
-    displayPrice: '$35.99/yearly',
+    displayPrice: '$39.99/yearly',
   },
 } as const;
 
