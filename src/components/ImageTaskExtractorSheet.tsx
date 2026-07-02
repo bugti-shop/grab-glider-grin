@@ -751,7 +751,7 @@ export const ImageTaskExtractorSheet = ({
           // If user cancelled without capturing, dismiss the whole flow too.
           if (!imageDataUrl && !isExtracting && !hasRun) onClose();
         }}
-        title={t('imageExtract.title', 'Scan tasks from paper')}
+        title=""
         initialMode="note"
         onBarcode={handleBarcode}
         onObjectCount={async (dataUrl) => {
