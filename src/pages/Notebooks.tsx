@@ -154,7 +154,7 @@ const Notebooks = () => {
 
       {/* Notebook grid — colorful covers with fanned paper bundle */}
       <div className="px-3 pt-5">
-        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-x-2 gap-y-8 max-w-3xl mx-auto">
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-x-1 gap-y-4 max-w-3xl mx-auto">
           {filtered.map((f) => {
             const count = counts.get(f.id) ?? 0;
             const color = f.color || '#3b82f6';
