@@ -8,17 +8,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Stripe Price IDs. Family/Team read from env so you can rotate without redeploy.
-const PRICE_IDS: Record<string, string | undefined> = {
+// Stripe Price IDs (Individual plans only — Family/Team are native iOS/Android)
+const PRICE_IDS: Record<string, string> = {
   weekly: "price_1TRbliFAPtKh08jGPKXWPcPG",
   monthly: "price_1TR6SoFAPtKh08jGW4lfGDYt",
   yearly: "price_1TRbljFAPtKh08jGGf1qg42c",
-  family: Deno.env.get("STRIPE_FAMILY_PRICE_ID"),
-  team: Deno.env.get("STRIPE_TEAM_PRICE_ID"),
 };
 
-// Which plans support quantity (per-seat)
-const QUANTITY_PLANS = new Set(["team"]);
 
 
 // Free trial is handled through checkout for eligible monthly/yearly plans.
