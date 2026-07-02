@@ -70,6 +70,7 @@ if (!__IS_QUICK_ADD_BOOT__) {
 
 // Lazy load everything else - they load in background after first paint
 const Notes = lazy(() => import("./pages/Notes"));
+const Notebooks = lazy(() => import("./pages/Notebooks"));
 const NotesCalendar = lazy(() => import("./pages/NotesCalendar"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
