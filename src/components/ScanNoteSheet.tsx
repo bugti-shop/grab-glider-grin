@@ -123,7 +123,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     setShowCamera(true);
   };
 
-  const runExtraction = async (dataUrl: string) => {
+  const runExtraction = async (dataUrl: string, opts?: { handwriting?: boolean }) => {
     if (!(await ensureSignedInForAi())) {
       onClose();
       return;
@@ -153,6 +153,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             imageBase64: dataUrl,
             languageCode: (i18n.language || 'en').split('-')[0],
             languageName: 'auto',
+            handwriting: opts?.handwriting === true,
             webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
           },
           timeout: AI_SCAN_TIMEOUT_MS,
@@ -478,12 +479,12 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
               }
             : null
         }
-        onCapture={async (dataUrl) => {
+        onCapture={async (dataUrl, opts) => {
           setShowCamera(false);
           setImageDataUrl(dataUrl);
-          await runExtraction(dataUrl);
+          await runExtraction(dataUrl, opts);
         }}
-        onBatchNote={async (pages) => {
+        onBatchNote={async (pages, opts) => {
           if (!pages.length) return;
           if (!(await ensureScannerAccess())) return;
           setShowCamera(false);
@@ -508,6 +509,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
                     imageBase64: pages[i],
                     languageCode: (i18n.language || 'en').split('-')[0],
                     languageName: 'auto',
+                    handwriting: opts?.handwriting === true,
                     webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
                   },
                   timeout: AI_SCAN_TIMEOUT_MS,

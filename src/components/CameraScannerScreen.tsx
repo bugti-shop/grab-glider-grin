@@ -35,6 +35,7 @@ import {
   GripVertical,
   RotateCcw,
   AlertCircle,
+  PenLine,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -60,7 +61,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   /** Called with a JPEG data URL when the user captures a frame. */
-  onCapture: (dataUrl: string) => void;
+  onCapture: (dataUrl: string, opts?: { handwriting?: boolean }) => void;
   /**
    * Called when Object Counting mode captures a frame. Should invoke the AI
    * and RESOLVE with the counted result. The scanner will then show a review
@@ -75,7 +76,7 @@ interface Props {
    * Receives every captured page in order. Parent should OCR each page
    * and combine them into a single note with page separators.
    */
-  onBatchNote?: (dataUrls: string[]) => Promise<void> | void;
+  onBatchNote?: (dataUrls: string[], opts?: { handwriting?: boolean }) => Promise<void> | void;
   /**
    * Called when a barcode is decoded in `barcode` mode. If omitted, decoded
    * barcodes are surfaced as a toast and the raw frame is still sent via
@@ -151,6 +152,9 @@ export const CameraScannerScreen = ({
   const [lastBarcode, setLastBarcode] = useState<string | null>(null);
   // Burst mode: capture 3 frames and auto-pick the sharpest.
   const [burstOn, setBurstOn] = useState(false);
+  // Handwriting mode: routes extraction to a stronger vision model with a
+  // handwriting-tuned prompt (cursive, cross-outs, margin notes, callouts).
+  const [handwritingOn, setHandwritingOn] = useState(false);
   // Multi-page batch scan (Note mode): capture N pages, save as one combined note.
   const [batchOn, setBatchOn] = useState(false);
   const [batchPages, setBatchPages] = useState<string[]>([]);
@@ -321,7 +325,7 @@ export const CameraScannerScreen = ({
         return;
       }
 
-      onCapture(compressed);
+      onCapture(compressed, { handwriting: handwritingOn });
       onClose();
     } catch (e) {
       console.error('[Scanner] shutter error', e);
@@ -329,7 +333,7 @@ export const CameraScannerScreen = ({
     } finally {
       setCapturing(false);
     }
-  }, [batchOn, burstOn, capturing, mode, onBarcode, onBatchNote, onCapture, onClose, onObjectCount, ready]);
+  }, [batchOn, burstOn, capturing, handwritingOn, mode, onBarcode, onBatchNote, onCapture, onClose, onObjectCount, ready]);
 
   // Reset batch when the scanner closes.
   useEffect(() => {
@@ -337,6 +341,7 @@ export const CameraScannerScreen = ({
       setBatchPages([]);
       setBatchOn(false);
       setBatchProcessing(false);
+      setHandwritingOn(false);
     }
   }, [isOpen]);
 
@@ -344,7 +349,7 @@ export const CameraScannerScreen = ({
     if (!onBatchNote || batchPages.length === 0 || batchProcessing) return;
     setBatchProcessing(true);
     try {
-      await onBatchNote(batchPages);
+      await onBatchNote(batchPages, { handwriting: handwritingOn });
       setBatchPages([]);
       // Parent typically closes the scanner after saving; if not, we stay open.
     } catch (e: any) {
@@ -353,7 +358,7 @@ export const CameraScannerScreen = ({
     } finally {
       setBatchProcessing(false);
     }
-  }, [batchPages, batchProcessing, onBatchNote]);
+  }, [batchPages, batchProcessing, handwritingOn, onBatchNote]);
 
   const undoLastBatchPage = useCallback(() => {
     setBatchPages((prev) => {
@@ -503,6 +508,35 @@ export const CameraScannerScreen = ({
             >
               <Files className="h-4 w-4" />
               Batch{batchPages.length > 0 ? ` · ${batchPages.length}` : ''}
+              {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
+            </button>
+          )}
+          {mode === 'note' && (
+            <button
+              onClick={() => {
+                if (!requirePro('burst')) return;
+                setHandwritingOn((v) => {
+                  const next = !v;
+                  toast(
+                    next
+                      ? '✍️ Handwriting mode on · uses stronger AI for cursive & notes'
+                      : 'Handwriting mode off',
+                    { duration: 1300 },
+                  );
+                  return next;
+                });
+              }}
+              className={cn(
+                'h-10 px-3 rounded-full backdrop-blur-xl border flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition',
+                handwritingOn
+                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_6px_18px_hsl(var(--primary)/0.35)]'
+                  : 'bg-white/10 border-white/15 text-white',
+              )}
+              aria-label="Toggle handwriting recognition"
+              aria-pressed={handwritingOn}
+            >
+              <PenLine className="h-4 w-4" />
+              Handwriting
               {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
             </button>
           )}

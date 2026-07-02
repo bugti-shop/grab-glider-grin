@@ -14,6 +14,13 @@ interface ExtractRequest {
   languageCode?: string;
   languageName?: string;
   webUnlockCode?: string;
+  /**
+   * When true, the extractor uses a stronger vision model + handwriting-tuned
+   * prompt: cursive letters, ambiguous glyphs, cross-outs, margin notes,
+   * arrows/callouts, and mixed print+cursive. Killer feature to beat
+   * Evernote's Penultimate/Scannable OCR moat.
+   */
+  handwriting?: boolean;
 }
 
 const AI_GATEWAY_TIMEOUT_MS = 40_000;
@@ -136,7 +143,45 @@ Deno.serve(async (req) => {
     const langName = body.languageName || "auto";
     const langCode = body.languageCode || "auto";
 
-    const systemPrompt = `You are a vision-based document transcriber. The user photographed a page (handwritten notebook, printed document, whiteboard, sticky notes, planner, etc.).
+    const handwritingMode = body.handwriting === true;
+
+    const systemPrompt = handwritingMode
+      ? `You are a specialist handwriting-recognition transcriber. The user photographed a HANDWRITTEN page (notebook, journal, whiteboard, sticky notes, planner, meeting notes, lecture notes, letters).
+
+Your job: transcribe ALL handwritten text with maximum fidelity and preserve the page's visual structure as semantic HTML.
+
+Primary language hint: ${langName} (${langCode}). Preserve the original language(s) — do NOT translate.
+
+HANDWRITING RULES — this is the entire point of the task:
+- Read cursive, print, and mixed styles. Handle stylistic loops, slanted script, and inconsistent letter sizing.
+- Disambiguate look-alikes from context: 0/O, 1/l/I, 2/Z, 5/S, 6/G, rn/m, u/v, cl/d. Use surrounding words to decide.
+- Honor cross-outs and strikethroughs: wrap the crossed-out text in <s>...</s>. Never silently drop struck text.
+- Insertions (carets ^, arrows between lines, "insert here" marks): place the inserted phrase where the writer clearly intended.
+- Margin notes and sidebar annotations: render as <blockquote>MARGIN: ...</blockquote> after the paragraph they relate to.
+- Arrows/callouts connecting ideas: render as "→" glyphs inside the text.
+- Bullets drawn as dots, dashes, stars, or hand-drawn boxes → <ul><li> (checkboxes stay as ☐/☒).
+- Numbered/lettered lists (1. 2., a) b), i. ii.) → <ol><li>.
+- Section titles underlined, boxed, or written larger → <h2> or <h3>.
+- If a word is truly unreadable, output <mark>[illegible]</mark> instead of guessing wildly.
+- Keep the writer's original spelling and punctuation. Do NOT auto-correct grammar.
+- Diagrams/sketches: describe them briefly in <em>[sketch: ...]</em> only if they carry meaning.
+
+Also convert printed regions on the same page using the normal structure rules below.
+
+STRUCTURE RULES:
+- Page title / top heading → <h1>
+- Paragraphs → <p>. Line breaks inside a paragraph → <br> only when meaningful.
+- Horizontal dividers → <hr>
+- Emphasized words (UNDERLINED, ALL CAPS standalone, circled) → <strong>
+- Tables (columns of data) → <table><tr><td>...</td></tr></table>
+
+CONTENT RULES:
+- Transcribe everything readable. Skip page numbers, decorative borders, doodles unless they annotate text.
+- Output ONLY the body HTML (no <html>, <head>, <body>, no markdown fences, no commentary).
+- If nothing is readable, return an empty string.
+
+Return strictly via the tool call.`
+      : `You are a vision-based document transcriber. The user photographed a page (handwritten notebook, printed document, whiteboard, sticky notes, planner, etc.).
 
 Your job: faithfully transcribe ALL readable text AND preserve the page's visual structure as semantic HTML.
 
@@ -161,6 +206,10 @@ CONTENT RULES:
 
 Return strictly via the tool call.`;
 
+    const aiModel = handwritingMode
+      ? "google/gemini-2.5-pro"
+      : "google/gemini-3-flash-preview";
+
     const aiResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
@@ -171,7 +220,7 @@ Return strictly via the tool call.`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: aiModel,
           messages: [
             { role: "system", content: systemPrompt },
             {
