@@ -151,22 +151,6 @@ const Notebooks = () => {
         </div>
       </header>
 
-      {/* Inline Add Notebook button — Duolingo blue */}
-      <div className="px-4 pt-3">
-        <button
-          type="button"
-          onClick={() => setAddOpen(true)}
-          className={cn(
-            'w-full flex items-center justify-center gap-2 rounded-2xl h-12 px-4',
-            'bg-[#3b82f6] text-white font-semibold text-base',
-            'shadow-[0_4px_0_0_#2563eb] active:translate-y-[2px] active:shadow-[0_2px_0_0_#2563eb]',
-            'transition-all duration-100',
-          )}
-        >
-          <Plus className="h-5 w-5" strokeWidth={3} />
-          Add Notebook
-        </button>
-      </div>
 
       {/* Notebook list — colored rows */}
       <ul className="divide-y divide-border mt-2">
