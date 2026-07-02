@@ -570,6 +570,30 @@ export const RICH_TEXT_EDITOR_STYLES = `
     transition: background 0.15s;
   }
   .flowist-web-clip-toggle:hover { background: hsl(var(--accent)); }
+  .flowist-web-clip-fullpage {
+    margin: 12px 18px;
+    padding: 14px;
+    border: 1px dashed hsl(var(--border));
+    border-radius: 10px;
+    background: hsl(var(--muted) / 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .flowist-web-clip-fullpage-btn {
+    align-self: flex-start;
+    padding: 8px 16px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 999px;
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .flowist-web-clip-fullpage-btn:hover { background: hsl(var(--accent)); }
+  .flowist-web-clip-fullpage-btn[disabled] { opacity: 0.6; cursor: wait; }
+  .flowist-web-clip-fullpage-hint { font-size: 11px; opacity: 0.7; }
   .flowist-web-clip-links {
     list-style: none !important;
     padding: 0 !important;
