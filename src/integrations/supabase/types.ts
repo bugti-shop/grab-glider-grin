@@ -834,6 +834,44 @@ export type Database = {
         }
         Relationships: []
       }
+      project_guest_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          project_id: string
+          revoked_at: string | null
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          project_id: string
+          revoked_at?: string | null
+          token: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          project_id?: string
+          revoked_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_guest_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_invitations: {
         Row: {
           accepted_at: string | null
@@ -1150,6 +1188,47 @@ export type Database = {
         }
         Relationships: []
       }
+      task_comments: {
+        Row: {
+          body: string
+          created_at: string
+          edited_at: string | null
+          id: string
+          mentions: string[]
+          task_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          mentions?: string[]
+          task_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          mentions?: string[]
+          task_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assignee_id: string | null
@@ -1439,6 +1518,14 @@ export type Database = {
     Functions: {
       can_edit_project: {
         Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_edit_task: {
+        Args: { _task_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_view_task: {
+        Args: { _task_id: string; _user_id: string }
         Returns: boolean
       }
       decrement_ai_usage: {
