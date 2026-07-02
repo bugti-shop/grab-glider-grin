@@ -74,7 +74,7 @@ export const TextTaskExtractorSheet = ({
   const { isPro, isAdminBypass, requireFeature } = useSubscription();
   const hasPaidAi = isPro || isAdminBypass;
 
-  const [mode, setMode] = useState<SourceMode>(initialMode || 'text');
+  const [mode, setMode] = useState<SourceMode>('text');
   const [text, setText] = useState(initialText || '');
   const [pdfName, setPdfName] = useState<string | null>(null);
   const [pdfText, setPdfText] = useState('');
