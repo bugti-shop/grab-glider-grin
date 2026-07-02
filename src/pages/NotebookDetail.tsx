@@ -120,7 +120,8 @@ const NotebookDetail = () => {
     mutate(nid, { isFavorite: !n.isFavorite });
   };
 
-  const handleCreateNote = () => {
+  const handleCreateNote = (type: NoteType) => {
+    setDefaultType(type);
     setSelectedNote(null);
     setIsEditorOpen(true);
   };
