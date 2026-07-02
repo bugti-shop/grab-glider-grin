@@ -347,7 +347,7 @@ export const CameraScannerScreen = ({
     if (!onBatchNote || batchPages.length === 0 || batchProcessing) return;
     setBatchProcessing(true);
     try {
-      await onBatchNote(batchPages);
+      await onBatchNote(batchPages, { handwriting: handwritingOn });
       setBatchPages([]);
       // Parent typically closes the scanner after saving; if not, we stay open.
     } catch (e: any) {
