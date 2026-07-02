@@ -36,6 +36,9 @@ export function scheduleEmbedNote(note: { id: string; title?: string; content?: 
 
 export async function embedNote(note: { id: string; title?: string; content?: string }): Promise<void> {
   try {
+    // Skip when the user isn't signed in — embed-note requires auth.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
     const { error } = await supabase.functions.invoke('embed-note', {
       body: { noteId: note.id, title: note.title || '', content: note.content || '' },
     });
@@ -44,6 +47,7 @@ export async function embedNote(note: { id: string; title?: string; content?: st
     console.warn('[semanticSearch] embed-note threw', e);
   }
 }
+
 
 export async function semanticSearchNotes(query: string, limit = 12): Promise<SemanticSearchHit[]> {
   const { data, error } = await supabase.functions.invoke('search-notes', {
