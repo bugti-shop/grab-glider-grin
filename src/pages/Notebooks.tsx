@@ -152,44 +152,71 @@ const Notebooks = () => {
       </header>
 
 
-      {/* Notebook list — colored rows */}
-      <ul className="divide-y divide-border mt-2">
-        {filtered.map((f) => {
-          const count = counts.get(f.id) ?? 0;
-          const color = f.color || '#3b82f6';
-          return (
-            <li key={f.id}>
+      {/* Notebook grid — colorful covers */}
+      <div className="px-4 pt-5">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-4 gap-y-6">
+          {filtered.map((f) => {
+            const count = counts.get(f.id) ?? 0;
+            const color = f.color || '#3b82f6';
+            return (
               <button
+                key={f.id}
                 type="button"
                 onClick={() => openNotebook(f.id)}
-                className={cn(
-                  'w-full flex items-center gap-3 px-4 py-4 text-left',
-                  'active:bg-muted/60 transition-colors',
-                )}
+                className="group flex flex-col items-center gap-2 text-center active:scale-95 transition-transform"
               >
-                <span
-                  className="flex h-9 w-9 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: color + '1a', color }}
+                {/* Notebook cover */}
+                <div
+                  className="relative w-full aspect-[3/4] rounded-r-lg rounded-l-sm overflow-hidden shadow-md"
+                  style={{
+                    backgroundColor: color,
+                    backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 60%, ${color}aa 100%)`,
+                  }}
                 >
-                  {f.isDefault ? <BookOpen className="h-5 w-5" /> : <Book className="h-5 w-5" />}
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-base font-medium truncate" style={{ color }}>
-                    {f.name}
+                  {/* Spine (left binding) */}
+                  <div
+                    className="absolute inset-y-0 left-0 w-2"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.22)' }}
+                  />
+                  {/* Rings on spine */}
+                  <div className="absolute inset-y-0 left-0 w-2 flex flex-col justify-around py-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <span
+                        key={i}
+                        className="mx-auto h-1 w-1 rounded-full bg-white/70"
+                      />
+                    ))}
+                  </div>
+                  {/* Highlight */}
+                  <div className="absolute inset-y-2 left-3 w-px bg-white/25" />
+                  {/* Count badge */}
+                  <span className="absolute top-2 right-2 min-w-[22px] h-[22px] px-1.5 rounded-full bg-white/25 backdrop-blur-sm text-[11px] font-semibold text-white flex items-center justify-center tabular-nums">
+                    {count}
                   </span>
+                  {/* Corner icon */}
+                  <div className="absolute bottom-2 right-2 text-white/80">
+                    {f.isDefault ? (
+                      <BookOpen className="h-4 w-4" />
+                    ) : (
+                      <Book className="h-4 w-4" />
+                    )}
+                  </div>
+                </div>
+                {/* Name */}
+                <span className="block w-full text-xs font-medium text-foreground truncate px-0.5">
+                  {f.name}
                 </span>
-                <span className="text-sm text-muted-foreground tabular-nums">{count}</span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
               </button>
-            </li>
-          );
-        })}
+            );
+          })}
+        </div>
         {filtered.length === 0 && (
-          <li className="py-16 text-center text-sm text-muted-foreground">
+          <div className="py-16 text-center text-sm text-muted-foreground">
             No notebooks found
-          </li>
+          </div>
         )}
-      </ul>
+      </div>
+
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-sm">
