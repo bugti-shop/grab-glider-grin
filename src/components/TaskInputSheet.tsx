@@ -939,11 +939,15 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
                   <PopoverTrigger asChild>
                     <button
                       onClick={openImageExtractor}
-                      className="w-10 h-10 rounded-lg bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors relative"
+                      disabled={isOpeningScanner || showImageExtractor}
+                      className="w-10 h-10 rounded-lg bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors relative disabled:opacity-60 disabled:cursor-wait"
                       aria-label={t('tasks.aiScanImage', 'Scan tasks from photo')}
+                      aria-busy={isOpeningScanner}
                       title={t('tasks.aiScanImageHint', 'Scan a paper or sticky-note board to add tasks')}
                     >
-                      <ScanLine className="h-5 w-5 text-primary" />
+                      {isOpeningScanner
+                        ? <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                        : <ScanLine className="h-5 w-5 text-primary" />}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent
