@@ -1482,8 +1482,14 @@ export const TaskDetailPage = ({
             }}
           />
 
+          {/* Comments (with @mentions when task is in a project) */}
+          <div className="border-t border-border pt-4">
+            <TaskComments taskId={task.id} projectId={task.projectId ?? null} />
+          </div>
+
           {/* Task Timestamps Section - Premium */}
           <div className="space-y-2 border-t border-border pt-4">
+
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
               <Clock className="h-4 w-4" />
               {t('taskDetail.taskHistory')}
