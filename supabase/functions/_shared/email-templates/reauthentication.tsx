@@ -3,12 +3,12 @@
 import * as React from 'npm:react@18.3.1'
 import {
   Body,
+  Button,
   Container,
   Head,
   Heading,
   Html,
   Img,
-  Link,
   Preview,
   Section,
   Text,
@@ -38,9 +38,9 @@ export const ReauthenticationEmail = ({ token, confirmationUrl }: Props) => {
             Click the link below to verify your email address:
           </Text>
 
-          <Text style={styles.text}>
-            <Link href={actionUrl} style={styles.link}>Verify email</Link>
-          </Text>
+          <Section style={styles.buttonWrap}>
+            <Button href={actionUrl} style={styles.button}>Verify email</Button>
+          </Section>
 
           <Text style={styles.text}>
             This link will expire 30 minutes after this email was sent.
