@@ -1048,6 +1048,14 @@ Deno.serve(async (req) => {
     }
 
 
+    // ── Clean up the DOM BEFORE Readability runs ─────────────────────────
+    // The user wants a genuine article: title, headings, images (with their
+    // captions), links, references. Everything else — ads, share buttons,
+    // navigation, footers, "related stories", newsletter prompts, comments —
+    // gets stripped in place so Readability has a clean tree to score.
+    cleanArticleDom(document as any);
+
+    let article: any = null;
     try {
       const reader = new Readability(document as any, {
         charThreshold: 200,
