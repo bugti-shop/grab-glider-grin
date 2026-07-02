@@ -981,7 +981,9 @@ const App = () => {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <SubscriptionProvider>
-              <QuickAddShell />
+              <MemoryRouter initialEntries={["/quick-add"]}>
+                <QuickAddShell />
+              </MemoryRouter>
             </SubscriptionProvider>
           </TooltipProvider>
         </QueryClientProvider>
