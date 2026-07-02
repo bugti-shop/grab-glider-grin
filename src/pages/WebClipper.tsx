@@ -37,6 +37,17 @@ const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: strin
 
 type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
 
+/**
+ * Session-scoped dedupe for the web clipper.
+ * A single URL+mode+attachment key should only ever hit fetch-article ONCE per app session.
+ * Prior bug: share-intent flows and StrictMode remounts caused the same page to be
+ * fetched and downloaded 3–5×. Keyed at the module level so React remounts can't reset it.
+ */
+const inFlightClipKeys = new Set<string>();
+const completedClipKeys = new Set<string>();
+const clipKey = (mode: string, url: string, attachment: string) =>
+  `${mode}::${(url || '').trim().toLowerCase()}::${(attachment || '').trim().toLowerCase()}`;
+
 const WebClipper = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -112,6 +123,15 @@ const WebClipper = () => {
     if (prepareStartedRef.current) return;
     if (previewReady) return;
     if (!(title || url || content || selection || attachment)) return;
+    // Session-scoped dedupe: never re-fetch the same URL+mode+attachment,
+    // even if this component remounts (StrictMode, back-nav, share-intent replay).
+    const key = clipKey(mode, url || '', attachment || '');
+    if (inFlightClipKeys.has(key) || completedClipKeys.has(key)) {
+      console.warn('[webClipper] duplicate clip suppressed for key', key);
+      prepareStartedRef.current = true;
+      clearClipperQuery();
+      return;
+    }
     prepareStartedRef.current = true;
     void prepareClip(mode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -163,6 +183,12 @@ const WebClipper = () => {
       console.warn('[webClipper] prepareClip already in flight — ignoring duplicate call');
       return;
     }
+    const dedupeKey = clipKey(clipMode, url || '', attachment || '');
+    if (completedClipKeys.has(dedupeKey)) {
+      console.warn('[webClipper] clip already completed this session — ignoring', dedupeKey);
+      return;
+    }
+    inFlightClipKeys.add(dedupeKey);
     prepareStartedRef.current = true;
     setSaving(true);
     setError(null);
@@ -467,6 +493,9 @@ const WebClipper = () => {
       setPreviewTitle(finalTitle);
       setPreviewHtml(noteContent);
       setPreviewReady(true);
+      // Mark this URL+mode as fully clipped so any later remount or share-intent
+      // replay is a no-op instead of re-hitting fetch-article.
+      completedClipKeys.add(dedupeKey);
       // Once the editable preview is built, consume the one-shot URL payload.
       // This prevents mobile Activity/webview restores from reopening the same
       // /webclipper?url=… route and fetching/saving duplicate copies later.
@@ -488,6 +517,9 @@ const WebClipper = () => {
       }
     } finally {
       abortRef.current = null;
+      // Release the in-flight lock. If the run succeeded, completedClipKeys
+      // already blocks re-runs; if it failed, releasing lets the user retry.
+      inFlightClipKeys.delete(dedupeKey);
       setSaving(false);
     }
   };
