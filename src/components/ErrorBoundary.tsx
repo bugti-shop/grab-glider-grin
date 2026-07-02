@@ -60,6 +60,18 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    try {
+      // Persist last error so we can inspect it on next reload
+      sessionStorage.setItem(
+        'lastBoundaryError',
+        JSON.stringify({
+          message: error?.message || String(error),
+          stack: (error?.stack || '').slice(0, 2000),
+          componentStack: (errorInfo?.componentStack || '').slice(0, 2000),
+          at: new Date().toISOString(),
+        }),
+      );
+    } catch {}
     this.props.onError?.(error, errorInfo);
     this.setState(prev => ({ errorCount: prev.errorCount + 1 }));
 
