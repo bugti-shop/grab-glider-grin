@@ -37,6 +37,17 @@ const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: strin
 
 type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
 
+/**
+ * Session-scoped dedupe for the web clipper.
+ * A single URL+mode+attachment key should only ever hit fetch-article ONCE per app session.
+ * Prior bug: share-intent flows and StrictMode remounts caused the same page to be
+ * fetched and downloaded 3–5×. Keyed at the module level so React remounts can't reset it.
+ */
+const inFlightClipKeys = new Set<string>();
+const completedClipKeys = new Set<string>();
+const clipKey = (mode: string, url: string, attachment: string) =>
+  `${mode}::${(url || '').trim().toLowerCase()}::${(attachment || '').trim().toLowerCase()}`;
+
 const WebClipper = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
