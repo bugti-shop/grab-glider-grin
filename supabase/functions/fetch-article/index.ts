@@ -336,10 +336,15 @@ function cleanArticleDom(doc: Document): void {
   for (const h of headings) {
     const text = (h.textContent || "").trim();
     if (!cutHeadingRe.test(text)) continue;
-    // Remove the heading itself and every sibling that follows it.
+    if (isProtected(h)) continue; // never cut inside a preserved FAQ block
+    // Remove the heading itself and every sibling that follows it — but
+    // stop if we hit a preserved FAQ block so questions stay in the article.
     let sib: any = h.nextSibling;
     while (sib) {
       const next = sib.nextSibling;
+      if (sib.nodeType === 1 && (sib.getAttribute?.('data-flowist-keep') === '1' || (sib.querySelector && sib.querySelector('[data-flowist-keep="1"]')))) {
+        break;
+      }
       sib.parentNode?.removeChild(sib);
       sib = next;
     }
