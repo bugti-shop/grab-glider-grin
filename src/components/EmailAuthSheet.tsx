@@ -31,12 +31,29 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const cooldownTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    cooldownTimer.current = window.setTimeout(
+      () => setResendCooldown((s) => Math.max(0, s - 1)),
+      1000,
+    );
+    return () => {
+      if (cooldownTimer.current) window.clearTimeout(cooldownTimer.current);
+    };
+  }, [resendCooldown]);
 
   if (!open) return null;
+
+  const startCooldown = () => setResendCooldown(45);
 
   const reset = () => {
     setMode('signin');
     setEmail(''); setPassword(''); setName(''); setOtp('');
+    setOtpError(null); setResendCooldown(0);
   };
 
   const close = () => { reset(); onClose(); };
