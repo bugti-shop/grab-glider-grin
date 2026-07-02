@@ -594,20 +594,17 @@ type PaywallTab = 'individual' | 'family' | 'team';
 const FAMILY_MONTHLY_EQUIV = 8.99; // per family (up to 4 members)
 const FAMILY_ANNUAL_TOTAL = 107.88; // 8.99 * 12
 const TEAM_PER_SEAT_MONTHLY = 3.99;
-const TEAM_MIN_SEATS = 2;
-const TEAM_MAX_SEATS = 50;
-const TEAM_DEFAULT_SEATS = 5;
 
 function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> }) {
   const { t, selectedPlan, setSelectedPlan, isPurchasing, PLANS, currentPlan, handlePurchase, hasUsedTrial, closePaywall, handleRestore, isRestoring, adminError, capacityMessage } = logic;
 
   const [activeTab, setActiveTab] = useState<PaywallTab>('individual');
-  const [teamSeats, setTeamSeats] = useState<number>(TEAM_DEFAULT_SEATS);
 
   // Individual tab always uses the yearly plan
   useEffect(() => {
     if (activeTab === 'individual') setSelectedPlan('yearly');
   }, [activeTab, setSelectedPlan]);
+
 
   const yearlyPlan = PLANS.find(p => p.id === 'yearly') ?? PLANS[PLANS.length - 1];
 
