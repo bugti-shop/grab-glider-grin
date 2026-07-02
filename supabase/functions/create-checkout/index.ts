@@ -26,22 +26,14 @@ serve(async (req) => {
 
   try {
     // Parse request body
-    const { planType, quantity } = await req.json();
-    if (!planType || !(planType in PRICE_IDS)) {
+    const { planType } = await req.json();
+    if (!planType || !PRICE_IDS[planType]) {
       throw new Error(`Invalid plan type: ${planType}. Must be one of: ${Object.keys(PRICE_IDS).join(", ")}`);
     }
     const priceId = PRICE_IDS[planType];
-    if (!priceId) {
-      throw new Error(`${planType} plan is not configured yet. Please contact support.`);
-    }
-    let seatQty = 1;
-    if (QUANTITY_PLANS.has(planType)) {
-      const n = Number(quantity);
-      if (!Number.isFinite(n) || n < 2 || n > 100) {
-        throw new Error("Team plan requires a seat quantity between 2 and 100.");
-      }
-      seatQty = Math.floor(n);
-    }
+    const seatQty = 1;
+
+
 
 
     // Initialize Stripe
