@@ -244,11 +244,25 @@ const Notebooks = () => {
               <button
                 key={f.id}
                 type="button"
-                onClick={() => openNotebook(f.id)}
-                className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform"
+                onClick={() => {
+                  if (longPressedRef.current) {
+                    longPressedRef.current = false;
+                    return;
+                  }
+                  openNotebook(f.id);
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setActionFor(f);
+                }}
+                onPointerDown={() => startPress(f)}
+                onPointerUp={cancelPress}
+                onPointerLeave={cancelPress}
+                onPointerCancel={cancelPress}
+                className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform select-none touch-none"
               >
                 {/* Notebook wrapper — smaller cover, stack spans full width */}
-                <div className="relative w-[90%] aspect-[3/4] pb-[5%]">
+                <div className="relative w-[88.7%] aspect-[3/4] pb-[5%]">
                   {/* Cover box (fills the top area, leaves pb for stack) */}
                   <div className="relative w-full h-full">
                     {/* Fanned paper bundle — full width, edge-to-edge with cover */}
