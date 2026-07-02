@@ -80,8 +80,10 @@ export function useShareIntent() {
 
       // 3. De-dup repeated fires (cold start + resume + sendIntentReceived).
       const signature = buildShareSignature({ url: url || attachment, text, attachment });
-      if (handledThisMount.has(signature)) return;
-      if (isDuplicateShare(signature)) return;
+      if (handledThisMount.has(signature) || isDuplicateShare(signature)) {
+        markNativeShareConsumed();
+        return;
+      }
       handledThisMount.add(signature);
 
       // 4. Mode selection: image/pdf attachments override; pure URL = article;
