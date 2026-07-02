@@ -40,6 +40,7 @@ import { toast } from 'sonner';
 interface TodaySheetsProps {
   // Input sheet
   isInputOpen: boolean;
+  inputDefaultDate?: Date;
   onCloseInput: () => void;
   onAddTask: (task: Omit<TodoItem, 'id' | 'completed'>) => void;
   /** When true, the task input sheet cannot be dismissed by tapping the
