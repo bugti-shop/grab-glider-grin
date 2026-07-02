@@ -211,22 +211,23 @@ const WebClipper = () => {
       let articleLinks: Array<{ href: string; text: string }> = [];
       let articleIsFallback = false;
       let fetchFailure: { code: string; status?: number; message?: string } | null = null;
-      // Always pull the full article when we have a URL in article/fullpage
-      // mode. Share intents on mobile sometimes ship a large snippet of the
-      // page metadata that used to short-circuit this fetch, leaving the
-      // note as "metadata only". A URL is authoritative — trust it.
+      // FULL-PAGE ALWAYS. The user explicitly does not want metadata-only or
+      // half-article clips. Whenever we have a URL, we ask the edge function
+      // for the complete rendered page (raw HTML, images, embeds — everything
+      // the human eye saw on the page). Selection mode is the only exception,
+      // since it saves the user's own highlighted text.
       const shouldFetchFull =
         !attachment &&
         !!url &&
-        (clipMode === 'article' || clipMode === 'fullpage');
+        clipMode !== 'selection';
 
       if (shouldFetchFull) {
         try {
           setStage('fetching');
           setProgress(null);
-          setProgressLabel(t('webClipper.stageFetching', 'Fetching full article…'));
+          setProgressLabel(t('webClipper.stageFetching', 'Fetching full page…'));
           const { data, error } = await supabase.functions.invoke('fetch-article', {
-            body: { url, mode: clipMode === 'fullpage' ? 'fullpage' : 'article' },
+            body: { url, mode: 'fullpage' },
           });
           if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
           if (error) {
