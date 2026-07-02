@@ -1,60 +1,62 @@
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
-
 import {
   Body,
   Container,
   Head,
   Heading,
   Html,
+  Img,
+  Link,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+import { BRAND, styles } from './_brand.ts'
 
-interface ReauthenticationEmailProps {
+interface Props {
   token: string
 }
 
-export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
+export const ReauthenticationEmail = ({ token }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Your verification code</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Confirm reauthentication</Heading>
-        <Text style={text}>Use the code below to confirm your identity:</Text>
-        <Text style={codeStyle}>{token}</Text>
-        <Text style={footer}>
-          This code will expire shortly. If you didn't request this, you can
-          safely ignore this email.
-        </Text>
+    <Preview>Your {BRAND.name} verification code</Preview>
+    <Body style={styles.main}>
+      <Container style={styles.container}>
+        <Section style={styles.header}>
+          <Img src={BRAND.logoUrl} width="56" height="56" alt={BRAND.name} style={styles.logo} />
+          <Text style={styles.brandName}>{BRAND.name}</Text>
+          <Text style={styles.brandTag}>{BRAND.tagline}</Text>
+        </Section>
+
+        <Section style={styles.card}>
+          <Heading style={styles.h1}>Verify it's you</Heading>
+          <Text style={styles.text}>
+            Enter this code in {BRAND.name} to confirm your identity:
+          </Text>
+          <Section style={{ textAlign: 'center' }}>
+            <Text style={styles.code}>{token}</Text>
+          </Section>
+          <Text style={styles.hint}>
+            This code expires shortly. Never share it with anyone — the {BRAND.name} team
+            will never ask you for this code.
+          </Text>
+        </Section>
+
+        <Section style={styles.footer}>
+          <Text style={styles.footerText}>
+            Didn't request this code? You can safely ignore this email.
+          </Text>
+          <Text style={styles.footerText}>
+            © {new Date().getFullYear()} {BRAND.name} ·{' '}
+            <Link href={BRAND.siteUrl} style={styles.footerLink}>flowist.me</Link>
+          </Text>
+        </Section>
       </Container>
     </Body>
   </Html>
 )
 
 export default ReauthenticationEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const codeStyle = {
-  fontFamily: 'Courier, monospace',
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 30px',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }

@@ -1,86 +1,71 @@
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
-
 import {
   Body,
   Button,
   Container,
   Head,
   Heading,
+  Hr,
   Html,
+  Img,
   Link,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+import { BRAND, styles } from './_brand.ts'
 
-interface SignupEmailProps {
-  siteName: string
-  siteUrl: string
+interface Props {
+  siteName?: string
+  siteUrl?: string
   recipient: string
   confirmationUrl: string
 }
 
-export const SignupEmail = ({
-  siteName,
-  siteUrl,
-  recipient,
-  confirmationUrl,
-}: SignupEmailProps) => (
+export const SignupEmail = ({ recipient, confirmationUrl }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your email for {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
-        <Text style={text}>
-          Thanks for signing up for{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          !
-        </Text>
-        <Text style={text}>
-          Please confirm your email address (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
-          ) by clicking the button below:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Verify Email
-        </Button>
-        <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
-        </Text>
+    <Preview>Confirm your email to start using {BRAND.name}</Preview>
+    <Body style={styles.main}>
+      <Container style={styles.container}>
+        <Section style={styles.header}>
+          <Img src={BRAND.logoUrl} width="56" height="56" alt={BRAND.name} style={styles.logo} />
+          <Text style={styles.brandName}>{BRAND.name}</Text>
+          <Text style={styles.brandTag}>{BRAND.tagline}</Text>
+        </Section>
+
+        <Section style={styles.card}>
+          <Heading style={styles.h1}>Confirm your email</Heading>
+          <Text style={styles.text}>
+            Welcome to {BRAND.name}! Please confirm <strong>{recipient}</strong> to
+            activate your account and start capturing notes, tasks, and habits everywhere.
+          </Text>
+          <Section style={styles.buttonWrap}>
+            <Button style={styles.button} href={confirmationUrl}>
+              Confirm my email
+            </Button>
+          </Section>
+          <Text style={styles.hint}>
+            Or copy this link into your browser:
+            <br />
+            <Link href={confirmationUrl} style={styles.link}>{confirmationUrl}</Link>
+          </Text>
+        </Section>
+
+        <Section style={styles.footer}>
+          <Text style={styles.footerText}>
+            Didn't create a {BRAND.name} account? You can safely ignore this email.
+          </Text>
+          <Text style={styles.footerText}>
+            © {new Date().getFullYear()} {BRAND.name} ·{' '}
+            <Link href={BRAND.siteUrl} style={styles.footerLink}>flowist.me</Link>
+          </Text>
+        </Section>
       </Container>
     </Body>
   </Html>
 )
 
 export default SignupEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
