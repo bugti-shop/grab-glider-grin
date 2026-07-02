@@ -27,6 +27,7 @@ interface SignupEmailProps {
 
 const FLOWIST_SITE_NAME = 'Flowist'
 const FLOWIST_SITE_URL = 'https://flowist.me'
+const FLOWIST_LOGO_URL = 'https://flowist.me/launcher-icon.png'
 
 export const SignupEmail = ({
   recipient,
