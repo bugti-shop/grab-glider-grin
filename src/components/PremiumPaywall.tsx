@@ -849,14 +849,15 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
                 ? (hasUsedTrial ? `Subscribe · ${yearlyPlan?.price ?? '$39.99/yr'}` : 'Try for $0.00 Today')
                 : activeTab === 'family'
                   ? `Get Family · $${FAMILY_ANNUAL_TOTAL.toFixed(2)}/yr`
-                  : `Get Team · $${teamAnnualTotal}/yr`;
+                  : `Get Team · $${TEAM_PER_SEAT_MONTHLY.toFixed(2)}/mo per member`;
 
             const onCta = () => {
               triggerTripleHeavyHaptic();
               if (activeTab === 'individual') handlePurchase('yearly');
               else if (activeTab === 'family') handlePurchase('family');
-              else handlePurchase('team', { quantity: teamSeats });
+              else handlePurchase('team');
             };
+
 
             return (
               <button onClick={onCta} disabled={isPurchasing}
