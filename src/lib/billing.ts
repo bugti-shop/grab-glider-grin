@@ -18,6 +18,12 @@ export const BILLING_CONFIG = IS_IOS ? {
   yearly: {
     productId: 'com.flowist.app.year',
   },
+  family: {
+    productId: 'com.flowist.app.family.year',
+  },
+  team: {
+    productId: 'com.flowist.app.team.year',
+  },
 } as const : {
   weekly: {
     productId: 'nnppd_weekly:nnnpd-weekly',
@@ -33,7 +39,16 @@ export const BILLING_CONFIG = IS_IOS ? {
     basePlanId: 'npd-yearly-plan',
     trialOfferId: 'npd-yearly-trial',
   },
+  family: {
+    productId: 'flowist_family_year:family-year',
+    basePlanId: 'family-year',
+  },
+  team: {
+    productId: 'flowist_team_year:team-year',
+    basePlanId: 'team-year',
+  },
 } as const;
+
 
 export type PlanType = keyof typeof BILLING_CONFIG;
 
