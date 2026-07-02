@@ -874,7 +874,12 @@ const Today = () => {
                     }
                   }}
                   setOrderVersion={setOrderVersion}
+                  onAddForDate={(date) => {
+                    setInputDefaultDate(date);
+                    setIsInputOpen(true);
+                  }}
                 />
+
               ) : viewMode === 'progress' ? (
                 <ProgressView
                   uncompletedItems={uncompletedItems}
