@@ -82,10 +82,17 @@ const WebClipper = () => {
   const [mode, setMode] = useState<ClipMode>(initialMode);
   const [picking, setPicking] = useState(!explicitMode);
 
+  // Guard against React StrictMode double-invocation and any re-render that
+  // could otherwise fire prepareClip() 2–3× for the same URL, producing
+  // duplicate copies of the fetched article.
+  const prepareStartedRef = useRef(false);
   useEffect(() => {
-    if (!picking && !previewReady && (title || url || content || selection || attachment)) {
-      void prepareClip(mode);
-    }
+    if (picking) return;
+    if (prepareStartedRef.current) return;
+    if (previewReady) return;
+    if (!(title || url || content || selection || attachment)) return;
+    prepareStartedRef.current = true;
+    void prepareClip(mode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picking]);
 
