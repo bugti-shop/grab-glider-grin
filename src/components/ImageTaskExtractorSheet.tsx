@@ -406,7 +406,7 @@ export const ImageTaskExtractorSheet = ({
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={isOpen && !showCamera && (imageDataUrl !== null || isExtracting || hasRun)} onOpenChange={(open) => !open && onClose()}>
       <SheetPortal>
         <SheetPrimitive.Overlay
           className="fixed inset-0 z-[199] bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
@@ -751,7 +751,7 @@ export const ImageTaskExtractorSheet = ({
           // If user cancelled without capturing, dismiss the whole flow too.
           if (!imageDataUrl && !isExtracting && !hasRun) onClose();
         }}
-        title={t('imageExtract.title', 'Scan tasks from paper')}
+        title=""
         initialMode="note"
         onBarcode={handleBarcode}
         onObjectCount={async (dataUrl) => {

@@ -313,7 +313,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={isOpen && !showCamera && (imageDataUrl !== null || isExtracting || hasRun)} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="bottom"
         className="rounded-t-3xl max-h-[92vh] overflow-y-auto p-0"
@@ -450,7 +450,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           setShowCamera(false);
           if (!imageDataUrl && !isExtracting && !hasRun) onClose();
         }}
-        title={t('scanNote.title', 'Scan page to note')}
+        title=""
         initialMode="note"
         onBarcode={handleBarcode}
         onObjectCount={async (dataUrl) => {

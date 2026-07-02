@@ -481,9 +481,11 @@ export const CameraScannerScreen = ({
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="text-sm font-semibold tracking-wide bg-white/10 backdrop-blur-xl border border-white/15 rounded-full px-4 py-1.5">
-          {title}
-        </div>
+        {title ? (
+          <div className="text-sm font-semibold tracking-wide bg-white/10 backdrop-blur-xl border border-white/15 rounded-full px-4 py-1.5">
+            {title}
+          </div>
+        ) : <div />}
         <div className="flex items-center gap-2">
           {mode === 'note' && onBatchNote && (
             <button
@@ -540,24 +542,7 @@ export const CameraScannerScreen = ({
               {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
             </button>
           )}
-          <button
-            onClick={() => {
-              if (!requirePro('burst')) return;
-              setBurstOn((v) => !v);
-              toast(burstOn ? 'Burst mode off' : 'Burst mode on · 3 shots, sharpest wins', { duration: 1100 });
-            }}
-            className={cn(
-              'h-10 px-3 rounded-full backdrop-blur-xl border flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition',
-              burstOn
-                ? 'bg-white text-black border-white shadow-[0_6px_18px_rgba(255,255,255,0.35)]'
-                : 'bg-white/10 border-white/15 text-white',
-            )}
-            aria-label="Toggle burst mode"
-          >
-            <Layers className="h-4 w-4" />
-            Burst
-            {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
-          </button>
+          {/* Burst mode removed per product decision. */}
           <button
             onClick={toggleTorch}
             disabled={!torchSupported}
