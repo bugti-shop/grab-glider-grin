@@ -776,8 +776,18 @@ export const TaskDetailPage = ({
         </div>
       </header>
 
+      {/* Team: project + assignee */}
+      <div className="px-4 pb-2">
+        <TaskProjectAssignPicker
+          projectId={task.projectId}
+          assigneeId={task.assigneeId}
+          onChange={(p) => onUpdate({ ...task, projectId: p.projectId, assigneeId: p.assigneeId })}
+        />
+      </div>
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+
         {/* Task Title */}
         <div className="space-y-2">
           <Input
