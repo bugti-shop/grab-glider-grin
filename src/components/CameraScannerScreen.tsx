@@ -332,7 +332,7 @@ export const CameraScannerScreen = ({
     } finally {
       setCapturing(false);
     }
-  }, [batchOn, burstOn, capturing, mode, onBarcode, onBatchNote, onCapture, onClose, onObjectCount, ready]);
+  }, [batchOn, burstOn, capturing, handwritingOn, mode, onBarcode, onBatchNote, onCapture, onClose, onObjectCount, ready]);
 
   // Reset batch when the scanner closes.
   useEffect(() => {
