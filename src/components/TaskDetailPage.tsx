@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { TodoItem, Priority, Folder, Note, RepeatType, ColoredTag, TimeTracking, TaskStatus, LocationReminder, TaskAttachment, EscalationTiming } from '@/types/note';
 import { TaskProjectAssignPicker } from '@/components/TaskProjectAssignPicker';
 import { ShareProjectSheet } from '@/components/ShareProjectSheet';
+import { TaskComments } from '@/components/TaskComments';
 import { Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
