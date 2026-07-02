@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Book, BookOpen, ChevronRight, Plus, Search, ArrowLeft } from 'lucide-react';
+import { Book, BookOpen, ChevronRight, Plus, Search, ArrowLeft, Check } from 'lucide-react';
 import { Folder as FolderType } from '@/types/note';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { useNotes } from '@/contexts/NotesContext';
@@ -18,6 +18,18 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+const NOTEBOOK_COLORS = [
+  '#3b82f6', // blue
+  '#22c55e', // green
+  '#f97316', // orange
+  '#ef4444', // red
+  '#a855f7', // purple
+  '#ec4899', // pink
+  '#eab308', // yellow
+  '#14b8a6', // teal
+  '#64748b', // slate
+];
+
 const Notebooks = () => {
   const navigate = useNavigate();
   const { notesMeta } = useNotes();
@@ -25,6 +37,7 @@ const Notebooks = () => {
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState<string>(NOTEBOOK_COLORS[0]);
 
   useEffect(() => {
     const load = async () => {
@@ -52,7 +65,6 @@ const Notebooks = () => {
     return () => window.removeEventListener('foldersUpdated', onUpdated);
   }, []);
 
-  // Count active notes per folder
   const counts = useMemo(() => {
     const map = new Map<string, number>();
     for (const n of notesMeta) {
@@ -76,7 +88,7 @@ const Notebooks = () => {
   }, [folders, query]);
 
   const openNotebook = (id: string) => {
-    navigate(`/notesdashboard?folder=${encodeURIComponent(id)}`);
+    navigate(`/notebook/${encodeURIComponent(id)}`);
   };
 
   const handleCreate = async () => {
@@ -89,7 +101,7 @@ const Notebooks = () => {
     const folder: FolderType = {
       id: genId(),
       name,
-      color: '#3b82f6',
+      color: newColor,
       icon: 'Book',
       isDefault: false,
       createdAt: new Date(),
@@ -99,6 +111,7 @@ const Notebooks = () => {
     await setSetting('folders', updated);
     window.dispatchEvent(new Event('foldersUpdated'));
     setNewName('');
+    setNewColor(NOTEBOOK_COLORS[0]);
     setAddOpen(false);
     toast.success(`Notebook "${name}" created`);
   };
@@ -138,10 +151,28 @@ const Notebooks = () => {
         </div>
       </header>
 
-      {/* Folder list — Evernote style rows */}
-      <ul className="divide-y divide-border">
+      {/* Inline Add Notebook button — Duolingo blue */}
+      <div className="px-4 pt-3">
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className={cn(
+            'w-full flex items-center justify-center gap-2 rounded-2xl h-12 px-4',
+            'bg-[#3b82f6] text-white font-semibold text-base',
+            'shadow-[0_4px_0_0_#2563eb] active:translate-y-[2px] active:shadow-[0_2px_0_0_#2563eb]',
+            'transition-all duration-100',
+          )}
+        >
+          <Plus className="h-5 w-5" strokeWidth={3} />
+          Add Notebook
+        </button>
+      </div>
+
+      {/* Notebook list — colored rows */}
+      <ul className="divide-y divide-border mt-2">
         {filtered.map((f) => {
           const count = counts.get(f.id) ?? 0;
+          const color = f.color || '#3b82f6';
           return (
             <li key={f.id}>
               <button
@@ -154,12 +185,14 @@ const Notebooks = () => {
               >
                 <span
                   className="flex h-9 w-9 items-center justify-center rounded-lg"
-                  style={{ backgroundColor: (f.color || '#3b82f6') + '1a', color: f.color || '#3b82f6' }}
+                  style={{ backgroundColor: color + '1a', color }}
                 >
                   {f.isDefault ? <BookOpen className="h-5 w-5" /> : <Book className="h-5 w-5" />}
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-base font-medium truncate">{f.name}</span>
+                  <span className="block text-base font-medium truncate" style={{ color }}>
+                    {f.name}
+                  </span>
                 </span>
                 <span className="text-sm text-muted-foreground tabular-nums">{count}</span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
@@ -173,25 +206,6 @@ const Notebooks = () => {
           </li>
         )}
       </ul>
-
-      {/* Floating blue "Add Notebook" — Duolingo-style */}
-      <button
-        type="button"
-        onClick={() => setAddOpen(true)}
-        aria-label="Add notebook"
-        className={cn(
-          'fixed z-40 flex h-14 w-14 items-center justify-center rounded-2xl',
-          'bg-[#3b82f6] text-white shadow-[0_6px_0_0_#2563eb,0_10px_20px_rgba(59,130,246,0.35)]',
-          'active:translate-y-[3px] active:shadow-[0_3px_0_0_#2563eb,0_6px_12px_rgba(59,130,246,0.35)]',
-          'transition-all duration-100',
-        )}
-        style={{
-          right: '20px',
-          bottom: 'calc(var(--safe-bottom, 0px) + 88px)',
-        }}
-      >
-        <Plus className="h-7 w-7" strokeWidth={3} />
-      </button>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -208,6 +222,26 @@ const Notebooks = () => {
             }}
             maxLength={60}
           />
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Pick a color</p>
+            <div className="flex flex-wrap gap-2">
+              {NOTEBOOK_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setNewColor(c)}
+                  aria-label={`Color ${c}`}
+                  className="h-8 w-8 rounded-full flex items-center justify-center transition-transform active:scale-95"
+                  style={{
+                    backgroundColor: c,
+                    boxShadow: newColor === c ? `0 0 0 3px ${c}55` : 'none',
+                  }}
+                >
+                  {newColor === c && <Check className="h-4 w-4 text-white" strokeWidth={3} />}
+                </button>
+              ))}
+            </div>
+          </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setAddOpen(false)}>
               Cancel
@@ -215,7 +249,8 @@ const Notebooks = () => {
             <Button
               onClick={handleCreate}
               disabled={!newName.trim()}
-              className="bg-[#3b82f6] hover:bg-[#2563eb]"
+              style={{ backgroundColor: newColor }}
+              className="text-white hover:opacity-90"
             >
               Create
             </Button>
