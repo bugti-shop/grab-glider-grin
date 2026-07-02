@@ -716,7 +716,54 @@ Deno.serve(async (req) => {
     // Inline embeds into the DOM (preserves order vs. headings/images).
     inlineEmbeds(document as any, base);
 
-    let article: any = null;
+    // FULL-PAGE MODE — return the entire raw HTML (start-to-end) without
+    // Readability trimming. Icons, ads, everything the page shipped.
+    if (wantFullPage) {
+      const domAuthor = extractAuthor(document as any);
+      const title = (metaTitle || target.hostname).trim();
+      const byline = (metaAuthor || domAuthor || "").trim();
+      const siteName = (metaSite || "").trim();
+      const leadImage = metaImage ? absolutize(metaImage, base) : "";
+      const bodyHtml =
+        (document.body as any)?.innerHTML ||
+        (document.documentElement as any)?.innerHTML ||
+        html;
+      const capped = capHtml(String(bodyHtml || ""), MAX_FULLPAGE_HTML_BYTES);
+      const images = extractImageUrls(capped.html);
+      return new Response(
+        JSON.stringify({
+          url: base,
+          title,
+          byline,
+          author: byline,
+          siteName,
+          excerpt: (metaDescription || "").trim(),
+          leadImage,
+          publishedTime: metaPublished,
+          content: capped.html,
+          contentHtml: capped.html,
+          rawHtml: capped.html,
+          images,
+          textContent: "",
+          length: capped.html.length,
+          truncated: capped.truncated,
+          fallback: false,
+          embeds: [] as string[],
+          importantLinks: [] as Array<{ href: string; text: string }>,
+          mode: "fullpage",
+        }),
+        {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "content-type": "application/json",
+            "cache-control": "public, max-age=300",
+          },
+        },
+      );
+    }
+
+
     try {
       const reader = new Readability(document as any, {
         charThreshold: 200,
