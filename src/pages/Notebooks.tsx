@@ -170,7 +170,7 @@ const Notebooks = () => {
                   {/* Cover box (fills the top area, leaves pb for stack) */}
                   <div className="relative w-full h-full">
                     {/* Fanned paper bundle — full width, edge-to-edge with cover */}
-                    <div className="absolute left-[6%] right-[6%] top-0 bottom-[-6%] pointer-events-none">
+                    <div className="absolute left-[2%] right-[2%] top-0 bottom-[-6%] pointer-events-none">
                       {/* Sheet 1 — back */}
                       <div
                         className="absolute left-0 right-0 top-[9%] bottom-[3%] rounded-r-lg rounded-l-[4px] bg-[#fdfaf1] shadow-[0_2px_3px_rgba(0,0,0,0.15)]"
