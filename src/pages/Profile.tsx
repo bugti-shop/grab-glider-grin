@@ -58,6 +58,7 @@ export default function Profile() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState('');
   const [showEmailAuth, setShowEmailAuth] = useState(false);
+  const [showChangeEmail, setShowChangeEmail] = useState(false);
 
   useEffect(() => {
     getSetting<string | null>('flowist_manual_country', null).then(setManualCountryCode);
