@@ -10,6 +10,7 @@ import {
   verifySignupOtp,
   signInWithEmailPassword,
   sendPasswordReset,
+  classifyOtpError,
 } from '@/utils/emailAuth';
 import type { GoogleUser } from '@/utils/googleAuth';
 
@@ -128,11 +129,16 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
       onSignedIn?.(u);
       close();
     } catch (err: any) {
-      const msg = err?.message || t('emailAuth.otpInvalid', 'Invalid or expired code');
-      setOtpError(msg);
+      const info = classifyOtpError(err);
+      setOtpError(info.message);
       toast({
-        title: t('emailAuth.otpInvalid', 'Invalid or expired code'),
-        description: msg,
+        title:
+          info.code === 'expired' ? t('emailAuth.otpExpired', 'Code expired')
+          : info.code === 'invalid' ? t('emailAuth.otpWrong', 'Wrong code')
+          : info.code === 'network' ? t('emailAuth.networkError', 'Connection problem')
+          : info.code === 'timeout' ? t('emailAuth.networkError', 'Connection problem')
+          : t('emailAuth.otpInvalid', 'Verification failed'),
+        description: info.message,
         variant: 'destructive',
       });
     } finally {
@@ -152,9 +158,17 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
         description: t('emailAuth.otpResentDesc', 'Check your inbox for the latest 6-digit code.'),
       });
     } catch (err: any) {
+      const info = classifyOtpError(err);
+      if (info.code === 'cooldown' && info.retryAfter) {
+        setResendCooldown(info.retryAfter);
+      }
       toast({
-        title: t('emailAuth.resendFailed', 'Could not resend code'),
-        description: err?.message || '',
+        title:
+          info.code === 'cooldown' ? t('emailAuth.tooSoon', 'Please wait')
+          : info.code === 'rate_limited' ? t('emailAuth.rateLimited', 'Too many attempts')
+          : info.code === 'network' || info.code === 'timeout' ? t('emailAuth.networkError', 'Connection problem')
+          : t('emailAuth.resendFailed', 'Could not resend code'),
+        description: info.message,
         variant: 'destructive',
       });
     } finally {
