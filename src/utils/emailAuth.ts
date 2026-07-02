@@ -192,3 +192,49 @@ export const signOutEmail = async (): Promise<void> => {
     new CustomEvent('googleAuthStateChanged', { detail: { user: null } }),
   );
 };
+
+/**
+ * Step 1 of changing email — sends a 6-digit OTP to the NEW address.
+ * The current email is NOT updated until `verifyEmailChangeOtp` succeeds.
+ */
+export const startEmailChange = async (newEmail: string): Promise<void> => {
+  const { error } = await supabase.auth.updateUser(
+    { email: newEmail },
+    { emailRedirectTo: `${window.location.origin}/` },
+  );
+  if (error) throw error;
+};
+
+/**
+ * Resend the email-change OTP (server-side throttled).
+ */
+export const resendEmailChangeOtp = async (newEmail: string): Promise<void> => {
+  await callOtpResend(newEmail, 'email_change');
+};
+
+/**
+ * Step 2 of changing email — verify the 6-digit OTP that was sent to the NEW
+ * address. On success the auth user's email is updated and the local session
+ * cache stays consistent.
+ */
+export const verifyEmailChangeOtp = async (
+  newEmail: string,
+  token: string,
+): Promise<GoogleUser> => {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: newEmail,
+    token: token.trim(),
+    type: 'email_change',
+  });
+  if (error) throw error;
+  if (!data.user) throw new Error('Verification did not return an updated user');
+
+  const meta = (data.user.user_metadata || {}) as Record<string, unknown>;
+  const name = (meta.full_name as string) || (meta.name as string) || '';
+  const session = data.session ?? (await supabase.auth.getSession()).data.session;
+  const accessToken = session?.access_token || '';
+  const u = toAuthUser(newEmail, name, data.user.id, accessToken);
+  await persistAuthUser(u);
+  return u;
+};
+
