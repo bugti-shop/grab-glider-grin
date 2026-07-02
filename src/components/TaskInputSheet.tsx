@@ -88,9 +88,11 @@ interface TaskInputSheetProps {
   selectedSectionId?: string | null;
   defaultDate?: Date; // New prop for calendar auto-assignment
   preventBackdropClose?: boolean;
+  /** When true and the sheet opens, immediately launch the AI image scanner. */
+  autoOpenScanner?: boolean;
 }
 
-export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFolderId, onCreateFolder, sections = [], selectedSectionId, defaultDate, preventBackdropClose = false }: TaskInputSheetProps) => {
+export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFolderId, onCreateFolder, sections = [], selectedSectionId, defaultDate, preventBackdropClose = false, autoOpenScanner = false }: TaskInputSheetProps) => {
   const { t } = useTranslation();
 
 
