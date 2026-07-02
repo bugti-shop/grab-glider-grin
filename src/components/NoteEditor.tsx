@@ -1223,6 +1223,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   {isReadingMode ? t('editor.exitReadingMode') : t('editor.enterReadingMode')}
                   {!isPro && !isReadingMode && <Crown className="h-3 w-3 ml-auto text-amber-500" />}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleToc}>
+                  <ListFilter className="h-4 w-4 mr-2" />
+                  {showToc ? t('editor.hideToc', 'Hide Table of Contents') : t('editor.showToc', 'Show Table of Contents')}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsFindReplaceOpen(true)}>
                   <Search className="h-4 w-4 mr-2" />
                   {t('editor.findReplace')}
