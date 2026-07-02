@@ -96,6 +96,9 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
         title: t('emailAuth.otpSent', 'Verification code sent'),
         description: t('emailAuth.otpSentDesc', 'Check your inbox for a 6-digit code from Flowist.'),
       });
+      setOtp('');
+      setOtpError(null);
+      startCooldown();
       setMode('otp');
     } catch (err: any) {
       toast({
@@ -110,19 +113,26 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
 
   const handleVerifyOtp = async () => {
     if (otp.length < 6) {
-      toast({ title: t('emailAuth.enterOtp', 'Enter the 6-digit code'), variant: 'destructive' });
+      setOtpError(t('emailAuth.enterOtp', 'Enter the 6-digit code'));
       return;
     }
     setLoading(true);
+    setOtpError(null);
     try {
+      // Cloud sync + session only persist AFTER Supabase confirms this OTP.
       const u = await verifySignupOtp(email.trim(), otp);
-      toast({ title: t('emailAuth.accountReady', 'Account verified') });
+      toast({
+        title: t('emailAuth.accountReady', 'Account verified'),
+        description: t('emailAuth.syncEnabled', 'Cloud sync is now active on this device.'),
+      });
       onSignedIn?.(u);
       close();
     } catch (err: any) {
+      const msg = err?.message || t('emailAuth.otpInvalid', 'Invalid or expired code');
+      setOtpError(msg);
       toast({
         title: t('emailAuth.otpInvalid', 'Invalid or expired code'),
-        description: err?.message || '',
+        description: msg,
         variant: 'destructive',
       });
     } finally {
@@ -131,12 +141,22 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
   };
 
   const handleResend = async () => {
+    if (resendCooldown > 0 || loading) return;
     setLoading(true);
+    setOtpError(null);
     try {
       await resendSignupOtp(email.trim());
-      toast({ title: t('emailAuth.otpResent', 'Code resent') });
+      startCooldown();
+      toast({
+        title: t('emailAuth.otpResent', 'New code sent'),
+        description: t('emailAuth.otpResentDesc', 'Check your inbox for the latest 6-digit code.'),
+      });
     } catch (err: any) {
-      toast({ title: 'Error', description: err?.message || '', variant: 'destructive' });
+      toast({
+        title: t('emailAuth.resendFailed', 'Could not resend code'),
+        description: err?.message || '',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
