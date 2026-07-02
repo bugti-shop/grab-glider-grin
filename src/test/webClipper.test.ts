@@ -7,7 +7,10 @@ import {
   extractUrlAndText,
   buildClipNoteBody,
   buildClipperUrl,
+  buildShareSignature,
+  isDuplicateShare,
   MAX_LENGTHS,
+  SHARE_CONSUMED_WINDOW_MS,
 } from '@/utils/webClipper';
 
 describe('webClipper.validateUrl', () => {
@@ -49,11 +52,36 @@ describe('webClipper.parseClipMode', () => {
   it('normalises known modes', () => {
     expect(parseClipMode('selection')).toBe('selection');
     expect(parseClipMode('full-page')).toBe('fullpage');
-    expect(parseClipMode('article')).toBe('fullpage');
+    expect(parseClipMode('article')).toBe('article');
   });
-  it('defaults to fullpage for unknown/empty', () => {
-    expect(parseClipMode('garbage')).toBe('fullpage');
-    expect(parseClipMode(null)).toBe('fullpage');
+  it('defaults to clean article mode for unknown/empty', () => {
+    expect(parseClipMode('garbage')).toBe('article');
+    expect(parseClipMode(null)).toBe('article');
+  });
+});
+
+describe('webClipper.isDuplicateShare', () => {
+  const createStorage = () => {
+    const data = new Map<string, string>();
+    return {
+      getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => data.set(key, value),
+    };
+  };
+
+  it('blocks stale native share payloads across app launches', () => {
+    const session = createStorage();
+    const consumed = createStorage();
+    const sig = buildShareSignature({ url: 'https://example.com/article', text: '' });
+    expect(isDuplicateShare(sig, 1000, session, consumed)).toBe(false);
+    expect(isDuplicateShare(sig, 1000 + 60_000, createStorage(), consumed)).toBe(true);
+  });
+
+  it('allows the same share again after the stale-intent window', () => {
+    const consumed = createStorage();
+    const sig = buildShareSignature({ url: 'https://example.com/article', text: '' });
+    expect(isDuplicateShare(sig, 1000, createStorage(), consumed)).toBe(false);
+    expect(isDuplicateShare(sig, 1000 + SHARE_CONSUMED_WINDOW_MS + 1, createStorage(), consumed)).toBe(false);
   });
 });
 

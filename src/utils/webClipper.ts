@@ -95,6 +95,14 @@ export type ClipMode = 'article' | 'selection' | 'fullpage' | 'image' | 'pdf';
 /** Window (ms) within which an identical share payload is treated as a duplicate. */
 export const SHARE_DEDUP_WINDOW_MS = 8000;
 
+/**
+ * Native share intents can survive Activity restores. Keep a longer consumed
+ * record so reopening the app cannot re-process the last shared article again.
+ */
+export const SHARE_CONSUMED_WINDOW_MS = 24 * 60 * 60 * 1000;
+const SHARE_SESSION_KEY = '__flowist_last_share__';
+const SHARE_CONSUMED_KEY = '__flowist_consumed_shares__';
+
 /** Allow http/https only. Reject `javascript:`, `data:`, malformed strings, etc. */
 export function validateUrl(urlString: string): string {
   if (!urlString) return '';
@@ -158,20 +166,50 @@ export function isDuplicateShare(
   signature: string,
   now: number = Date.now(),
   storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof sessionStorage !== 'undefined' ? sessionStorage : null,
+  consumedStorage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof localStorage !== 'undefined' ? localStorage : null,
 ): boolean {
-  if (!signature || !storage) return false;
+  if (!signature) return false;
   try {
-    const KEY = '__flowist_last_share__';
-    const raw = storage.getItem(KEY);
+    const consumedRaw = consumedStorage?.getItem(SHARE_CONSUMED_KEY);
+    const consumed = consumedRaw ? JSON.parse(consumedRaw) as Record<string, number> : {};
+    const lastConsumedAt = Number(consumed[signature] || 0);
+    if (lastConsumedAt && now - lastConsumedAt < SHARE_CONSUMED_WINDOW_MS) {
+      return true;
+    }
+  } catch {
+    /* localStorage unavailable — continue with session-only dedup */
+  }
+
+  try {
+    const raw = storage?.getItem(SHARE_SESSION_KEY);
     if (raw) {
       const prev = JSON.parse(raw) as { sig: string; t: number };
       if (prev && prev.sig === signature && now - prev.t < SHARE_DEDUP_WINDOW_MS) {
         return true;
       }
     }
-    storage.setItem(KEY, JSON.stringify({ sig: signature, t: now }));
   } catch {
-    /* sessionStorage unavailable — fall through, no dedup */
+    /* sessionStorage unavailable — continue */
+  }
+
+  try {
+    storage?.setItem(SHARE_SESSION_KEY, JSON.stringify({ sig: signature, t: now }));
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const consumedRaw = consumedStorage?.getItem(SHARE_CONSUMED_KEY);
+    const consumed = consumedRaw ? JSON.parse(consumedRaw) as Record<string, number> : {};
+    const cutoff = now - SHARE_CONSUMED_WINDOW_MS;
+    const compacted: Record<string, number> = {};
+    for (const [sig, t] of Object.entries(consumed)) {
+      if (Number(t) >= cutoff) compacted[sig] = Number(t);
+    }
+    compacted[signature] = now;
+    consumedStorage?.setItem(SHARE_CONSUMED_KEY, JSON.stringify(compacted));
+  } catch {
+    /* localStorage unavailable — fall through */
   }
   return false;
 }
