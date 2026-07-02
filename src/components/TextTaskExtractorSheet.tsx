@@ -87,7 +87,7 @@ export const TextTaskExtractorSheet = ({
   useEffect(() => {
     if (isOpen) {
       // Re-apply initial values whenever the sheet opens (e.g. opening from a different note)
-      setMode(initialMode || 'text');
+      setMode('text');
       setText(initialText || '');
     } else {
       setMode('text'); setText(''); setPdfName(null); setPdfText('');
