@@ -1,7 +1,6 @@
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
-
 import {
   Body,
   Button,
@@ -9,84 +8,65 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+import { BRAND, styles } from './_brand.ts'
 
-interface EmailChangeEmailProps {
-  siteName: string
-  // oldEmail is the user's current address (HookData.OldEmail). For the
-  // NEW-recipient half of a secure email_change fanout, `email` equals the
-  // recipient (NEW), so the "from" line must render oldEmail to read
-  // "from OLD to NEW" instead of "from NEW to NEW".
-  oldEmail: string
-  email: string
-  newEmail: string
+interface Props {
+  siteName?: string
+  email?: string
+  newEmail?: string
   confirmationUrl: string
 }
 
-export const EmailChangeEmail = ({
-  siteName,
-  oldEmail,
-  newEmail,
-  confirmationUrl,
-}: EmailChangeEmailProps) => (
+export const EmailChangeEmail = ({ email, newEmail, confirmationUrl }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your email change for {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Confirm your email change</Heading>
-        <Text style={text}>
-          You requested to change your email address for {siteName} from{' '}
-          <Link href={`mailto:${oldEmail}`} style={link}>
-            {oldEmail}
-          </Link>{' '}
-          to{' '}
-          <Link href={`mailto:${newEmail}`} style={link}>
-            {newEmail}
-          </Link>
-          .
-        </Text>
-        <Text style={text}>
-          Click the button below to confirm this change:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
-        </Button>
-        <Text style={footer}>
-          If you didn't request this change, please secure your account
-          immediately.
-        </Text>
+    <Preview>Confirm your new email for {BRAND.name}</Preview>
+    <Body style={styles.main}>
+      <Container style={styles.container}>
+        <Section style={styles.header}>
+          <Img src={BRAND.logoUrl} width="56" height="56" alt={BRAND.name} style={styles.logo} />
+          <Text style={styles.brandName}>{BRAND.name}</Text>
+          <Text style={styles.brandTag}>{BRAND.tagline}</Text>
+        </Section>
+
+        <Section style={styles.card}>
+          <Heading style={styles.h1}>Confirm your new email</Heading>
+          <Text style={styles.text}>
+            You asked to change your {BRAND.name} sign-in email
+            {email ? <> from <strong>{email}</strong></> : null}
+            {newEmail ? <> to <strong>{newEmail}</strong></> : null}.
+            Confirm this change to keep your account secure.
+          </Text>
+          <Section style={styles.buttonWrap}>
+            <Button style={styles.button} href={confirmationUrl}>
+              Confirm email change
+            </Button>
+          </Section>
+          <Text style={styles.hint}>
+            Or paste this link into your browser:
+            <br />
+            <Link href={confirmationUrl} style={styles.link}>{confirmationUrl}</Link>
+          </Text>
+        </Section>
+
+        <Section style={styles.footer}>
+          <Text style={styles.footerText}>
+            Didn't request this change? Ignore this email or reset your password immediately.
+          </Text>
+          <Text style={styles.footerText}>
+            © {new Date().getFullYear()} {BRAND.name} ·{' '}
+            <Link href={BRAND.siteUrl} style={styles.footerLink}>flowist.me</Link>
+          </Text>
+        </Section>
       </Container>
     </Body>
   </Html>
 )
 
 export default EmailChangeEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
