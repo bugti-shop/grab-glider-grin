@@ -128,6 +128,15 @@ export class ErrorBoundary extends Component<Props, State> {
               : t('errorBoundary.unexpectedError', 'An unexpected error occurred. Please try again.')}
           </p>
 
+          {this.state.error?.message && (
+            <details className="mb-4 text-left max-w-sm w-full">
+              <summary className="text-xs text-muted-foreground cursor-pointer">Details</summary>
+              <pre className="mt-2 text-[10px] leading-snug whitespace-pre-wrap break-all bg-muted/50 rounded p-2 max-h-40 overflow-auto">
+                {this.state.error.message}
+              </pre>
+            </details>
+          )}
+
           <div className="flex flex-col gap-3 w-full max-w-xs">
             <Button onClick={this.handleRetry} variant="default" className="w-full gap-2">
               <RefreshCw className="h-4 w-4" />
