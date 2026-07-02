@@ -402,6 +402,7 @@ const WebClipper = () => {
         parts.push(`</section>`);
         // Single sanitize pass over the full assembled document (allows iframe/video for embeds).
         noteContent = sanitizeClippedArticle(parts.join('\n'));
+        setFullPageSnapshot(snapshotForNote);
       } else {
         const mergedContent = extractedPdfText
           ? [content, extractedPdfText, pdfTruncated ? '_(PDF text truncated)_' : '']
@@ -417,6 +418,7 @@ const WebClipper = () => {
           attachment: attachment || undefined,
           attachmentType,
         });
+        setFullPageSnapshot(null);
       }
 
 
