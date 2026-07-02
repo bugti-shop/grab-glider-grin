@@ -324,7 +324,7 @@ export const CameraScannerScreen = ({
         return;
       }
 
-      onCapture(compressed);
+      onCapture(compressed, { handwriting: handwritingOn });
       onClose();
     } catch (e) {
       console.error('[Scanner] shutter error', e);
