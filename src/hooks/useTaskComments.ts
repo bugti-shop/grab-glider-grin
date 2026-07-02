@@ -65,9 +65,19 @@ export function useTaskComments(taskId: string | null | undefined) {
     if (!uid) throw new Error('Sign in to comment');
     const trimmed = body.trim();
     if (!trimmed) return null;
-    const { error } = await supabase.from('task_comments')
-      .insert({ task_id: taskId, user_id: uid, body: trimmed.slice(0, 4000), mentions });
+    const { data: inserted, error } = await supabase.from('task_comments')
+      .insert({ task_id: taskId, user_id: uid, body: trimmed.slice(0, 4000), mentions })
+      .select('id')
+      .single();
     if (error) throw error;
+
+    // Fire-and-forget: email + realtime in-app notifications for @mentions
+    const targets = mentions.filter((m) => m && m !== uid);
+    if (inserted?.id && targets.length > 0) {
+      supabase.functions.invoke('notify-mention', {
+        body: { commentId: inserted.id, taskId, mentions: targets },
+      }).catch((e) => console.warn('[mentions] notify failed', e));
+    }
   }, [taskId]);
 
   const remove = useCallback(async (commentId: string) => {
