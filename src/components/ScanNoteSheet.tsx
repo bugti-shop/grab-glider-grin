@@ -123,7 +123,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     setShowCamera(true);
   };
 
-  const runExtraction = async (dataUrl: string) => {
+  const runExtraction = async (dataUrl: string, opts?: { handwriting?: boolean }) => {
     if (!(await ensureSignedInForAi())) {
       onClose();
       return;
