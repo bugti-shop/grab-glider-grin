@@ -523,6 +523,16 @@ export default function Profile() {
         }}
       />
 
+      <ChangeEmailSheet
+        open={showChangeEmail}
+        currentEmail={user?.email || ''}
+        onClose={() => setShowChangeEmail(false)}
+        onEmailChanged={() => {
+          toast({ title: t('profile.emailUpdated', 'Email updated') });
+        }}
+      />
+
+
 
       {/* Subscription Section */}
       <div className="px-5 mt-6">
