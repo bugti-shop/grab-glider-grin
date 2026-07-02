@@ -392,6 +392,51 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, threshold = 600) => 
     }
     clip.dataset.hydrated = '1';
   });
+
+  // Full-page snapshot placeholders — click to expand the gzipped raw HTML
+  // into a sandboxed iframe that renders exactly as the page was captured.
+  const snapshots = root.querySelectorAll<HTMLElement>(
+    '.flowist-web-clip-fullpage[data-role="fullpage-snapshot"]',
+  );
+  snapshots.forEach((fig) => {
+    if (fig.dataset.hydrated === '1') return;
+    fig.dataset.hydrated = '1';
+    const btn = fig.querySelector<HTMLButtonElement>('button[data-role="fullpage-open"]');
+    if (!btn) return;
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (fig.querySelector('iframe.flowist-web-clip-fullpage-frame')) {
+        // Already open — collapse again.
+        fig.querySelector('iframe.flowist-web-clip-fullpage-frame')?.remove();
+        btn.textContent = btn.dataset.originalLabel || btn.textContent || 'View snapshot';
+        return;
+      }
+      btn.dataset.originalLabel = btn.textContent || '';
+      btn.textContent = 'Loading snapshot…';
+      btn.setAttribute('disabled', 'true');
+      try {
+        const gz = fig.getAttribute('data-compressed-gz') || '';
+        const { decompressHtml } = await import('@/utils/htmlCompression');
+        const html = await decompressHtml(gz);
+        const iframe = document.createElement('iframe');
+        iframe.className = 'flowist-web-clip-fullpage-frame';
+        iframe.setAttribute('sandbox', 'allow-same-origin allow-popups');
+        iframe.setAttribute(
+          'style',
+          'width:100%;min-height:70vh;border:1px solid hsl(var(--border));border-radius:8px;margin-top:8px;background:#fff',
+        );
+        iframe.srcdoc = html;
+        fig.appendChild(iframe);
+        btn.textContent = '▴ Hide snapshot';
+      } catch (err) {
+        console.error('[webClip] snapshot expand failed', err);
+        btn.textContent = '⚠️ Could not open snapshot';
+      } finally {
+        btn.removeAttribute('disabled');
+      }
+    });
+  });
 };
 
 /* ────────────────────────────────────────────────────────────── */

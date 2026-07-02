@@ -304,6 +304,17 @@ export interface Note {
   metaDescription?: string;
   // File attachments
   attachments?: TaskAttachment[];
+  /** Compressed gzip+base64 snapshot of the full raw HTML page (fullpage web clips). */
+  fullPageSnapshot?: {
+    /** gzip-compressed HTML, base64-encoded. Prefix `raw:` means uncompressed base64 fallback. */
+    gz: string;
+    /** Original (uncompressed) byte length of the HTML. */
+    bytes: number;
+    /** Source URL the snapshot was captured from. */
+    url?: string;
+    /** ISO capture timestamp. */
+    capturedAt?: string;
+  };
   // Timestamps
   createdAt: Date;
   updatedAt: Date;

@@ -25,6 +25,7 @@ import {
   formatBytes,
   ATTACHMENT_LIMITS,
 } from '@/utils/webClipper';
+import { compressHtml, formatBytesShort } from '@/utils/htmlCompression';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
   { id: 'article',   icon: FileText, titleKey: 'webClipper.modeArticle',   descKey: 'webClipper.modeArticleDesc',   fallbackTitle: 'Article',     fallbackDesc: 'Save the readable article body' },
@@ -54,6 +55,8 @@ const WebClipper = () => {
   const [previewReady, setPreviewReady] = useState(false);
   const [previewTitle, setPreviewTitle] = useState('');
   const [previewHtml, setPreviewHtml] = useState('');
+  /** Full-page raw HTML snapshot (compressed) — carried from prepareClip to commitClip. */
+  const [fullPageSnapshot, setFullPageSnapshot] = useState<Note['fullPageSnapshot'] | null>(null);
   const contentEditorRef = useRef<HTMLDivElement>(null);
 
   // Hydrate web-clip cards (adds expand/collapse toggle for long clips)
@@ -336,7 +339,38 @@ const WebClipper = () => {
         }
         // Body wrapper — hydrator wires expand/collapse when word count is high.
         parts.push(`<div class="flowist-web-clip-body" data-role="body">`);
-        parts.push(articleHtml);
+        // In full-page mode we compress the raw HTML into a snapshot field
+        // rather than dumping multi-MB of markup into the note body.
+        let snapshotForNote: Note['fullPageSnapshot'] | null = null;
+        if (clipMode === 'fullpage') {
+          try {
+            const compressed = await compressHtml(articleHtml);
+            snapshotForNote = {
+              gz: compressed.gz,
+              bytes: compressed.bytes,
+              url: url || undefined,
+              capturedAt,
+            };
+            const safeGz = compressed.gz.replace(/"/g, '&quot;');
+            const readableSize = formatBytesShort(compressed.bytes);
+            parts.push(
+              `<figure class="flowist-web-clip-fullpage" contenteditable="false" ` +
+              `data-role="fullpage-snapshot" data-compressed-gz="${safeGz}" ` +
+              `data-bytes="${compressed.bytes}" data-url="${safeUrl}" ` +
+              `data-captured-at="${capturedAt}">` +
+              `<button type="button" class="flowist-web-clip-fullpage-btn" data-role="fullpage-open">` +
+              `🌐 View full captured page (${readableSize})` +
+              `</button>` +
+              `<div class="flowist-web-clip-fullpage-hint">Snapshot stored offline — opens exactly as the page was when clipped.</div>` +
+              `</figure>`,
+            );
+          } catch (compressErr) {
+            console.warn('[webClipper] fullpage compression failed', compressErr);
+            parts.push(articleHtml);
+          }
+        } else {
+          parts.push(articleHtml);
+        }
         if (articleEmbeds.length && !articleEmbeds.every((e) => articleHtml.includes(e))) {
           parts.push(`<h3>${sanitizeForDisplay(t('webClipper.embedsHeading', 'Embedded media'))}</h3>`);
           parts.push(articleEmbeds.join('\n'));
@@ -368,6 +402,7 @@ const WebClipper = () => {
         parts.push(`</section>`);
         // Single sanitize pass over the full assembled document (allows iframe/video for embeds).
         noteContent = sanitizeClippedArticle(parts.join('\n'));
+        setFullPageSnapshot(snapshotForNote);
       } else {
         const mergedContent = extractedPdfText
           ? [content, extractedPdfText, pdfTruncated ? '_(PDF text truncated)_' : '']
@@ -383,6 +418,7 @@ const WebClipper = () => {
           attachment: attachment || undefined,
           attachmentType,
         });
+        setFullPageSnapshot(null);
       }
 
 
@@ -431,6 +467,7 @@ const WebClipper = () => {
         title: cleanTitle,
         content: cleanHtml,
         voiceRecordings: [],
+        ...(fullPageSnapshot ? { fullPageSnapshot } : {}),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
