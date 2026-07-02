@@ -197,23 +197,6 @@ const Notebooks = () => {
                         backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 55%, ${color}99 100%)`,
                       }}
                     >
-                      {/* Spine shadow — wider */}
-                      <div
-                        className="absolute inset-y-0 left-0 w-[18%]"
-                        style={{
-                          background:
-                            'linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 70%, rgba(255,255,255,0.15) 100%)',
-                        }}
-                      />
-                      {/* Rings on spine — more rings, wider band */}
-                      <div className="absolute inset-y-0 left-0 w-[18%] flex flex-col justify-around py-1.5">
-                        {Array.from({ length: 7 }).map((_, i) => (
-                          <span
-                            key={i}
-                            className="mx-auto h-[4px] w-[4px] rounded-full bg-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.3)]"
-                          />
-                        ))}
-                      </div>
                       {/* Glossy highlight */}
                       <div className="absolute top-0 bottom-0 left-[14%] w-[2px] bg-white/25" />
                       {/* Count badge */}
@@ -228,6 +211,23 @@ const Notebooks = () => {
                           <Book className="h-3 w-3" />
                         )}
                       </div>
+                    </div>
+
+                    {/* Spine + rings — outside cover so they extend down to paper stack bottom */}
+                    <div
+                      className="absolute top-0 bottom-[-6%] left-0 w-[18%] rounded-l-[4px] pointer-events-none"
+                      style={{
+                        background:
+                          'linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 70%, rgba(255,255,255,0.15) 100%)',
+                      }}
+                    />
+                    <div className="absolute top-0 bottom-[-6%] left-0 w-[18%] flex flex-col justify-around py-1.5 pointer-events-none">
+                      {Array.from({ length: 9 }).map((_, i) => (
+                        <span
+                          key={i}
+                          className="mx-auto h-[4px] w-[4px] rounded-full bg-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.3)]"
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>
