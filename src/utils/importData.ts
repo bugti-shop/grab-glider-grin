@@ -875,12 +875,16 @@ const parseEvernoteExport = async (
             : new Date();
 
           const folder = ensureFolder();
+          const resolvedTagIds = tagMatches.length
+            ? await syncExternalTagsToGlobal(tagMatches, existingTags, tagsByName)
+            : [];
           notes.push({
             id: generateId(),
             type: 'regular',
             title,
             content: inner,
             tags: tagMatches.length ? tagMatches : undefined,
+            tagIds: resolvedTagIds.length ? resolvedTagIds : undefined,
             folderId: folder.id,
             voiceRecordings: [],
             attachments: noteAttachments.length ? noteAttachments : undefined,
