@@ -1034,6 +1034,96 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Free-tier monthly gating ─────────────────────────────────────────
+    // Signed-in Pro users (or admin web-unlock) get unlimited web clips.
+    // Free users are capped at FREE_MONTHLY_LIMIT clips per calendar month.
+    // Anonymous callers get no monthly quota (must sign in).
+    const WEB_UNLOCK_CODE = "mustafabugti890";
+    const FREE_MONTHLY_LIMIT = 10;
+    const hasWebUnlock = String((body as any)?.webUnlockCode || "") === WEB_UNLOCK_CODE;
+    const authHeader = req.headers.get("Authorization") || "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const accessToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+    const isAnonHeader = !accessToken || accessToken === anonKey;
+    let quotaConsumed: { identifier: string; date: string } | null = null;
+    if (!hasWebUnlock) {
+      if (isAnonHeader) {
+        return new Response(
+          JSON.stringify({ error: "Sign in required to use the Web Clipper.", code: "auth_required" }),
+          { status: 401, headers: { ...corsHeaders, "content-type": "application/json" } },
+        );
+      }
+      try {
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.45.0");
+        const sb = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: userData, error: userError } = await sb.auth.getUser(accessToken);
+        if (userError || !userData?.user) {
+          return new Response(
+            JSON.stringify({ error: "Sign in required.", code: "auth_required" }),
+            { status: 401, headers: { ...corsHeaders, "content-type": "application/json" } },
+          );
+        }
+        const userId = String(userData.user.id);
+        const userEmail = String(userData.user.email || "").toLowerCase();
+        const admin = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        );
+        const { data: ents } = await admin
+          .from("user_entitlements")
+          .select("is_active, expires_at, grace_period_expires_at, in_billing_retry")
+          .or(userEmail
+            ? `app_user_id.eq.${userId},app_user_id.eq.${userEmail}`
+            : `app_user_id.eq.${userId}`);
+        const nowMs = Date.now();
+        const isPro = (ents || []).some((e: any) => {
+          if (!e?.is_active) return false;
+          const exp = e.expires_at ? new Date(e.expires_at).getTime() : Infinity;
+          const grace = e.grace_period_expires_at ? new Date(e.grace_period_expires_at).getTime() : 0;
+          return exp > nowMs || grace > nowMs || e.in_billing_retry;
+        });
+        if (!isPro) {
+          // Monthly quota: bucket by first-of-month so the same RPC works.
+          const d = new Date();
+          const monthDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
+          const { data: usage, error: usageErr } = await admin.rpc(
+            "increment_ai_usage_if_under_limit",
+            {
+              p_identifier: userId,
+              p_identifier_type: "user",
+              p_feature: "web_clipper_fetch",
+              p_usage_date: monthDate,
+              p_limit: FREE_MONTHLY_LIMIT,
+            },
+          );
+          const row = Array.isArray(usage) ? usage[0] : usage;
+          if (usageErr || !row?.allowed) {
+            return new Response(
+              JSON.stringify({
+                error: `Free plan is limited to ${FREE_MONTHLY_LIMIT} web clips per month. Upgrade to Pro for unlimited clipping.`,
+                code: "monthly_limit_reached",
+                limit: FREE_MONTHLY_LIMIT,
+                used: row?.new_count ?? FREE_MONTHLY_LIMIT,
+              }),
+              { status: 402, headers: { ...corsHeaders, "content-type": "application/json" } },
+            );
+          }
+          quotaConsumed = { identifier: userId, date: monthDate };
+        }
+      } catch (gateErr) {
+        console.error("[fetch-article] gating error", gateErr);
+        // Fail closed on gating errors — do not silently grant free unlimited access.
+        return new Response(
+          JSON.stringify({ error: "Unable to verify subscription. Please try again.", code: "gate_error" }),
+          { status: 500, headers: { ...corsHeaders, "content-type": "application/json" } },
+        );
+      }
+    }
+
+
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     let html = "";
