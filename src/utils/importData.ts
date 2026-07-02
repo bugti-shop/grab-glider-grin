@@ -777,6 +777,14 @@ const parseEvernoteExport = async (
       return notebookFolder;
     };
 
+    // Load global tags once so we can match/sync Evernote tags into the app's
+    // existing tag system (Evernote-like import: reuse existing tag ids and
+    // create + register any new names as global AppTags).
+    const existingTags = await getAllTags();
+    const tagsByName = new Map<string, AppTag>(
+      existingTags.map(t => [t.name.trim().toLowerCase(), t]),
+    );
+
     if (text.includes('<en-export') || text.includes('<note>')) {
       const noteMatches = text.match(/<note>([\s\S]*?)<\/note>/g) || [];
       const total = noteMatches.length;
