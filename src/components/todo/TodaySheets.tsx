@@ -40,6 +40,7 @@ import { toast } from 'sonner';
 interface TodaySheetsProps {
   // Input sheet
   isInputOpen: boolean;
+  inputDefaultDate?: Date;
   onCloseInput: () => void;
   onAddTask: (task: Omit<TodoItem, 'id' | 'completed'>) => void;
   /** When true, the task input sheet cannot be dismissed by tapping the
@@ -186,7 +187,7 @@ export const TodaySheets = (props: TodaySheetsProps) => {
 
   return (
     <>
-      <TaskInputSheet isOpen={props.isInputOpen} onClose={props.onCloseInput} onAddTask={props.onAddTask} folders={props.folders} selectedFolderId={props.selectedFolderId} onCreateFolder={props.onCreateFolder} sections={props.sections} selectedSectionId={props.inputSectionId} preventBackdropClose={props.preventInputBackdropClose} />
+      <TaskInputSheet isOpen={props.isInputOpen} onClose={props.onCloseInput} onAddTask={props.onAddTask} folders={props.folders} selectedFolderId={props.selectedFolderId} onCreateFolder={props.onCreateFolder} sections={props.sections} selectedSectionId={props.inputSectionId} defaultDate={props.inputDefaultDate} preventBackdropClose={props.preventInputBackdropClose} />
       <TaskDetailPage 
         isOpen={!!props.selectedTask} 
         task={props.selectedTask} 

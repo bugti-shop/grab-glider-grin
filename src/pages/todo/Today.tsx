@@ -194,6 +194,7 @@ const Today = () => {
 
   // ── All state from extracted hook ──
   const state = useTodayState();
+  const [inputDefaultDate, setInputDefaultDate] = useState<Date | undefined>(undefined);
   const {
     tasksSettings, getPriorityColor, getPriorityName, requireFeature, isPro, allGlobalTags,
     items, setItems, folders, setFolders, sections, setSections,
@@ -873,7 +874,12 @@ const Today = () => {
                     }
                   }}
                   setOrderVersion={setOrderVersion}
+                  onAddForDate={(date) => {
+                    setInputDefaultDate(date);
+                    setIsInputOpen(true);
+                  }}
                 />
+
               ) : viewMode === 'progress' ? (
                 <ProgressView
                   uncompletedItems={uncompletedItems}
@@ -959,9 +965,10 @@ const Today = () => {
       {/* All sheets/dialogs extracted to TodaySheets */}
       <Suspense fallback={null}><TodaySheets
         isInputOpen={isInputOpen}
+        inputDefaultDate={inputDefaultDate}
         preventInputBackdropClose={widgetMode}
         onCloseInput={() => {
-          setIsInputOpen(false); setInputSectionId(null);
+          setIsInputOpen(false); setInputSectionId(null); setInputDefaultDate(undefined);
           if (widgetModeRef.current) {
             widgetModeRef.current = false;
             setWidgetMode(false);
