@@ -48,13 +48,6 @@ const WebClipper = () => {
   // so upgrading unlocks unlimited clipping without a page refresh.
   const showQuota = !isPro && !isAdminBypass;
   const quota = useWebClipperQuota(showQuota);
-  // Re-poll the counter after every successful (or failed) fetch so the bar
-  // reflects server-side increments the edge function just applied.
-  useEffect(() => {
-    if (!showQuota) return;
-    if (stage === 'idle') void quota.refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, showQuota, saved, isPro]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [stage, setStage] = useState<Stage>('idle');
