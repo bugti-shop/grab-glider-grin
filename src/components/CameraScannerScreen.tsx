@@ -543,6 +543,7 @@ export const CameraScannerScreen = ({
             </button>
           )}
           {/* Burst mode removed per product decision. */}
+          <button
             onClick={toggleTorch}
             disabled={!torchSupported}
             className={cn(
