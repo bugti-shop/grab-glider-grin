@@ -2002,7 +2002,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
               </div>
             </div>
           ) : (
-            <div className="relative flex-1 min-h-0">
+            <div className="relative flex-1 min-h-0 flex flex-col">
+              {showToc && (
+                <TableOfContents content={content} editorRef={editorRef} />
+              )}
               <RichTextEditor
                 content={content}
                 onChange={setContent}
