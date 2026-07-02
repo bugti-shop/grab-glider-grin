@@ -13,7 +13,7 @@
  */
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import {
   buildClipperUrl,
@@ -34,6 +34,12 @@ type SendIntentResult = {
   additionalItems?: Array<{ title?: string; description?: string; type?: string; url?: string }>;
 };
 
+type FlowistShareIntentPlugin = {
+  markConsumed(): Promise<{ ok: boolean }>;
+};
+
+const FlowistShareIntent = registerPlugin<FlowistShareIntentPlugin>('FlowistShareIntent');
+
 export function useShareIntent() {
   const navigate = useNavigate();
 
@@ -41,6 +47,15 @@ export function useShareIntent() {
     if (!Capacitor.isNativePlatform()) return;
 
     let cancelled = false;
+    const handledThisMount = new Set<string>();
+
+    const markNativeShareConsumed = () => {
+      if (!Capacitor.isNativePlatform()) return;
+      void FlowistShareIntent.markConsumed().catch(() => {
+        // Older native shells won't have this plugin yet; persistent JS dedup
+        // still prevents stale shares from being reprocessed on app reopen.
+      });
+    };
 
     const handlePayload = (raw: SendIntentResult | null | undefined) => {
       if (cancelled || !raw) return;
@@ -65,7 +80,11 @@ export function useShareIntent() {
 
       // 3. De-dup repeated fires (cold start + resume + sendIntentReceived).
       const signature = buildShareSignature({ url: url || attachment, text, attachment });
-      if (isDuplicateShare(signature)) return;
+      if (handledThisMount.has(signature) || isDuplicateShare(signature)) {
+        markNativeShareConsumed();
+        return;
+      }
+      handledThisMount.add(signature);
 
       // 4. Mode selection: image/pdf attachments override; pure URL = article;
       //    pure text = selection.
@@ -86,8 +105,16 @@ export function useShareIntent() {
         attachment,
         attachmentType: attachmentKind,
         mode,
+        shareId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
       });
-      navigate(target, { replace: false });
+      markNativeShareConsumed();
+      navigate(target, { replace: true });
+    };
+
+    const handleSendIntentEvent = () => {
+      import('send-intent')
+        .then(({ SendIntent }) => SendIntent.checkSendIntentReceived().then(handlePayload).catch(() => {}))
+        .catch(() => {});
     };
 
     // Lazy import — the plugin's JS bridge is only present in native builds.
@@ -101,9 +128,7 @@ export function useShareIntent() {
           });
 
         // 2. Warm start: app already in background when user shared.
-        window.addEventListener('sendIntentReceived', () => {
-          SendIntent.checkSendIntentReceived().then(handlePayload).catch(() => {});
-        });
+        window.addEventListener('sendIntentReceived', handleSendIntentEvent);
       })
       .catch((err) => {
         console.warn('[shareIntent] send-intent plugin unavailable', err);
@@ -119,6 +144,7 @@ export function useShareIntent() {
 
     return () => {
       cancelled = true;
+      window.removeEventListener('sendIntentReceived', handleSendIntentEvent);
       resumeSub.then((s) => s.remove()).catch(() => {});
     };
   }, [navigate]);

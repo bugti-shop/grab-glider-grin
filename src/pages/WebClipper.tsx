@@ -77,6 +77,11 @@ const WebClipper = () => {
     rawAttachmentType === 'image' || rawAttachmentType === 'pdf' ? rawAttachmentType : null;
   const initialMode = parseClipMode(searchParams.get('mode'));
 
+  const clearClipperQuery = () => {
+    if (typeof window === 'undefined' || !window.location.search) return;
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.hash || ''}`);
+  };
+
   // Explicit mode OR an attachment payload auto-prepares immediately (no picker).
   const explicitMode = searchParams.has('mode') || !!attachment;
   const [mode, setMode] = useState<ClipMode>(initialMode);
@@ -443,6 +448,10 @@ const WebClipper = () => {
       setPreviewTitle(finalTitle);
       setPreviewHtml(noteContent);
       setPreviewReady(true);
+      // Once the editable preview is built, consume the one-shot URL payload.
+      // This prevents mobile Activity/webview restores from reopening the same
+      // /webclipper?url=… route and fetching/saving duplicate copies later.
+      clearClipperQuery();
       setStage('idle');
       setProgress(null);
     } catch (error) {
@@ -492,6 +501,7 @@ const WebClipper = () => {
       // stuck on “Saving to notes…”. The single-row path updates IndexedDB,
       // metadata cache, UI events, and cloud sync without touching old notes.
       await saveNoteToDBSingle(newNote);
+      clearClipperQuery();
       setSaved(true);
       setStage('idle');
       toast({
