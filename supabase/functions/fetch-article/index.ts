@@ -238,7 +238,7 @@ function cleanArticleDom(doc: Document): void {
   }
 
   // 2) Iframes that aren't legitimate media embeds (youtube/vimeo/etc.).
-  const mediaHostsRe = /(youtube\.com|youtu\.be|youtube-nocookie\.com|vimeo\.com|player\.vimeo\.com|dailymotion\.com|twitch\.tv|soundcloud\.com|spotify\.com|scribd\.com|slideshare\.net|codepen\.io|codesandbox\.io|jsfiddle\.net|gist\.github\.com|twitter\.com\/.+\/status|x\.com\/.+\/status|instagram\.com\/p\/|tiktok\.com\/@/)/i;
+  const mediaHostsRe = new RegExp("(youtube\\.com|youtu\\.be|youtube-nocookie\\.com|vimeo\\.com|player\\.vimeo\\.com|dailymotion\\.com|twitch\\.tv|soundcloud\\.com|spotify\\.com|scribd\\.com|slideshare\\.net|codepen\\.io|codesandbox\\.io|jsfiddle\\.net|gist\\.github\\.com|twitter\\.com/.+/status|x\\.com/.+/status|instagram\\.com/p/|tiktok\\.com/@)", "i");
   doc.querySelectorAll("iframe").forEach((el: any) => {
     const src = String(el.getAttribute("src") || "");
     if (!src || !mediaHostsRe.test(src)) el.remove();
