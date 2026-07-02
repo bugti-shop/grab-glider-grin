@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Mail, KeyRound, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -31,12 +31,29 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const cooldownTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    cooldownTimer.current = window.setTimeout(
+      () => setResendCooldown((s) => Math.max(0, s - 1)),
+      1000,
+    );
+    return () => {
+      if (cooldownTimer.current) window.clearTimeout(cooldownTimer.current);
+    };
+  }, [resendCooldown]);
 
   if (!open) return null;
+
+  const startCooldown = () => setResendCooldown(45);
 
   const reset = () => {
     setMode('signin');
     setEmail(''); setPassword(''); setName(''); setOtp('');
+    setOtpError(null); setResendCooldown(0);
   };
 
   const close = () => { reset(); onClose(); };
@@ -79,6 +96,9 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
         title: t('emailAuth.otpSent', 'Verification code sent'),
         description: t('emailAuth.otpSentDesc', 'Check your inbox for a 6-digit code from Flowist.'),
       });
+      setOtp('');
+      setOtpError(null);
+      startCooldown();
       setMode('otp');
     } catch (err: any) {
       toast({
@@ -93,19 +113,26 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
 
   const handleVerifyOtp = async () => {
     if (otp.length < 6) {
-      toast({ title: t('emailAuth.enterOtp', 'Enter the 6-digit code'), variant: 'destructive' });
+      setOtpError(t('emailAuth.enterOtp', 'Enter the 6-digit code'));
       return;
     }
     setLoading(true);
+    setOtpError(null);
     try {
+      // Cloud sync + session only persist AFTER Supabase confirms this OTP.
       const u = await verifySignupOtp(email.trim(), otp);
-      toast({ title: t('emailAuth.accountReady', 'Account verified') });
+      toast({
+        title: t('emailAuth.accountReady', 'Account verified'),
+        description: t('emailAuth.syncEnabled', 'Cloud sync is now active on this device.'),
+      });
       onSignedIn?.(u);
       close();
     } catch (err: any) {
+      const msg = err?.message || t('emailAuth.otpInvalid', 'Invalid or expired code');
+      setOtpError(msg);
       toast({
         title: t('emailAuth.otpInvalid', 'Invalid or expired code'),
-        description: err?.message || '',
+        description: msg,
         variant: 'destructive',
       });
     } finally {
@@ -114,12 +141,22 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
   };
 
   const handleResend = async () => {
+    if (resendCooldown > 0 || loading) return;
     setLoading(true);
+    setOtpError(null);
     try {
       await resendSignupOtp(email.trim());
-      toast({ title: t('emailAuth.otpResent', 'Code resent') });
+      startCooldown();
+      toast({
+        title: t('emailAuth.otpResent', 'New code sent'),
+        description: t('emailAuth.otpResentDesc', 'Check your inbox for the latest 6-digit code.'),
+      });
     } catch (err: any) {
-      toast({ title: 'Error', description: err?.message || '', variant: 'destructive' });
+      toast({
+        title: t('emailAuth.resendFailed', 'Could not resend code'),
+        description: err?.message || '',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -257,19 +294,37 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
             <Input
               type="text"
               inputMode="numeric"
+              autoComplete="one-time-code"
               maxLength={6}
               placeholder="••••••"
               value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-              className="h-14 rounded-xl text-center text-2xl font-bold tracking-[0.5em]"
+              onChange={(e) => {
+                setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                if (otpError) setOtpError(null);
+              }}
+              className={`h-14 rounded-xl text-center text-2xl font-bold tracking-[0.5em] ${otpError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
             />
+            {otpError && (
+              <p className="text-[12px] text-red-600 text-center -mt-1">{otpError}</p>
+            )}
             <Button onClick={handleVerifyOtp} disabled={loading || otp.length < 6} className="w-full h-12 rounded-xl font-bold">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}
-              {t('emailAuth.verify', 'Verify & continue')}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <KeyRound className="h-4 w-4 mr-2" />}
+              {loading
+                ? t('emailAuth.verifying', 'Verifying…')
+                : t('emailAuth.verify', 'Verify & continue')}
             </Button>
-            <button onClick={handleResend} disabled={loading} className="w-full text-center text-[13px] text-[#666] underline py-1">
-              {t('emailAuth.resend', 'Resend code')}
+            <button
+              onClick={handleResend}
+              disabled={loading || resendCooldown > 0}
+              className="w-full text-center text-[13px] text-[#666] underline py-1 disabled:no-underline disabled:opacity-60"
+            >
+              {resendCooldown > 0
+                ? t('emailAuth.resendIn', 'Resend code in {{s}}s', { s: resendCooldown })
+                : t('emailAuth.resend', 'Resend code')}
             </button>
+            <p className="text-[11px] text-[#999] text-center leading-relaxed">
+              {t('emailAuth.syncNote', 'Cloud sync activates the moment your code is verified.')}
+            </p>
           </div>
         )}
 
