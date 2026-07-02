@@ -14,6 +14,12 @@ const PremiumUnlock = () => {
     (async () => {
       try {
         await setSetting('flowist_admin_bypass', true);
+        // Mark this device as having the Team plan so team-tier features
+        // (guest links, assignee gating, etc.) unlock on the web unlock flow.
+        try {
+          localStorage.setItem('flowist_stripe_plan', 'team');
+          localStorage.setItem('flowist_rc_product', 'com.flowist.app.team.year');
+        } catch {}
       } catch (e) {
         console.warn('PremiumUnlock: setSetting failed', e);
       }
