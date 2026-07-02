@@ -95,25 +95,26 @@ export const TimelineView = ({
                 >
                   <span className="text-lg font-bold tracking-tight">{group.label}</span>
                 </button>
-                {hasTasks ? (
+                {hasTasks && isCollapsed ? (
                   <button
                     onClick={() => toggleViewSectionCollapse(group.id)}
-                    className="h-8 min-w-8 px-2 rounded-full border-2 border-primary text-primary text-sm font-semibold flex items-center justify-center"
+                    className="h-6 min-w-6 px-1.5 rounded-full border border-primary/60 text-primary text-xs font-normal flex items-center justify-center"
                     aria-label={`${group.tasks.length} tasks`}
                   >
                     {group.tasks.length}
                   </button>
-                ) : null}
-                <button
-                  onClick={() => {
-                    Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
-                    onAddForDate?.(group.date);
-                  }}
-                  className="h-9 w-9 flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
-                  aria-label={`Add task on ${group.label}`}
-                >
-                  <Plus className="h-5 w-5" />
-                </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+                      onAddForDate?.(group.date);
+                    }}
+                    className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
+                    aria-label={`Add task on ${group.label}`}
+                  >
+                    <Plus className="h-5 w-5" />
+                  </button>
+                )}
               </div>
               {!isCollapsed && hasTasks && (
                 <Droppable droppableId={group.id}>
