@@ -138,12 +138,14 @@ describe('webClipper.buildClipperUrl', () => {
       title: 'Hello & World',
       url: 'https://example.com/?q=1',
       mode: 'article',
+      shareId: 'share-123',
     });
     expect(u.startsWith('/webclipper?')).toBe(true);
     const parsed = new URLSearchParams(u.split('?')[1]);
     expect(parsed.get('title')).toBe('Hello & World');
     expect(parsed.get('url')).toBe('https://example.com/?q=1');
     expect(parsed.get('mode')).toBe('article');
+    expect(parsed.get('shareId')).toBe('share-123');
   });
   it('truncates oversized payloads at MAX_LENGTHS', () => {
     const u = buildClipperUrl({ content: 'x'.repeat(MAX_LENGTHS.content + 500) });

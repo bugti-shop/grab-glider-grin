@@ -105,6 +105,7 @@ export function useShareIntent() {
         attachment,
         attachmentType: attachmentKind,
         mode,
+        shareId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
       });
       markNativeShareConsumed();
       navigate(target, { replace: true });

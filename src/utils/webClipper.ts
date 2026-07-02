@@ -320,6 +320,7 @@ export function buildClipperUrl(payload: {
   mode?: ClipMode;
   attachment?: string;
   attachmentType?: 'image' | 'pdf' | null;
+  shareId?: string;
 }): string {
   const params = new URLSearchParams();
   if (payload.title) params.set('title', payload.title.substring(0, MAX_LENGTHS.title));
@@ -329,6 +330,7 @@ export function buildClipperUrl(payload: {
   if (payload.attachment) params.set('attachment', payload.attachment.substring(0, MAX_LENGTHS.attachment));
   if (payload.attachmentType) params.set('attachmentType', payload.attachmentType);
   if (payload.mode) params.set('mode', payload.mode);
+  if (payload.shareId) params.set('shareId', payload.shareId.substring(0, 80));
   return `/webclipper?${params.toString()}`;
 }
 
