@@ -3,6 +3,7 @@ import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
 import { TodoItem, Priority, RepeatType, Folder, VoiceRecording, LocationReminder, TaskAttachment } from '@/types/note';
 import { TagManagementSheet } from '@/components/TagManagementSheet';
+import { TaskProjectAssignPicker } from '@/components/TaskProjectAssignPicker';
 import { useGlobalTags } from '@/hooks/useGlobalTags';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -1481,6 +1482,9 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
                   </button>
                 );
               }
+
+              if (action.id === 'folder' as any && false) { /* placeholder to keep formatter happy */ }
+
 
               if (action.id === 'image') {
                 return (
