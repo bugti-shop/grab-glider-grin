@@ -341,6 +341,7 @@ export const CameraScannerScreen = ({
       setBatchPages([]);
       setBatchOn(false);
       setBatchProcessing(false);
+      setHandwritingOn(false);
     }
   }, [isOpen]);
 
