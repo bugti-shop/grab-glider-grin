@@ -401,6 +401,58 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, threshold = 600) => 
   snapshots.forEach((fig) => {
     if (fig.dataset.hydrated === '1') return;
     fig.dataset.hydrated = '1';
+
+    const originalUrl = fig.getAttribute('data-url') || '';
+    const capturedAt = fig.getAttribute('data-captured-at') || '';
+
+    // Ensure a "Download captured HTML" button exists alongside the view button.
+    if (!fig.querySelector('button[data-role="fullpage-download"]')) {
+      const dl = document.createElement('button');
+      dl.type = 'button';
+      dl.className = 'flowist-web-clip-fullpage-btn';
+      dl.setAttribute('data-role', 'fullpage-download');
+      dl.setAttribute('contenteditable', 'false');
+      dl.textContent = '⬇ Download captured HTML';
+      const openBtn = fig.querySelector('button[data-role="fullpage-open"]');
+      if (openBtn && openBtn.parentNode) {
+        openBtn.parentNode.insertBefore(dl, openBtn.nextSibling);
+      } else {
+        fig.appendChild(dl);
+      }
+      dl.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const prev = dl.textContent;
+        dl.setAttribute('disabled', 'true');
+        dl.textContent = 'Preparing…';
+        try {
+          const gz = fig.getAttribute('data-compressed-gz') || '';
+          const { decompressHtml } = await import('@/utils/htmlCompression');
+          const html = await decompressHtml(gz);
+          const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+          const href = URL.createObjectURL(blob);
+          let host = 'page';
+          try { if (originalUrl) host = new URL(originalUrl).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+          const stamp = (capturedAt || new Date().toISOString()).replace(/[:.]/g, '-');
+          const a = document.createElement('a');
+          a.href = href;
+          a.download = `flowist-clip-${host}-${stamp}.html`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(href), 4000);
+          dl.textContent = '✓ Downloaded';
+          setTimeout(() => { dl.textContent = prev || '⬇ Download captured HTML'; }, 1500);
+        } catch (err) {
+          console.error('[webClip] download failed', err);
+          dl.textContent = '⚠️ Download failed';
+          setTimeout(() => { dl.textContent = prev || '⬇ Download captured HTML'; }, 2000);
+        } finally {
+          dl.removeAttribute('disabled');
+        }
+      });
+    }
+
     const btn = fig.querySelector<HTMLButtonElement>('button[data-role="fullpage-open"]');
     if (!btn) return;
     btn.addEventListener('click', async (e) => {
@@ -418,10 +470,32 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, threshold = 600) => 
       try {
         const gz = fig.getAttribute('data-compressed-gz') || '';
         const { decompressHtml } = await import('@/utils/htmlCompression');
-        const html = await decompressHtml(gz);
+        let html = await decompressHtml(gz);
+
+        // Inject a <base href> pointing at the original page so any relative
+        // asset/link URLs left in the captured document resolve against the
+        // source site rather than the Flowist app origin.
+        if (originalUrl) {
+          const safeBase = originalUrl.replace(/"/g, '&quot;');
+          const baseTag = `<base href="${safeBase}" target="_blank">`;
+          if (/<base\s/i.test(html)) {
+            // leave existing <base> intact
+          } else if (/<head[^>]*>/i.test(html)) {
+            html = html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
+          } else if (/<html[^>]*>/i.test(html)) {
+            html = html.replace(/<html([^>]*)>/i, `<html$1><head>${baseTag}</head>`);
+          } else {
+            html = `<!DOCTYPE html><html><head>${baseTag}</head><body>${html}</body></html>`;
+          }
+        }
+
         const iframe = document.createElement('iframe');
         iframe.className = 'flowist-web-clip-fullpage-frame';
-        iframe.setAttribute('sandbox', 'allow-same-origin allow-popups');
+        // Allow scripts + popups so interactive captured pages render, but
+        // omit allow-same-origin to keep the snapshot isolated from Flowist.
+        iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox');
+        iframe.setAttribute('referrerpolicy', 'no-referrer');
+        iframe.setAttribute('loading', 'lazy');
         iframe.setAttribute(
           'style',
           'width:100%;min-height:70vh;border:1px solid hsl(var(--border));border-radius:8px;margin-top:8px;background:#fff',
