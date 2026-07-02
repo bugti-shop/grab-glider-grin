@@ -484,7 +484,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           setImageDataUrl(dataUrl);
           await runExtraction(dataUrl, opts);
         }}
-        onBatchNote={async (pages) => {
+        onBatchNote={async (pages, opts) => {
           if (!pages.length) return;
           if (!(await ensureScannerAccess())) return;
           setShowCamera(false);
@@ -509,6 +509,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
                     imageBase64: pages[i],
                     languageCode: (i18n.language || 'en').split('-')[0],
                     languageName: 'auto',
+                    handwriting: opts?.handwriting === true,
                     webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
                   },
                   timeout: AI_SCAN_TIMEOUT_MS,
