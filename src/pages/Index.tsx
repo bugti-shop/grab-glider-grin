@@ -186,6 +186,15 @@ const Index = () => {
     };
   }, []);
 
+  // Honour ?folder=<id> query — used by Notebooks list to jump straight in.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const target = params.get('folder');
+    if (target && folders.some(f => f.id === target)) {
+      setSelectedFolderId(target);
+    }
+  }, [location.search, folders]);
+
   // Default selectedFolderId to first folder (Inbox) — "All Notes" view removed.
   useEffect(() => {
     if (selectedFolderId == null && folders.length > 0) {
