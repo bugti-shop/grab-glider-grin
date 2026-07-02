@@ -105,6 +105,17 @@ export const ImageTaskExtractorSheet = ({
     }
   }, [isOpen]);
 
+  // Auto-open the camera scanner directly when the sheet opens (skip intermediate UI).
+  useEffect(() => {
+    if (!isOpen) return;
+    if (showCamera || imageDataUrl || isExtracting || hasRun) return;
+    (async () => {
+      if (!(await ensureScannerAccess())) { onClose(); return; }
+      setShowCamera(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   const handleBarcode = (value: string, format: string) => {
     if (!value) return;
     const safe = value.trim();
