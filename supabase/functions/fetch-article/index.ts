@@ -730,11 +730,19 @@ Deno.serve(async (req) => {
       const byline = (metaAuthor || domAuthor || "").trim();
       const siteName = (metaSite || "").trim();
       const leadImage = metaImage ? absolutize(metaImage, base) : "";
-      const bodyHtml =
-        (document.body as any)?.innerHTML ||
-        (document.documentElement as any)?.innerHTML ||
+      // Serialize the ENTIRE document — DOCTYPE, <html>, <head> (title, meta,
+      // links, icons), and <body> (all elements, ads, scripts-as-text). This
+      // matches the raw HTML the browser rendered, with URLs absolutized so
+      // the offline snapshot loads assets correctly.
+      const docEl = document.documentElement as any;
+      const outerHtml: string =
+        (docEl && typeof docEl.outerHTML === "string" && docEl.outerHTML) ||
         html;
-      const capped = capHtml(String(bodyHtml || ""), MAX_FULLPAGE_HTML_BYTES);
+      // Preserve the original DOCTYPE where present, else default to HTML5.
+      const doctypeMatch = html.match(/^\s*<!doctype[^>]*>/i);
+      const doctype = doctypeMatch ? doctypeMatch[0] : "<!DOCTYPE html>";
+      const fullDocument = `${doctype}\n${outerHtml}`;
+      const capped = capHtml(fullDocument, MAX_FULLPAGE_HTML_BYTES);
       const images = extractImageUrls(capped.html);
       return new Response(
         JSON.stringify({
