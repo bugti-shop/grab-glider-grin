@@ -19,6 +19,7 @@ import { ProfileAchievements } from '@/components/profile/ProfileAchievements';
 import { ProfileSubscriptionCard } from '@/components/profile/ProfileSubscriptionCard';
 import { CountryFlagPickerSheet } from '@/components/CountryFlagPickerSheet';
 import { EmailAuthSheet } from '@/components/EmailAuthSheet';
+import { ChangeEmailSheet } from '@/components/ChangeEmailSheet';
 import { Capacitor } from '@capacitor/core';
 
 
