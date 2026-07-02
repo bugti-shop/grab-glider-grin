@@ -1,27 +1,35 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, Plus, Check, User as UserIcon } from 'lucide-react';
+import { Users, Plus, Check, User as UserIcon, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjects, useProjectMembers } from '@/hooks/useProjects';
+import { useHasTeamPlan } from '@/hooks/useHasTeamPlan';
+import { toast } from 'sonner';
 
 interface Props {
   projectId?: string;
   assigneeId?: string;
   onChange: (patch: { projectId?: string; assigneeId?: string }) => void;
   compact?: boolean;
+  /** When true, assignment requires Teams/Family plan. Triggers upsell otherwise. */
+  gateAssignBehindTeamPlan?: boolean;
 }
 
 /**
  * Compact chip-style picker used inside TaskInputSheet + TaskDetailPage.
  * Lets the user pick which team project a task belongs to and who it's assigned to.
  */
-export function TaskProjectAssignPicker({ projectId, assigneeId, onChange, compact }: Props) {
+export function TaskProjectAssignPicker({ projectId, assigneeId, onChange, compact, gateAssignBehindTeamPlan }: Props) {
   const { projects, createProject } = useProjects();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const hasTeamPlan = useHasTeamPlan();
+  const navigate = useNavigate();
+  const assignLocked = !!gateAssignBehindTeamPlan && !hasTeamPlan;
 
   const currentProject = useMemo(() => projects.find((p) => p.id === projectId), [projects, projectId]);
   const { members } = useProjectMembers(projectId ?? null);
@@ -85,6 +93,19 @@ export function TaskProjectAssignPicker({ projectId, assigneeId, onChange, compa
       </Popover>
 
       {projectId && (
+        assignLocked ? (
+          <button
+            type="button"
+            onClick={() => {
+              toast.info('Assigning tasks is a Teams/Family plan feature.');
+              navigate('/premium');
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-dashed border-amber-400 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100/70 transition-all whitespace-nowrap"
+          >
+            <Lock className="h-3.5 w-3.5" />
+            <span className="text-sm">Assign · Teams</span>
+          </button>
+        ) : (
         <Popover>
           <PopoverTrigger asChild>
             <button className={cn(
@@ -129,6 +150,7 @@ export function TaskProjectAssignPicker({ projectId, assigneeId, onChange, compa
             ))}
           </PopoverContent>
         </Popover>
+        )
       )}
     </div>
   );
