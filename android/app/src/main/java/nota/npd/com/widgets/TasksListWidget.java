@@ -10,7 +10,7 @@ import android.net.Uri;
 import android.widget.RemoteViews;
 
 import nota.npd.com.MainActivity;
-import nota.npd.com.QuickAddActivity;
+import nota.npd.com.QuickAddOverlayActivity;
 import nota.npd.com.R;
 
 /**
@@ -76,7 +76,7 @@ public class TasksListWidget extends AppWidgetProvider {
     }
 
     private PendingIntent buildQuickAddIntent(Context ctx, int widgetId) {
-        Intent open = new Intent(ctx, QuickAddActivity.class);
+        Intent open = new Intent(ctx, QuickAddOverlayActivity.class);
         open.setAction("nota.npd.com.widgets.TASKS_LIST_QUICK_ADD_" + widgetId);
         open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         return PendingIntent.getActivity(ctx, ("quickadd-list" + widgetId).hashCode(), open,
