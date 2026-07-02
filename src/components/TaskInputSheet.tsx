@@ -1627,6 +1627,7 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
             <TaskProjectAssignPicker
               projectId={projectId}
               assigneeId={assigneeId}
+              gateAssignBehindTeamPlan
               onChange={(p) => { setProjectId(p.projectId); setAssigneeId(p.assigneeId); }}
             />
 
