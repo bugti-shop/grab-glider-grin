@@ -213,16 +213,16 @@ const Notebooks = () => {
                       </div>
                     </div>
 
-                    {/* Spine + rings — outside cover so they extend down to paper stack bottom */}
+                    {/* Spine + rings — extend down to match back sheet bottom (-3%) */}
                     <div
-                      className="absolute top-0 bottom-[-6%] left-0 w-[18%] rounded-l-[4px] pointer-events-none"
+                      className="absolute top-0 bottom-[-3%] left-0 w-[18%] rounded-l-[4px] pointer-events-none"
                       style={{
                         background:
                           'linear-gradient(90deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 70%, rgba(255,255,255,0.15) 100%)',
                       }}
                     />
-                    <div className="absolute top-0 bottom-[-6%] left-0 w-[18%] flex flex-col justify-around py-1.5 pointer-events-none">
-                      {Array.from({ length: 9 }).map((_, i) => (
+                    <div className="absolute top-0 bottom-[-3%] left-0 w-[18%] flex flex-col justify-around py-1.5 pointer-events-none">
+                      {Array.from({ length: 8 }).map((_, i) => (
                         <span
                           key={i}
                           className="mx-auto h-[4px] w-[4px] rounded-full bg-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.3)]"
