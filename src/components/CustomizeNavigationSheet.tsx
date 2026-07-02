@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { GripVertical, RotateCcw, Home, FileText, Calendar, Settings, User, Pencil, Check, X } from 'lucide-react';
+import { GripVertical, RotateCcw, Home, FileText, Calendar, Settings, User, Book, Pencil, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
