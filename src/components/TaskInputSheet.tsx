@@ -60,7 +60,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { TaskDateTimePage, RepeatSettings } from './TaskDateTimePage';
 import { parseNaturalLanguageTask, hasNaturalLanguagePatterns } from '@/utils/naturalLanguageParser';
 import { supabase } from '@/integrations/supabase/client';
-import { Sparkles as SparklesIcon, ScanLine } from 'lucide-react';
+import { Sparkles as SparklesIcon, ScanLine, Loader2 } from 'lucide-react';
 import { ImageTaskExtractorSheet } from './ImageTaskExtractorSheet';
 import { TextTaskExtractorSheet } from './TextTaskExtractorSheet';
 import { SafeComponent } from './ErrorBoundary';
