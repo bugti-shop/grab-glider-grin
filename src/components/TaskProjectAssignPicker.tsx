@@ -150,6 +150,7 @@ export function TaskProjectAssignPicker({ projectId, assigneeId, onChange, compa
             ))}
           </PopoverContent>
         </Popover>
+        )
       )}
     </div>
   );
