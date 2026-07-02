@@ -227,6 +227,51 @@ async function inlineCssUrls(
  *  Preserves: article body, headings, images (+ <figcaption>), links,
  *  blockquotes, lists, tables, references, code, embedded video/iframes. */
 function cleanArticleDom(doc: Document): void {
+  // 0) Preserve FAQ / Q&A sections. Often built with accordions (button +
+  //    hidden panel) or <details>/<summary>. Mark containers so purge passes
+  //    skip them, reveal any hidden panels, and convert accordion triggers
+  //    into <h3>s so questions still render after <button> gets stripped.
+  const faqRe = /(faq|frequently\s*asked|q\s*&\s*a|questions?[-_ ]?(and|&)[-_ ]?answers?)/i;
+  const faqRoots = new Set<any>();
+  for (const sel of [
+    '[class*="faq" i]', '[id*="faq" i]',
+    '[class*="accordion" i]', '[class*="question" i]',
+    '[data-testid*="faq" i]', '[aria-label*="faq" i]',
+  ]) {
+    try { doc.querySelectorAll(sel).forEach((el: any) => faqRoots.add(el)); } catch { /* skip */ }
+  }
+  const allHeads = Array.from(doc.querySelectorAll("h1, h2, h3, h4")) as any[];
+  for (const h of allHeads) {
+    if (!faqRe.test((h.textContent || "").trim())) continue;
+    faqRoots.add(h);
+    const level = Number(h.tagName?.[1] || 3);
+    let sib: any = h.nextElementSibling;
+    while (sib) {
+      const tag = String(sib.tagName || "").toUpperCase();
+      if (/^H[1-4]$/.test(tag) && Number(tag[1]) <= level) break;
+      faqRoots.add(sib);
+      sib = sib.nextElementSibling;
+    }
+  }
+  faqRoots.forEach((el: any) => {
+    try {
+      el.setAttribute('data-flowist-keep', '1');
+      el.querySelectorAll?.('[hidden]').forEach((n: any) => n.removeAttribute('hidden'));
+      el.querySelectorAll?.('[aria-hidden="true"]').forEach((n: any) => n.setAttribute('aria-hidden', 'false'));
+      el.querySelectorAll?.('button, summary').forEach((btn: any) => {
+        const t = (btn.textContent || '').trim();
+        if (!t) return;
+        const h = doc.createElement('h3');
+        h.textContent = t;
+        btn.parentNode?.replaceChild(h, btn);
+      });
+      el.querySelectorAll?.('details').forEach((d: any) => d.setAttribute('open', ''));
+    } catch { /* ignore */ }
+  });
+  const isProtected = (el: any): boolean => {
+    try { return !!(el?.closest && el.closest('[data-flowist-keep]')); } catch { return false; }
+  };
+
   // 1) Element types that are almost always chrome/noise.
   const purgeTags = [
     "script", "style", "noscript", "template", "svg", "canvas",
@@ -234,7 +279,7 @@ function cleanArticleDom(doc: Document): void {
     "ins", // adsense
   ];
   for (const tag of purgeTags) {
-    doc.querySelectorAll(tag).forEach((el: any) => el.remove());
+    doc.querySelectorAll(tag).forEach((el: any) => { if (!isProtected(el)) el.remove(); });
   }
 
   // 2) Iframes that aren't legitimate media embeds (youtube/vimeo/etc.).
