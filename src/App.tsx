@@ -453,6 +453,7 @@ const AppRoutes = () => {
             <Route path="/" element={<RootRedirect />} />
             <Route path="/notesdashboard" element={<Index />} />
             <Route path="/notes" element={<Notes />} />
+            <Route path="/notebooks" element={<Notebooks />} />
             <Route path="/calendar" element={<NotesCalendar />} />
             <Route path="/clip" element={<WebClipper />} />
             <Route path="/webclipper" element={<WebClipper />} />
