@@ -26,7 +26,6 @@ import {
   ATTACHMENT_LIMITS,
 } from '@/utils/webClipper';
 import { compressHtml, formatBytesShort } from '@/utils/htmlCompression';
-import { ClipCostEstimator } from '@/components/webclipper/ClipCostEstimator';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
   { id: 'article',   icon: FileText, titleKey: 'webClipper.modeArticle',   descKey: 'webClipper.modeArticleDesc',   fallbackTitle: 'Article',     fallbackDesc: 'Save the readable article body' },
@@ -728,12 +727,6 @@ const WebClipper = () => {
                   {t('webClipper.previewHint', 'Everything the clipper found — images, videos, links, text — is above. Delete or edit anything before saving.')}
                 </p>
               </div>
-
-              <ClipCostEstimator
-                snapshotBytes={fullPageSnapshot?.bytes ?? null}
-                previewHtmlLength={previewHtml.length}
-              />
-
               <div className="flex gap-2 pt-1">
                 <Button onClick={commitClip} disabled={saving} className="flex-1">
                   <Save className="h-4 w-4 mr-1.5" />
