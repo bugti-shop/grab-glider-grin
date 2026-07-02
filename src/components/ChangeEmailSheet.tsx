@@ -67,8 +67,15 @@ export function ChangeEmailSheet({ open, currentEmail, onClose, onEmailChanged }
         title: t('changeEmail.codeSent', 'Verification code sent'),
         description: t('changeEmail.codeSentDesc', 'Enter the 6-digit code we sent to {{email}}.', { email: target }),
       });
-      setOtp(''); setOtpError(null); setCooldown(45);
+      setOtp(''); setOtpError(null);
       setStep('verify');
+      // Sync initial cooldown from backend (Supabase just sent an email so a
+      // server-side cooldown is already active). Fall back to 45s optimistically.
+      setCooldown(45);
+      try {
+        const { retryAfter, cooldownSeconds } = await checkOtpCooldown(target, 'email_change');
+        setCooldown(retryAfter > 0 ? retryAfter : cooldownSeconds);
+      } catch { /* keep optimistic value */ }
     } catch (err: any) {
       const info = classifyOtpError(err);
       toast({
@@ -80,6 +87,7 @@ export function ChangeEmailSheet({ open, currentEmail, onClose, onEmailChanged }
       setLoading(false);
     }
   };
+
 
   const handleVerify = async () => {
     if (otp.length < 6) {
