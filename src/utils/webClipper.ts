@@ -125,8 +125,10 @@ export function parseClipMode(value: string | null | undefined): ClipMode {
   if (v === 'fullpage' || v === 'full-page' || v === 'full_page') return 'fullpage';
   if (v === 'image' || v === 'img') return 'image';
   if (v === 'pdf') return 'pdf';
-  // Default to full-page capture — users want everything, not metadata stubs.
-  return 'fullpage';
+  if (v === 'article') return 'article';
+  // Default to clean-article capture — genuine article body with images,
+  // captions, headings, and links, but no ads / nav / related-stories chrome.
+  return 'article';
 }
 
 const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|bmp|heic|heif|avif|svg)(\?|#|$)/i;
