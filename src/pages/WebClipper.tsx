@@ -135,6 +135,14 @@ const WebClipper = () => {
    * Does NOT save to the DB — commitClip() does that when the user hits Save.
    */
   const prepareClip = async (clipMode: ClipMode) => {
+    // Belt-and-braces: if a prepare pass is already running, don't kick off
+    // another one on top. Duplicate concurrent fetches were creating 2–3
+    // copies of the same article until the app was closed.
+    if (abortRef.current) {
+      console.warn('[webClipper] prepareClip already in flight — ignoring duplicate call');
+      return;
+    }
+    prepareStartedRef.current = true;
     setSaving(true);
     setError(null);
     canceledRef.current = false;
