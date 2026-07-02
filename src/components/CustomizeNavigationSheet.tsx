@@ -79,7 +79,8 @@ export const CustomizeNavigationSheet = ({ isOpen, onClose }: CustomizeNavigatio
 
   const loadNavItems = async () => {
     try {
-      const saved = await getSetting<NavItem[] | null>('customNavItems', null);
+      const rawSaved = await getSetting<NavItem[] | null>('customNavItems', null);
+      const saved = rawSaved ? migrateSavedNavItems(rawSaved) : rawSaved;
       if (saved && saved.length > 0) {
         // Merge with defaults to include any new items and ensure paths are set
         const savedMap = new Map(saved.map(item => [item.id, item]));
