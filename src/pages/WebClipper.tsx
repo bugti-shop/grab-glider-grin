@@ -343,7 +343,7 @@ const WebClipper = () => {
         // In full-page mode we compress the raw HTML into a snapshot field
         // rather than dumping multi-MB of markup into the note body.
         let snapshotForNote: Note['fullPageSnapshot'] | null = null;
-        if (clipMode === 'fullpage') {
+        if (clipMode !== 'selection' && articleHtml) {
           try {
             const compressed = await compressHtml(articleHtml);
             snapshotForNote = {
