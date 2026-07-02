@@ -339,7 +339,8 @@ export const useCustomNavigation = () => {
 
   useEffect(() => {
     const loadItems = async () => {
-      const saved = await getSetting<NavItem[] | null>('customNavItems', null);
+      const rawSaved = await getSetting<NavItem[] | null>('customNavItems', null);
+      const saved = rawSaved ? migrateSavedNavItems(rawSaved) : rawSaved;
       if (saved && saved.length > 0) {
         // Merge with defaults to ensure paths are correct
         const savedMap = new Map(saved.map(item => [item.id, item]));
