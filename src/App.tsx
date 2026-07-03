@@ -213,6 +213,13 @@ const TourNavigationListener = () => {
   return null;
 };
 
+// Feature discovery tour system — wires router navigation + hydrates cloud state.
+const TourBootstrap = () => {
+  useTourBootstrap();
+  return null;
+};
+
+
 
 // Intercept clicks/taps on @mention chips inside any editor and SPA-navigate.
 // Works for both legacy <a class="rt-mention" href="..."> and the new
@@ -444,6 +451,8 @@ const AppRoutes = () => {
         <NavigationLoader />
         <DashboardTracker />
         <TourNavigationListener />
+        <TourBootstrap />
+
         <WidgetRouteListener />
         <MentionClickListener />
         <CommentClickListener />
