@@ -505,9 +505,12 @@ const VirtualNotebookGrid = ({
   const rowVirtualizer = useWindowVirtualizer({
     count: rowCount,
     estimateSize: () => rowHeight,
-    overscan: 4,
+    // Larger overscan + measured row size keep rows mounted ahead of a fast fling
+    // so users never see a blank patch during momentum scrolling.
+    overscan: 12,
     scrollMargin,
   });
+
 
   return (
     <div ref={parentRef} className="px-3 pt-5 max-w-3xl mx-auto">
