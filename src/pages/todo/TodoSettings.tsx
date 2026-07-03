@@ -449,6 +449,7 @@ const TodoSettings = () => {
               onClick={() => setShowCustomizeNavigationSheet(true)} 
             />
             <button
+              data-tour="settings-more-tabs"
               onClick={() => setShowMoreTabsExpanded(!showMoreTabsExpanded)}
               className="w-full flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted transition-colors"
             >
@@ -465,6 +466,7 @@ const TodoSettings = () => {
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </button>
                 <button
+                  data-tour="settings-eisenhower-matrix"
                   onClick={() => navigate('/todo/matrix')}
                   className="w-full flex items-center justify-between px-6 py-3 border-b border-border/50 hover:bg-muted transition-colors"
                 >
