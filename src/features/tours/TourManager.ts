@@ -101,6 +101,7 @@ class TourManagerImpl {
 
     const finalize = async () => {
       try { delete document.body.dataset.tourActive; } catch {}
+      emitTourActiveChange(false);
       this.activeDriver = null;
       currentDrv = null;
       const finishedId = this.activeTourId;
