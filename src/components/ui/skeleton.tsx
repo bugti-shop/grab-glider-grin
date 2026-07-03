@@ -6,6 +6,11 @@ import { cn } from "@/lib/utils";
  * visibly active without becoming distracting.
  */
 function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  // Hide skeleton loaders while a feature tour is running so highlighted
+  // targets aren't obscured by placeholder shimmer.
+  if (typeof document !== 'undefined' && document.body?.dataset.tourActive === 'true') {
+    return null;
+  }
   return (
     <div
       className={cn("rounded-md bg-muted", className)}
