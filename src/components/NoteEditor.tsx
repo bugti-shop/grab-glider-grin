@@ -1193,7 +1193,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
             <DropdownMenu open={isOptionsMenuOpen} onOpenChange={setIsOptionsMenuOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
+                <Button data-tour="note-options-menu" variant="ghost" size="icon" className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
                   <MoreVertical className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -1408,6 +1408,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   Tags ({noteTagIds.length})
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <div data-tour="note-extract-group">
                 {/* Email Extractor with inline sub-options - Premium */}
                 <Collapsible>
                   <CollapsibleTrigger asChild>
@@ -1835,6 +1836,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+                </div>
                 {note && (
                   <>
                     <DropdownMenuItem onClick={() => setIsVersionHistoryOpen(true)}>

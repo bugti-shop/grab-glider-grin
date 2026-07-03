@@ -610,6 +610,15 @@ const Index = () => {
     }
   };
 
+  useEffect(() => {
+    const openFirstRegularNoteForTour = () => {
+      const regular = notes.find((n) => n.type === 'regular' && !n.isDeleted) ?? notes.find((n) => !n.isDeleted);
+      if (regular) handleEditNote(regular);
+    };
+    window.addEventListener('flowist-tour-open-first-regular-note', openFirstRegularNoteForTour);
+    return () => window.removeEventListener('flowist-tour-open-first-regular-note', openFirstRegularNoteForTour);
+  }, [notes]);
+
   const persistFolders = async (updatedFolders: Folder[]) => {
     await setSetting('folders', updatedFolders);
     window.dispatchEvent(new Event('foldersUpdated'));
