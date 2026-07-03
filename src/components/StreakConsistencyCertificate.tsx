@@ -254,20 +254,24 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           I'm on a
         </p>
 
-        {/* Big streak number */}
-        <p data-streak-number style={{
-          color: '#ffffff',
-          fontSize: s(currentStreak >= 10000 ? 36 : currentStreak >= 1000 ? 42 : 48),
-          fontWeight: 900,
-          margin: '0 0 2px',
-          lineHeight: 1,
-          position: 'relative',
-          zIndex: 1,
-          textShadow: `0 4px 20px ${colors.glow}`,
-          textAlign: 'left',
-        }}>
-          {currentStreak.toLocaleString()}
-        </p>
+        {/* Big streak number + flame drop inline */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: s(10), position: 'relative', zIndex: 1 }}>
+          <p data-streak-number style={{
+            color: '#ffffff',
+            fontSize: s(currentStreak >= 10000 ? 36 : currentStreak >= 1000 ? 42 : 48),
+            fontWeight: 900,
+            margin: '0 0 2px',
+            lineHeight: 1,
+            textShadow: `0 4px 20px ${colors.glow}`,
+            textAlign: 'left',
+          }}>
+            {currentStreak.toLocaleString()}
+          </p>
+          <svg width={s(44)} height={s(58)} viewBox="0 0 24 24" fill="white" style={{ opacity: 0.85, flexShrink: 0 }}>
+            <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.866 4-9 7-13 3 4 7 9.134 7 13 0 3.866-3.134 7-7 7z" />
+          </svg>
+        </div>
+
 
         {/* "day/days productivity streak!" */}
         <p data-streak-label style={{
@@ -300,16 +304,14 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           </p>
         )}
 
-        {/* Bottom row: stats + branding */}
+        {/* Bottom row: stats only */}
         <div style={{
           display: 'flex',
           alignItems: 'flex-end',
-          justifyContent: 'space-between',
           gap: s(16),
           marginTop: s(28),
           position: 'relative',
           zIndex: 1,
-          flexWrap: 'wrap',
         }}>
           <div style={{ display: 'flex', gap: s(24), flexShrink: 0 }}>
             <div>
@@ -321,63 +323,53 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
               <p style={{ color: '#ffffffaa', fontSize: s(11), margin: `${s(4)}px 0 0`, fontWeight: 500 }}>Best Streak</p>
             </div>
           </div>
+        </div>
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: s(10),
-            flexShrink: 0,
-          }}>
-            <Suspense fallback={null}>
-              {(() => {
-                // Guarantee a scannable QR: min 72px, scales up on larger cards.
-                // Quiet zone (padding) = ~4 modules ≈ 12% of QR size, min 8px.
-                const qrSize = Math.max(72, Math.min(120, s(56)));
-                const quietZone = Math.max(8, Math.round(qrSize * 0.12));
-                return (
-                  <div style={{
-                    background: '#ffffff',
-                    borderRadius: 10,
-                    padding: quietZone,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  }}>
-                    <QRCodeSVG
-                      value="https://onelink.to/9xy8rz"
-                      size={qrSize}
-                      level="H"
-                      bgColor="#ffffff"
-                      fgColor="#000000"
-                      marginSize={0}
-                    />
-                  </div>
-                );
-              })()}
-            </Suspense>
 
-            <div>
-              <p style={{ color: '#ffffffdd', fontSize: s(13), fontWeight: 700, margin: 0 }}>Flowist</p>
-              <p style={{ color: '#ffffff99', fontSize: s(9), margin: `${s(2)}px 0 0` }}>Notepad & To Do List</p>
-            </div>
+
+
+        {/* QR + Flowist branding — small, right side */}
+        <div style={{
+          position: 'absolute',
+          right: s(20),
+          bottom: s(20),
+          display: 'flex',
+          alignItems: 'center',
+          gap: s(8),
+          zIndex: 2,
+        }}>
+          <Suspense fallback={null}>
+            {(() => {
+              const qrSize = Math.max(52, Math.min(72, s(48)));
+              const quietZone = Math.max(6, Math.round(qrSize * 0.1));
+              return (
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: 8,
+                  padding: quietZone,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                }}>
+                  <QRCodeSVG
+                    value="https://onelink.to/9xy8rz"
+                    size={qrSize}
+                    level="H"
+                    bgColor="#ffffff"
+                    fgColor="#000000"
+                    marginSize={0}
+                  />
+                </div>
+              );
+            })()}
+          </Suspense>
+          <div>
+            <p style={{ color: '#ffffffee', fontSize: s(11), fontWeight: 700, margin: 0 }}>Flowist</p>
+            <p style={{ color: '#ffffff99', fontSize: s(8), margin: `${s(2)}px 0 0` }}>Notepad & To Do List</p>
           </div>
         </div>
 
-        {/* Flame icon decorative */}
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          right: s(16),
-          transform: 'translateY(-60%)',
-          opacity: 0.15,
-          zIndex: 0,
-          pointerEvents: 'none',
-        }}>
-          <svg width={s(120)} height={s(160)} viewBox="0 0 24 24" fill="white">
-            <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.866 4-9 7-13 3 4 7 9.134 7 13 0 3.866-3.134 7-7 7z" />
-          </svg>
-        </div>
       </div>
 
 
