@@ -497,6 +497,43 @@ export const countTasksInDB = async (): Promise<number> => {
   }
 };
 
+// Lifetime count of tasks marked completed. Uses the 'completed' index so we
+// never materialize the whole task set.
+export const countCompletedTasksInDB = async (): Promise<number> => {
+  if (tasksCache) return tasksCache.filter((t) => t.completed).length;
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        // IDB stores booleans as-is; count via index range on true.
+        const index = store.index('completed');
+        // Some browsers store booleans; use IDBKeyRange.only(1) fallback if needed.
+        const req = index.count(IDBKeyRange.only(true as unknown as IDBValidKey));
+        req.onsuccess = () => {
+          const n = Number(req.result) || 0;
+          if (n > 0) return resolve(n);
+          // Fallback: numeric 1 (older data)
+          try {
+            const req2 = index.count(IDBKeyRange.only(1));
+            req2.onsuccess = () => resolve(Number(req2.result) || 0);
+            req2.onerror = () => resolve(0);
+          } catch {
+            resolve(0);
+          }
+        };
+        req.onerror = () => resolve(0);
+      } catch {
+        resolve(0);
+      }
+    });
+  } catch {
+    return 0;
+  }
+};
+
+
 // Insert or replace a single task without rewriting the whole tasks store.
 export const putTaskInDB = async (task: TodoItem, skipSyncEvent = false): Promise<boolean> => {
   markLocalStorageMigrationDone();
