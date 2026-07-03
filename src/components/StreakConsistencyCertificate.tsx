@@ -254,23 +254,34 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           I'm on a
         </p>
 
-        {/* Big streak number + flame drop inline */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: s(10), position: 'relative', zIndex: 1 }}>
-          <p data-streak-number style={{
-            color: '#ffffff',
-            fontSize: s(currentStreak >= 10000 ? 36 : currentStreak >= 1000 ? 42 : 48),
-            fontWeight: 900,
-            margin: '0 0 2px',
-            lineHeight: 1,
-            textShadow: `0 4px 20px ${colors.glow}`,
-            textAlign: 'left',
-          }}>
-            {currentStreak.toLocaleString()}
-          </p>
-          <svg width={s(44)} height={s(58)} viewBox="0 0 24 24" fill="white" style={{ opacity: 0.85, flexShrink: 0 }}>
+        {/* Big streak number */}
+        <p data-streak-number style={{
+          color: '#ffffff',
+          fontSize: s(currentStreak >= 10000 ? 36 : currentStreak >= 1000 ? 42 : 48),
+          fontWeight: 900,
+          margin: '0 0 2px',
+          lineHeight: 1,
+          position: 'relative',
+          zIndex: 1,
+          textShadow: `0 4px 20px ${colors.glow}`,
+          textAlign: 'left',
+        }}>
+          {currentStreak.toLocaleString()}
+        </p>
+
+        {/* Flame drop — big, top-right corner, subtle */}
+        <div style={{
+          position: 'absolute',
+          top: s(28),
+          right: s(24),
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}>
+          <svg width={s(110)} height={s(145)} viewBox="0 0 24 24" fill="white" style={{ opacity: 0.35 }}>
             <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.866 4-9 7-13 3 4 7 9.134 7 13 0 3.866-3.134 7-7 7z" />
           </svg>
         </div>
+
 
 
         {/* "day/days productivity streak!" */}
