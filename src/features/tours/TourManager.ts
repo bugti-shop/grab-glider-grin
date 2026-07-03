@@ -83,6 +83,7 @@ class TourManagerImpl {
     }
 
     this.activeTourId = tourId;
+    try { document.body.dataset.tourActive = 'true'; } catch {}
 
     // Flag lets us tear down a per-step driver without triggering the
     // "tour is over" side-effects (mark seen, drain queue).
