@@ -45,17 +45,35 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
   const { t } = useTranslation();
   const { profile } = useUserProfile();
   const cardRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [cardName, setCardName] = useState(profile.name || '');
   const [copiedText, setCopiedText] = useState(false);
+  const [cardWidth, setCardWidth] = useState(360);
 
   useEffect(() => {
     if (!cardName && profile.name) setCardName(profile.name);
   }, [profile.name]);
 
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setCardWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Scale factor: 360px baseline; clamp between 0.82 and 1.4
+  const scale = Math.max(0.82, Math.min(1.4, cardWidth / 360));
+  const s = (n: number) => Math.round(n * scale);
+
   const colors = getStreakColor(currentStreak);
   const displayName = cardName.trim();
+
 
   const handleShare = useCallback(async () => {
     setIsSharing(true);
