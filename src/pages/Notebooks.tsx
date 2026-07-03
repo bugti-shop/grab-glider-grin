@@ -30,6 +30,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useFirstVisitTour } from '@/features/tours/useFeatureTour';
+import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';
 
 const NOTEBOOK_COLORS = [
   '#3b82f6', // blue
@@ -228,6 +229,7 @@ const Notebooks = () => {
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
             {folders.length} {folders.length === 1 ? 'notebook' : 'notebooks'}
           </span>
+          <FeatureGuideButton />
         </div>
         <div className="px-4 pb-3">
           <div className="relative">
