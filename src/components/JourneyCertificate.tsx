@@ -208,111 +208,104 @@ export const JourneyCertificate = ({ open, onClose, journey, progress }: Journey
             }} />
 
             {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <div style={{ textAlign: 'center', marginBottom: 14 }}>
               <p style={{ color: colors.accent, fontSize: 10, letterSpacing: 3, textTransform: 'uppercase', fontWeight: 600 }}>
                 Certificate of Completion
               </p>
             </div>
 
-            {/* Journey emoji */}
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <span style={{ fontSize: 56 }}>{journey.emoji}</span>
-            </div>
-
-            {/* Journey name */}
-            <div style={{ textAlign: 'center', marginBottom: 6 }}>
-              <h3 style={{ color: colors.accent, fontSize: 24, fontWeight: 800, margin: 0 }}>
-                {journey.name}
-              </h3>
-            </div>
-
-            {/* Subtitle */}
-            <p style={{ textAlign: 'center', color: colors.text, fontSize: 11, marginBottom: 20, opacity: 0.8 }}>
-              {journey.description}
-            </p>
-
-            {/* Awarded to - centered in middle */}
-            {displayName && (
-              <div data-export-profile-row="true" style={{ textAlign: 'center', marginBottom: 16 }}>
-                <p style={{ color: colors.text, fontSize: 9, opacity: 0.6, marginBottom: 2 }}>Awarded to</p>
-                <p data-export-profile-name="true" style={{ color: '#ffffff', fontSize: 16, fontWeight: 700, display: 'inline-block', paddingBottom: 4, borderBottom: `2px solid ${colors.accent}80` }}>
-                  {displayName}
+            {/* Two-column landscape body (Duolingo-style) */}
+            <div className="flex flex-col sm:flex-row sm:items-stretch sm:gap-6 gap-4">
+              {/* LEFT: identity + stats */}
+              <div className="sm:flex-1 sm:min-w-0" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                  <span style={{ fontSize: 44 }}>{journey.emoji}</span>
+                </div>
+                <div style={{ textAlign: 'center', marginBottom: 4 }}>
+                  <h3 style={{ color: colors.accent, fontSize: 22, fontWeight: 800, margin: 0, lineHeight: 1.15 }}>
+                    {journey.name}
+                  </h3>
+                </div>
+                <p style={{ textAlign: 'center', color: colors.text, fontSize: 11, marginBottom: 12, opacity: 0.8, lineHeight: 1.35 }}>
+                  {journey.description}
                 </p>
-              </div>
-            )}
 
-            {/* Divider */}
-            <div style={{ width: 60, height: 2, background: colors.accent, margin: '0 auto 16px', opacity: 0.5, borderRadius: 1 }} />
-
-            {/* Stats */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 16 }}>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ color: colors.accent, fontSize: 20, fontWeight: 800, margin: 0 }}>
-                  {totalTasks}
-                </p>
-                <p style={{ color: colors.text, fontSize: 9, opacity: 0.7 }}>Tasks Done</p>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ color: colors.accent, fontSize: 20, fontWeight: 800, margin: 0 }}>
-                  {journey.milestones.length}
-                </p>
-                <p style={{ color: colors.text, fontSize: 9, opacity: 0.7 }}>Milestones</p>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ color: colors.accent, fontSize: 20, fontWeight: 800, margin: 0 }}>
-                  {totalDays}
-                </p>
-                <p style={{ color: colors.text, fontSize: 9, opacity: 0.7 }}>Days</p>
-              </div>
-            </div>
-
-            {/* Animated Milestone Timeline */}
-            <div style={{ position: 'relative', paddingLeft: 28, marginBottom: 20 }}>
-              {/* Vertical line */}
-              <div style={{
-                position: 'absolute', left: 10, top: 4, bottom: 4, width: 2,
-                background: `linear-gradient(to bottom, ${colors.accent}, ${colors.accent}40)`,
-                borderRadius: 1,
-              }} />
-              {journey.milestones.map((ms, i) => (
-                <motion.div
-                  key={ms.id}
-                  initial={{ opacity: 0, x: -15 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + i * 0.15, duration: 0.4 }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    marginBottom: i < journey.milestones.length - 1 ? 10 : 0,
-                    position: 'relative',
-                  }}
-                >
-                  {/* Timeline dot */}
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.4 + i * 0.15, type: 'spring', stiffness: 300 }}
-                    style={{
-                      position: 'absolute', left: -22,
-                      width: 20, height: 20, borderRadius: '50%',
-                      background: colors.accent,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 10, boxShadow: `0 0 8px ${colors.accent}60`,
-                    }}
-                  >
-                    {ms.icon}
-                  </motion.div>
-                  {/* Milestone info */}
-                  <div style={{ paddingLeft: 6 }}>
-                    <p style={{ color: '#ffffff', fontSize: 11, fontWeight: 700, margin: 0, lineHeight: 1.3 }}>
-                      {ms.name} <span style={{ color: colors.accent, fontWeight: 600, fontSize: 10 }}>({ms.tasksRequired} tasks)</span>
-                    </p>
-                    <p style={{ color: colors.text, fontSize: 8, margin: 0, opacity: 0.7 }}>
-                      {ms.description}
+                {displayName && (
+                  <div data-export-profile-row="true" style={{ textAlign: 'center', marginBottom: 12 }}>
+                    <p style={{ color: colors.text, fontSize: 9, opacity: 0.6, marginBottom: 2 }}>Awarded to</p>
+                    <p data-export-profile-name="true" style={{ color: '#ffffff', fontSize: 16, fontWeight: 700, display: 'inline-block', paddingBottom: 4, borderBottom: `2px solid ${colors.accent}80` }}>
+                      {displayName}
                     </p>
                   </div>
-                </motion.div>
-              ))}
+                )}
+
+                <div style={{ width: 60, height: 2, background: colors.accent, margin: '0 auto 12px', opacity: 0.5, borderRadius: 1 }} />
+
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 8 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <p style={{ color: colors.accent, fontSize: 20, fontWeight: 800, margin: 0 }}>{totalTasks}</p>
+                    <p style={{ color: colors.text, fontSize: 9, opacity: 0.7 }}>Tasks Done</p>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <p style={{ color: colors.accent, fontSize: 20, fontWeight: 800, margin: 0 }}>{journey.milestones.length}</p>
+                    <p style={{ color: colors.text, fontSize: 9, opacity: 0.7 }}>Milestones</p>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <p style={{ color: colors.accent, fontSize: 20, fontWeight: 800, margin: 0 }}>{totalDays}</p>
+                    <p style={{ color: colors.text, fontSize: 9, opacity: 0.7 }}>Days</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Vertical divider on desktop */}
+              <div className="hidden sm:block" style={{ width: 1, background: `${colors.accent}30`, borderRadius: 1 }} />
+
+              {/* RIGHT: milestone timeline */}
+              <div className="sm:flex-1 sm:min-w-0" style={{ position: 'relative', paddingLeft: 28, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{
+                  position: 'absolute', left: 10, top: 4, bottom: 4, width: 2,
+                  background: `linear-gradient(to bottom, ${colors.accent}, ${colors.accent}40)`,
+                  borderRadius: 1,
+                }} />
+                {journey.milestones.map((ms, i) => (
+                  <motion.div
+                    key={ms.id}
+                    initial={{ opacity: 0, x: -15 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + i * 0.15, duration: 0.4 }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      marginBottom: i < journey.milestones.length - 1 ? 8 : 0,
+                      position: 'relative',
+                    }}
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.4 + i * 0.15, type: 'spring', stiffness: 300 }}
+                      style={{
+                        position: 'absolute', left: -22,
+                        width: 20, height: 20, borderRadius: '50%',
+                        background: colors.accent,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 10, boxShadow: `0 0 8px ${colors.accent}60`,
+                      }}
+                    >
+                      {ms.icon}
+                    </motion.div>
+                    <div style={{ paddingLeft: 6 }}>
+                      <p style={{ color: '#ffffff', fontSize: 11, fontWeight: 700, margin: 0, lineHeight: 1.3 }}>
+                        {ms.name} <span style={{ color: colors.accent, fontWeight: 600, fontSize: 10 }}>({ms.tasksRequired} tasks)</span>
+                      </p>
+                      <p style={{ color: colors.text, fontSize: 8, margin: 0, opacity: 0.7 }}>
+                        {ms.description}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
+
 
             {/* Date */}
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
