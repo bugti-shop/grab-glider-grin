@@ -1408,6 +1408,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   Tags ({noteTagIds.length})
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <div data-tour="note-extract-group">
                 {/* Email Extractor with inline sub-options - Premium */}
                 <Collapsible>
                   <CollapsibleTrigger asChild>
