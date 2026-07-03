@@ -7,7 +7,7 @@ import { addPomodoroSession } from '@/utils/pomodoroStorage';
 import { addNotification } from '@/utils/notificationStore';
 import { sendWebNotification, requestNotificationPermission } from '@/utils/webNotifications';
 import { setFocusBgState, clearFocusBgState, onFocusBgCommand } from '@/utils/focusBackgroundState';
-import { showFocusOngoing, hideFocusOngoing } from '@/utils/focusPersistentNotification';
+import { showFocusOngoing, hideFocusOngoing, onFocusQuickControl } from '@/utils/focusPersistentNotification';
 import { SoundLibrary } from '@/components/focus/SoundLibrary';
 import { FocusFlipClock } from '@/components/focus/FocusFlipClock';
 import { findTrack, FocusTrack } from '@/components/focus/FocusSounds';
@@ -551,6 +551,23 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
       if (cmd === 'open') setBackgrounded(false);
       else if (cmd === 'toggle') { if (running) pauseSession(); else resumeSession(); }
       else if (cmd === 'stop') { discardSession(true); clearFocusBgState(); setBackgrounded(false); onClose(); }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
+
+  // ---- Quick controls tapped from the persistent notification ------------
+  // Keeps the on-screen state in sync with anything the user did from the
+  // lock screen / notification shade (pause, mute, volume, exit).
+  useEffect(() => {
+    return onFocusQuickControl((e) => {
+      switch (e.action) {
+        case 'pause':  if (running) pauseSession(); break;
+        case 'resume': if (!running) resumeSession(); break;
+        case 'mute':   updatePrefs({ whiteNoiseMuted: true }); break;
+        case 'unmute': updatePrefs({ whiteNoiseMuted: false }); break;
+        case 'volume': updatePrefs({ whiteNoiseVolume: Math.max(0, Math.min(1, e.volume)), whiteNoiseMuted: e.muted }); break;
+        case 'stop':   discardSession(true); clearFocusBgState(); setBackgrounded(false); onClose(); break;
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running]);
