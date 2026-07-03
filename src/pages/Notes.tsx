@@ -572,6 +572,7 @@ const Notes = () => {
               >
                 <ListTodo className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6" />
               </Button>
+              <FeatureGuideButton />
             </div>
           </div>
         </div>
