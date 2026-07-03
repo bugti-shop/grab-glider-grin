@@ -77,6 +77,9 @@ const HabitNew = () => {
   const [goalAmount, setGoalAmount] = useState(1);
   const [goalUnit, setGoalUnit] = useState('times');
   const [showGoalDialog, setShowGoalDialog] = useState(false);
+  /** When true, show a time picker for each repeat and sync to reminders on save. */
+  const [scheduleEachRepeat, setScheduleEachRepeat] = useState(false);
+  const [repeatTimes, setRepeatTimes] = useState<string[]>([]);
 
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [showDateDialog, setShowDateDialog] = useState(false);
