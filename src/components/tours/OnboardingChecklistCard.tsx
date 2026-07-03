@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { getDaysSinceInstall } from '@/features/tours/TourStateStore';
 import { useFeatureTour } from '@/features/tours/useFeatureTour';
+import { loadTodoItems } from '@/utils/todoItemsStorage';
+
 
 const CHECKLIST_STATE_KEY = 'onboarding-checklist-v1';
 
@@ -193,3 +195,57 @@ export const OnboardingChecklistCard = ({ signals }: OnboardingChecklistCardProp
     </div>
   );
 };
+
+/**
+ * Self-sufficient host that reads onboarding signals directly from storage.
+ * Drop this anywhere without passing signals — it re-reads on window focus
+ * and on the custom `flowistOnboardingSignalChange` event.
+ */
+export const OnboardingChecklistCardAuto = () => {
+  const [signals, setSignals] = useState({
+    hasCreatedTask: false,
+    hasCreatedNote: false,
+    hasSwitchedTaskView: false,
+    hasVisitedProgress: false,
+    hasChangedTheme: false,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const compute = async () => {
+      try {
+        const [items, theme, viewMode, visitedProgress, noteCountFlag] = await Promise.all([
+          loadTodoItems().catch(() => []),
+          getSetting<string>('theme', 'light'),
+          getSetting<string>('todoViewMode', 'flat'),
+          getSetting<boolean>('onboarding-visited-progress', false),
+          getSetting<boolean>('onboarding-has-note', false),
+        ]);
+        if (cancelled) return;
+        setSignals({
+          hasCreatedTask: (items?.length ?? 0) > 0,
+          hasCreatedNote: !!noteCountFlag,
+          hasSwitchedTaskView: !!viewMode && viewMode !== 'flat',
+          hasVisitedProgress: !!visitedProgress,
+          hasChangedTheme: !!theme && theme !== 'light',
+        });
+      } catch {
+        /* ignore */
+      }
+    };
+    void compute();
+    const handler = () => void compute();
+    window.addEventListener('focus', handler);
+    window.addEventListener('flowistOnboardingSignalChange', handler);
+    const interval = window.setInterval(compute, 15000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', handler);
+      window.removeEventListener('flowistOnboardingSignalChange', handler);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  return <OnboardingChecklistCard signals={signals} />;
+};
+
