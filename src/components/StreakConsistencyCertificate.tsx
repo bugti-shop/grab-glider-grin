@@ -134,35 +134,35 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
   }, [currentStreak, totalCompletions, displayName]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" ref={wrapRef}>
       {/* The shareable card */}
       <div
         ref={cardRef}
         style={{
           background: colors.bg,
           borderRadius: 20,
-          padding: '36px 28px 32px',
+          padding: `${s(36)}px ${s(28)}px ${s(32)}px`,
           position: 'relative',
           overflow: 'hidden',
-          minHeight: 340,
+          minHeight: s(340),
         }}
       >
         {/* Decorative glow circles */}
         <div style={{
           position: 'absolute', top: -40, right: -40,
-          width: 180, height: 180, borderRadius: '50%',
+          width: s(180), height: s(180), borderRadius: '50%',
           background: `radial-gradient(circle, ${colors.glow}30, transparent 70%)`,
         }} />
         <div style={{
           position: 'absolute', bottom: -30, left: -30,
-          width: 120, height: 120, borderRadius: '50%',
+          width: s(120), height: s(120), borderRadius: '50%',
           background: `radial-gradient(circle, ${colors.glow}20, transparent 70%)`,
         }} />
 
         {/* "I'm on a" text */}
         <p data-streak-intro style={{
           color: '#ffffffdd',
-          fontSize: 22,
+          fontSize: s(22),
           fontWeight: 700,
           margin: 0,
           lineHeight: 1.3,
@@ -175,7 +175,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         {/* Big streak number */}
         <p data-streak-number style={{
           color: '#ffffff',
-          fontSize: currentStreak >= 10000 ? 36 : currentStreak >= 1000 ? 42 : 48,
+          fontSize: s(currentStreak >= 10000 ? 36 : currentStreak >= 1000 ? 42 : 48),
           fontWeight: 900,
           margin: '0 0 2px',
           lineHeight: 1,
@@ -190,7 +190,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         {/* "day/days productivity streak!" */}
         <p data-streak-label style={{
           color: '#ffffffdd',
-          fontSize: 22,
+          fontSize: s(22),
           fontWeight: 700,
           margin: 0,
           lineHeight: 1.3,
@@ -204,65 +204,70 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         {displayName && (
           <p style={{
             color: '#ffffffbb',
-            fontSize: 13,
+            fontSize: s(13),
             fontWeight: 600,
-            marginTop: 12,
+            marginTop: s(12),
             position: 'relative',
             zIndex: 1,
+            maxWidth: '60%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}>
             {displayName}
           </p>
         )}
 
-        {/* Stats row at bottom */}
+        {/* Bottom row: stats + branding */}
         <div style={{
           display: 'flex',
-          gap: 28,
-          marginTop: 28,
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          gap: s(16),
+          marginTop: s(28),
           position: 'relative',
           zIndex: 1,
+          flexWrap: 'wrap',
         }}>
-          <div style={{ minWidth: 72 }}>
-            <p style={{ color: '#ffffff', fontSize: 22, fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{totalCompletions}</p>
-            <p style={{ color: '#ffffffaa', fontSize: 11, margin: '4px 0 0', fontWeight: 500 }}>Tasks Done</p>
-          </div>
-          <div style={{ minWidth: 72 }}>
-            <p style={{ color: '#ffffff', fontSize: 22, fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{longestStreak}</p>
-            <p style={{ color: '#ffffffaa', fontSize: 11, margin: '4px 0 0', fontWeight: 500 }}>Best Streak</p>
-          </div>
-        </div>
-
-        {/* Branding at bottom-right */}
-        <div style={{
-          position: 'absolute',
-          bottom: 20,
-          right: 24,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          zIndex: 1,
-        }}>
-          <Suspense fallback={null}>
-            <div style={{
-              background: '#ffffff',
-              borderRadius: 8,
-              padding: 4,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <QRCodeSVG
-                value="https://play.google.com/store/apps/details?id=nota.npd.com"
-                size={52}
-                level="M"
-                bgColor="#ffffff"
-                fgColor="#000000"
-              />
+          <div style={{ display: 'flex', gap: s(24), flexShrink: 0 }}>
+            <div>
+              <p style={{ color: '#ffffff', fontSize: s(22), fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{totalCompletions}</p>
+              <p style={{ color: '#ffffffaa', fontSize: s(11), margin: `${s(4)}px 0 0`, fontWeight: 500 }}>Tasks Done</p>
             </div>
-          </Suspense>
-          <div>
-            <p style={{ color: '#ffffffdd', fontSize: 13, fontWeight: 700, margin: 0 }}>Flowist</p>
-            <p style={{ color: '#ffffff99', fontSize: 9, margin: '2px 0 0' }}>Notepad & To Do List</p>
+            <div>
+              <p style={{ color: '#ffffff', fontSize: s(22), fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{longestStreak}</p>
+              <p style={{ color: '#ffffffaa', fontSize: s(11), margin: `${s(4)}px 0 0`, fontWeight: 500 }}>Best Streak</p>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: s(10),
+            flexShrink: 0,
+          }}>
+            <Suspense fallback={null}>
+              <div style={{
+                background: '#ffffff',
+                borderRadius: 8,
+                padding: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <QRCodeSVG
+                  value="https://play.google.com/store/apps/details?id=nota.npd.com"
+                  size={s(52)}
+                  level="M"
+                  bgColor="#ffffff"
+                  fgColor="#000000"
+                />
+              </div>
+            </Suspense>
+            <div>
+              <p style={{ color: '#ffffffdd', fontSize: s(13), fontWeight: 700, margin: 0 }}>Flowist</p>
+              <p style={{ color: '#ffffff99', fontSize: s(9), margin: `${s(2)}px 0 0` }}>Notepad & To Do List</p>
+            </div>
           </div>
         </div>
 
@@ -270,16 +275,18 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         <div style={{
           position: 'absolute',
           top: '50%',
-          right: 16,
+          right: s(16),
           transform: 'translateY(-60%)',
           opacity: 0.15,
           zIndex: 0,
+          pointerEvents: 'none',
         }}>
-          <svg width="120" height="160" viewBox="0 0 24 24" fill="white">
+          <svg width={s(120)} height={s(160)} viewBox="0 0 24 24" fill="white">
             <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.866 4-9 7-13 3 4 7 9.134 7 13 0 3.866-3.134 7-7 7z" />
           </svg>
         </div>
       </div>
+
 
       {/* Name input */}
       <div className="bg-card border rounded-xl p-3">
