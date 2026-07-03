@@ -107,6 +107,33 @@ class TourManagerImpl {
     this.activeDriver = drv;
     try {
       drv.drive();
+      // Auto-dismiss the popover when the user clicks the highlighted target,
+      // so tour UI doesn't linger over the sheet/menu the user just opened.
+      const dismissOnTargetClick = (ev: MouseEvent) => {
+        const target = ev.target as Element | null;
+        if (!target) return;
+        // Ignore clicks inside the popover itself.
+        if (target.closest('.driver-popover')) return;
+        // Match any highlighted step target.
+        const anyStepMatch = steps.some((s) => {
+          const sel = typeof s.element === 'string' ? s.element : null;
+          return sel ? !!target.closest(sel) : false;
+        });
+        if (anyStepMatch) {
+          try { drv.destroy(); } catch {}
+          window.removeEventListener('click', dismissOnTargetClick, true);
+        }
+      };
+      window.addEventListener('click', dismissOnTargetClick, true);
+      // Clean up listener when tour ends.
+      const origOnDestroyed = drv as any;
+      const cleanup = () => window.removeEventListener('click', dismissOnTargetClick, true);
+      setTimeout(() => {
+        // Also cleanup if tour ends via other means.
+        const check = setInterval(() => {
+          if (!this.activeDriver) { cleanup(); clearInterval(check); }
+        }, 500);
+      }, 0);
     } catch {
       this.activeDriver = null;
       this.activeTourId = null;
