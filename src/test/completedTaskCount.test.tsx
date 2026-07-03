@@ -9,12 +9,11 @@
  */
 
 import 'fake-indexeddb/auto';
+import { IDBFactory } from 'fake-indexeddb';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
-// The module must be imported AFTER fake-indexeddb/auto so the IDB polyfill is
-// in place. We re-import between tests via vi.resetModules to reset internal
-// caches (tasksCache, dispatch timers) that live at module scope.
+// Import lazily after we reset the IDB factory + module cache in beforeEach.
 let taskStorage: typeof import('@/utils/taskStorage');
 
 const makeTask = (id: string, completed: boolean) => ({
@@ -39,23 +38,13 @@ const waitForEvent = (name: string, timeoutMs = 1000) =>
   });
 
 beforeEach(async () => {
-  // Reset fake IDB between tests so counts start at 0.
-  const dbs = await indexedDB.databases?.().catch(() => []) ?? [];
-  await Promise.all(
-    dbs.map(
-      (d) =>
-        new Promise<void>((resolve) => {
-          if (!d.name) return resolve();
-          const req = indexedDB.deleteDatabase(d.name);
-          req.onsuccess = () => resolve();
-          req.onerror = () => resolve();
-          req.onblocked = () => resolve();
-        }),
-    ),
-  );
+  // Fresh IDB instance per test — much more reliable than deleteDatabase()
+  // when the module still holds a live connection at import time.
+  (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
   vi.resetModules();
   taskStorage = await import('@/utils/taskStorage');
 });
+
 
 afterEach(() => {
   vi.useRealTimers();
