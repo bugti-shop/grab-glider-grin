@@ -50,10 +50,15 @@ export const VirtualJourneyCard = () => {
   const [showPicker, setShowPicker] = useState(false);
   const [celebration, setCelebration] = useState<{ milestone?: JourneyMilestone; completed?: boolean } | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
+  // Optimistic bump: counts task-completion events that arrived before the
+  // journey data reload finished, so the progress bar / counter update
+  // immediately instead of waiting for the debounced storage flush.
+  const [optimisticBump, setOptimisticBump] = useState(0);
 
   const reload = async () => {
     const d = await loadJourneyDataAsync();
     setData(d);
+    setOptimisticBump(0);
   };
 
   useEffect(() => {
@@ -70,7 +75,11 @@ export const VirtualJourneyCard = () => {
       reload();
     };
 
-    const tasksHandler = () => reload();
+    const tasksHandler = () => {
+      // Bump the visible progress right away, then reconcile from storage.
+      setOptimisticBump((b) => b + 1);
+      reload();
+    };
 
     window.addEventListener('journeyMilestoneReached', milestoneHandler as EventListener);
     window.addEventListener('tasksUpdated', tasksHandler);
