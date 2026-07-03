@@ -398,12 +398,12 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={handleShare}
           disabled={isSharing}
-          className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+          className="flex-1 min-w-[120px] bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isSharing ? (
             <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
@@ -411,6 +411,20 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
             <Share2 className="h-4 w-4" />
           )}
           {isSharing ? 'Exporting...' : 'Share'}
+        </motion.button>
+
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={handleDownloadPdf}
+          disabled={isDownloading}
+          className="bg-card border rounded-xl px-4 py-3 text-sm flex items-center gap-2 disabled:opacity-50"
+        >
+          {isDownloading ? (
+            <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 text-muted-foreground" />
+          )}
+          {isDownloading ? 'Preparing...' : 'PDF'}
         </motion.button>
 
         <motion.button
