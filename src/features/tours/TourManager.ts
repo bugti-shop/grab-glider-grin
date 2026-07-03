@@ -69,11 +69,12 @@ class TourManagerImpl {
       for (const sel of preSelectors) {
         const trigger = await this.waitForSelector(sel, 2000);
         if (trigger instanceof HTMLElement) {
-          try { trigger.click(); } catch {}
-          await this.wait(260);
+          try { this.simulateActivation(trigger); } catch {}
+          await this.wait(320);
         }
       }
     }
+
 
     const steps = await this.buildSteps(tour);
     if (steps.length === 0) {
@@ -254,6 +255,26 @@ class TourManagerImpl {
   private wait(ms: number) {
     return new Promise<void>((resolve) => setTimeout(resolve, ms));
   }
+
+  /**
+   * Radix triggers (DropdownMenu, Popover) open on pointerdown, not click.
+   * A bare `.click()` won't open them, so dispatch a full pointer sequence.
+   */
+  private simulateActivation(el: HTMLElement) {
+    const rect = el.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const opts: PointerEventInit = {
+      bubbles: true, cancelable: true, composed: true,
+      pointerType: 'mouse', isPrimary: true, button: 0, clientX: x, clientY: y,
+    };
+    try { el.dispatchEvent(new PointerEvent('pointerdown', opts)); } catch {}
+    try { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y })); } catch {}
+    try { el.dispatchEvent(new PointerEvent('pointerup', opts)); } catch {}
+    try { el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y })); } catch {}
+    try { el.click(); } catch {}
+  }
+
 }
 
 export const TourManager = new TourManagerImpl();
