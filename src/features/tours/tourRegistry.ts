@@ -29,8 +29,9 @@ export interface FeatureTour {
   trigger: TourTrigger;
   triggerConfig?: { days?: number };
   premium?: boolean;
-  /** Optional CSS selector to click BEFORE the tour starts (e.g. open a menu). */
-  beforeStart?: string;
+  /** Optional CSS selector(s) to click BEFORE the tour starts (e.g. open a menu).
+   *  Provide an array to click multiple targets in sequence, each waited-for. */
+  beforeStart?: string | string[];
   steps: FeatureTourStep[];
 }
 
