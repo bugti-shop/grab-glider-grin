@@ -1610,7 +1610,7 @@ export const RichTextEditor = ({
     // Hydrate any freshly-inserted code blocks / web-clips.
     hydrateSynced();
     handleInput();
-  }, [notesSettings.markdownShortcuts, hydrateSynced]);
+  }, [hydrateSynced]);
 
   // Android/mobile soft keyboards fire `keydown` with keyCode 229 and no `key`,
   // so our markdown block/inline shortcuts (which key off e.key===' '/'Enter'/'*'/etc.)
@@ -1680,7 +1680,7 @@ export const RichTextEditor = ({
         handleInput();
       }
     }
-  }, [notesSettings.markdownShortcuts, slashMenu.open, mentionMenu.open]);
+  }, [slashMenu.open, mentionMenu.open]);
 
   // Handle keydown - checklist Enter key and other keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
