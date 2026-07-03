@@ -6,7 +6,9 @@ import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
 import { countCompletedTasksInDB } from '@/utils/taskStorage';
 import { loadStreakData } from '@/utils/streakStorage';
 import { getSetting } from '@/utils/settingsStorage';
+import { useTasksUpdated } from '@/hooks/useTasksUpdated';
 import { Folder, TaskSection } from '@/types/note';
+
 
 interface StatsData {
   notes: number;
@@ -51,16 +53,16 @@ export const useProfileStats = () => {
   }, []);
 
   useEffect(() => {
-    const refresh = () => void load();
-    const refreshEvents = ['notesUpdated', 'notesRestored', 'tasksUpdated', 'tasksRestored', 'foldersUpdated', 'foldersRestored'];
-
     void load();
-    refreshEvents.forEach((eventName) => window.addEventListener(eventName, refresh));
-
-    return () => {
-      refreshEvents.forEach((eventName) => window.removeEventListener(eventName, refresh));
-    };
   }, [load]);
+
+  // Single, deduplicated listener per event — prevents drift from double-binds
+  // during navigation, StrictMode double-invoke, or HMR reloads.
+  useTasksUpdated(
+    () => void load(),
+    ['notesUpdated', 'notesRestored', 'tasksUpdated', 'tasksRestored', 'foldersUpdated', 'foldersRestored'],
+  );
+
 
   return { stats, isLoading };
 };

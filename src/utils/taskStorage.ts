@@ -497,8 +497,10 @@ export const countTasksInDB = async (): Promise<number> => {
   }
 };
 
-// Lifetime count of tasks marked completed. Uses the 'completed' index so we
-// never materialize the whole task set.
+// Lifetime count of tasks marked completed. Iterates via a key-only cursor
+// so we never materialize the full task objects into memory (safe for 10k+
+// task stores). Booleans are not valid IDB keys, so the `completed` index
+// alone can't be range-queried directly.
 export const countCompletedTasksInDB = async (): Promise<number> => {
   if (tasksCache) return tasksCache.filter((t) => t.completed).length;
   try {
@@ -507,23 +509,17 @@ export const countCompletedTasksInDB = async (): Promise<number> => {
       try {
         const tx = db.transaction(STORE_NAME, 'readonly');
         const store = tx.objectStore(STORE_NAME);
-        // IDB stores booleans as-is; count via index range on true.
-        const index = store.index('completed');
-        // Some browsers store booleans; use IDBKeyRange.only(1) fallback if needed.
-        const req = index.count(IDBKeyRange.only(true as unknown as IDBValidKey));
+        const req = store.openCursor();
+        let count = 0;
         req.onsuccess = () => {
-          const n = Number(req.result) || 0;
-          if (n > 0) return resolve(n);
-          // Fallback: numeric 1 (older data)
-          try {
-            const req2 = index.count(IDBKeyRange.only(1));
-            req2.onsuccess = () => resolve(Number(req2.result) || 0);
-            req2.onerror = () => resolve(0);
-          } catch {
-            resolve(0);
-          }
+          const cursor = req.result;
+          if (!cursor) return resolve(count);
+          const val = cursor.value as { completed?: unknown } | undefined;
+          if (val && (val.completed === true || val.completed === 1)) count++;
+          cursor.continue();
         };
-        req.onerror = () => resolve(0);
+        req.onerror = () => resolve(count);
+        tx.onerror = () => resolve(count);
       } catch {
         resolve(0);
       }
@@ -532,6 +528,7 @@ export const countCompletedTasksInDB = async (): Promise<number> => {
     return 0;
   }
 };
+
 
 
 // Insert or replace a single task without rewriting the whole tasks store.
