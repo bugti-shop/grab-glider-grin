@@ -667,7 +667,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           <h2 className="text-[17px] font-bold mb-2 mt-6" style={{ color: PRO_BLUE, fontFamily: "'Nunito', sans-serif" }}>
             Select Your Plan
           </h2>
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-3 gap-2.5 pt-3">
             {PLANS.map((plan) => {
               const active = selectedPlan === plan.id;
               const badge = plan.badgeKey ? t(plan.badgeKey) : null;
@@ -675,33 +675,29 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
                 <button
                   key={plan.id}
                   onClick={() => { triggerTripleHeavyHaptic(); setSelectedPlan(plan.id); }}
-                  className="relative rounded-xl px-4 py-3 text-left transition-all active:scale-[0.99]"
+                  className="relative rounded-2xl px-2 py-4 flex flex-col items-center justify-center text-center transition-all active:scale-[0.97] min-h-[104px]"
                   style={{
                     background: active ? `${PRO_BLUE}18` : '#141414',
                     border: `1.5px solid ${active ? PRO_BLUE : '#262626'}`,
                   }}>
                   {badge && (
-                    <span className="absolute -top-2 right-3 text-[10px] font-bold px-2 py-[2px] rounded-full"
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-bold px-2.5 py-[3px] rounded-full"
                       style={{ background: PRO_BLUE, color: '#fff' }}>
                       {badge}
                     </span>
                   )}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[13.5px] font-bold text-white">
-                        {t(plan.labelKey)}
-                      </p>
-                      {plan.id === 'monthly' && !hasUsedTrial && (
-                        <p className="text-[11px] mt-0.5" style={{ color: PRO_BLUE }}>3-day free trial</p>
-                      )}
-                      {plan.id === 'yearly' && !hasUsedTrial && (
-                        <p className="text-[11px] mt-0.5" style={{ color: PRO_BLUE }}>3-day free trial</p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[16px] font-black text-white">{plan.price}</p>
-                    </div>
-                  </div>
+                  {active && (
+                    <span className="absolute top-1.5 right-1.5 h-4 w-4 rounded-full flex items-center justify-center"
+                      style={{ background: PRO_BLUE }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                  )}
+                  <p className="text-[15px] font-black text-white leading-tight">
+                    {t(plan.labelKey)}
+                  </p>
+                  <p className="text-[12.5px] font-semibold mt-1.5" style={{ color: active ? PRO_BLUE : '#8a8a8a' }}>
+                    {plan.price}
+                  </p>
                 </button>
               );
             })}
