@@ -13,6 +13,7 @@ import {
   isDismissedForever,
   markTourSeen,
 } from './TourStateStore';
+import { emitTourActiveChange } from './useIsTourActive';
 
 
 type NavigateFn = (path: string) => void;
@@ -90,6 +91,7 @@ class TourManagerImpl {
 
     this.activeTourId = tourId;
     try { document.body.dataset.tourActive = 'true'; } catch {}
+    emitTourActiveChange(true);
 
     // Flag lets us tear down a per-step driver without triggering the
     // "tour is over" side-effects (mark seen, drain queue).
@@ -99,6 +101,7 @@ class TourManagerImpl {
 
     const finalize = async () => {
       try { delete document.body.dataset.tourActive; } catch {}
+      emitTourActiveChange(false);
       this.activeDriver = null;
       currentDrv = null;
       const finishedId = this.activeTourId;

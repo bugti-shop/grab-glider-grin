@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsTourActive } from '@/features/tours/useIsTourActive';
 
 /**
  * Route-aware skeleton screen used as the global <Suspense> fallback.
@@ -172,11 +173,10 @@ const pickSkeleton = (path: string) => {
 
 export const RouteSkeleton = () => {
   const location = useLocation();
+  const isTourActive = useIsTourActive();
   // Suppress skeleton entirely during feature tours so highlighted targets
   // aren't hidden behind placeholder shimmer during lazy chunk loads.
-  if (typeof document !== 'undefined' && document.body?.dataset.tourActive === 'true') {
-    return null;
-  }
+  if (isTourActive) return null;
   return (
     <div aria-busy="true" aria-live="polite" role="status">
       <span className="sr-only">Loading…</span>
