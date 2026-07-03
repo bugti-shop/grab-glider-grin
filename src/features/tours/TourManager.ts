@@ -62,13 +62,16 @@ class TourManagerImpl {
       await this.wait(250);
     }
 
-    // Optional pre-action: click a trigger (e.g. open a dropdown menu) so the
-    // real target becomes visible before we highlight it.
+    // Optional pre-actions: click one or more triggers (e.g. open task detail,
+    // then open its ⋮ menu) so the real target becomes visible before highlight.
     if (tour.beforeStart) {
-      const trigger = await this.waitForSelector(tour.beforeStart, 1500);
-      if (trigger instanceof HTMLElement) {
-        try { trigger.click(); } catch {}
-        await this.wait(200);
+      const preSelectors = Array.isArray(tour.beforeStart) ? tour.beforeStart : [tour.beforeStart];
+      for (const sel of preSelectors) {
+        const trigger = await this.waitForSelector(sel, 2000);
+        if (trigger instanceof HTMLElement) {
+          try { trigger.click(); } catch {}
+          await this.wait(260);
+        }
       }
     }
 
