@@ -87,7 +87,7 @@ export const FEATURE_TOURS: FeatureTour[] = [
   },
   hint('task-create-section', 'tasks', 'Create your first section', 'Group related tasks by adding a new section inside any list.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-menu-add-section"]', side: 'left' }),
   hint('task-create-folder', 'tasks', 'Create your first folder', 'Organize multiple task lists together using folders in the sidebar.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-menu-manage-folders"]', side: 'left' }),
-  hint('task-focus-mode', 'tasks', 'Try Focus Mode', 'Start a Pomodoro session with an ambient background to focus deeply.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-options-menu"]' }),
+  hint('task-focus-mode', 'tasks', 'Try Focus Mode', 'Start a Pomodoro session with an ambient background to focus deeply.', '/todo/today', { beforeStart: '[data-tour="task-row"]', target: '[data-tour="task-detail-focus-mode"]', side: 'top' }),
   hint('task-switch-view', 'tasks', 'Switch view — Timeline or Kanban', 'Open the ⋮ menu and switch between Flat, Kanban, Status, Timeline, or Priority.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-options-menu"]' }),
   hint('task-journey', 'tasks', 'Choose your virtual journey', 'Turn long-term goals into a gamified adventure in Progress → Journeys.', '/todo/progress', { target: '[data-tour="progress-journeys"]' }),
   hint('task-create-habit', 'tasks', 'Create your first habit', 'Add a daily habit and start building streaks from the sidebar.', '/todo/progress'),
