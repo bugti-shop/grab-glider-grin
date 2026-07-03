@@ -801,6 +801,7 @@ export const TaskDetailPage = ({
         </div>
 
         {/* Task Status Selection - Premium */}
+        <div data-tour="task-detail-status" className="space-y-2">
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Circle className="h-4 w-4" />
