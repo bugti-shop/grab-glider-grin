@@ -13,7 +13,7 @@ import { Sparkles, CheckCircle2, Calendar as CalendarIcon2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TodoLayout } from './TodoLayout';
-import { OnboardingChecklistCardAuto } from '@/components/tours/OnboardingChecklistCard';
+
 import { useFirstVisitTour } from '@/features/tours/useFeatureTour';
 import { TourManager } from '@/features/tours/TourManager';
 
@@ -686,7 +686,7 @@ const Today = () => {
       <TodayTourTrigger />
       <main className="py-3 pb-32">
         <h1 className="sr-only">Flowist — Today's Tasks &amp; Daily Planner</h1>
-        <OnboardingChecklistCardAuto />
+        
 
         {/* Folders — full width to align with search bar */}
         <div className="mb-4" data-tour="todo-folders-section">
