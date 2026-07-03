@@ -26,6 +26,7 @@ import { genId } from '@/utils/genId';
 import { logActivity } from '@/utils/activityLogger';
 import { useNoteTypeVisibility } from '@/hooks/useNoteTypeVisibility';
 import { triggerHaptic } from '@/utils/haptics';
+import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';
 
 
 const NotebookDetail = () => {
@@ -156,6 +157,7 @@ const NotebookDetail = () => {
               {folderNotes.length} {folderNotes.length === 1 ? 'note' : 'notes'}
             </p>
           </div>
+          <FeatureGuideButton />
         </div>
       </header>
 
