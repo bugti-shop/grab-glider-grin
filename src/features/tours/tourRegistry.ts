@@ -15,6 +15,9 @@ export interface FeatureTourStep {
   description: string;
   side?: 'top' | 'bottom' | 'left' | 'right';
   optional?: boolean;
+  /** If true, advance the tour when the user clicks the highlighted element
+   *  (instead of dismissing). Used for guided click-through flows. */
+  interactive?: boolean;
 }
 
 export interface FeatureTour {
@@ -69,8 +72,31 @@ export const FEATURE_TOURS: FeatureTour[] = [
   hint('task-create-first', 'tasks', 'Create your first task', 'Tap the task input at the top of Today and type your first task.', '/todo/today', { target: '[data-tour="todo-add-task"]' }),
   hint('task-natural-language', 'tasks', 'Try natural language input', 'Type e.g. "Buy Groceries tomorrow at 6:46 PM" — Flowist auto-parses date & time.', '/todo/today', { beforeStart: '[data-tour="todo-add-task"]', target: '[data-tour="task-input-sheet-input"]' }),
   hint('task-scan-from-image', 'tasks', 'Scan tasks from notes or screenshots', 'Use the AI scanner to extract tasks from a photo or screenshot.', '/todo/today', { premium: true, beforeStart: '[data-tour="todo-add-task"]', target: '[data-tour="task-input-scan-button"]' }),
-  hint('task-set-priority', 'tasks', 'Set a task priority', 'Open a task and choose Low / Medium / High / Urgent priority.', '/todo/today'),
-  hint('task-update-status', 'tasks', 'Update task status', 'Change a task between To-do, In progress, or Done from the task menu.', '/todo/today'),
+  {
+    id: 'task-set-priority',
+    category: 'tasks',
+    title: 'Set a task priority',
+    shortDescription: 'Open a task and choose Low / Medium / High / Urgent priority.',
+    route: '/todo/today',
+    trigger: 'manual-only',
+    steps: [
+      { elementSelector: '[data-tour="task-row"]', title: 'Open any task', description: 'Tap a task to open its details.', side: 'bottom', interactive: true },
+      { elementSelector: '[data-tour="task-detail-options"]', title: 'Open the options menu', description: 'Tap the ⋮ menu at the top right.', side: 'bottom', interactive: true },
+      { elementSelector: '[data-tour="task-detail-priority-item"]', title: 'Pick a priority', description: 'Choose Low, Medium, High, or Urgent.', side: 'left' },
+    ],
+  },
+  {
+    id: 'task-update-status',
+    category: 'tasks',
+    title: 'Update task status',
+    shortDescription: 'Change a task between To-do, In progress, or Done.',
+    route: '/todo/today',
+    trigger: 'manual-only',
+    steps: [
+      { elementSelector: '[data-tour="task-row"]', title: 'Open any task', description: 'Tap a task to open its details.', side: 'bottom', interactive: true },
+      { elementSelector: '[data-tour="task-detail-status"]', title: 'Change the status', description: 'Switch between To-do, In progress, or Done here.', side: 'top' },
+    ],
+  },
   hint('task-create-section', 'tasks', 'Create your first section', 'Group related tasks by adding a new section inside any list.', '/todo/today', { target: '[data-tour="todo-folders-section"]' }),
   hint('task-create-folder', 'tasks', 'Create your first folder', 'Organize multiple task lists together using folders in the sidebar.', '/todo/today', { target: '[data-tour="todo-folders-section"]' }),
   hint('task-focus-mode', 'tasks', 'Try Focus Mode', 'Start a Pomodoro session with an ambient background to focus deeply.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-options-menu"]' }),

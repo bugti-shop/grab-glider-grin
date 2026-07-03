@@ -109,6 +109,7 @@ export const TaskItem = memo(({
           onTap={() => onTaskClick(item)}
         >
           <div
+            data-tour="task-row"
             className={cn(
               "flex items-start gap-3 py-2.5 px-2 cursor-pointer select-none bg-background",
               !hidePriorityBorder && "border-l-4",

@@ -725,7 +725,7 @@ export const TaskDetailPage = ({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button data-tour="task-detail-options" variant="ghost" size="icon">
 
                 <MoreVertical className="h-5 w-5" />
               </Button>
@@ -736,7 +736,7 @@ export const TaskDetailPage = ({
                 {task.completed ? t('taskDetail.markAsIncomplete') : t('taskDetail.markAsDone')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleSetPriority('high')} className="cursor-pointer">
+              <DropdownMenuItem data-tour="task-detail-priority-item" onClick={() => handleSetPriority('high')} className="cursor-pointer">
                 <Flag className="h-4 w-4 mr-2 text-red-500" />{t('taskDetail.highPriority')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleSetPriority('medium')} className="cursor-pointer">
@@ -801,7 +801,7 @@ export const TaskDetailPage = ({
         </div>
 
         {/* Task Status Selection - Premium */}
-        <div className="space-y-2">
+        <div data-tour="task-detail-status" className="space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Circle className="h-4 w-4" />
             {t('taskDetail.taskStatus')}
