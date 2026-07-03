@@ -186,7 +186,9 @@ export const TodoOptionsDropdown = ({
 
                 <Crown className="h-3.5 w-3.5 ml-2" fill="#FFD700" color="#FFD700" />
               </DropdownMenuItem>
+              </div>
             </>
+
           )}
         </div>
 
