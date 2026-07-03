@@ -15,6 +15,9 @@ export interface FeatureTourStep {
   description: string;
   side?: 'top' | 'bottom' | 'left' | 'right';
   optional?: boolean;
+  /** If true, advance the tour when the user clicks the highlighted element
+   *  (instead of dismissing). Used for guided click-through flows. */
+  interactive?: boolean;
 }
 
 export interface FeatureTour {
