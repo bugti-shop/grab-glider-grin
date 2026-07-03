@@ -92,7 +92,7 @@ export const FEATURE_TOURS: FeatureTour[] = [
   hint('notes-sketch', 'notes', 'Add a sketch note', 'Choose the Sketch note type to draw freehand with pens, colors & shapes.', '/notesdashboard', { target: '[data-tour="new-note-button"]' }),
   hint('notes-import', 'notes', 'Import notes', 'Bring notes in from Markdown or other apps via the notes ⋮ menu.', '/notesdashboard'),
   hint('notes-scan', 'notes', 'Scan notes from the editor toolbar', 'Inside any note, use the bottom toolbar scan button to capture handwritten pages.', '/notesdashboard', { premium: true }),
-  hint('notes-editor-menu', 'notes', 'Explore all features in the notes editor menu', 'Open the ⋮ menu inside a note to unlock TOC, export, and more.', '/notesdashboard'),
+  hint('notes-editor-menu', 'notes', 'Explore all features in the notes editor menu', 'Open the ⋮ menu inside a note to unlock TOC, export, and more.', '/notesdashboard', { beforeStart: ['event:flowist-tour-open-first-regular-note', '[data-tour="note-options-menu"]'], target: '[data-tour="note-extract-group"]', side: 'left' }),
 
   // ─── Personalization ──────────────────────────────────────────
   hint('personalize-theme', 'personalization', 'Personalize your theme', 'Open Settings → Appearance to switch between 9 themes or design your own.', '/settings', { target: '[data-tour="settings-appearance"]' }),
