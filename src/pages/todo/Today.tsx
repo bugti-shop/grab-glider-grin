@@ -543,7 +543,7 @@ const Today = () => {
               priorityColor={getPriorityColor(item.priority || 'none')}
               updateItem={updateItem}
             />
-            <div className="flex-1 min-w-0" onClick={() => !currentSwipe?.isSwiping && setSelectedTask(item)}>
+            <div data-tour="task-row" className="flex-1 min-w-0" onClick={() => !currentSwipe?.isSwiping && setSelectedTask(item)}>
               {item.voiceRecording ? (
                 <div className="flex items-center gap-2">
                   <button onClick={(e) => handleFlatVoicePlay(item, e)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors min-w-0 flex-1">
