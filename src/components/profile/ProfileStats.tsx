@@ -6,7 +6,9 @@ import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
 import { countCompletedTasksInDB } from '@/utils/taskStorage';
 import { loadStreakData } from '@/utils/streakStorage';
 import { getSetting } from '@/utils/settingsStorage';
+import { useTasksUpdated } from '@/hooks/useTasksUpdated';
 import { Folder, TaskSection } from '@/types/note';
+
 
 interface StatsData {
   notes: number;
