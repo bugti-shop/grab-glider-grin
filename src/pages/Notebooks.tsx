@@ -110,12 +110,16 @@ const Notebooks = () => {
 
   const doDelete = async () => {
     if (!deleteFor) return;
-    if (deleteFor.isDefault) {
-      toast.error("Default notebook can't be deleted");
+    if (deleteFor.isDefault && folders.length <= 1) {
+      toast.error("Create another notebook before deleting Inbox");
       setDeleteFor(null);
       return;
     }
-    const next = folders.filter((f) => f.id !== deleteFor.id);
+    let next = folders.filter((f) => f.id !== deleteFor.id);
+    // If we removed the default, promote another notebook to default
+    if (deleteFor.isDefault && next.length > 0 && !next.some((f) => f.isDefault)) {
+      next = next.map((f, i) => (i === 0 ? { ...f, isDefault: true } : f));
+    }
     await persistFolders(next);
     setDeleteFor(null);
     toast.success('Notebook deleted');
