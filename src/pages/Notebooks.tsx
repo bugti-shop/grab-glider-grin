@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Book, BookOpen, ChevronRight, Plus, Search, ArrowLeft, Check, Pencil, Palette, Trash2 } from 'lucide-react';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { Folder as FolderType } from '@/types/note';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { useNotes } from '@/contexts/NotesContext';
@@ -8,6 +9,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { genId } from '@/utils/genId';
+
 import {
   Dialog,
   DialogContent,
@@ -238,107 +240,23 @@ const Notebooks = () => {
       </header>
 
 
-      {/* Notebook grid — colorful covers with fanned paper bundle */}
-      <div className="px-3 pt-5">
-        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-x-1 gap-y-4 max-w-3xl mx-auto">
-          {filtered.map((f) => {
-            const count = counts.get(f.id) ?? 0;
-            const color = f.color || '#3b82f6';
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => {
-                  if (longPressedRef.current) {
-                    longPressedRef.current = false;
-                    return;
-                  }
-                  openNotebook(f.id);
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setActionFor(f);
-                }}
-                onPointerDown={() => startPress(f)}
-                onPointerUp={cancelPress}
-                onPointerLeave={cancelPress}
-                onPointerCancel={cancelPress}
-                className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform select-none touch-none"
-              >
-                {/* Notebook wrapper — smaller cover, stack spans full width */}
-                <div className="relative w-[90%] aspect-[3/4] pb-[5%]">
-                  {/* Cover box (fills the top area, leaves pb for stack) */}
-                  <div className="relative w-full h-full">
-                    {/* Fanned paper bundle — full width, edge-to-edge with cover */}
-                    <div className="absolute left-[1.5%] right-[1.5%] top-0 bottom-[-6%] pointer-events-none">
-                      {/* Sheet 1 — back */}
-                      <div
-                        className="absolute left-0 right-0 top-[9%] bottom-[3%] rounded-r-lg rounded-l-[4px] bg-[#fdfaf1] shadow-[0_2px_3px_rgba(0,0,0,0.15)]"
-                      />
-                      {/* Sheet 2 — middle */}
-                      <div
-                        className="absolute left-0 right-0 top-[7%] bottom-[1.5%] rounded-r-lg rounded-l-[4px] bg-white shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
-                      />
-                      {/* Sheet 3 — front, flush with cover edges */}
-                      <div className="absolute left-0 right-0 top-[5%] bottom-0 rounded-r-lg rounded-l-[4px] bg-white shadow-[0_3px_5px_-1px_rgba(0,0,0,0.2)]">
-                        {/* ruled hint */}
-                        <div className="absolute inset-x-2 bottom-1 space-y-[2px]">
-                          <div className="h-px bg-black/10" />
-                          <div className="h-px bg-black/10" />
-                        </div>
-                      </div>
-                    </div>
+      {/* Notebook grid — virtualized for 10k+ notebooks */}
+      <VirtualNotebookGrid
+        items={filtered}
+        counts={counts}
+        onOpen={openNotebook}
+        onContext={(f) => setActionFor(f)}
+        startPress={startPress}
+        cancelPress={cancelPress}
+        longPressedRef={longPressedRef}
+      />
 
-                    {/* Notebook cover — sits on top of the bundle */}
-                    <div
-                      className="relative w-full h-full rounded-r-lg rounded-l-[4px] overflow-hidden shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
-                      style={{
-                        backgroundColor: color,
-                        backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 55%, ${color}99 100%)`,
-                      }}
-                    >
-                      {/* Spine shadow */}
-                      <div
-                        className="absolute inset-y-0 left-0 w-[10%]"
-                        style={{
-                          background:
-                            'linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 60%, rgba(255,255,255,0.15) 100%)',
-                        }}
-                      />
-                      {/* Rings on spine */}
-                      <div className="absolute inset-y-0 left-0 w-[10%] flex flex-col justify-around py-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <span
-                            key={i}
-                            className="mx-auto h-[3px] w-[3px] rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
-                          />
-                        ))}
-                      </div>
-                      {/* Glossy highlight */}
-                      <div className="absolute top-0 bottom-0 left-[14%] w-[2px] bg-white/25" />
-                      {/* Count badge */}
-                      <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-black/25 backdrop-blur-sm text-[9px] font-semibold text-white flex items-center justify-center tabular-nums">
-                        {count}
-                      </span>
-                    </div>
-
-                  </div>
-                </div>
-                {/* Name */}
-                <span className="block w-full text-[15px] font-semibold text-foreground truncate px-0.5 leading-tight mt-1.5">
-                  {f.name}
-                </span>
-              </button>
-            );
-          })}
+      {filtered.length === 0 && (
+        <div className="py-16 text-center text-sm text-muted-foreground">
+          No notebooks found
         </div>
+      )}
 
-        {filtered.length === 0 && (
-          <div className="py-16 text-center text-sm text-muted-foreground">
-            No notebooks found
-          </div>
-        )}
-      </div>
 
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -528,4 +446,172 @@ const Notebooks = () => {
   );
 };
 
+// ---- Virtualized responsive notebook grid ----
+type VGridProps = {
+  items: FolderType[];
+  counts: Map<string, number>;
+  onOpen: (id: string) => void;
+  onContext: (f: FolderType) => void;
+  startPress: (f: FolderType) => void;
+  cancelPress: () => void;
+  longPressedRef: React.MutableRefObject<boolean>;
+};
+
+const VirtualNotebookGrid = ({
+  items,
+  counts,
+  onOpen,
+  onContext,
+  startPress,
+  cancelPress,
+  longPressedRef,
+}: VGridProps) => {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const [cols, setCols] = useState(4);
+  const [rowHeight, setRowHeight] = useState(160);
+
+  // Compute columns responsively from container width (matches original 4/5/6 breakpoints)
+  useLayoutEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+    const compute = () => {
+      const w = el.clientWidth;
+      // Match Tailwind sm(640)/md(768) breakpoints on window width
+      const ww = window.innerWidth;
+      const nextCols = ww >= 768 ? 6 : ww >= 640 ? 5 : 4;
+      setCols(nextCols);
+      // Cell width -> aspect 3/4 cover + label + gap
+      const cellW = (w - 8 /* px-3 padding compensation */) / nextCols;
+      const coverH = (cellW * 0.9) * (4 / 3); // 90% width * 4/3 aspect
+      const labelH = 28; // name line
+      const gapY = 16;
+      setRowHeight(Math.ceil(coverH + labelH + gapY));
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    window.addEventListener('resize', compute);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', compute);
+    };
+  }, []);
+
+  const rowCount = Math.ceil(items.length / cols);
+
+  // Estimate top offset (sticky header + search) so window virtualizer aligns visible rows
+  const scrollMargin = parentRef.current?.offsetTop ?? 0;
+
+  const rowVirtualizer = useWindowVirtualizer({
+    count: rowCount,
+    estimateSize: () => rowHeight,
+    overscan: 4,
+    scrollMargin,
+  });
+
+  return (
+    <div ref={parentRef} className="px-3 pt-5 max-w-3xl mx-auto">
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const rowStart = virtualRow.index * cols;
+          const rowItems = items.slice(rowStart, rowStart + cols);
+          return (
+            <div
+              key={virtualRow.key}
+              className="grid gap-x-1"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`,
+                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+              }}
+            >
+              {rowItems.map((f) => {
+                const count = counts.get(f.id) ?? 0;
+                const color = f.color || '#3b82f6';
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => {
+                      if (longPressedRef.current) {
+                        longPressedRef.current = false;
+                        return;
+                      }
+                      onOpen(f.id);
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      onContext(f);
+                    }}
+                    onPointerDown={() => startPress(f)}
+                    onPointerUp={cancelPress}
+                    onPointerLeave={cancelPress}
+                    onPointerCancel={cancelPress}
+                    className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform select-none touch-none"
+                  >
+                    <div className="relative w-[90%] aspect-[3/4] pb-[5%]">
+                      <div className="relative w-full h-full">
+                        <div className="absolute left-[1.5%] right-[1.5%] top-0 bottom-[-6%] pointer-events-none">
+                          <div className="absolute left-0 right-0 top-[9%] bottom-[3%] rounded-r-lg rounded-l-[4px] bg-[#fdfaf1] shadow-[0_2px_3px_rgba(0,0,0,0.15)]" />
+                          <div className="absolute left-0 right-0 top-[7%] bottom-[1.5%] rounded-r-lg rounded-l-[4px] bg-white shadow-[0_2px_4px_rgba(0,0,0,0.18)]" />
+                          <div className="absolute left-0 right-0 top-[5%] bottom-0 rounded-r-lg rounded-l-[4px] bg-white shadow-[0_3px_5px_-1px_rgba(0,0,0,0.2)]">
+                            <div className="absolute inset-x-2 bottom-1 space-y-[2px]">
+                              <div className="h-px bg-black/10" />
+                              <div className="h-px bg-black/10" />
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className="relative w-full h-full rounded-r-lg rounded-l-[4px] overflow-hidden shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
+                          style={{
+                            backgroundColor: color,
+                            backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 55%, ${color}99 100%)`,
+                          }}
+                        >
+                          <div
+                            className="absolute inset-y-0 left-0 w-[10%]"
+                            style={{
+                              background:
+                                'linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 60%, rgba(255,255,255,0.15) 100%)',
+                            }}
+                          />
+                          <div className="absolute inset-y-0 left-0 w-[10%] flex flex-col justify-around py-1">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <span
+                                key={i}
+                                className="mx-auto h-[3px] w-[3px] rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
+                              />
+                            ))}
+                          </div>
+                          <div className="absolute top-0 bottom-0 left-[14%] w-[2px] bg-white/25" />
+                          <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-black/25 backdrop-blur-sm text-[9px] font-semibold text-white flex items-center justify-center tabular-nums">
+                            {count}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="block w-full text-[15px] font-semibold text-foreground truncate px-0.5 leading-tight mt-1.5">
+                      {f.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export default Notebooks;
+
