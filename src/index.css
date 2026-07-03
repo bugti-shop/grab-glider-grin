@@ -581,6 +581,12 @@ table th[contenteditable="true"]:hover {
   }
 }
 
+@keyframes flowistSkeletonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+
 /* Animations */
 @keyframes fade-in {
   from {
