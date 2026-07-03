@@ -736,18 +736,20 @@ export const TaskDetailPage = ({
                 {task.completed ? t('taskDetail.markAsIncomplete') : t('taskDetail.markAsDone')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem data-tour="task-detail-priority-item" onClick={() => handleSetPriority('high')} className="cursor-pointer">
-                <Flag className="h-4 w-4 mr-2 text-red-500" />{t('taskDetail.highPriority')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSetPriority('medium')} className="cursor-pointer">
-                <Flag className="h-4 w-4 mr-2 text-orange-500" />{t('taskDetail.mediumPriority')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSetPriority('low')} className="cursor-pointer">
-                <Flag className="h-4 w-4 mr-2 text-green-500" />{t('taskDetail.lowPriority')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSetPriority('none')} className="cursor-pointer">
-                <Flag className="h-4 w-4 mr-2 text-muted-foreground" />{t('taskDetail.noPriority')}
-              </DropdownMenuItem>
+              <div data-tour="task-detail-priority-group">
+                <DropdownMenuItem data-tour="task-detail-priority-item" onClick={() => handleSetPriority('high')} className="cursor-pointer">
+                  <Flag className="h-4 w-4 mr-2 text-red-500" />{t('taskDetail.highPriority')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetPriority('medium')} className="cursor-pointer">
+                  <Flag className="h-4 w-4 mr-2 text-orange-500" />{t('taskDetail.mediumPriority')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetPriority('low')} className="cursor-pointer">
+                  <Flag className="h-4 w-4 mr-2 text-green-500" />{t('taskDetail.lowPriority')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetPriority('none')} className="cursor-pointer">
+                  <Flag className="h-4 w-4 mr-2 text-muted-foreground" />{t('taskDetail.noPriority')}
+                </DropdownMenuItem>
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => { if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }} className="cursor-pointer">
                 <TimerIcon className="h-4 w-4 mr-2" />Focus Mode
