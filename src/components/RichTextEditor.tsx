@@ -1214,10 +1214,10 @@ export const RichTextEditor = ({
         // Safety net for mobile/browser paste paths that bypass onPaste and
         // insert raw plaintext markdown directly into the contenteditable.
         if (
-          inputType === 'insertFromPaste' && !isInsideCode(editorRef.current) &&
           inputType === 'insertFromPaste' &&
           !isInsideCode(editorRef.current)
         ) {
+
           const pastedText = editorRef.current.innerText || '';
           const converted = markdownPasteToHtml(pastedText);
           const hasRichBlocks = !!editorRef.current.querySelector(
