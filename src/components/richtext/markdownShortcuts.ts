@@ -263,6 +263,106 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
   return false;
 }
 
+function moveCaretToEnd(el: HTMLElement) {
+  const sel = window.getSelection();
+  if (!sel) return;
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function replaceCurrentBlockWithContent(
+  oldBlock: BlockEl,
+  newBlock: HTMLElement,
+  caretTarget: HTMLElement,
+  root?: HTMLElement | null,
+) {
+  if (root && oldBlock === root) {
+    root.replaceChildren(newBlock);
+  } else {
+    oldBlock.replaceWith(newBlock);
+  }
+  moveCaretToEnd(caretTarget);
+}
+
+/**
+ * Safety-net conversion for mobile/IME paths where the browser inserts
+ * `# Heading` / `* item` as normal text without delivering the Space keydown.
+ * Runs after input, preserving the text after the marker instead of requiring
+ * the marker to be alone on the line.
+ */
+export function tryMarkdownCompletedBlockShortcut(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  if (isInsideCode(root)) return false;
+  const block = getCaretBlock(root);
+  if (!block) return false;
+  if (block.closest('pre, code, table, .flowist-web-clip, [data-webclip], [data-math], .rt-codeblock')) {
+    return false;
+  }
+
+  const text = textBeforeCaretInBlock(block).replace(/\u00A0/g, ' ');
+  const match = text.match(/^(#{1,4}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>)\s+(.+)$/i);
+  if (!match) return false;
+
+  const token = match[1];
+  const content = match[2];
+  if (!content.trim()) return false;
+
+  if (/^#{1,4}$/.test(token)) {
+    const level = token.length;
+    const h = document.createElement(`h${level}`);
+    h.textContent = content;
+    replaceCurrentBlockWithContent(block, h, h, root);
+    return true;
+  }
+
+  if (token === '-' || token === '*' || token === '+') {
+    const ul = document.createElement('ul');
+    const li = document.createElement('li');
+    li.textContent = content;
+    ul.appendChild(li);
+    replaceCurrentBlockWithContent(block, ul, li, root);
+    return true;
+  }
+
+  if (/^\d+\.$/.test(token)) {
+    const ol = document.createElement('ol');
+    const li = document.createElement('li');
+    li.textContent = content;
+    ol.appendChild(li);
+    replaceCurrentBlockWithContent(block, ol, li, root);
+    return true;
+  }
+
+  if (token === '[]' || token === '[ ]' || token.toLowerCase() === '[x]') {
+    const checked = token.toLowerCase() === '[x]';
+    const ul = document.createElement('ul');
+    ul.className = 'checklist';
+    const li = document.createElement('li');
+    li.className = 'checklist-item';
+    if (checked) li.setAttribute('checked', 'true');
+    li.innerHTML =
+      `<input type="checkbox" class="checklist-checkbox"${checked ? ' checked' : ''} />` +
+      `<span class="checklist-text"></span>`;
+    const span = li.querySelector('.checklist-text') as HTMLElement;
+    span.textContent = content;
+    ul.appendChild(li);
+    replaceCurrentBlockWithContent(block, ul, span, root);
+    return true;
+  }
+
+  if (token === '>') {
+    const bq = document.createElement('blockquote');
+    bq.textContent = content;
+    replaceCurrentBlockWithContent(block, bq, bq, root);
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Handle Enter: convert `---` on an empty line into a divider.
  */

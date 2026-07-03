@@ -53,6 +53,7 @@ import {
 import { applySmartDetection, SmartDetectionSettings } from './richtext/richTextDetection';
 import {
   tryMarkdownBlockShortcut,
+  tryMarkdownCompletedBlockShortcut,
   tryMarkdownEnterShortcut,
   tryMarkdownInlineShortcut,
   markdownPasteToHtml,
@@ -1225,6 +1226,16 @@ export const RichTextEditor = ({
           );
           if (converted && !hasRichBlocks) {
             editorRef.current.innerHTML = converted;
+            hydrateSynced();
+          }
+        } else if (
+          inputType === 'insertText' ||
+          inputType === 'insertReplacementText' ||
+          inputType === 'insertCompositionText'
+        ) {
+          // Safety net for mobile/IME/autocomplete paths that miss keydown or
+          // batch `# Heading` into one input event: convert after the text lands.
+          if (tryMarkdownCompletedBlockShortcut(editorRef.current)) {
             hydrateSynced();
           }
         }
