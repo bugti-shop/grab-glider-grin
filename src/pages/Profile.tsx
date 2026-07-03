@@ -20,6 +20,7 @@ import { ProfileSubscriptionCard } from '@/components/profile/ProfileSubscriptio
 import { CountryFlagPickerSheet } from '@/components/CountryFlagPickerSheet';
 import { EmailAuthSheet } from '@/components/EmailAuthSheet';
 import { ChangeEmailSheet } from '@/components/ChangeEmailSheet';
+import { EmailToFlowistCard } from '@/components/EmailToFlowistCard';
 import { Capacitor } from '@capacitor/core';
 
 
