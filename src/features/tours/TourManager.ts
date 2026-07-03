@@ -13,6 +13,7 @@ import {
   isDismissedForever,
   markTourSeen,
 } from './TourStateStore';
+import { emitTourActiveChange } from './useIsTourActive';
 
 
 type NavigateFn = (path: string) => void;
