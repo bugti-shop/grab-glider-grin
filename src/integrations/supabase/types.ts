@@ -1400,6 +1400,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_feature_tours: {
+        Row: {
+          dismissed_forever: boolean
+          seen_at: string
+          tour_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          dismissed_forever?: boolean
+          seen_at?: string
+          tour_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          dismissed_forever?: boolean
+          seen_at?: string
+          tour_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_lifetime_counters: {
         Row: {
           created_at: string

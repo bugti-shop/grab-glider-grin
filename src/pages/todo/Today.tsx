@@ -13,6 +13,9 @@ import { Sparkles, CheckCircle2, Calendar as CalendarIcon2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TodoLayout } from './TodoLayout';
+import { OnboardingChecklistCardAuto } from '@/components/tours/OnboardingChecklistCard';
+import { useFirstVisitTour } from '@/features/tours/useFeatureTour';
+
 import { toast } from 'sonner';
 import { subDays } from 'date-fns';
 import { ResolvedTaskImage } from '@/components/ResolvedTaskImage';
@@ -667,9 +670,11 @@ const Today = () => {
 
   return (
     <TodoLayout title="Flowist" searchValue={viewModeSearch} onSearchChange={(val) => startTransition(() => setViewModeSearch(val))}>
-      
+      <TodayTourTrigger />
       <main className="py-3 pb-32">
         <h1 className="sr-only">Flowist — Today's Tasks &amp; Daily Planner</h1>
+        <OnboardingChecklistCardAuto />
+
         {/* Folders — full width to align with search bar */}
         <div className="mb-4" data-tour="todo-folders-section">
             <div className="flex items-center justify-between mb-3">
@@ -1108,6 +1113,14 @@ const Today = () => {
       </Suspense>
     </TodoLayout>
   );
+
+};
+
+// First-visit tour trigger — mounted inside <TodoLayout> so navigation context is ready.
+const TodayTourTrigger = () => {
+  useFirstVisitTour('/todo/today', 'task-add-basics');
+  return null;
 };
 
 export default Today;
+

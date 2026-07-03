@@ -15,11 +15,21 @@ import { StreakDetailSheet } from '@/components/StreakDetailSheet';
 import { VirtualJourneyCard } from '@/components/VirtualJourneyCard';
 import { StreakSocietyBadge } from '@/components/StreakSocietyBadge';
 import { StreakConsistencyCertificate } from '@/components/StreakConsistencyCertificate';
+import { useFirstVisitTour } from '@/features/tours/useFeatureTour';
 
 const Progress = () => {
   const { t } = useTranslation();
   const { openPaywall } = useSubscription();
   const { data, isLoading, completedToday, atRisk, status, weekData, gracePeriodRemaining, isPro } = useStreak();
+  useFirstVisitTour('/todo/progress');
+  useEffect(() => {
+    // Mark Progress tab visit for the onboarding checklist auto-check.
+    import('@/utils/settingsStorage').then(({ setSetting }) => {
+      setSetting('onboarding-visited-progress', true, { skipCloudSync: true }).catch(() => {});
+      window.dispatchEvent(new Event('flowistOnboardingSignalChange'));
+    });
+  }, []);
+
   const [weekStats, setWeekStats] = useState({ completed: 0, total: 0 });
   
   const [showCertificates, setShowCertificates] = useState(false);

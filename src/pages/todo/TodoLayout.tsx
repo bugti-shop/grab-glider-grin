@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FileText, Search, Sun, Moon, X, Crown } from 'lucide-react';
 import { NotificationCenter } from '@/components/NotificationCenter';
+import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
 
@@ -66,6 +67,8 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
                 {isDarkMode ? <Sun className="h-4 w-4 sm:h-5 sm:w-5" /> : <Moon className="h-4 w-4 sm:h-5 sm:w-5" />}
               </Button>
               <NotificationCenter />
+              <FeatureGuideButton />
+
               <Button
                 size="icon"
                 variant="ghost"

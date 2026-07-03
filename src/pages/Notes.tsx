@@ -178,6 +178,12 @@ const Notes = () => {
         updatedNotes = [noteMeta, ...prevNotes];
       }
       saveNoteToDBSingle(note);
+      // Onboarding signal — user has created at least one note.
+      import('@/utils/settingsStorage').then(({ setSetting }) => {
+        setSetting('onboarding-has-note', true, { skipCloudSync: true }).catch(() => {});
+        window.dispatchEvent(new Event('flowistOnboardingSignalChange'));
+      });
+
       return updatedNotes;
     });
     return true;

@@ -1,112 +1,75 @@
-# Notes Power-Up: 4 Feature Bundle
+# Flowist Feature Discovery & Onboarding Tour System
 
-Each bundle ships independently — you can approve one at a time or all four. Order below is by ROI (biggest win first, least risk).
+Progressive, low-friction discoverability: one contextual tip at a time, plus a persistent "Feature Guide" hub and a 7-day new-user checklist. Backed by a per-user seen-state table so tips don't repeat across reinstalls.
 
----
+## What gets built
 
-## Bundle 1 — Web Clipper inline "card" block  *(1 pass, front-end only)*
+### 1. Backend — per-user tour state
+New table `user_feature_tours`:
+- `user_id` (uuid, ref auth.users)
+- `tour_id` (text)
+- `seen_at` (timestamptz)
+- `dismissed_forever` (boolean) — powers "Don't show tips like this again"
+- Primary key `(user_id, tour_id)`
+- RLS: users read/write only their own rows; standard GRANTs to `authenticated` + `service_role`
+- Realtime not required (writes are rare, local cache handles reads)
 
-**What changes for you**
-- Web-clip content inside a note is no longer a plain wall of text. It renders as an **Evernote-style card**: favicon + site name header strip, hero image, title, byline·date, excerpt, and a collapsible "Read full clip" body.
-- Collapsed by default when the clip is > 600 words — one click expands.
-- Card gets a subtle bordered container, a colored source strip, and a small "↗ Open original" pill.
-- Works retroactively on every clip you already saved (uses the existing `data-block-type="webClip"` markup).
+### 2. Core engine — `src/features/tours/`
+- **`tourRegistry.ts`** — declarative list of all tours (see structure in your prompt). No JSX; pure data. Categories: tasks / notes / notebooks / progress / journeys / settings.
+- **`TourManager.ts`** — singleton service:
+  - `startTour(id)`, `queueTour(id)`, `markSeen(id)`, `hasSeen(id)`, `dismissForever(id)`
+  - Guarantees single active tour; new triggers queue instead of interrupting
+  - Wraps driver.js with Flowist-styled popovers, Skip / Next / "Don't show again" buttons
+  - Auto-navigates to `route` before starting, waits for target selector to mount (with timeout + graceful bail)
+- **`useFeatureTour.ts`** — React hook: exposes manager + reactive `seenSet`
+- **`TourStateStore.ts`** — local cache (IndexedDB via existing settingsStorage) + Cloud sync. Reads instant from cache; background flush to Cloud on write; on auth login, hydrates cache from Cloud.
 
-**Technical**
-- New CSS module `src/components/richtext/webClipCard.css` styling `.flowist-web-clip` + subclasses.
-- Strip inline `style="…"` attrs in `WebClipper.tsx` in favor of classnames.
-- New `hydrateWebClipsIn(root)` helper in `richTextBlocks.ts` that wires the expand/collapse button and word-count badge on every render.
-- Notes list preview (`NoteCard.tsx`) shows a mini clip chip with favicon + site name when the note starts with a web clip.
+### 3. UI components — `src/components/tours/`
+- **`FeatureGuideModal.tsx`** — opened from the existing header bell/help icon. Categorized list with icon, title, one-line description, "✓ Seen" / "New" badge, "Show me" button that closes modal → navigates → fires tour.
+- **`OnboardingChecklistCard.tsx`** — appears on Home for first 7 days (or until dismissed). Items: Create first task / Try a note type / Switch a task view / Explore Progress / Pick a theme. Auto-checks items via existing app events (task created, notes count > 0, layout changed, Progress route visited, theme changed). Collapsible + permanent "X" dismiss.
+- **`EmptyStateHint.tsx`** — small reusable secondary hint chip appended to existing empty states (Notes, Journeys) that opens the relevant tour.
 
----
+### 4. Wiring
+- Add `data-tour="…"` attributes to targeted elements (add-task sheet buttons, ⋮ menu, note-type picker, notebook add button, Progress tabs, theme selector). Only attribute additions — no layout changes.
+- Header bell/help icon → opens `FeatureGuideModal` on every screen.
+- Home screen → mount `OnboardingChecklistCard` above the task list (conditional).
+- Notes empty state → append `EmptyStateHint` for `note-types` tour.
+- Route-level `useEffect` on Home, Notebooks, Progress → fires `first-visit` tours through the manager.
+- `days-since-install` trigger uses existing install-date setting (fallback: profile `created_at`).
 
-## Bundle 2 — Tasks inside notes → global task list  *(2 passes, backend + frontend)*
+### 5. Priority tours (2–4 steps each, per your list)
+`task-add-basics`, `task-views`, `task-toolbar-power`, `note-types`, `notebooks-color-coding`, `progress-tab-overview`, `journeys-intro`, `themes-personalize` — all registered as data in `tourRegistry.ts`.
 
-**What changes for you**
-- Any checkbox line inside a note (`ul.checklist > li.checklist-item`) is now a **real task** in Today / Upcoming.
-- Two-way: check it in the note → it completes in Today. Check it in Today → the note reflects it.
-- Delete the line in the note → task is soft-archived (not deleted, to prevent accidents).
-- Optional "@today", "!high", "^2pm" inline shortcuts parse into due date/priority.
-- Tasks show a "📝 from *Note Title*" chip so you can jump back to the source.
+## Design principles enforced in code
+- Single active tour: enforced by `TourManager` mutex.
+- Never repeats: `hasSeen` check before every auto-trigger.
+- Skippable: driver.js `allowClose: true` + explicit Skip button; "Don't show again" writes `dismissed_forever`.
+- Max 3 consecutive tips: queue caps auto-chained tours at 1; further tours require manual trigger.
+- Free + paid: no entitlement gate. Paid features get a small `<PremiumCrown/>` badge inside the tooltip text.
+- Mobile: driver.js configured with `stagePadding: 4`, `smoothScroll: true`, and popover width capped at `min(320px, 92vw)`.
 
-**Technical**
-- New column `tasks.source_note_id uuid` + `tasks.source_block_id text` + index. Migration + GRANTs.
-- New util `src/utils/noteTaskBridge.ts`:
-  - `syncChecklistToTasks(noteId, editorRoot)` — diffs current checklist items vs. `tasks` where `source_note_id = ?`; upserts new, updates text/completed on existing, soft-archives removed.
-  - Runs on note save (debounced 500 ms) via `NoteEditor.tsx` `onInput`.
-  - Runs in reverse via a Realtime subscription on `tasks`: when a linked task changes, patch the corresponding `<li>` in any open note editor.
-- Each `<li>` gets `data-task-id="..."`; assignment happens on first sync.
-- Natural language parser reuses existing `src/utils/naturalLanguageParser.ts`.
+## Technical notes
 
----
+```text
+src/
+├── features/tours/
+│   ├── tourRegistry.ts       # data-only list of tours
+│   ├── TourManager.ts        # driver.js wrapper + queue
+│   ├── TourStateStore.ts     # local cache + Cloud sync
+│   └── useFeatureTour.ts     # React hook
+├── components/tours/
+│   ├── FeatureGuideModal.tsx
+│   ├── OnboardingChecklistCard.tsx
+│   └── EmptyStateHint.tsx
+└── (data-tour="…" attributes added across existing screens)
+```
 
-## Bundle 3 — Home dashboard widgets from note content  *(2 passes)*
+Dependencies to add: `driver.js` (~15 KB gzipped).
 
-**What changes for you**
-- On any note block (checklist, table, callout, heading section), open the block menu → **"Pin to Home"**.
-- Home dashboard grows a "Pinned from Notes" row (drag to reorder, resize S/M/L).
-- Widget is live: edit the source note → widget updates instantly on all devices.
-- Types supported v1: **Checklist widget** (interactive checkboxes), **Table widget** (read-only), **Callout widget**, **Heading + text widget**.
+DB migration adds `user_feature_tours` with RLS + GRANTs in the same statement.
 
-**Technical**
-- New table `note_widgets`:
-  ```
-  id uuid pk, user_id, note_id, block_id text, kind text,
-  size text default 'M', position int, created_at, updated_at
-  ```
-  RLS: user can only see own. GRANTs to authenticated + service_role.
-- Realtime enabled → same live-sync path as tasks.
-- New `src/components/home/NoteWidgetsRow.tsx` renders widgets, hydrates blocks by scanning stored note HTML for `data-block-id="…"`.
-- New "Pin block" affordance in `BubbleMenu.tsx` — assigns a stable `data-block-id` (nanoid) to the target block if missing, inserts a `note_widgets` row.
-
----
-
-## Bundle 4 — Publish note as public webpage + inline formulas  *(2–3 passes)*
-
-### 4a. Publish as public webpage  *(freemium)*
-
-**What changes for you**
-- Note menu → **"Publish"** → modal shows preview + URL.
-- **Free tier:** unlisted URL `flowist.me/n/<random-8-char>` — noindex, no custom slug, no password.
-- **Pro tier:** custom slug `flowist.me/n/<your-slug>`, indexable, optional password, view counter, "Updated N minutes ago" stamp.
-- One click to unpublish. Republish regenerates or preserves URL.
-- Beautiful reader page with your note title, meta description, OG image (first image in note), semantic HTML, print-friendly CSS.
-
-**Technical**
-- New table `published_notes`:
-  ```
-  slug text pk, note_id uuid, user_id uuid, is_indexable bool,
-  password_hash text null, view_count int default 0,
-  published_html text, published_at, updated_at
-  ```
-- RLS: owner can read/write own row; **`anon` can SELECT** for the reader page (public content). GRANTs accordingly.
-- New route `/n/:slug` renders a static-feeling `PublishedNote.tsx` with SSR-like SEO (title, description, canonical, og:*, JSON-LD Article).
-- New edge function `publish-note` — sanitizes note HTML, uploads referenced images to Storage (`user-attachments/published/…`) so they survive private-storage constraints, stamps `published_html`.
-- Pro gate uses existing `SubscriptionProvider` — free users get unlisted-only, Pro unlocks slug/index/password.
-- `robots.txt` and dynamic `<meta name="robots" content="noindex">` for unlisted rows.
-
-### 4b. Inline formulas & variables
-
-**What changes for you**
-- Type `{{today}}`, `{{now}}`, `{{page.title}}`, `{{page.created}}` → renders live values inline.
-- Type `=SUM(1,2,3)`, `=AVG(...)`, `=IF(a>b, "yes", "no")`, `=42*1.2` → evaluates and renders result with a small ƒ chip; click chip to edit formula.
-- Variables scoped per note: `{{price}} = 10` on one line → `{{price * qty}}` recalculates elsewhere.
-
-**Technical**
-- New `src/components/richtext/formulaEngine.ts` — safe evaluator (no `eval`, custom Pratt parser or `expr-eval` package).
-- New block wrapper `<span class="rt-formula" data-expr="…" data-result="…" contenteditable="false">` similar to existing `rt-math`.
-- Hydrator `hydrateFormulasIn(root, noteContext)` re-evaluates on every render (cheap; expressions are small).
-- Slash menu entry `/formula`; markdown-style trigger auto-converts `{{…}}` and `=…` when caret leaves the token.
-- Variable table built by first pass over the note collecting `{{name}} = value` definitions.
-
----
-
-## Order of delivery
-
-1. **Bundle 1** — 1 pass (safe, self-contained; unblock immediately after approval)
-2. **Bundle 2** — 2 passes (migration first, then bridge + UI)
-3. **Bundle 3** — 2 passes (migration + widgets, then Home integration)
-4. **Bundle 4a** — 2 passes (backend + reader page)
-5. **Bundle 4b** — 1 pass (frontend-only)
-
-Total: ~8 focused passes. I can also ship them in any order you prefer, or stop after any bundle. Which do you want me to start with — Bundle 1 right now?
+## Out of scope (kept intentionally small)
+- No analytics dashboard for tour funnels (can add later)
+- No A/B testing infrastructure
+- No animated illustrations inside tooltips — text + existing icons only
+- No changes to existing screens beyond adding `data-tour` attributes and mounting the 3 new components in their host screens

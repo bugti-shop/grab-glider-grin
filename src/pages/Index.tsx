@@ -32,6 +32,7 @@ import { format, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppLogo } from '@/components/AppLogo';
 import { NotificationCenter } from '@/components/NotificationCenter';
+import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1109,6 +1110,8 @@ const Index = () => {
                 {isDarkMode ? <Sun className="h-4 w-4 xs:h-5 xs:w-5 sm:h-5 sm:w-5" /> : <Moon className="h-4 w-4 xs:h-5 xs:w-5 sm:h-5 sm:w-5" />}
               </Button>
               <NotificationCenter />
+              <FeatureGuideButton />
+
               <Button
                 size="icon"
                 variant="ghost"
