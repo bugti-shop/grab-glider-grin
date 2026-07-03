@@ -280,9 +280,10 @@ const Progress = () => {
         <SafeComponent fallback={null}>
           <StreakConsistencyCertificate
             currentStreak={data?.currentStreak || 0}
-            totalCompletions={data?.totalCompletions || 0}
+            totalCompletions={lifetimeCompleted}
             longestStreak={data?.longestStreak || 0}
           />
+
         </SafeComponent>
 
         {/* Stats Grid */}
