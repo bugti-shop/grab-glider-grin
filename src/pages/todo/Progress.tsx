@@ -62,6 +62,12 @@ const Progress = () => {
           total: tasks.filter(t => t.completed).length,
         });
 
+        // Lifetime completed task count — the true source of truth,
+        // synced instantly with today's tasks via the tasksUpdated event.
+        const completedTotal = await countCompletedTasksInDB();
+        setLifetimeCompleted(completedTotal);
+
+
         const rewardResult = await checkDailyReward();
         setRewardDay(rewardResult.currentDay);
         setRewardClaimed(!rewardResult.canClaim);
