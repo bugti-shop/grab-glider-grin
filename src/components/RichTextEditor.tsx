@@ -1607,7 +1607,7 @@ export const RichTextEditor = ({
   // the actual inserted text, so we mirror the desktop shortcuts here.
   const handleBeforeInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     const ie = e.nativeEvent as InputEvent;
-    if (notesSettings.markdownShortcuts === false) return;
+    // Markdown shortcuts always enabled
     if (slashMenu.open || mentionMenu.open) return;
     if (isInsideCode(editorRef.current)) return;
 
