@@ -496,9 +496,13 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
   }, [open]);
 
   // ---- Background mode bridge: publish state, listen for bar commands ---
+  // The native foreground service is kept alive for the ENTIRE session
+  // (not only when the user picks "Run in Background") so the timer + sound
+  // survive closing the sheet, changing dashboards, or the app being killed.
   useEffect(() => {
     if (!open) return;
-    const active = backgrounded && (running || !!sessionRef.current);
+    const sessionActive = running || !!sessionRef.current;
+    const active = backgrounded && sessionActive;
     setFocusBgState({
       active,
       running,
@@ -506,26 +510,26 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
       endAt: sessionRef.current?.endAt,
       remainingSec: sessionRef.current?.remainingSec ?? remaining,
     });
-    if (!backgrounded) {
-      // visible: ensure bar is hidden AND cancel the ongoing native notification
-      clearFocusBgState();
-      void hideFocusOngoing();
-    } else if (active) {
-      // Post/update the persistent Android ongoing notification so the user
-      // can see the timer from the notification shade until they Exit.
+    if (!backgrounded) clearFocusBgState();
+
+    if (sessionActive) {
       void showFocusOngoing({
         taskTitle: sessionRef.current?.taskTitle,
         remainingSec: remaining,
         endAtMs: sessionRef.current?.endAt,
         running,
+        soundUrl: prefs.whiteNoise && !prefs.whiteNoiseMuted && currentTrack ? currentTrack.url : undefined,
+        soundVolume: prefs.whiteNoiseMuted ? 0 : prefs.whiteNoiseVolume,
       });
+    } else {
+      void hideFocusOngoing();
     }
-  }, [open, backgrounded, running, remaining]);
+  }, [open, backgrounded, running, remaining, prefs.whiteNoise, prefs.whiteNoiseMuted, prefs.whiteNoiseVolume, prefs.soundTrackId, currentTrack]);
 
-  // While backgrounded, refresh the ongoing notification every 15s so remaining
-  // time stays fresh without flooding the notification system.
+  // Refresh the ongoing notification every 15s so remaining time stays fresh
+  // even while the sheet is open, without flooding the notification system.
   useEffect(() => {
-    if (!backgrounded || !running) return;
+    if (!running) return;
     const id = setInterval(() => {
       void showFocusOngoing({
         taskTitle: sessionRef.current?.taskTitle,
@@ -534,10 +538,12 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
           : remaining,
         endAtMs: sessionRef.current?.endAt,
         running: true,
+        soundUrl: prefs.whiteNoise && !prefs.whiteNoiseMuted && currentTrack ? currentTrack.url : undefined,
+        soundVolume: prefs.whiteNoiseMuted ? 0 : prefs.whiteNoiseVolume,
       });
     }, 15000);
     return () => clearInterval(id);
-  }, [backgrounded, running]);
+  }, [running, prefs.whiteNoise, prefs.whiteNoiseMuted, prefs.whiteNoiseVolume, currentTrack]);
 
 
   useEffect(() => {
