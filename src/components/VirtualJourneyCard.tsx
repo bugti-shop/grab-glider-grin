@@ -268,7 +268,7 @@ export const VirtualJourneyCard = () => {
               {isComplete
                 ? `🏆 ${t('journey.journeyComplete', 'Journey Complete! 🎉')}`
                 : nextMilestone
-                  ? t('journey.nextMilestone', { name: jt.milestoneName(journey, nextMilestone), count: nextMilestone.tasksRequired - (progress.currentMilestoneTasks ?? 0), defaultValue: 'Next: {{name}} ({{count}} tasks away)' })
+                  ? t('journey.nextMilestone', { name: jt.milestoneName(journey, nextMilestone), count: nextMilestone.tasksRequired - (currentMsTasksDisplay), defaultValue: 'Next: {{name}} ({{count}} tasks away)' })
                   : lastReached ? jt.milestoneName(journey, lastReached) : t('journey.startingPoint', 'Starting point')}
             </span>
           </div>
@@ -279,7 +279,7 @@ export const VirtualJourneyCard = () => {
               const reached = progress.milestonesReached.includes(ms.id);
               const isCurrent = i === (progress.currentMilestoneIndex ?? 0) && !isComplete;
               const msTarget = ms.tasksRequired - (i > 0 ? journey.milestones[i - 1].tasksRequired : 0);
-              const currentTasks = isCurrent ? (progress.currentMilestoneTasks ?? 0) : reached ? msTarget : 0;
+              const currentTasks = isCurrent ? (currentMsTasksDisplay) : reached ? msTarget : 0;
               return (
                 <div
                   key={ms.id}
