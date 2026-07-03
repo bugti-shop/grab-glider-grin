@@ -783,12 +783,9 @@ const TodoSettings = () => {
           {/* About & Support Section */}
           <div className="border border-border rounded-lg overflow-hidden">
             <SectionHeading title={t('settings.aboutSupport', 'About & Support')} />
-            <SettingsRow label={t('settings.shareWithFriends')} onClick={handleShareApp} />
             <SettingsRow label={t('settings.termsOfService')} onClick={() => navigate('/terms-and-conditions')} />
-            <SettingsRow label={t('settings.helpFeedback')} onClick={() => setShowHelpDialog(true)} />
-            <SettingsRow label={t('settings.sendFeedback', 'Send Feedback / Report Bug')} onClick={() => setShowFeedbackDialog(true)} />
             <SettingsRow label={t('settings.privacy')} onClick={() => navigate('/privacy-policy')} />
-            <SettingsRow label={t('settings.rateApp')} onClick={handleRateAndShare} />
+
           </div>
         </div>
       </main>
