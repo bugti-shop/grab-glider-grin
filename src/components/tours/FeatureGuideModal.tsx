@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HelpCircle, X, Check, Sparkles, Crown, Rocket } from 'lucide-react';
 
 import {
@@ -207,13 +207,13 @@ export const FeatureGuideModal = ({ isOpen, onClose }: FeatureGuideModalProps) =
 export const FeatureGuideButton = ({ className }: { className?: string }) => {
   const [open, setOpen] = useState(false);
 
-  // Listen for global 'feature-guide:open' events so first-launch (or any
-  // milestone code) can pop the modal without prop drilling.
-  // Every mounted FeatureGuideButton reacts, but the modal is deduped by React.
-  if (typeof window !== 'undefined') {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffectOpenListener(setOpen);
-  }
+  // Listen for global 'feature-guide:open' events so first-launch and milestone
+  // code can pop the modal from anywhere without prop drilling.
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener('feature-guide:open', handler);
+    return () => window.removeEventListener('feature-guide:open', handler);
+  }, []);
 
   return (
     <>
@@ -235,13 +235,4 @@ export const FeatureGuideButton = ({ className }: { className?: string }) => {
   );
 };
 
-// Named hook so it plays nice with react-hooks lint rules.
-import { useEffect } from 'react';
-function useEffectOpenListener(setOpen: (v: boolean) => void) {
-  useEffect(() => {
-    const handler = () => setOpen(true);
-    window.addEventListener('feature-guide:open', handler);
-    return () => window.removeEventListener('feature-guide:open', handler);
-  }, [setOpen]);
-}
 
