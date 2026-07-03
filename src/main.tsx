@@ -267,10 +267,13 @@ const bootstrap = async () => {
 bootstrap();
 
 if (Capacitor.isNativePlatform()) {
+  // Aggressive fallback: hide splash quickly on slow devices so users never
+  // stare at a static splash while the JS bundle finishes hydrating.
   setTimeout(() => {
     SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {});
-  }, 1500);
+  }, 400);
 }
+
 
 // Warm settings cache in background (non-blocking)
 warmSettingsCache().catch(() => {});
