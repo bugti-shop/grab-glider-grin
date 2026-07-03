@@ -167,6 +167,7 @@ export const TodoOptionsDropdown = ({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => { setIsSelectionMode(true); setIsSelectActionsOpen(true); }} className="cursor-pointer"><MousePointer2 className="h-4 w-4 mr-2" />{t('menu.select')}</DropdownMenuItem>
               <DropdownMenuSeparator />
+              <div data-tour="todo-menu-view-modes">
               <DropdownMenuItem onClick={() => setViewMode('flat')} className={cn("cursor-pointer", viewMode === 'flat' && "bg-accent")}><LayoutList className="h-4 w-4 mr-2" />{t('menu.flatLayout')}</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setViewMode('kanban')} className={cn("cursor-pointer", viewMode === 'kanban' && "bg-accent")}><Columns3 className="h-4 w-4 mr-2" />{t('menu.kanbanBoard')}</DropdownMenuItem>
               <DropdownMenuItem onClick={() => { if (!requireFeature('view_mode_status_board')) return; setViewMode('kanban-status'); }} className={cn("cursor-pointer", viewMode === 'kanban-status' && "bg-accent")}>
@@ -182,9 +183,12 @@ export const TodoOptionsDropdown = ({
               <DropdownMenuItem onClick={() => { if (!requireFeature('view_mode_priority')) return; setViewMode('priority'); }} className={cn("cursor-pointer", viewMode === 'priority' && "bg-accent")}>
                 <Flag className="h-4 w-4 mr-2" />
                 <span className="flex-1">{t('menu.priorityBoard')}</span>
+
                 <Crown className="h-3.5 w-3.5 ml-2" fill="#FFD700" color="#FFD700" />
               </DropdownMenuItem>
+              </div>
             </>
+
           )}
         </div>
 
