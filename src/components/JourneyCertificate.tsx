@@ -170,7 +170,7 @@ export const JourneyCertificate = ({ open, onClose, journey, progress }: Journey
           </button>
         </div>
 
-        <div className="p-4 space-y-4 max-w-md mx-auto">
+        <div className="p-4 space-y-4 max-w-2xl mx-auto">
           {/* Certificate Card */}
           <div
             ref={cardRef}
