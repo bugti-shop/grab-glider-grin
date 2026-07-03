@@ -107,33 +107,40 @@ class TourManagerImpl {
     this.activeDriver = drv;
     try {
       drv.drive();
-      // Auto-dismiss the popover when the user clicks the highlighted target,
-      // so tour UI doesn't linger over the sheet/menu the user just opened.
-      const dismissOnTargetClick = (ev: MouseEvent) => {
+      // Click handler: advance for interactive steps, dismiss for the rest,
+      // so tour UI never lingers over a sheet the user just opened.
+      const onTargetClick = (ev: MouseEvent) => {
+        if (!this.activeDriver) return;
         const target = ev.target as Element | null;
         if (!target) return;
-        // Ignore clicks inside the popover itself.
         if (target.closest('.driver-popover')) return;
-        // Match any highlighted step target.
-        const anyStepMatch = steps.some((s) => {
-          const sel = typeof s.element === 'string' ? s.element : null;
-          return sel ? !!target.closest(sel) : false;
-        });
-        if (anyStepMatch) {
+
+        const idx = drv.getActiveIndex();
+        const currentStep = typeof idx === 'number' ? tour.steps[idx] : undefined;
+        if (!currentStep) return;
+        const sel = currentStep.elementSelector;
+        if (!sel || !target.closest(sel)) return;
+
+        if (currentStep.interactive && idx! < tour.steps.length - 1) {
+          const nextSel = tour.steps[idx! + 1].elementSelector;
+          // Wait for the next target to appear (e.g. after navigation) then advance.
+          this.waitForSelector(nextSel, 3000).then((el) => {
+            if (!this.activeDriver) return;
+            if (el) {
+              try { drv.moveNext(); } catch {}
+            } else {
+              try { drv.destroy(); } catch {}
+            }
+          });
+        } else {
           try { drv.destroy(); } catch {}
-          window.removeEventListener('click', dismissOnTargetClick, true);
         }
       };
-      window.addEventListener('click', dismissOnTargetClick, true);
-      // Clean up listener when tour ends.
-      const origOnDestroyed = drv as any;
-      const cleanup = () => window.removeEventListener('click', dismissOnTargetClick, true);
-      setTimeout(() => {
-        // Also cleanup if tour ends via other means.
-        const check = setInterval(() => {
-          if (!this.activeDriver) { cleanup(); clearInterval(check); }
-        }, 500);
-      }, 0);
+      window.addEventListener('click', onTargetClick, true);
+      const cleanup = () => window.removeEventListener('click', onTargetClick, true);
+      const check = setInterval(() => {
+        if (!this.activeDriver) { cleanup(); clearInterval(check); }
+      }, 500);
     } catch {
       this.activeDriver = null;
       this.activeTourId = null;
