@@ -15,6 +15,7 @@ import { StreakDetailSheet } from '@/components/StreakDetailSheet';
 import { VirtualJourneyCard } from '@/components/VirtualJourneyCard';
 import { StreakSocietyBadge } from '@/components/StreakSocietyBadge';
 import { StreakConsistencyCertificate } from '@/components/StreakConsistencyCertificate';
+import { useFirstVisitTour } from '@/features/tours/useFeatureTour';
 
 const Progress = () => {
   const { t } = useTranslation();
