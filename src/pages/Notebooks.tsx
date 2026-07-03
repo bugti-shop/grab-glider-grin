@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Book, BookOpen, ChevronRight, Plus, Search, ArrowLeft, Check, Pencil, Palette, Trash2 } from 'lucide-react';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { Folder as FolderType } from '@/types/note';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { useNotes } from '@/contexts/NotesContext';
@@ -8,6 +9,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { genId } from '@/utils/genId';
+
 import {
   Dialog,
   DialogContent,
