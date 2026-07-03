@@ -69,11 +69,12 @@ class TourManagerImpl {
       for (const sel of preSelectors) {
         const trigger = await this.waitForSelector(sel, 2000);
         if (trigger instanceof HTMLElement) {
-          try { trigger.click(); } catch {}
-          await this.wait(260);
+          try { this.simulateActivation(trigger); } catch {}
+          await this.wait(320);
         }
       }
     }
+
 
     const steps = await this.buildSteps(tour);
     if (steps.length === 0) {
