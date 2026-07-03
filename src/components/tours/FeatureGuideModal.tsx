@@ -52,11 +52,14 @@ export const FeatureGuideModal = ({ isOpen, onClose }: FeatureGuideModalProps) =
 
   const handleShow = (tourId: string) => {
     setRunningId(tourId);
+    // Close the modal FIRST so its overlay doesn't sit on top of the coach-mark.
     onClose();
+    // Wait for the Dialog exit animation (Radix ~200ms) before driving the tour.
     setTimeout(() => {
       start(tourId).finally(() => setRunningId(null));
-    }, 150);
+    }, 260);
   };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>

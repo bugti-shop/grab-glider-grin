@@ -9,11 +9,11 @@ import 'driver.js/dist/driver.css';
 
 import { getTour, type FeatureTour, type FeatureTourStep } from './tourRegistry';
 import {
-  dismissTourForever,
   hasSeenTour,
   isDismissedForever,
   markTourSeen,
 } from './TourStateStore';
+
 
 type NavigateFn = (path: string) => void;
 
@@ -62,6 +62,16 @@ class TourManagerImpl {
       await this.wait(250);
     }
 
+    // Optional pre-action: click a trigger (e.g. open a dropdown menu) so the
+    // real target becomes visible before we highlight it.
+    if (tour.beforeStart) {
+      const trigger = await this.waitForSelector(tour.beforeStart, 1500);
+      if (trigger instanceof HTMLElement) {
+        try { trigger.click(); } catch {}
+        await this.wait(200);
+      }
+    }
+
     const steps = await this.buildSteps(tour);
     if (steps.length === 0) {
       // Nothing to show — treat as seen so we don't retry every visit.
@@ -70,7 +80,6 @@ class TourManagerImpl {
     }
 
     this.activeTourId = tourId;
-    let dismissForever = false;
 
     const drv = driver({
       showProgress: steps.length > 1,
@@ -80,8 +89,9 @@ class TourManagerImpl {
       stageRadius: 10,
       smoothScroll: true,
       popoverClass: 'flowist-tour-popover',
+      // Hide the Back button per user preference — only Next + Close.
+      showButtons: ['next', 'close'],
       nextBtnText: 'Next',
-      prevBtnText: 'Back',
       doneBtnText: 'Got it',
       progressText: '{{current}} of {{total}}',
       steps,
@@ -89,40 +99,10 @@ class TourManagerImpl {
         this.activeDriver = null;
         const finishedId = this.activeTourId;
         this.activeTourId = null;
-        if (finishedId) {
-          if (dismissForever) await dismissTourForever(finishedId);
-          else await markTourSeen(finishedId);
-        }
+        if (finishedId) await markTourSeen(finishedId);
         this.drainQueue();
       },
     });
-
-    // Inject a "Don't show tips like this again" link into the popover.
-    // driver.js re-renders the popover per step, so re-inject on highlight.
-    const injectDismissLink = () => {
-      const pop = document.querySelector('.driver-popover');
-      if (!pop || pop.querySelector('.flowist-tour-dismiss')) return;
-      const footer = pop.querySelector('.driver-popover-footer');
-      if (!footer) return;
-      const link = document.createElement('button');
-      link.type = 'button';
-      link.className = 'flowist-tour-dismiss';
-      link.textContent = "Don't show tips like this again";
-      link.addEventListener('click', () => {
-        dismissForever = true;
-        try { drv.destroy(); } catch {}
-      });
-      footer.prepend(link);
-    };
-
-    // Patch each step's onHighlighted to inject our extra link (and preserve any prior handler).
-    for (const step of steps) {
-      const prev = step.onHighlighted;
-      step.onHighlighted = (el, s, opts2) => {
-        try { prev?.(el, s, opts2); } catch {}
-        setTimeout(injectDismissLink, 0);
-      };
-    }
 
     this.activeDriver = drv;
     try {
@@ -133,6 +113,7 @@ class TourManagerImpl {
       this.drainQueue();
     }
   }
+
 
   /** Queue a tour to run after the current one finishes (or immediately if idle). */
   queueTour(tourId: string) {
