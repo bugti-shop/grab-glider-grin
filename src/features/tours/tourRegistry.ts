@@ -68,7 +68,7 @@ export const FEATURE_TOURS: FeatureTour[] = [
   // ─── Tasks ─────────────────────────────────────────────────────
   hint('task-create-first', 'tasks', 'Create your first task', 'Tap the task input at the top of Today and type your first task.', '/todo/today', { target: '[data-tour="todo-add-task"]' }),
   hint('task-natural-language', 'tasks', 'Try natural language input', 'Type e.g. "Buy Groceries tomorrow at 6:46 PM" — Flowist auto-parses date & time.', '/todo/today', { beforeStart: '[data-tour="todo-add-task"]', target: '[data-tour="task-input-sheet-input"]' }),
-  hint('task-scan-from-image', 'tasks', 'Scan tasks from notes or screenshots', 'Use the AI scanner to extract tasks from a photo or screenshot.', '/todo/today', { premium: true, target: '[data-tour="todo-options-menu"]' }),
+  hint('task-scan-from-image', 'tasks', 'Scan tasks from notes or screenshots', 'Use the AI scanner to extract tasks from a photo or screenshot.', '/todo/today', { premium: true, beforeStart: '[data-tour="todo-add-task"]', target: '[data-tour="task-input-scan-button"]' }),
   hint('task-set-priority', 'tasks', 'Set a task priority', 'Open a task and choose Low / Medium / High / Urgent priority.', '/todo/today'),
   hint('task-update-status', 'tasks', 'Update task status', 'Change a task between To-do, In progress, or Done from the task menu.', '/todo/today'),
   hint('task-create-section', 'tasks', 'Create your first section', 'Group related tasks by adding a new section inside any list.', '/todo/today', { target: '[data-tour="todo-folders-section"]' }),

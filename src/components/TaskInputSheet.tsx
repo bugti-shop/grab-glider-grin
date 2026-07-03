@@ -956,6 +956,7 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
                 <Popover open={showScanCoachmark} onOpenChange={(o) => !o && dismissScanCoachmark()}>
                   <PopoverTrigger asChild>
                     <button
+                      data-tour="task-input-scan-button"
                       onClick={openImageExtractor}
                       disabled={isOpeningScanner || showImageExtractor}
                       className="w-10 h-10 rounded-lg bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors relative disabled:opacity-60 disabled:cursor-wait"
