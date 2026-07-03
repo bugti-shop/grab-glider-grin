@@ -329,20 +329,34 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
             flexShrink: 0,
           }}>
             <Suspense fallback={null}>
-              <div style={{
-                background: '#ffffff',
-                borderRadius: 8,
-                padding: 4,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <QRCodeSVG
-                  value="https://play.google.com/store/apps/details?id=nota.npd.com"
-                  size={s(52)}
-                  level="M"
-                  bgColor="#ffffff"
-                  fgColor="#000000"
+              {(() => {
+                // Guarantee a scannable QR: min 72px, scales up on larger cards.
+                // Quiet zone (padding) = ~4 modules ≈ 12% of QR size, min 8px.
+                const qrSize = Math.max(72, Math.min(120, s(56)));
+                const quietZone = Math.max(8, Math.round(qrSize * 0.12));
+                return (
+                  <div style={{
+                    background: '#ffffff',
+                    borderRadius: 10,
+                    padding: quietZone,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  }}>
+                    <QRCodeSVG
+                      value="https://play.google.com/store/apps/details?id=nota.npd.com"
+                      size={qrSize}
+                      level="H"
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                      marginSize={0}
+                    />
+                  </div>
+                );
+              })()}
+            </Suspense>
+
                 />
               </div>
             </Suspense>
