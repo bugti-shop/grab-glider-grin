@@ -66,19 +66,21 @@ export const useFeatureTour = () => {
 };
 
 /** Fire the first-visit tour(s) for a given route, if any and not yet seen. */
-export const useFirstVisitTour = (route: string) => {
+export const useFirstVisitTour = (route: string, explicitTourId?: string) => {
   useEffect(() => {
+    if (explicitTourId) {
+      TourManager.startTour(explicitTourId, { auto: true });
+      return;
+    }
     const eligible = FEATURE_TOURS.filter(
       (t) => t.trigger === 'first-visit' && t.route === route,
     );
     if (eligible.length === 0) return;
 
     (async () => {
-      // days-since-install trigger honoring
       for (const tour of eligible) {
         TourManager.startTour(tour.id, { auto: true });
       }
-      // Also try any days-since-install tours whose window has arrived.
       const days = await getDaysSinceInstall();
       const dueByAge = FEATURE_TOURS.filter(
         (t) =>
@@ -90,8 +92,9 @@ export const useFirstVisitTour = (route: string) => {
         TourManager.startTour(tour.id, { auto: true });
       }
     })();
-  }, [route]);
+  }, [route, explicitTourId]);
 };
+
 
 /** Fire an empty-state tour manually (e.g. from a Notes empty view). */
 export const triggerEmptyStateTour = (tourId: string) => {
