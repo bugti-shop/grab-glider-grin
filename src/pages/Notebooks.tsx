@@ -240,107 +240,23 @@ const Notebooks = () => {
       </header>
 
 
-      {/* Notebook grid — colorful covers with fanned paper bundle */}
-      <div className="px-3 pt-5">
-        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-x-1 gap-y-4 max-w-3xl mx-auto">
-          {filtered.map((f) => {
-            const count = counts.get(f.id) ?? 0;
-            const color = f.color || '#3b82f6';
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => {
-                  if (longPressedRef.current) {
-                    longPressedRef.current = false;
-                    return;
-                  }
-                  openNotebook(f.id);
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setActionFor(f);
-                }}
-                onPointerDown={() => startPress(f)}
-                onPointerUp={cancelPress}
-                onPointerLeave={cancelPress}
-                onPointerCancel={cancelPress}
-                className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform select-none touch-none"
-              >
-                {/* Notebook wrapper — smaller cover, stack spans full width */}
-                <div className="relative w-[90%] aspect-[3/4] pb-[5%]">
-                  {/* Cover box (fills the top area, leaves pb for stack) */}
-                  <div className="relative w-full h-full">
-                    {/* Fanned paper bundle — full width, edge-to-edge with cover */}
-                    <div className="absolute left-[1.5%] right-[1.5%] top-0 bottom-[-6%] pointer-events-none">
-                      {/* Sheet 1 — back */}
-                      <div
-                        className="absolute left-0 right-0 top-[9%] bottom-[3%] rounded-r-lg rounded-l-[4px] bg-[#fdfaf1] shadow-[0_2px_3px_rgba(0,0,0,0.15)]"
-                      />
-                      {/* Sheet 2 — middle */}
-                      <div
-                        className="absolute left-0 right-0 top-[7%] bottom-[1.5%] rounded-r-lg rounded-l-[4px] bg-white shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
-                      />
-                      {/* Sheet 3 — front, flush with cover edges */}
-                      <div className="absolute left-0 right-0 top-[5%] bottom-0 rounded-r-lg rounded-l-[4px] bg-white shadow-[0_3px_5px_-1px_rgba(0,0,0,0.2)]">
-                        {/* ruled hint */}
-                        <div className="absolute inset-x-2 bottom-1 space-y-[2px]">
-                          <div className="h-px bg-black/10" />
-                          <div className="h-px bg-black/10" />
-                        </div>
-                      </div>
-                    </div>
+      {/* Notebook grid — virtualized for 10k+ notebooks */}
+      <VirtualNotebookGrid
+        items={filtered}
+        counts={counts}
+        onOpen={openNotebook}
+        onContext={(f) => setActionFor(f)}
+        startPress={startPress}
+        cancelPress={cancelPress}
+        longPressedRef={longPressedRef}
+      />
 
-                    {/* Notebook cover — sits on top of the bundle */}
-                    <div
-                      className="relative w-full h-full rounded-r-lg rounded-l-[4px] overflow-hidden shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
-                      style={{
-                        backgroundColor: color,
-                        backgroundImage: `linear-gradient(135deg, ${color} 0%, ${color}dd 55%, ${color}99 100%)`,
-                      }}
-                    >
-                      {/* Spine shadow */}
-                      <div
-                        className="absolute inset-y-0 left-0 w-[10%]"
-                        style={{
-                          background:
-                            'linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 60%, rgba(255,255,255,0.15) 100%)',
-                        }}
-                      />
-                      {/* Rings on spine */}
-                      <div className="absolute inset-y-0 left-0 w-[10%] flex flex-col justify-around py-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <span
-                            key={i}
-                            className="mx-auto h-[3px] w-[3px] rounded-full bg-white/85 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]"
-                          />
-                        ))}
-                      </div>
-                      {/* Glossy highlight */}
-                      <div className="absolute top-0 bottom-0 left-[14%] w-[2px] bg-white/25" />
-                      {/* Count badge */}
-                      <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-black/25 backdrop-blur-sm text-[9px] font-semibold text-white flex items-center justify-center tabular-nums">
-                        {count}
-                      </span>
-                    </div>
-
-                  </div>
-                </div>
-                {/* Name */}
-                <span className="block w-full text-[15px] font-semibold text-foreground truncate px-0.5 leading-tight mt-1.5">
-                  {f.name}
-                </span>
-              </button>
-            );
-          })}
+      {filtered.length === 0 && (
+        <div className="py-16 text-center text-sm text-muted-foreground">
+          No notebooks found
         </div>
+      )}
 
-        {filtered.length === 0 && (
-          <div className="py-16 text-center text-sm text-muted-foreground">
-            No notebooks found
-          </div>
-        )}
-      </div>
 
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
