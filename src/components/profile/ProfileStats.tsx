@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FileText, CheckCircle2, FolderOpen, Layers, CalendarDays } from 'lucide-react';
 import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
-import { countTasksInDB } from '@/utils/taskStorage';
+import { countCompletedTasksInDB } from '@/utils/taskStorage';
 import { loadStreakData } from '@/utils/streakStorage';
 import { getSetting } from '@/utils/settingsStorage';
 import { Folder, TaskSection } from '@/types/note';
