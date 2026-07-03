@@ -459,6 +459,7 @@ const TodoSettings = () => {
             {showMoreTabsExpanded && (
               <div className="bg-muted/30">
                 <button
+                  data-tour="settings-habit-tracker"
                   onClick={() => navigate('/todo/habits')}
                   className="w-full flex items-center justify-between px-6 py-3 border-b border-border/50 hover:bg-muted transition-colors"
                 >
