@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useFirstVisitTour } from '@/features/tours/useFeatureTour';
 
 const NOTEBOOK_COLORS = [
   '#3b82f6', // blue
@@ -45,6 +46,8 @@ const NOTEBOOK_COLORS = [
 const Notebooks = () => {
   const navigate = useNavigate();
   const { notesMeta } = useNotes();
+  useFirstVisitTour('/notebooks');
+
   const [folders, setFolders] = useState<FolderType[]>([]);
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);

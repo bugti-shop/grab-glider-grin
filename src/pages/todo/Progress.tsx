@@ -20,6 +20,15 @@ const Progress = () => {
   const { t } = useTranslation();
   const { openPaywall } = useSubscription();
   const { data, isLoading, completedToday, atRisk, status, weekData, gracePeriodRemaining, isPro } = useStreak();
+  useFirstVisitTour('/todo/progress');
+  useEffect(() => {
+    // Mark Progress tab visit for the onboarding checklist auto-check.
+    import('@/utils/settingsStorage').then(({ setSetting }) => {
+      setSetting('onboarding-visited-progress', true, { skipCloudSync: true }).catch(() => {});
+      window.dispatchEvent(new Event('flowistOnboardingSignalChange'));
+    });
+  }, []);
+
   const [weekStats, setWeekStats] = useState({ completed: 0, total: 0 });
   
   const [showCertificates, setShowCertificates] = useState(false);
