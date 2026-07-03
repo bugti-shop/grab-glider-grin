@@ -82,8 +82,8 @@ export const FEATURE_TOURS: FeatureTour[] = [
   hint('task-journey', 'tasks', 'Choose your virtual journey', 'Turn long-term goals into a gamified adventure in Progress → Journeys.', '/todo/progress', { target: '[data-tour="progress-journeys"]' }),
   hint('task-create-habit', 'tasks', 'Create your first habit', 'Add a daily habit and start building streaks from the sidebar.', '/todo/settings', { beforeStart: '[data-tour="settings-more-tabs"]', target: '[data-tour="settings-habit-tracker"]', side: 'top' }),
   hint('task-eisenhower', 'tasks', 'Add tasks via Eisenhower Matrix', 'Drop tasks into the 4 quadrants to focus on what matters most.', '/todo/settings', { beforeStart: '[data-tour="settings-more-tabs"]', target: '[data-tour="settings-eisenhower-matrix"]', side: 'top' }),
-  hint('task-import', 'tasks', 'Import tasks', 'Bring in tasks from CSV using the ⋮ → Import option.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-options-menu"]' }),
-  hint('task-batch-add', 'tasks', 'Add batch tasks', 'Open ⋮ → Add multiple to paste or type many tasks at once.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-options-menu"]' }),
+  hint('task-import', 'tasks', 'Import tasks', 'Bring in tasks from CSV using the ⋮ → Import option.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-menu-import-tasks"]', side: 'left' }),
+  hint('task-batch-add', 'tasks', 'Add batch tasks', 'Open ⋮ → Add multiple to paste or type many tasks at once.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-menu-batch-tasks"]', side: 'left' }),
 
   // ─── Notes ─────────────────────────────────────────────────────
   hint('notes-switch-dashboard', 'notes', 'Switch to Notes dashboard', 'Tap the notes icon in the header to jump into your notes workspace.', '/todo/today', { target: '[data-tour="switch-to-notes"]', side: 'bottom' }),
