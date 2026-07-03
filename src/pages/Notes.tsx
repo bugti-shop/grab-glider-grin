@@ -26,6 +26,8 @@ import { useTranslation } from 'react-i18next';
 import { useNotes } from '@/contexts/NotesContext';
 import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 import { logPerfEvent } from '@/utils/perfLogger';
+import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';
+import { EmptyStateHint } from '@/components/tours/EmptyStateHint';
 
 import {
   DropdownMenu,
@@ -570,6 +572,7 @@ const Notes = () => {
               >
                 <ListTodo className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6" />
               </Button>
+              <FeatureGuideButton />
             </div>
           </div>
         </div>
@@ -709,9 +712,15 @@ const Notes = () => {
               {viewMode === 'trash' ? t('notes.trashEmpty') : viewMode === 'archived' ? t('notes.noArchivedNotes') : t('notes.noNotes')}
             </p>
             {viewMode === 'active' && (
-              <p className="text-muted-foreground/60 text-sm mt-2">
-                {t('emptyStates.tapToCreateNote')}
-              </p>
+              <>
+                <p className="text-muted-foreground/60 text-sm mt-2">
+                  {t('emptyStates.tapToCreateNote')}
+                </p>
+                <EmptyStateHint
+                  tourId="note-types"
+                  message="Flowist has 6 note types — Sticky, Lined, Regular, Code, Sketch, and LinkedIn Formatter."
+                />
+              </>
             )}
           </div>
         ) : (

@@ -9,6 +9,7 @@ import { SettingsDialogs } from '@/components/settings/SettingsDialogs';
 import { SettingsSheets } from '@/components/settings/SettingsSheets';
 import { FeedbackDialog } from '@/components/FeedbackDialog';
 import { HeaderOffsetSheet } from '@/components/settings/HeaderOffsetSheet';
+import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';
 
 // Keys for one-time coachmarks shown across the app. Add new keys here so
 // "Show tips again" resets them all in one place.
@@ -63,7 +64,8 @@ const Settings = () => {
         <div className="container mx-auto px-2 xs:px-3 sm:px-4 py-2 xs:py-3 sm:py-4">
           <div className="flex items-center gap-1.5 xs:gap-2 min-w-0">
             <AppLogo />
-            <h1 className="text-base xs:text-lg sm:text-xl font-bold truncate">{t('settings.title')}</h1>
+            <h1 className="text-base xs:text-lg sm:text-xl font-bold truncate flex-1">{t('settings.title')}</h1>
+            <FeatureGuideButton />
           </div>
         </div>
       </header>
@@ -86,7 +88,9 @@ const Settings = () => {
           {/* Preferences Section */}
           <div className="border border-border rounded-lg overflow-hidden" data-tour="settings-preferences">
             <SectionHeading title={t('settings.preferences', 'Preferences')} />
-            <SettingsRow label={t('settings.appearance')} onClick={() => state.setShowThemeDialog(true)} />
+            <div data-tour="settings-appearance">
+              <SettingsRow label={t('settings.appearance')} onClick={() => state.setShowThemeDialog(true)} />
+            </div>
             <SettingsRow label={t('settings.language')} onClick={() => state.setShowLanguageDialog(true)} />
             <SettingsRow label={t('settings.noteTypeVisibility', 'Note Type Visibility')} showCrown onClick={() => { if (requireFeature('notes_type_visibility')) state.setShowNoteTypeVisibilitySheet(true); }} />
             <SettingsRow label={t('settings.notesSettings', 'Notes Settings')} showCrown onClick={() => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); }} />

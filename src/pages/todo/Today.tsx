@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TodoLayout } from './TodoLayout';
 import { OnboardingChecklistCardAuto } from '@/components/tours/OnboardingChecklistCard';
 import { useFirstVisitTour } from '@/features/tours/useFeatureTour';
+import { TourManager } from '@/features/tours/TourManager';
 
 import { toast } from 'sonner';
 import { subDays } from 'date-fns';
@@ -282,6 +283,18 @@ const Today = () => {
       window.removeEventListener('popstate', checkAddParam);
     };
   }, [location.search, setIsInputOpen]);
+
+  // Task-views + toolbar-power discovery: once the user has 5+ tasks, they're
+  // ready to learn about layout switching (Kanban/Timeline) and bulk power tools.
+  // TourManager itself dedupes seen/dismissed state, so this is safe to re-run.
+  useEffect(() => {
+    if (items.length >= 5) {
+      TourManager.startTour('task-views', { auto: true });
+    }
+    if (items.length >= 15) {
+      TourManager.queueTour('task-toolbar-power');
+    }
+  }, [items.length]);
 
   // Open a task when arriving via /todo/today?openTask=<id> OR via in-app mention event.
   useEffect(() => {
