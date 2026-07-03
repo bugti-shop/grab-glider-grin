@@ -107,7 +107,10 @@ export const VirtualJourneyCard = () => {
   if (active) {
     const { journey, progress } = active;
     const totalJourneyTasks = journey.totalTasks;
-    const totalDone = Math.min(progress.tasksCompleted ?? 0, totalJourneyTasks);
+    const rawDone = Math.min(progress.tasksCompleted ?? 0, totalJourneyTasks);
+    // Blend optimistic bumps in so the bar advances the moment a task is
+    // ticked, even before storage / journey advancement have caught up.
+    const totalDone = Math.min(rawDone + optimisticBump, totalJourneyTasks);
     const percent = Math.min((totalDone / totalJourneyTasks) * 100, 100);
     const isComplete = !!progress.completedAt;
 
