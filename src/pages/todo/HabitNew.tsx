@@ -77,6 +77,9 @@ const HabitNew = () => {
   const [goalAmount, setGoalAmount] = useState(1);
   const [goalUnit, setGoalUnit] = useState('times');
   const [showGoalDialog, setShowGoalDialog] = useState(false);
+  /** When true, show a time picker for each repeat and sync to reminders on save. */
+  const [scheduleEachRepeat, setScheduleEachRepeat] = useState(false);
+  const [repeatTimes, setRepeatTimes] = useState<string[]>([]);
 
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [showDateDialog, setShowDateDialog] = useState(false);
@@ -122,6 +125,17 @@ const HabitNew = () => {
       setGoalType(h.goalType || 'all');
       if (h.goalAmount) setGoalAmount(h.goalAmount);
       if (h.goalUnit) setGoalUnit(h.goalUnit);
+      // Restore per-repeat schedule if habit already stores one reminder per repeat.
+      if (
+        h.goalType === 'amount' &&
+        (h.goalAmount ?? 0) > 1 &&
+        h.reminders &&
+        h.reminders.length === (h.goalAmount ?? 0) &&
+        h.reminders.every((r) => r.enabled && r.time)
+      ) {
+        setScheduleEachRepeat(true);
+        setRepeatTimes(h.reminders.map((r) => r.time));
+      }
       if (h.startDate) setStartDate(new Date(h.startDate));
       setGoalDays(h.goalDays || 0);
       if (h.sectionId) setSectionId(h.sectionId);
@@ -147,8 +161,34 @@ const HabitNew = () => {
     setQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
   };
 
+  // Keep repeatTimes array in sync with goalAmount. Defaults spread evenly
+  // across waking hours (08:00 → 20:00) the first time the user enables it.
+  useEffect(() => {
+    if (!scheduleEachRepeat) return;
+    setRepeatTimes((prev) => {
+      const n = Math.max(1, goalAmount);
+      if (prev.length === n) return prev;
+      const next = [...prev];
+      if (next.length < n) {
+        // Distribute new slots evenly between 08:00 and 20:00.
+        const startMin = 8 * 60;
+        const endMin = 20 * 60;
+        for (let i = next.length; i < n; i++) {
+          const t = n === 1 ? startMin : Math.round(startMin + ((endMin - startMin) * i) / (n - 1));
+          const hh = String(Math.floor(t / 60)).padStart(2, '0');
+          const mm = String(t % 60).padStart(2, '0');
+          next.push(`${hh}:${mm}`);
+        }
+      } else {
+        next.length = n;
+      }
+      return next;
+    });
+  }, [goalAmount, scheduleEachRepeat]);
+
   const goalLabel = useMemo(() => {
     if (goalType === 'all') return 'Achieve it all';
+    if (goalUnit === 'times' && goalAmount > 1) return `${goalAmount}× per day`;
     return `Reach ${goalAmount} ${goalUnit}`;
   }, [goalType, goalAmount, goalUnit]);
 
@@ -185,7 +225,14 @@ const HabitNew = () => {
       sectionId,
       kind,
       chainAfterHabitId: chainAfterHabitId || undefined,
-      reminders: reminders.length > 0 ? reminders : undefined,
+      reminders: (() => {
+        // If user opted into per-repeat schedule, materialise those times as
+        // reminders so notifications fire at each check-in slot.
+        if (scheduleEachRepeat && goalType === 'amount' && repeatTimes.length > 0) {
+          return repeatTimes.map((time) => ({ enabled: true, time }));
+        }
+        return reminders.length > 0 ? reminders : undefined;
+      })(),
       reminder: undefined, // legacy field cleared on save
       autoPopupLog: autoPopup,
       completions: editingExisting?.completions ?? [],
@@ -573,20 +620,68 @@ const HabitNew = () => {
               onClick={() => setGoalType('amount')}
             />
             {goalType === 'amount' && (
-              <div className="flex items-center gap-2 pt-2">
-                <Input
-                  type="number"
-                  min={1}
-                  value={goalAmount}
-                  onChange={(e) => setGoalAmount(Math.max(1, Number(e.target.value) || 1))}
-                  className="h-10 w-24"
-                />
-                <Input
-                  value={goalUnit}
-                  onChange={(e) => setGoalUnit(e.target.value)}
-                  placeholder="unit (e.g. cups)"
-                  className="h-10 flex-1"
-                />
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={24}
+                    value={goalAmount}
+                    onChange={(e) => setGoalAmount(Math.max(1, Math.min(24, Number(e.target.value) || 1)))}
+                    className="h-10 w-24"
+                  />
+                  <Input
+                    value={goalUnit}
+                    onChange={(e) => setGoalUnit(e.target.value)}
+                    placeholder="unit (e.g. times, cups)"
+                    className="h-10 flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  You can check in up to {goalAmount} {goalAmount === 1 ? 'time' : 'times'} per day.
+                </p>
+
+                {goalAmount > 1 && (
+                  <div className="rounded-xl border border-border/60 p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium">Set a time for each repeat</div>
+                        <div className="text-xs text-muted-foreground">
+                          We'll remind you at each of these times.
+                        </div>
+                      </div>
+                      <Switch
+                        checked={scheduleEachRepeat}
+                        onCheckedChange={setScheduleEachRepeat}
+                      />
+                    </div>
+
+                    {scheduleEachRepeat && (
+                      <div className="space-y-2">
+                        {repeatTimes.map((time, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-16">
+                              Repeat {idx + 1}
+                            </span>
+                            <Input
+                              type="time"
+                              value={time}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setRepeatTimes((prev) => {
+                                  const next = [...prev];
+                                  next[idx] = v;
+                                  return next;
+                                });
+                              }}
+                              className="h-10 flex-1"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
