@@ -20,6 +20,7 @@ import { ProfileSubscriptionCard } from '@/components/profile/ProfileSubscriptio
 import { CountryFlagPickerSheet } from '@/components/CountryFlagPickerSheet';
 import { EmailAuthSheet } from '@/components/EmailAuthSheet';
 import { ChangeEmailSheet } from '@/components/ChangeEmailSheet';
+import { EmailToFlowistCard } from '@/components/EmailToFlowistCard';
 import { Capacitor } from '@capacitor/core';
 
 
@@ -419,6 +420,12 @@ export default function Profile() {
             <p className="text-xs text-muted-foreground mt-0.5">{getJoinedDate()}</p>
           )}
         </div>
+
+        {user?.uid && (
+          <EmailToFlowistCard userId={user.uid} displayName={displayName} />
+        )}
+
+
 
         {/* Sign-in / Sign-out */}
         <div className="mt-4">

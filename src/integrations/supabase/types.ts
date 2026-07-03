@@ -137,6 +137,44 @@ export type Database = {
         }
         Relationships: []
       }
+      email_aliases: {
+        Row: {
+          created_at: string
+          default_folder_id: string | null
+          id: string
+          is_active: boolean
+          local_part: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_folder_id?: string | null
+          id?: string
+          is_active?: boolean
+          local_part: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_folder_id?: string | null
+          id?: string
+          is_active?: boolean
+          local_part?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_aliases_default_folder_id_fkey"
+            columns: ["default_folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
