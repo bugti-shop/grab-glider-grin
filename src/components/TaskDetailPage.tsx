@@ -4,7 +4,7 @@ import { saveTaskMedia, makeTaskMediaRef, deleteTaskMedia, parseTaskMediaRef } f
 import { useTranslation } from 'react-i18next';
 import { TodoItem, Priority, Folder, Note, RepeatType, ColoredTag, TimeTracking, TaskStatus, LocationReminder, TaskAttachment, EscalationTiming } from '@/types/note';
 import { TaskComments } from '@/components/TaskComments';
-import { Share2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -208,7 +208,7 @@ export const TaskDetailPage = ({
     priority: 'sheet',
   });
 
-  const [showShareSheet, setShowShareSheet] = useState(false);
+  
 
   if (!isOpen || !task) return null;
 
