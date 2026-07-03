@@ -110,12 +110,43 @@ export const useJourneyAdvancement = () => {
       }, 250);
     };
 
+    // Foreground / resume re-sync: when the tab becomes visible or the native
+    // app resumes, force an immediate journey reconciliation so any tasks
+    // completed on another surface (widget, other device) or while the app
+    // was backgrounded advance the journey right away.
+    const foregroundHandler = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      void syncAndAdvance();
+      // Also let downstream UI (VirtualJourneyCard, Progress) refresh.
+      window.dispatchEvent(new Event('tasksUpdated'));
+    };
+    const visibilityHandler = () => {
+      if (document.visibilityState === 'visible') foregroundHandler();
+    };
+
     window.addEventListener('tasksUpdated', handler);
     window.addEventListener('journeyUpdated', handler);
+    document.addEventListener('visibilitychange', visibilityHandler);
+    window.addEventListener('focus', foregroundHandler);
+
+    let capacitorCleanup: (() => void) | null = null;
+    import('@capacitor/app')
+      .then(({ App }) => {
+        const sub = App.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) foregroundHandler();
+        });
+        capacitorCleanup = () => {
+          Promise.resolve(sub).then((s) => s.remove()).catch(() => {});
+        };
+      })
+      .catch(() => {});
 
     return () => {
       window.removeEventListener('tasksUpdated', handler);
       window.removeEventListener('journeyUpdated', handler);
+      document.removeEventListener('visibilitychange', visibilityHandler);
+      window.removeEventListener('focus', foregroundHandler);
+      capacitorCleanup?.();
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
