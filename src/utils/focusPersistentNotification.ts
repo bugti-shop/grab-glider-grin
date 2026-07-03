@@ -56,6 +56,8 @@ export const showFocusOngoing = async (opts: FocusOngoingOpts) => {
         remainingSec: opts.remainingSec,
         endAtMs: opts.endAtMs,
         running: opts.running,
+        soundUrl: opts.soundUrl,
+        soundVolume: opts.soundVolume,
       });
       return;
     } catch {}
