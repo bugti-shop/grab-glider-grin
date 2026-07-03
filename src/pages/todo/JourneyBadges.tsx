@@ -509,7 +509,7 @@ const JourneyBadges = () => {
                 <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-center gap-3">
                   <div className="bg-white rounded-md p-1 flex items-center justify-center">
                     <QRCodeSVG
-                      value="https://play.google.com/store/apps/details?id=nota.npd.com"
+                      value="https://onelink.to/9xy8rz"
                       size={64}
                       level="M"
                       bgColor="#ffffff"
