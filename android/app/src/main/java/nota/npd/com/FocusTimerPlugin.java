@@ -18,6 +18,9 @@ public class FocusTimerPlugin extends Plugin {
         Double end = call.getDouble("endAtMs");
         if (end != null) i.putExtra("endAtMs", end.longValue());
         i.putExtra("running", call.getBoolean("running", true));
+        i.putExtra("soundUrl", call.getString("soundUrl", ""));
+        Double vol = call.getDouble("soundVolume");
+        if (vol != null) i.putExtra("soundVolume", vol.doubleValue());
         if (Build.VERSION.SDK_INT >= 26) getContext().startForegroundService(i); else getContext().startService(i);
         call.resolve(new JSObject().put("ok", true));
     }
