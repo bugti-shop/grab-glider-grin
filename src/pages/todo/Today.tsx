@@ -254,6 +254,15 @@ const Today = () => {
     sortedSections, toggleViewSectionCollapse, handleClearFilters,
   } = state;
 
+  useEffect(() => {
+    const openFirstTaskForTour = () => {
+      const firstTask = uncompletedItems[0] ?? completedItems[0] ?? items[0];
+      if (firstTask) setSelectedTask(firstTask);
+    };
+    window.addEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
+    return () => window.removeEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
+  }, [completedItems, items, setSelectedTask, uncompletedItems]);
+
   // Widget deep-link: ?add=1 → auto-open the task input sheet.
   // ?widget=1 marks this as a launcher-widget flow, so closing the sheet
   // (either after saving or by dismissing) minimizes the app back to the
@@ -543,7 +552,7 @@ const Today = () => {
               priorityColor={getPriorityColor(item.priority || 'none')}
               updateItem={updateItem}
             />
-            <div className="flex-1 min-w-0" onClick={() => !currentSwipe?.isSwiping && setSelectedTask(item)}>
+            <div data-tour="task-row" className="flex-1 min-w-0" onClick={() => !currentSwipe?.isSwiping && setSelectedTask(item)}>
               {item.voiceRecording ? (
                 <div className="flex items-center gap-2">
                   <button onClick={(e) => handleFlatVoicePlay(item, e)} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors min-w-0 flex-1">
