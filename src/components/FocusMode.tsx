@@ -569,9 +569,11 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
 
   const attemptClose = () => {
     if (prefs.strict && running) { setConfirmExit(true); return; }
-    // If a session is active, offer background-mode option
+    // If a session is active, auto-move to background so timer + sound
+    // keep running via the native foreground service. User can exit from
+    // the notification shade or the on-screen background bar.
     if (sessionRef.current && (running || (sessionRef.current.remainingSec ?? 0) > 0)) {
-      setShowBackgroundPrompt(true);
+      continueInBackground();
       return;
     }
     noise.stop();
