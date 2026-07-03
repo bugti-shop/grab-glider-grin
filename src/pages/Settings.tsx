@@ -141,12 +141,9 @@ const Settings = () => {
           {/* About & Support Section */}
           <div className="border border-border rounded-lg overflow-hidden">
             <SectionHeading title={t('settings.aboutSupport', 'About & Support')} />
-            <SettingsRow label={t('settings.shareWithFriends')} onClick={state.handleShareApp} />
             <SettingsRow label={t('settings.termsOfService')} onClick={() => state.setShowTermsDialog(true)} />
-            <SettingsRow label={t('settings.helpFeedback')} onClick={() => state.setShowHelpDialog(true)} />
-            <SettingsRow label={t('settings.sendFeedback', 'Send Feedback / Report Bug')} onClick={() => setShowFeedbackDialog(true)} />
             <SettingsRow label={t('settings.privacy')} onClick={() => window.open('https://docs.google.com/document/d/1YY5k6mXOKJtiZjEb9ws6Aq7UQbStGy-I/edit?usp=drivesdk&ouid=105643538765333343845&rtpof=true&sd=true', '_blank')} />
-            <SettingsRow label={t('settings.rateApp')} onClick={state.handleRateAndShare} />
+
           </div>
 
         </div>
