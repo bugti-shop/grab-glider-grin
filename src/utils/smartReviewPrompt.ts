@@ -103,12 +103,12 @@ export const openPlayStoreReview = async () => {
     try {
       const { Browser } = await import('@capacitor/browser');
       await Browser.open({
-        url: `https://play.google.com/store/apps/details?id=${appId}`,
+        url: `https://onelink.to/9xy8rz`,
       });
     } catch {
-      window.open(`https://play.google.com/store/apps/details?id=${appId}`, '_blank');
+      window.open(`https://onelink.to/9xy8rz`, '_blank');
     }
   } else {
-    window.open(`https://play.google.com/store/apps/details?id=${appId}`, '_blank');
+    window.open(`https://onelink.to/9xy8rz`, '_blank');
   }
 };

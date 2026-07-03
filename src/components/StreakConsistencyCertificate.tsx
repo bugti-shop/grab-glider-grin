@@ -33,7 +33,7 @@ const getShareText = (streak: number, totalTasks: number, userName: string) => {
     `💪 Every day counts!`,
   ];
   if (userName) lines.push('', `— ${userName}`);
-  lines.push('', 'Track your productivity with Flowist 👇', 'https://play.google.com/store/apps/details?id=nota.npd.com');
+  lines.push('', 'Track your productivity with Flowist 👇', 'https://onelink.to/9xy8rz');
   return lines.join('\n');
 };
 
@@ -345,7 +345,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
                     boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   }}>
                     <QRCodeSVG
-                      value="https://play.google.com/store/apps/details?id=nota.npd.com"
+                      value="https://onelink.to/9xy8rz"
                       size={qrSize}
                       level="H"
                       bgColor="#ffffff"

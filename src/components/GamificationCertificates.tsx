@@ -820,7 +820,7 @@ const CertificateCard = ({ cert, unlocked, userName, userAvatar }: { cert: Certi
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <QRCodeSVG
-                value="https://play.google.com/store/apps/details?id=nota.npd.com"
+                value="https://onelink.to/9xy8rz"
                 size={64}
                 level="M"
                 bgColor="#ffffff"

@@ -254,7 +254,7 @@ export const useSettingsPageState = () => {
   };
 
   const handleShareApp = () => {
-    const shareUrl = 'https://play.google.com/store/apps/details?id=nota.npd.com';
+    const shareUrl = 'https://onelink.to/9xy8rz';
     if (navigator.share) {
       navigator.share({ title: t('share.appTitle'), text: t('share.appDescription'), url: shareUrl });
     } else {
@@ -285,7 +285,7 @@ export const useSettingsPageState = () => {
   };
 
   const handleRateAndShare = () => {
-    window.open('https://play.google.com/store/apps/details?id=nota.npd.com', '_blank');
+    window.open('https://onelink.to/9xy8rz', '_blank');
   };
 
   const handleCustomThemeSelect = async (theme: CustomTheme) => {
