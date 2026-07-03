@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsTourActive } from '@/features/tours/useIsTourActive';
 
 /**
  * Route-aware skeleton screen used as the global <Suspense> fallback.
