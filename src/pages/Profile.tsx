@@ -421,9 +421,10 @@ export default function Profile() {
           )}
         </div>
 
-        {user && (
-          <EmailToFlowistCard userId={user.id} displayName={displayName} />
+        {user?.uid && (
+          <EmailToFlowistCard userId={user.uid} displayName={displayName} />
         )}
+
 
 
         {/* Sign-in / Sign-out */}
