@@ -1680,7 +1680,7 @@ const Index = () => {
               )}
               {isTypeVisible('code') && isTypeVisible('sketch') && <DropdownMenuSeparator />}
               {isTypeVisible('sketch') && (
-                <DropdownMenuItem onClick={() => { triggerHaptic('medium'); handleCreateNote('sketch'); setNoteTypeSelectorOpen(false); }} className="gap-2">
+                <DropdownMenuItem data-tour="note-type-sketch" onClick={() => { triggerHaptic('medium'); handleCreateNote('sketch'); setNoteTypeSelectorOpen(false); }} className="gap-2">
                   <PenTool className="h-4 w-4 text-teal-500" />
                   {t('notes.noteTypes.sketch', 'Sketch')}
                 </DropdownMenuItem>
