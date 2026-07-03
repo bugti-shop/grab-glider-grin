@@ -437,6 +437,7 @@ const Notebooks = () => {
 
       {/* Add Notebook button — bottom fixed, matches Home's New note button */}
       <Button
+        data-tour="add-notebook"
         className="fixed left-4 right-4 z-50 h-12 text-base font-semibold md:hidden"
         style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
         size="lg"
