@@ -1116,4 +1116,11 @@ const Today = () => {
 
 };
 
+// First-visit tour trigger — mounted inside <TodoLayout> so navigation context is ready.
+const TodayTourTrigger = () => {
+  useFirstVisitTour('/todo/today', 'task-add-basics');
+  return null;
+};
+
 export default Today;
+
