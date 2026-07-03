@@ -325,19 +325,8 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           </div>
         </div>
 
-        {/* Flame icon — moved up, aligned right next to the big streak number */}
-        <div style={{
-          position: 'absolute',
-          top: s(60),
-          left: s(28) + s(currentStreak >= 10000 ? 36 : currentStreak >= 1000 ? 42 : 48) * String(currentStreak).length * 0.62 + s(8),
-          opacity: 0.9,
-          zIndex: 1,
-          pointerEvents: 'none',
-        }}>
-          <svg width={s(56)} height={s(72)} viewBox="0 0 24 24" fill="white" style={{ opacity: 0.85 }}>
-            <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.866 4-9 7-13 3 4 7 9.134 7 13 0 3.866-3.134 7-7 7z" />
-          </svg>
-        </div>
+
+
 
         {/* QR + Flowist branding — small, right side */}
         <div style={{
