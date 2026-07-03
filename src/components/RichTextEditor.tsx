@@ -1214,7 +1214,7 @@ export const RichTextEditor = ({
         // Safety net for mobile/browser paste paths that bypass onPaste and
         // insert raw plaintext markdown directly into the contenteditable.
         if (
-          notesSettings.markdownShortcuts !== false &&
+          inputType === 'insertFromPaste' && !isInsideCode(editorRef.current) &&
           inputType === 'insertFromPaste' &&
           !isInsideCode(editorRef.current)
         ) {
