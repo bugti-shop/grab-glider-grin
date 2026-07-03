@@ -125,16 +125,21 @@ const HabitNew = () => {
       setGoalType(h.goalType || 'all');
       if (h.goalAmount) setGoalAmount(h.goalAmount);
       if (h.goalUnit) setGoalUnit(h.goalUnit);
-      // Restore per-repeat schedule if habit already stores one reminder per repeat.
-      if (
-        h.goalType === 'amount' &&
-        (h.goalAmount ?? 0) > 1 &&
-        h.reminders &&
-        h.reminders.length === (h.goalAmount ?? 0) &&
-        h.reminders.every((r) => r.enabled && r.time)
-      ) {
+      // Restore per-repeat schedule from any legacy shape:
+      //  1) `h.reminders` matching goalAmount → treat as per-repeat times.
+      //  2) `h.reminders` present but shorter/longer → hydrate the times we
+      //     have (clamped to 1..24) so the UI opens with real values.
+      //  3) legacy `h.reminder` → seed the reminders list without breaking UI.
+      const goalAmt = Math.max(1, Math.min(24, h.goalAmount ?? 1));
+      const enabledTimes = (h.reminders ?? [])
+        .filter((r) => r.enabled && !!r.time)
+        .map((r) => r.time);
+      if (h.goalType === 'amount' && goalAmt > 1 && enabledTimes.length >= 2) {
         setScheduleEachRepeat(true);
-        setRepeatTimes(h.reminders.map((r) => r.time));
+        // Pad / trim to goalAmt so the picker never renders undefined rows.
+        const filled = enabledTimes.slice(0, goalAmt);
+        while (filled.length < goalAmt) filled.push('09:00');
+        setRepeatTimes(filled);
       }
       if (h.startDate) setStartDate(new Date(h.startDate));
       setGoalDays(h.goalDays || 0);
@@ -198,6 +203,25 @@ const HabitNew = () => {
 
   const handleSave = async () => {
     triggerHaptic('medium').catch(() => {});
+    // Validate goalAmount 1..24 up-front — protects against pasted values,
+    // stale state from older builds, and the number input's edge cases.
+    let safeAmount = goalAmount;
+    if (goalType === 'amount') {
+      if (!Number.isFinite(safeAmount) || safeAmount < 1) safeAmount = 1;
+      if (safeAmount > 24) safeAmount = 24;
+      if (safeAmount !== goalAmount) setGoalAmount(safeAmount);
+    }
+    // Reminders are only auto-generated when the per-repeat toggle is on and
+    // we have valid HH:mm strings; otherwise we fall through to the manually
+    // curated reminders list.
+    const validRepeatTimes =
+      scheduleEachRepeat && goalType === 'amount'
+        ? repeatTimes.slice(0, safeAmount).filter((t) => /^\d{2}:\d{2}$/.test(t))
+        : [];
+    if (scheduleEachRepeat && goalType === 'amount' && validRepeatTimes.length !== safeAmount) {
+      toast.error(`Please set a valid time for all ${safeAmount} repeats.`);
+      return;
+    }
     const existing = await loadHabits();
     const editingExisting = editingRef.current;
     if (!editingExisting) {
@@ -218,7 +242,7 @@ const HabitNew = () => {
       weeklyCount: frequency === 'weekly' ? weeklyCount : undefined,
       intervalDays: frequency === 'interval' ? intervalDays : undefined,
       goalType,
-      goalAmount: goalType === 'amount' ? goalAmount : undefined,
+      goalAmount: goalType === 'amount' ? safeAmount : undefined,
       goalUnit: goalType === 'amount' ? goalUnit : undefined,
       startDate: format(startDate, 'yyyy-MM-dd'),
       goalDays,
@@ -226,10 +250,10 @@ const HabitNew = () => {
       kind,
       chainAfterHabitId: chainAfterHabitId || undefined,
       reminders: (() => {
-        // If user opted into per-repeat schedule, materialise those times as
-        // reminders so notifications fire at each check-in slot.
-        if (scheduleEachRepeat && goalType === 'amount' && repeatTimes.length > 0) {
-          return repeatTimes.map((time) => ({ enabled: true, time }));
+        // Per-repeat reminders ONLY when the toggle is on — otherwise keep
+        // the manual list untouched so we don't clobber user-curated times.
+        if (validRepeatTimes.length > 0) {
+          return validRepeatTimes.map((time) => ({ enabled: true, time }));
         }
         return reminders.length > 0 ? reminders : undefined;
       })(),
