@@ -116,6 +116,10 @@ export const VirtualJourneyCard = () => {
 
     const currentMsIndex = progress.currentMilestoneIndex ?? 0;
     const nextMilestone = currentMsIndex < journey.milestones.length ? journey.milestones[currentMsIndex] : undefined;
+    const currentMsBase = progress.currentMilestoneTasks ?? 0;
+    const currentMsTasksDisplay = nextMilestone
+      ? Math.min(currentMsBase + optimisticBump, nextMilestone.tasksRequired - (currentMsIndex > 0 ? journey.milestones[currentMsIndex - 1].tasksRequired : 0))
+      : currentMsBase;
     const lastReached = [...journey.milestones].reverse().find(m => progress.milestonesReached.includes(m.id));
 
     return (
