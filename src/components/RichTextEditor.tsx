@@ -1214,10 +1214,10 @@ export const RichTextEditor = ({
         // Safety net for mobile/browser paste paths that bypass onPaste and
         // insert raw plaintext markdown directly into the contenteditable.
         if (
-          notesSettings.markdownShortcuts !== false &&
           inputType === 'insertFromPaste' &&
           !isInsideCode(editorRef.current)
         ) {
+
           const pastedText = editorRef.current.innerText || '';
           const converted = markdownPasteToHtml(pastedText);
           const hasRichBlocks = !!editorRef.current.querySelector(
@@ -1585,7 +1585,8 @@ export const RichTextEditor = ({
   // both text/plain and text/html; previously the text/html presence made us
   // skip conversion, leaving raw #, [], **bold**, etc. in the note.
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    if (notesSettings.markdownShortcuts === false) return;
+    // Markdown shortcuts always enabled (user preference: no toggle gating)
+
     if (isInsideCode(editorRef.current)) return; // preserve raw paste inside code blocks
     const cd = e.clipboardData;
     if (!cd) return;
@@ -1606,7 +1607,7 @@ export const RichTextEditor = ({
   // the actual inserted text, so we mirror the desktop shortcuts here.
   const handleBeforeInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     const ie = e.nativeEvent as InputEvent;
-    if (notesSettings.markdownShortcuts === false) return;
+    // Markdown shortcuts always enabled
     if (slashMenu.open || mentionMenu.open) return;
     if (isInsideCode(editorRef.current)) return;
 
@@ -1688,8 +1689,9 @@ export const RichTextEditor = ({
     // when the closing marker is typed.
     // Skip while slash / mention menus are showing so their own handling wins.
     // ─────────────────────────────────────────────────────────────
-    const mdEnabled = notesSettings.markdownShortcuts !== false;
+    const mdEnabled = true;
     if (mdEnabled && !slashMenu.open && !mentionMenu.open && !isInsideCode(editorRef.current)) {
+
       if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (tryMarkdownBlockShortcut(editorRef.current)) {
           e.preventDefault();
