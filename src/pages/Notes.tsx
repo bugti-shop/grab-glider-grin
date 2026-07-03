@@ -26,6 +26,8 @@ import { useTranslation } from 'react-i18next';
 import { useNotes } from '@/contexts/NotesContext';
 import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 import { logPerfEvent } from '@/utils/perfLogger';
+import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';
+import { EmptyStateHint } from '@/components/tours/EmptyStateHint';
 
 import {
   DropdownMenu,
