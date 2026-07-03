@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FileText, CheckCircle2, FolderOpen, Layers, CalendarDays } from 'lucide-react';
 import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
-import { countTasksInDB } from '@/utils/taskStorage';
+import { countCompletedTasksInDB } from '@/utils/taskStorage';
 import { loadStreakData } from '@/utils/streakStorage';
 import { getSetting } from '@/utils/settingsStorage';
 import { Folder, TaskSection } from '@/types/note';
@@ -24,7 +24,7 @@ export const useProfileStats = () => {
     try {
       const [notes, taskCount, streak, noteFolders, todoFolders, taskSections] = await Promise.all([
         loadNotesMetadataFromDB(),
-        countTasksInDB(),
+        countCompletedTasksInDB(),
         loadStreakData('flowist_streak'),
         getSetting<Folder[]>('folders', []),
         getSetting<Folder[]>('todoFolders', []),

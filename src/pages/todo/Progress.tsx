@@ -6,6 +6,8 @@ import { useStreak } from '@/hooks/useStreak';
 import { cn } from '@/lib/utils';
 import { Flame, Check, Snowflake, Trophy, Zap, TrendingUp, Calendar, Gift, Clock, Award } from 'lucide-react';
 import { loadTodoItems } from '@/utils/todoItemsStorage';
+import { countCompletedTasksInDB } from '@/utils/taskStorage';
+
 import { startOfWeek, endOfWeek } from 'date-fns';
 import { checkDailyReward, loadDailyRewardData } from '@/utils/dailyRewardStorage';
 import { SafeComponent } from '@/components/ErrorBoundary';
@@ -31,6 +33,8 @@ const Progress = () => {
   }, []);
 
   const [weekStats, setWeekStats] = useState({ completed: 0, total: 0 });
+  const [lifetimeCompleted, setLifetimeCompleted] = useState(0);
+
   
   const [showCertificates, setShowCertificates] = useState(false);
   const [showStreakDetail, setShowStreakDetail] = useState(false);
@@ -57,6 +61,12 @@ const Progress = () => {
           completed: thisWeekTasks.length,
           total: tasks.filter(t => t.completed).length,
         });
+
+        // Lifetime completed task count — the true source of truth,
+        // synced instantly with today's tasks via the tasksUpdated event.
+        const completedTotal = await countCompletedTasksInDB();
+        setLifetimeCompleted(completedTotal);
+
 
         const rewardResult = await checkDailyReward();
         setRewardDay(rewardResult.currentDay);
@@ -270,9 +280,10 @@ const Progress = () => {
         <SafeComponent fallback={null}>
           <StreakConsistencyCertificate
             currentStreak={data?.currentStreak || 0}
-            totalCompletions={data?.totalCompletions || 0}
+            totalCompletions={lifetimeCompleted}
             longestStreak={data?.longestStreak || 0}
           />
+
         </SafeComponent>
 
         {/* Stats Grid */}
@@ -291,7 +302,7 @@ const Progress = () => {
                 <Check className="h-4 w-4" />
                 <span className="text-xs font-medium uppercase">{t('streak.totalCompleted', 'Total Completed')}</span>
               </div>
-              <p className="text-2xl font-bold">{data?.totalCompletions || 0} <span className="text-sm font-normal text-muted-foreground">{t('streak.tasks', 'tasks')}</span></p>
+              <p className="text-2xl font-bold">{lifetimeCompleted} <span className="text-sm font-normal text-muted-foreground">{t('streak.tasks', 'tasks')}</span></p>
             </div>
             
             <div className="bg-card rounded-xl p-4 border">
