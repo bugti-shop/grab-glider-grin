@@ -9,11 +9,11 @@ import 'driver.js/dist/driver.css';
 
 import { getTour, type FeatureTour, type FeatureTourStep } from './tourRegistry';
 import {
-  dismissTourForever,
   hasSeenTour,
   isDismissedForever,
   markTourSeen,
 } from './TourStateStore';
+
 
 type NavigateFn = (path: string) => void;
 
