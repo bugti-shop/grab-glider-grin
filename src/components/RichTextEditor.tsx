@@ -1585,7 +1585,8 @@ export const RichTextEditor = ({
   // both text/plain and text/html; previously the text/html presence made us
   // skip conversion, leaving raw #, [], **bold**, etc. in the note.
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    if (notesSettings.markdownShortcuts === false) return;
+    // Markdown shortcuts always enabled (user preference: no toggle gating)
+
     if (isInsideCode(editorRef.current)) return; // preserve raw paste inside code blocks
     const cd = e.clipboardData;
     if (!cd) return;
