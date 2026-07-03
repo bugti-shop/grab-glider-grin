@@ -254,6 +254,15 @@ const Today = () => {
     sortedSections, toggleViewSectionCollapse, handleClearFilters,
   } = state;
 
+  useEffect(() => {
+    const openFirstTaskForTour = () => {
+      const firstTask = uncompletedItems[0] ?? completedItems[0] ?? items[0];
+      if (firstTask) setSelectedTask(firstTask);
+    };
+    window.addEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
+    return () => window.removeEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
+  }, [completedItems, items, setSelectedTask, uncompletedItems]);
+
   // Widget deep-link: ?add=1 → auto-open the task input sheet.
   // ?widget=1 marks this as a launcher-widget flow, so closing the sheet
   // (either after saving or by dismissing) minimizes the app back to the
