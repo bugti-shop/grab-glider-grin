@@ -33,6 +33,8 @@ const Progress = () => {
   }, []);
 
   const [weekStats, setWeekStats] = useState({ completed: 0, total: 0 });
+  const [lifetimeCompleted, setLifetimeCompleted] = useState(0);
+
   
   const [showCertificates, setShowCertificates] = useState(false);
   const [showStreakDetail, setShowStreakDetail] = useState(false);
