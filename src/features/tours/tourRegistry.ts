@@ -74,27 +74,14 @@ export const FEATURE_TOURS: FeatureTour[] = [
   hint('task-natural-language', 'tasks', 'Try natural language input', 'Type e.g. "Buy Groceries tomorrow at 6:46 PM" — Flowist auto-parses date & time.', '/todo/today', { beforeStart: '[data-tour="todo-add-task"]', target: '[data-tour="task-input-sheet-input"]' }),
   hint('task-scan-from-image', 'tasks', 'Scan tasks from notes or screenshots', 'Use the AI scanner to extract tasks from a photo or screenshot.', '/todo/today', { premium: true, beforeStart: '[data-tour="todo-add-task"]', target: '[data-tour="task-input-scan-button"]' }),
   {
-    id: 'task-set-priority',
-    category: 'tasks',
-    title: 'Set a task priority',
-    shortDescription: 'Open a task and choose Low / Medium / High / Urgent priority.',
-    route: '/todo/today',
-    trigger: 'manual-only',
-    steps: [
-      { elementSelector: '[data-tour="task-row"]', title: 'Open any task', description: 'Tap a task to open its details.', side: 'bottom', interactive: true },
-      { elementSelector: '[data-tour="task-detail-options"]', title: 'Open the options menu', description: 'Tap the ⋮ menu at the top right.', side: 'bottom', interactive: true },
-      { elementSelector: '[data-tour="task-detail-priority-item"]', title: 'Pick a priority', description: 'Choose Low, Medium, High, or Urgent.', side: 'left' },
-    ],
-  },
-  {
     id: 'task-update-status',
     category: 'tasks',
     title: 'Update task status',
     shortDescription: 'Change a task between To-do, In progress, or Done.',
     route: '/todo/today',
     trigger: 'manual-only',
+    beforeStart: ['[data-tour="task-row"]', '[data-tour="task-detail-options"]'],
     steps: [
-      { elementSelector: '[data-tour="task-row"]', title: 'Open any task', description: 'Tap a task to open its details.', side: 'bottom', interactive: true },
       { elementSelector: '[data-tour="task-detail-status"]', title: 'Change the status', description: 'Switch between To-do, In progress, or Done here.', side: 'top' },
     ],
   },
