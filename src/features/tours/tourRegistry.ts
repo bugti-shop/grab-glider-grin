@@ -1,13 +1,7 @@
 // Data-only registry of every feature discovery tour in Flowist.
 // Add new tours here — no JSX, no imports from components.
 
-export type TourCategory =
-  | 'tasks'
-  | 'notes'
-  | 'notebooks'
-  | 'progress'
-  | 'journeys'
-  | 'settings';
+export type TourCategory = 'tasks' | 'notes' | 'personalization';
 
 export type TourTrigger =
   | 'first-visit'
@@ -16,12 +10,10 @@ export type TourTrigger =
   | 'days-since-install';
 
 export interface FeatureTourStep {
-  /** CSS selector or [data-tour="id"] attribute of the element to spotlight. */
   elementSelector: string;
   title: string;
   description: string;
   side?: 'top' | 'bottom' | 'left' | 'right';
-  /** If true, this step is skipped when the target isn't in the DOM (rather than failing the tour). */
   optional?: boolean;
 }
 
@@ -30,196 +22,76 @@ export interface FeatureTour {
   category: TourCategory;
   title: string;
   shortDescription: string;
-  /** Route to navigate to before the tour starts. */
   route: string;
   trigger: TourTrigger;
   triggerConfig?: { days?: number };
-  /** Marks features that are behind Flowist Pro — shown as a small badge in the guide. */
   premium?: boolean;
   steps: FeatureTourStep[];
 }
 
+// Helper: build a single-step "hint" tour that just shows a popover on <body>.
+const hint = (
+  id: string,
+  category: TourCategory,
+  title: string,
+  shortDescription: string,
+  route: string,
+  extras: Partial<FeatureTour> = {},
+): FeatureTour => ({
+  id,
+  category,
+  title,
+  shortDescription,
+  route,
+  trigger: 'manual-only',
+  steps: [
+    {
+      elementSelector: 'body',
+      title,
+      description: shortDescription,
+      side: 'bottom',
+      optional: true,
+    },
+  ],
+  ...extras,
+});
+
 export const FEATURE_TOURS: FeatureTour[] = [
-  // ─── Tasks & Boards ──────────────────────────────────────────────
-  {
-    id: 'task-add-basics',
-    category: 'tasks',
-    title: 'Add a task the smart way',
-    shortDescription: 'Templates, dates, and deadlines — right where you type.',
-    route: '/todo/today',
-    trigger: 'first-visit',
-    steps: [
-      {
-        elementSelector: '[data-tour="task-input"]',
-        title: 'Type a task',
-        description: 'Start typing to add a task. Press Enter to save and keep going.',
-        side: 'top',
-      },
-      {
-        elementSelector: '[data-tour="task-templates"]',
-        title: 'Reuse with templates',
-        description: 'Save frequent tasks as templates so you can add them in one tap.',
-        side: 'top',
-        optional: true,
-      },
-      {
-        elementSelector: '[data-tour="task-date"]',
-        title: 'Schedule and set deadlines',
-        description: 'Pick a due date, deadline, or repeat pattern from the toolbar.',
-        side: 'top',
-        optional: true,
-      },
-    ],
-  },
-  {
-    id: 'task-views',
-    category: 'tasks',
-    title: 'Switch task views',
-    shortDescription: 'Flat, Kanban, Status, Timeline, or Priority — your tasks, your way.',
-    route: '/todo/today',
-    trigger: 'manual-only',
-    steps: [
-      {
-        elementSelector: '[data-tour="todo-options-menu"]',
-        title: 'Open the task menu',
-        description: 'Tap ⋮ to switch layout — try Kanban or Timeline for a new perspective.',
-        side: 'left',
-      },
-    ],
-  },
-  {
-    id: 'task-toolbar-power',
-    category: 'tasks',
-    title: 'Power tools in the task menu',
-    shortDescription: 'Group by, filter, bulk-add, and CSV import/export.',
-    route: '/todo/today',
-    trigger: 'manual-only',
-    steps: [
-      {
-        elementSelector: '[data-tour="todo-options-menu"]',
-        title: 'Group, filter, import & export',
-        description: 'The ⋮ menu holds Group By, Filter, Add Multiple, and CSV import/export.',
-        side: 'left',
-      },
-    ],
-  },
+  // ─── Tasks ─────────────────────────────────────────────────────
+  hint('task-create-first', 'tasks', 'Create your first task', 'Tap the task input at the top of Today and type your first task.', '/todo/today'),
+  hint('task-natural-language', 'tasks', 'Try natural language input', 'Type e.g. "Buy Groceries tomorrow at 6:46 PM" — Flowist auto-parses date & time.', '/todo/today'),
+  hint('task-scan-from-image', 'tasks', 'Scan tasks from notes or screenshots', 'Use the AI scanner to extract tasks from a photo or screenshot.', '/todo/today', { premium: true }),
+  hint('task-set-priority', 'tasks', 'Set a task priority', 'Open a task and choose Low / Medium / High / Urgent priority.', '/todo/today'),
+  hint('task-update-status', 'tasks', 'Update task status', 'Change a task between To-do, In progress, or Done from the task menu.', '/todo/today'),
+  hint('task-create-section', 'tasks', 'Create your first section', 'Group related tasks by adding a new section inside any list.', '/todo/today'),
+  hint('task-create-folder', 'tasks', 'Create your first folder', 'Organize multiple task lists together using folders in the sidebar.', '/todo/today'),
+  hint('task-focus-mode', 'tasks', 'Try Focus Mode', 'Start a Pomodoro session with an ambient background to focus deeply.', '/todo/today'),
+  hint('task-switch-view', 'tasks', 'Switch view — Timeline or Kanban', 'Open the ⋮ menu and switch between Flat, Kanban, Status, Timeline, or Priority.', '/todo/today'),
+  hint('task-journey', 'tasks', 'Choose your virtual journey', 'Turn long-term goals into a gamified adventure in Progress → Journeys.', '/todo/progress'),
+  hint('task-create-habit', 'tasks', 'Create your first habit', 'Add a daily habit and start building streaks from the sidebar.', '/todo/progress'),
+  hint('task-eisenhower', 'tasks', 'Add tasks via Eisenhower Matrix', 'Drop tasks into the 4 quadrants to focus on what matters most.', '/todo/progress'),
+  hint('task-import', 'tasks', 'Import tasks', 'Bring in tasks from CSV using the ⋮ → Import option.', '/todo/today'),
+  hint('task-batch-add', 'tasks', 'Add batch tasks', 'Open ⋮ → Add multiple to paste or type many tasks at once.', '/todo/today'),
 
-  // ─── Notes ────────────────────────────────────────────────────────
-  {
-    id: 'note-types',
-    category: 'notes',
-    title: '6 note types for every thought',
-    shortDescription: 'Sticky, Lined, Regular, Code, Sketch, and LinkedIn Formatter.',
-    route: '/notesdashboard',
-    trigger: 'empty-state',
-    steps: [
-      {
-        elementSelector: '[data-tour="new-note-button"]',
-        title: 'Pick a note type',
-        description: 'Tap here and choose Sticky, Lined, Code, Sketch, or the LinkedIn Formatter.',
-        side: 'top',
-      },
-    ],
-  },
+  // ─── Notes ─────────────────────────────────────────────────────
+  hint('notes-switch-dashboard', 'notes', 'Switch to Notes dashboard', 'Tap Notebooks in the bottom navigation to enter your notes workspace.', '/notesdashboard'),
+  hint('notes-create-first', 'notes', 'Create your first note', 'Tap "+" on the Notes dashboard and pick a note type.', '/notesdashboard'),
+  hint('notes-create-notebook', 'notes', 'Create your first notebook', 'Open the Notebooks tab and tap "+" to create a color-coded notebook.', '/notebooks'),
+  hint('notes-sketch', 'notes', 'Add a sketch note', 'Choose the Sketch note type to draw freehand with pens, colors & shapes.', '/notesdashboard'),
+  hint('notes-import', 'notes', 'Import notes', 'Bring notes in from Markdown or other apps via the notes ⋮ menu.', '/notesdashboard'),
+  hint('notes-scan', 'notes', 'Scan notes from the editor toolbar', 'Inside any note, use the bottom toolbar scan button to capture handwritten pages.', '/notesdashboard', { premium: true }),
+  hint('notes-editor-menu', 'notes', 'Explore all features in the notes editor menu', 'Open the ⋮ menu inside a note to unlock TOC, export, and more.', '/notesdashboard'),
 
-  // ─── Notebooks & Folders ─────────────────────────────────────────
-  {
-    id: 'notebooks-color-coding',
-    category: 'notebooks',
-    title: 'Color-coded notebooks',
-    shortDescription: 'Group notes into notebooks with a color that fits the topic.',
-    route: '/notebooks',
-    trigger: 'first-visit',
-    steps: [
-      {
-        elementSelector: '[data-tour="add-notebook"]',
-        title: 'Create your first notebook',
-        description: 'Notebooks are color-coded folders for notes. Long-press one to rename or recolor.',
-        side: 'top',
-      },
-    ],
-  },
-
-  // ─── Progress & Habits ───────────────────────────────────────────
-  {
-    id: 'progress-tab-overview',
-    category: 'progress',
-    title: 'Track habits & priorities',
-    shortDescription: 'Habits, Eisenhower Matrix, and Choose Your Adventure — all in one place.',
-    route: '/todo/progress',
-    trigger: 'first-visit',
-    steps: [
-      {
-        elementSelector: '[data-tour="progress-habits"]',
-        title: 'Daily habits',
-        description: 'Build streaks with a gallery of Life, Health, and Sports habits.',
-        side: 'bottom',
-        optional: true,
-      },
-      {
-        elementSelector: '[data-tour="progress-matrix"]',
-        title: 'Eisenhower Matrix',
-        description: 'Your tasks auto-sort into 4 quadrants so you focus on what matters.',
-        side: 'bottom',
-        optional: true,
-      },
-      {
-        elementSelector: '[data-tour="progress-journeys"]',
-        title: 'Choose Your Adventure',
-        description: 'Turn long-term goals into gamified journeys — Sail the Nile, Climb Everest, and more.',
-        side: 'bottom',
-        optional: true,
-      },
-    ],
-  },
-
-  // ─── Journeys ────────────────────────────────────────────────────
-  {
-    id: 'journeys-intro',
-    category: 'journeys',
-    title: 'Choose Your Adventure',
-    shortDescription: 'Long-term goals become gamified task journeys.',
-    route: '/todo/progress',
-    trigger: 'manual-only',
-    steps: [
-      {
-        elementSelector: '[data-tour="progress-journeys"]',
-        title: 'Start a journey',
-        description: 'Pick an adventure — every completed task moves you further along the map.',
-        side: 'bottom',
-        optional: true,
-      },
-    ],
-  },
-
-  // ─── Settings & Personalization ──────────────────────────────────
-  {
-    id: 'themes-personalize',
-    category: 'settings',
-    title: 'Personalize your theme',
-    shortDescription: '9 themes plus a custom builder.',
-    route: '/settings',
-    trigger: 'manual-only',
-    steps: [
-      {
-        elementSelector: '[data-tour="settings-appearance"]',
-        title: 'Pick a look you love',
-        description: 'Open Appearance to switch between 9 themes or design your own.',
-        side: 'bottom',
-        optional: true,
-      },
-    ],
-  },
+  // ─── Personalization ──────────────────────────────────────────
+  hint('personalize-theme', 'personalization', 'Personalize your theme', 'Open Settings → Appearance to switch between 9 themes or design your own.', '/settings'),
+  hint('personalize-app-lock', 'personalization', 'Setup App Lock in Settings', 'Turn on App Lock in Settings to protect Flowist with a passcode or biometrics.', '/settings'),
 ];
 
 export const getTour = (id: string): FeatureTour | undefined =>
   FEATURE_TOURS.find((t) => t.id === id);
 
 export const CATEGORY_LABELS: Record<TourCategory, string> = {
-  tasks: 'Tasks & Boards',
+  tasks: 'Tasks',
   notes: 'Notes',
-  notebooks: 'Notebooks & Folders',
-  progress: 'Progress & Habits',
-  journeys: 'Journeys',
-  settings: 'Settings & Personalization',
+  personalization: 'Personalization',
 };

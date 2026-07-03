@@ -19,14 +19,7 @@ interface FeatureGuideModalProps {
   onClose: () => void;
 }
 
-const CATEGORY_ORDER: TourCategory[] = [
-  'tasks',
-  'notes',
-  'notebooks',
-  'progress',
-  'journeys',
-  'settings',
-];
+const CATEGORY_ORDER: TourCategory[] = ['tasks', 'notes', 'personalization'];
 
 interface ReleaseNote {
   version: string;
