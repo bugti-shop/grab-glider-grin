@@ -16,6 +16,7 @@
     <!-- Foreground Service (for notifications) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- Microphone (for voice notes/recording) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
