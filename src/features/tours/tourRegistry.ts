@@ -86,7 +86,7 @@ export const FEATURE_TOURS: FeatureTour[] = [
   hint('task-batch-add', 'tasks', 'Add batch tasks', 'Open ⋮ → Add multiple to paste or type many tasks at once.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-options-menu"]' }),
 
   // ─── Notes ─────────────────────────────────────────────────────
-  hint('notes-switch-dashboard', 'notes', 'Switch to Notes dashboard', 'Tap Notebooks in the bottom navigation to enter your notes workspace.', '/notesdashboard', { target: '[data-tour="switch-to-notes"]' }),
+  hint('notes-switch-dashboard', 'notes', 'Switch to Notes dashboard', 'Tap the notes icon in the header to jump into your notes workspace.', '/todo/today', { target: '[data-tour="switch-to-notes"]', side: 'bottom' }),
   hint('notes-create-first', 'notes', 'Create your first note', 'Tap "+" on the Notes dashboard and pick a note type.', '/notesdashboard', { target: '[data-tour="new-note-button"]' }),
   hint('notes-create-notebook', 'notes', 'Create your first notebook', 'Open the Notebooks tab and tap "+" to create a color-coded notebook.', '/notebooks', { target: '[data-tour="add-notebook"]' }),
   hint('notes-sketch', 'notes', 'Add a sketch note', 'Choose the Sketch note type to draw freehand with pens, colors & shapes.', '/notesdashboard', { beforeStart: '[data-tour="new-note-button"]', target: '[data-tour="note-type-sketch"]', side: 'left' }),
