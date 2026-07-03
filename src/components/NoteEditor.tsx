@@ -2121,47 +2121,8 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         )}
       </div>
 
-      {/* Attachments Section — hidden for sketch notes */}
-      {noteType !== 'sketch' && (
-        <NoteAttachmentsSection
-          attachments={noteAttachments}
-          onChange={setNoteAttachments}
-        />
-      )}
-
-      {/* Backlinks Section */}
-      {note && backlinks.length > 0 && (
-        <div className="border-t bg-background/95 backdrop-blur-sm">
-          <Collapsible open={isBacklinksOpen} onOpenChange={setIsBacklinksOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 hover:bg-accent/50 transition-colors">
-              <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Link2 className="h-4 w-4" />
-                {backlinks.length} backlink{backlinks.length !== 1 ? 's' : ''}
-              </span>
-              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", isBacklinksOpen && "rotate-180")} />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="px-4 pb-3 space-y-1 max-h-32 overflow-y-auto">
-                {backlinks.map((linkedNote) => (
-                  <button
-                    key={linkedNote.id}
-                    onClick={() => {
-                      handleSave();
-                      onClose();
-                      // Trigger opening the linked note via navigation or callback
-                      toast.info(`Navigate to "${linkedNote.title}" to view`);
-                    }}
-                    className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-left rounded-md hover:bg-accent transition-colors"
-                  >
-                    <FileText className="h-4 w-4 text-primary" />
-                    <span className="truncate">{linkedNote.title || 'Untitled'}</span>
-                  </button>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-      )}
+      {/* Attachments & Backlinks sections removed — they were sitting behind the
+          bottom formatting toolbar and were never accessible. */}
 
       {/* AI page scan → formatted HTML into note */}
       <SafeComponent fallback={null}>
