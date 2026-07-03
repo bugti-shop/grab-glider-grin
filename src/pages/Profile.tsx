@@ -421,6 +421,11 @@ export default function Profile() {
           )}
         </div>
 
+        {user && (
+          <EmailToFlowistCard userId={user.id} displayName={displayName} />
+        )}
+
+
         {/* Sign-in / Sign-out */}
         <div className="mt-4">
           {user ? (
