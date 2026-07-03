@@ -342,8 +342,8 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         {/* QR + Flowist branding — small, right side */}
         <div style={{
           position: 'absolute',
-          right: s(20),
-          bottom: s(20),
+          right: s(12),
+          bottom: s(36),
           display: 'flex',
           alignItems: 'center',
           gap: s(8),
@@ -351,7 +351,8 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         }}>
           <Suspense fallback={null}>
             {(() => {
-              const qrSize = Math.max(52, Math.min(72, s(48)));
+              const qrSize = Math.max(40, Math.min(56, s(38)));
+
               const quietZone = Math.max(6, Math.round(qrSize * 0.1));
               return (
                 <div style={{
