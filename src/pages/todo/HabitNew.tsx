@@ -225,7 +225,14 @@ const HabitNew = () => {
       sectionId,
       kind,
       chainAfterHabitId: chainAfterHabitId || undefined,
-      reminders: reminders.length > 0 ? reminders : undefined,
+      reminders: (() => {
+        // If user opted into per-repeat schedule, materialise those times as
+        // reminders so notifications fire at each check-in slot.
+        if (scheduleEachRepeat && goalType === 'amount' && repeatTimes.length > 0) {
+          return repeatTimes.map((time) => ({ enabled: true, time }));
+        }
+        return reminders.length > 0 ? reminders : undefined;
+      })(),
       reminder: undefined, // legacy field cleared on save
       autoPopupLog: autoPopup,
       completions: editingExisting?.completions ?? [],
