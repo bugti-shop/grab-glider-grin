@@ -449,12 +449,14 @@ export const WordToolbar = ({
     title,
     active = false,
     children,
+    'data-tour': dataTour,
   }: {
     onClick?: () => void;
     disabled?: boolean;
     title: string;
     active?: boolean;
     children: React.ReactNode;
+    'data-tour'?: string;
   }) => (
     <button
       type="button"
@@ -463,6 +465,7 @@ export const WordToolbar = ({
       onPointerDown={(e) => e.preventDefault()}
       disabled={disabled}
       title={title}
+      data-tour={dataTour}
       className={cn(
         "h-[38px] w-[38px] flex items-center justify-center rounded-lg transition-all duration-150 flex-shrink-0",
         "hover:bg-accent/60 active:scale-95",
@@ -814,7 +817,7 @@ export const WordToolbar = ({
         )}
 
         {onScan && (
-          <IconBtn onClick={onScan} title={t('scanNote.scan', 'Scan')}>
+          <IconBtn onClick={onScan} title={t('scanNote.scan', 'Scan')} data-tour="editor-toolbar-scan">
             <Camera className="h-[18px] w-[18px]" strokeWidth={2.5} />
           </IconBtn>
         )}
