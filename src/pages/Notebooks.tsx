@@ -426,7 +426,7 @@ const Notebooks = () => {
             </button>
             <button
               type="button"
-              disabled={actionFor?.isDefault}
+              disabled={actionFor?.isDefault && folders.length <= 1}
               className="flex items-center gap-3 px-4 py-3 text-left hover:bg-muted transition-colors border-t text-destructive disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={() => {
                 if (!actionFor) return;
