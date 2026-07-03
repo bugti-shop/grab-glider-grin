@@ -73,6 +73,7 @@
  <string>Flowist needs access to your photo library to attach images to notes and tasks.</string>
  <key>UIBackgroundModes</key>
  <array>
+  <string>audio</string>
   <string>remote-notification</string>
   <string>fetch</string>
   <string>processing</string>
