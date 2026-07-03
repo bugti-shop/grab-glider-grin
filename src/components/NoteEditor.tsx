@@ -1836,6 +1836,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                     </div>
                   </CollapsibleContent>
                 </Collapsible>
+                </div>
                 {note && (
                   <>
                     <DropdownMenuItem onClick={() => setIsVersionHistoryOpen(true)}>
