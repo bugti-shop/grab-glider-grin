@@ -67,6 +67,11 @@ class TourManagerImpl {
     if (tour.beforeStart) {
       const preSelectors = Array.isArray(tour.beforeStart) ? tour.beforeStart : [tour.beforeStart];
       for (const sel of preSelectors) {
+        if (sel.startsWith('event:')) {
+          window.dispatchEvent(new CustomEvent(sel.slice('event:'.length)));
+          await this.wait(420);
+          continue;
+        }
         const trigger = await this.waitForSelector(sel, 2000);
         if (trigger instanceof HTMLElement) {
           try { this.simulateActivation(trigger); } catch {}
