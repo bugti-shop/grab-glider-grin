@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { m as motion } from 'framer-motion';
-import { Share2, Edit3, Check, Copy } from 'lucide-react';
+import { Share2, Edit3, Check, Copy, Download } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { triggerHaptic } from '@/utils/haptics';
 import { shareImageBlob } from '@/utils/shareImage';
@@ -132,6 +132,88 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
     triggerHaptic('light').catch(() => {});
     setTimeout(() => setCopiedText(false), 2000);
   }, [currentStreak, totalCompletions, displayName]);
+
+  const [isDownloading, setIsDownloading] = useState(false);
+  const handleDownloadPdf = useCallback(async () => {
+    setIsDownloading(true);
+    triggerHaptic('medium').catch(() => {});
+    try {
+      const element = cardRef.current;
+      if (!element) return;
+
+      // Match share-time layout tweaks
+      const introText = element.querySelector('[data-streak-intro]') as HTMLElement | null;
+      const streakNum = element.querySelector('[data-streak-number]') as HTMLElement | null;
+      const streakLabel = element.querySelector('[data-streak-label]') as HTMLElement | null;
+      const origIntroMargin = introText?.style.marginTop;
+      const origNumMargin = streakNum?.style.marginTop;
+      const origLabelMargin = streakLabel?.style.marginTop;
+      if (introText) introText.style.marginTop = '-13px';
+      if (streakNum) streakNum.style.marginTop = '-12px';
+      if (streakLabel) streakLabel.style.marginTop = '13px';
+
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(element, {
+        scale: 4,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      if (introText) introText.style.marginTop = origIntroMargin || '';
+      if (streakNum) streakNum.style.marginTop = origNumMargin || '';
+      if (streakLabel) streakLabel.style.marginTop = origLabelMargin || '';
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const { jsPDF } = await import('jspdf');
+
+      // A4 portrait in mm
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const maxW = pageW - margin * 2;
+      const maxH = pageH - margin * 2;
+
+      const ratio = canvas.width / canvas.height;
+      let drawW = maxW;
+      let drawH = drawW / ratio;
+      if (drawH > maxH) {
+        drawH = maxH;
+        drawW = drawH * ratio;
+      }
+      const x = (pageW - drawW) / 2;
+      const y = (pageH - drawH) / 2;
+
+      pdf.addImage(imgData, 'PNG', x, y, drawW, drawH, undefined, 'FAST');
+
+      // Footer
+      pdf.setFontSize(9);
+      pdf.setTextColor(120);
+      pdf.text('Flowist — Notepad & To Do List', pageW / 2, pageH - 8, { align: 'center' });
+
+      const fileName = `flowist-streak-${currentStreak}-days.pdf`;
+
+      // Try native share on mobile (Capacitor) if available; otherwise download
+      const blob = pdf.output('blob');
+      try {
+        const anyNav = navigator as any;
+        const file = new File([blob], fileName, { type: 'application/pdf' });
+        if (anyNav.canShare && anyNav.canShare({ files: [file] })) {
+          await anyNav.share({ files: [file], title: 'Flowist Streak' });
+        } else {
+          pdf.save(fileName);
+        }
+      } catch {
+        pdf.save(fileName);
+      }
+    } catch (e) {
+      console.error('[StreakCert] PDF download failed:', e);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [currentStreak]);
+
 
   return (
     <div className="space-y-3" ref={wrapRef}>
@@ -316,12 +398,12 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={handleShare}
           disabled={isSharing}
-          className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+          className="flex-1 min-w-[120px] bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {isSharing ? (
             <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
@@ -329,6 +411,20 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
             <Share2 className="h-4 w-4" />
           )}
           {isSharing ? 'Exporting...' : 'Share'}
+        </motion.button>
+
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={handleDownloadPdf}
+          disabled={isDownloading}
+          className="bg-card border rounded-xl px-4 py-3 text-sm flex items-center gap-2 disabled:opacity-50"
+        >
+          {isDownloading ? (
+            <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 text-muted-foreground" />
+          )}
+          {isDownloading ? 'Preparing...' : 'PDF'}
         </motion.button>
 
         <motion.button
