@@ -26,8 +26,11 @@ export interface FeatureTour {
   trigger: TourTrigger;
   triggerConfig?: { days?: number };
   premium?: boolean;
+  /** Optional CSS selector to click BEFORE the tour starts (e.g. open a menu). */
+  beforeStart?: string;
   steps: FeatureTourStep[];
 }
+
 
 // Helper: build a single-step "hint" tour that just shows a popover on <body>.
 const hint = (
