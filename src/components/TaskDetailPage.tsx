@@ -3,8 +3,6 @@ import { genId } from '@/utils/genId';
 import { saveTaskMedia, makeTaskMediaRef, deleteTaskMedia, parseTaskMediaRef } from '@/utils/taskMediaStorage';
 import { useTranslation } from 'react-i18next';
 import { TodoItem, Priority, Folder, Note, RepeatType, ColoredTag, TimeTracking, TaskStatus, LocationReminder, TaskAttachment, EscalationTiming } from '@/types/note';
-import { TaskProjectAssignPicker } from '@/components/TaskProjectAssignPicker';
-import { ShareProjectSheet } from '@/components/ShareProjectSheet';
 import { TaskComments } from '@/components/TaskComments';
 import { Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -722,11 +720,6 @@ export const TaskDetailPage = ({
 
         {/* Right: Options Menu */}
         <div className="flex items-center gap-2">
-          {task.projectId && (
-            <Button variant="ghost" size="icon" onClick={() => setShowShareSheet(true)} title="Share project">
-              <Share2 className="h-5 w-5" />
-            </Button>
-          )}
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-5 w-5" />
           </Button>
@@ -777,14 +770,6 @@ export const TaskDetailPage = ({
         </div>
       </header>
 
-      {/* Team: project + assignee */}
-      <div className="px-4 pb-2">
-        <TaskProjectAssignPicker
-          projectId={task.projectId}
-          assigneeId={task.assigneeId}
-          onChange={(p) => onUpdate({ ...task, projectId: p.projectId, assigneeId: p.assigneeId })}
-        />
-      </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
@@ -1482,10 +1467,11 @@ export const TaskDetailPage = ({
             }}
           />
 
-          {/* Comments (with @mentions when task is in a project) */}
+          {/* Comments */}
           <div className="border-t border-border pt-4">
-            <TaskComments taskId={task.id} projectId={task.projectId ?? null} />
+            <TaskComments taskId={task.id} projectId={null} />
           </div>
+
 
           {/* Task Timestamps Section - Premium */}
           <div className="space-y-2 border-t border-border pt-4">
@@ -1648,11 +1634,6 @@ export const TaskDetailPage = ({
         onComplete={() => { if (task && !task.completed) handleMarkAsDone(); }}
       />
 
-      <ShareProjectSheet
-        isOpen={showShareSheet}
-        onClose={() => setShowShareSheet(false)}
-        projectId={task.projectId ?? null}
-      />
 
     </div>
   );
