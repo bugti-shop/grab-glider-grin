@@ -620,20 +620,68 @@ const HabitNew = () => {
               onClick={() => setGoalType('amount')}
             />
             {goalType === 'amount' && (
-              <div className="flex items-center gap-2 pt-2">
-                <Input
-                  type="number"
-                  min={1}
-                  value={goalAmount}
-                  onChange={(e) => setGoalAmount(Math.max(1, Number(e.target.value) || 1))}
-                  className="h-10 w-24"
-                />
-                <Input
-                  value={goalUnit}
-                  onChange={(e) => setGoalUnit(e.target.value)}
-                  placeholder="unit (e.g. cups)"
-                  className="h-10 flex-1"
-                />
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={24}
+                    value={goalAmount}
+                    onChange={(e) => setGoalAmount(Math.max(1, Math.min(24, Number(e.target.value) || 1)))}
+                    className="h-10 w-24"
+                  />
+                  <Input
+                    value={goalUnit}
+                    onChange={(e) => setGoalUnit(e.target.value)}
+                    placeholder="unit (e.g. times, cups)"
+                    className="h-10 flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  You can check in up to {goalAmount} {goalAmount === 1 ? 'time' : 'times'} per day.
+                </p>
+
+                {goalAmount > 1 && (
+                  <div className="rounded-xl border border-border/60 p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium">Set a time for each repeat</div>
+                        <div className="text-xs text-muted-foreground">
+                          We'll remind you at each of these times.
+                        </div>
+                      </div>
+                      <Switch
+                        checked={scheduleEachRepeat}
+                        onCheckedChange={setScheduleEachRepeat}
+                      />
+                    </div>
+
+                    {scheduleEachRepeat && (
+                      <div className="space-y-2">
+                        {repeatTimes.map((time, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-16">
+                              Repeat {idx + 1}
+                            </span>
+                            <Input
+                              type="time"
+                              value={time}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setRepeatTimes((prev) => {
+                                  const next = [...prev];
+                                  next[idx] = v;
+                                  return next;
+                                });
+                              }}
+                              className="h-10 flex-1"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
