@@ -133,6 +133,88 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
     setTimeout(() => setCopiedText(false), 2000);
   }, [currentStreak, totalCompletions, displayName]);
 
+  const [isDownloading, setIsDownloading] = useState(false);
+  const handleDownloadPdf = useCallback(async () => {
+    setIsDownloading(true);
+    triggerHaptic('medium').catch(() => {});
+    try {
+      const element = cardRef.current;
+      if (!element) return;
+
+      // Match share-time layout tweaks
+      const introText = element.querySelector('[data-streak-intro]') as HTMLElement | null;
+      const streakNum = element.querySelector('[data-streak-number]') as HTMLElement | null;
+      const streakLabel = element.querySelector('[data-streak-label]') as HTMLElement | null;
+      const origIntroMargin = introText?.style.marginTop;
+      const origNumMargin = streakNum?.style.marginTop;
+      const origLabelMargin = streakLabel?.style.marginTop;
+      if (introText) introText.style.marginTop = '-13px';
+      if (streakNum) streakNum.style.marginTop = '-12px';
+      if (streakLabel) streakLabel.style.marginTop = '13px';
+
+      const html2canvas = (await import('html2canvas')).default;
+      const canvas = await html2canvas(element, {
+        scale: 4,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      if (introText) introText.style.marginTop = origIntroMargin || '';
+      if (streakNum) streakNum.style.marginTop = origNumMargin || '';
+      if (streakLabel) streakLabel.style.marginTop = origLabelMargin || '';
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const { jsPDF } = await import('jspdf');
+
+      // A4 portrait in mm
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const maxW = pageW - margin * 2;
+      const maxH = pageH - margin * 2;
+
+      const ratio = canvas.width / canvas.height;
+      let drawW = maxW;
+      let drawH = drawW / ratio;
+      if (drawH > maxH) {
+        drawH = maxH;
+        drawW = drawH * ratio;
+      }
+      const x = (pageW - drawW) / 2;
+      const y = (pageH - drawH) / 2;
+
+      pdf.addImage(imgData, 'PNG', x, y, drawW, drawH, undefined, 'FAST');
+
+      // Footer
+      pdf.setFontSize(9);
+      pdf.setTextColor(120);
+      pdf.text('Flowist — Notepad & To Do List', pageW / 2, pageH - 8, { align: 'center' });
+
+      const fileName = `flowist-streak-${currentStreak}-days.pdf`;
+
+      // Try native share on mobile (Capacitor) if available; otherwise download
+      const blob = pdf.output('blob');
+      try {
+        const anyNav = navigator as any;
+        const file = new File([blob], fileName, { type: 'application/pdf' });
+        if (anyNav.canShare && anyNav.canShare({ files: [file] })) {
+          await anyNav.share({ files: [file], title: 'Flowist Streak' });
+        } else {
+          pdf.save(fileName);
+        }
+      } catch {
+        pdf.save(fileName);
+      }
+    } catch (e) {
+      console.error('[StreakCert] PDF download failed:', e);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [currentStreak]);
+
+
   return (
     <div className="space-y-3" ref={wrapRef}>
       {/* The shareable card */}
