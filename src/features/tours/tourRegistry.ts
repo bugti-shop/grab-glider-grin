@@ -80,7 +80,7 @@ export const FEATURE_TOURS: FeatureTour[] = [
     trigger: 'manual-only',
     steps: [
       {
-        elementSelector: '[data-tour="task-menu"]',
+        elementSelector: '[data-tour="todo-options-menu"]',
         title: 'Open the task menu',
         description: 'Tap ⋮ to switch layout — try Kanban or Timeline for a new perspective.',
         side: 'left',
@@ -96,7 +96,7 @@ export const FEATURE_TOURS: FeatureTour[] = [
     trigger: 'manual-only',
     steps: [
       {
-        elementSelector: '[data-tour="task-menu"]',
+        elementSelector: '[data-tour="todo-options-menu"]',
         title: 'Group, filter, import & export',
         description: 'The ⋮ menu holds Group By, Filter, Add Multiple, and CSV import/export.',
         side: 'left',
