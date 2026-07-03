@@ -712,9 +712,15 @@ const Notes = () => {
               {viewMode === 'trash' ? t('notes.trashEmpty') : viewMode === 'archived' ? t('notes.noArchivedNotes') : t('notes.noNotes')}
             </p>
             {viewMode === 'active' && (
-              <p className="text-muted-foreground/60 text-sm mt-2">
-                {t('emptyStates.tapToCreateNote')}
-              </p>
+              <>
+                <p className="text-muted-foreground/60 text-sm mt-2">
+                  {t('emptyStates.tapToCreateNote')}
+                </p>
+                <EmptyStateHint
+                  tourId="note-types"
+                  message="Flowist has 6 note types — Sticky, Lined, Regular, Code, Sketch, and LinkedIn Formatter."
+                />
+              </>
             )}
           </div>
         ) : (
