@@ -922,6 +922,7 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
         <div className="px-4 pt-2 pb-4">
           <div className="flex items-center gap-3 mb-2">
             <Input
+              data-tour="task-input-sheet-input"
               ref={inputRef}
               placeholder={t('tasks.naturalLanguagePlaceholder')}
               value={taskText}
