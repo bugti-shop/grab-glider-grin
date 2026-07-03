@@ -43,6 +43,8 @@ import { FocusBackgroundBar } from "@/components/focus/FocusBackgroundBar";
 import { RadixPointerEventsRescue } from "@/components/RadixPointerEventsRescue";
 import { DesktopSidebar } from "@/components/desktop/DesktopSidebar";
 import { WidgetAddTask, WidgetNewSticky, WidgetNewLined, WidgetNewRegular, WidgetNewSketch } from "@/pages/WidgetEntry";
+import { useTourBootstrap } from "@/features/tours/useFeatureTour";
+
 
 const StreakMilestoneCelebration = lazy(() => import("@/components/StreakMilestoneCelebration").then(m => ({ default: m.StreakMilestoneCelebration })));
 const StreakTierCelebration = lazy(() => import("@/components/StreakTierCelebration").then(m => ({ default: m.StreakTierCelebration })));
