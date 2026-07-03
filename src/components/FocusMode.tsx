@@ -594,6 +594,8 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
         : remaining,
       endAtMs: sessionRef.current?.endAt,
       running,
+      soundUrl: prefs.whiteNoise && !prefs.whiteNoiseMuted && currentTrack ? currentTrack.url : undefined,
+      soundVolume: prefs.whiteNoiseMuted ? 0 : prefs.whiteNoiseVolume,
     });
     onClose(); // hides the host sheet/page wrapper; native service keeps running
   };
