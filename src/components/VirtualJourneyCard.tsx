@@ -50,10 +50,15 @@ export const VirtualJourneyCard = () => {
   const [showPicker, setShowPicker] = useState(false);
   const [celebration, setCelebration] = useState<{ milestone?: JourneyMilestone; completed?: boolean } | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
+  // Optimistic bump: counts task-completion events that arrived before the
+  // journey data reload finished, so the progress bar / counter update
+  // immediately instead of waiting for the debounced storage flush.
+  const [optimisticBump, setOptimisticBump] = useState(0);
 
   const reload = async () => {
     const d = await loadJourneyDataAsync();
     setData(d);
+    setOptimisticBump(0);
   };
 
   useEffect(() => {
@@ -70,7 +75,11 @@ export const VirtualJourneyCard = () => {
       reload();
     };
 
-    const tasksHandler = () => reload();
+    const tasksHandler = () => {
+      // Bump the visible progress right away, then reconcile from storage.
+      setOptimisticBump((b) => b + 1);
+      reload();
+    };
 
     window.addEventListener('journeyMilestoneReached', milestoneHandler as EventListener);
     window.addEventListener('tasksUpdated', tasksHandler);
@@ -98,12 +107,19 @@ export const VirtualJourneyCard = () => {
   if (active) {
     const { journey, progress } = active;
     const totalJourneyTasks = journey.totalTasks;
-    const totalDone = Math.min(progress.tasksCompleted ?? 0, totalJourneyTasks);
+    const rawDone = Math.min(progress.tasksCompleted ?? 0, totalJourneyTasks);
+    // Blend optimistic bumps in so the bar advances the moment a task is
+    // ticked, even before storage / journey advancement have caught up.
+    const totalDone = Math.min(rawDone + optimisticBump, totalJourneyTasks);
     const percent = Math.min((totalDone / totalJourneyTasks) * 100, 100);
     const isComplete = !!progress.completedAt;
 
     const currentMsIndex = progress.currentMilestoneIndex ?? 0;
     const nextMilestone = currentMsIndex < journey.milestones.length ? journey.milestones[currentMsIndex] : undefined;
+    const currentMsBase = progress.currentMilestoneTasks ?? 0;
+    const currentMsTasksDisplay = nextMilestone
+      ? Math.min(currentMsBase + optimisticBump, nextMilestone.tasksRequired - (currentMsIndex > 0 ? journey.milestones[currentMsIndex - 1].tasksRequired : 0))
+      : currentMsBase;
     const lastReached = [...journey.milestones].reverse().find(m => progress.milestonesReached.includes(m.id));
 
     return (
@@ -252,7 +268,7 @@ export const VirtualJourneyCard = () => {
               {isComplete
                 ? `🏆 ${t('journey.journeyComplete', 'Journey Complete! 🎉')}`
                 : nextMilestone
-                  ? t('journey.nextMilestone', { name: jt.milestoneName(journey, nextMilestone), count: nextMilestone.tasksRequired - (progress.currentMilestoneTasks ?? 0), defaultValue: 'Next: {{name}} ({{count}} tasks away)' })
+                  ? t('journey.nextMilestone', { name: jt.milestoneName(journey, nextMilestone), count: nextMilestone.tasksRequired - (currentMsTasksDisplay), defaultValue: 'Next: {{name}} ({{count}} tasks away)' })
                   : lastReached ? jt.milestoneName(journey, lastReached) : t('journey.startingPoint', 'Starting point')}
             </span>
           </div>
@@ -263,7 +279,7 @@ export const VirtualJourneyCard = () => {
               const reached = progress.milestonesReached.includes(ms.id);
               const isCurrent = i === (progress.currentMilestoneIndex ?? 0) && !isComplete;
               const msTarget = ms.tasksRequired - (i > 0 ? journey.milestones[i - 1].tasksRequired : 0);
-              const currentTasks = isCurrent ? (progress.currentMilestoneTasks ?? 0) : reached ? msTarget : 0;
+              const currentTasks = isCurrent ? (currentMsTasksDisplay) : reached ? msTarget : 0;
               return (
                 <div
                   key={ms.id}
