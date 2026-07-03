@@ -1035,7 +1035,8 @@ export const TaskDetailPage = ({
         </div>
 
         {/* Focus Mode */}
-        <div className="space-y-2">
+        <div data-tour="task-detail-focus-mode" className="space-y-2">
+
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <TimerIcon className="h-4 w-4" />
             Focus Mode
