@@ -302,7 +302,7 @@ const Progress = () => {
                 <Check className="h-4 w-4" />
                 <span className="text-xs font-medium uppercase">{t('streak.totalCompleted', 'Total Completed')}</span>
               </div>
-              <p className="text-2xl font-bold">{data?.totalCompletions || 0} <span className="text-sm font-normal text-muted-foreground">{t('streak.tasks', 'tasks')}</span></p>
+              <p className="text-2xl font-bold">{lifetimeCompleted} <span className="text-sm font-normal text-muted-foreground">{t('streak.tasks', 'tasks')}</span></p>
             </div>
             
             <div className="bg-card rounded-xl p-4 border">
