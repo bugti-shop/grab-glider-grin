@@ -6,6 +6,8 @@ import { useStreak } from '@/hooks/useStreak';
 import { cn } from '@/lib/utils';
 import { Flame, Check, Snowflake, Trophy, Zap, TrendingUp, Calendar, Gift, Clock, Award } from 'lucide-react';
 import { loadTodoItems } from '@/utils/todoItemsStorage';
+import { countCompletedTasksInDB } from '@/utils/taskStorage';
+
 import { startOfWeek, endOfWeek } from 'date-fns';
 import { checkDailyReward, loadDailyRewardData } from '@/utils/dailyRewardStorage';
 import { SafeComponent } from '@/components/ErrorBoundary';
