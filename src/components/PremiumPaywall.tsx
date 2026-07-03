@@ -675,7 +675,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
                 <button
                   key={plan.id}
                   onClick={() => { triggerTripleHeavyHaptic(); setSelectedPlan(plan.id); }}
-                  className="relative rounded-2xl px-2 py-2.5 flex flex-col items-center justify-center text-center transition-all active:scale-[0.97] min-h-[76px]"
+                  className="relative rounded-2xl px-2 py-2 flex flex-col items-center justify-center text-center transition-all active:scale-[0.97] min-h-[58px]"
                   style={{
                     background: active ? `${PRO_BLUE}18` : '#141414',
                     border: `1.5px solid ${active ? PRO_BLUE : '#262626'}`,
@@ -692,10 +692,10 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     </span>
                   )}
-                  <p className="text-[15px] font-black text-white leading-tight">
+                  <p className="text-[13.5px] font-black text-white leading-tight">
                     {t(plan.labelKey)}
                   </p>
-                  <p className="text-[12.5px] font-semibold mt-1.5" style={{ color: active ? PRO_BLUE : '#8a8a8a' }}>
+                  <p className="text-[11.5px] font-semibold mt-1" style={{ color: active ? PRO_BLUE : '#8a8a8a' }}>
                     {plan.price}
                   </p>
                 </button>

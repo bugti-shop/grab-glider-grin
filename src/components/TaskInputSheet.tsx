@@ -169,7 +169,6 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   const [repeatDays, setRepeatDays] = useState<number[]>([]);
   const [folderId, setFolderId] = useState<string | undefined>();
   const [sectionId, setSectionId] = useState<string | undefined>();
-  const [projectId, setProjectId] = useState<string | undefined>();
   const [assigneeId, setAssigneeId] = useState<string | undefined>();
   const [showDateTimePage, setShowDateTimePage] = useState(false);
   const [showDeadlinePage, setShowDeadlinePage] = useState(false);
@@ -478,7 +477,6 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       attachments: attachments.length > 0 ? attachments : undefined,
       estimatedHours: finalEstimatedHours,
       isUrgent: isUrgent || undefined,
-      projectId,
       assigneeId,
     };
 
