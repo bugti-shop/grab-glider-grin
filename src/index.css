@@ -586,6 +586,15 @@ table th[contenteditable="true"]:hover {
   50% { opacity: 0.45; }
 }
 
+/* Hide any skeleton/shimmer placeholders while a feature tour is running so
+   highlighted targets stay visible and aren't obscured by loading UI. */
+body[data-tour-active="true"] .animate-pulse,
+body[data-tour-active="true"] [aria-busy="true"][role="status"] {
+  display: none !important;
+}
+
+
+
 
 /* Animations */
 @keyframes fade-in {
