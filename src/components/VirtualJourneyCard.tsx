@@ -29,6 +29,7 @@ import { LazyConfetti as Confetti } from '@/components/LazyConfetti';
 import { playAchievementSound } from '@/utils/gamificationSounds';
 import { JourneyCertificate } from '@/components/JourneyCertificate';
 import { MiniMedalBadge } from '@/components/MedalBadge';
+import { EmptyStateHint } from '@/components/tours/EmptyStateHint';
 
 /** Helper to get translated journey name */
 const useJourneyT = () => {
@@ -410,6 +411,13 @@ export const VirtualJourneyCard = () => {
           </div>
         )}
       </motion.button>
+
+      {(!data || data.completedJourneys.length === 0) && (
+        <EmptyStateHint
+          tourId="journeys-intro"
+          message="Turn a long-term goal into a gamified journey."
+        />
+      )}
 
       <JourneyPickerSheet
         open={showPicker}
