@@ -89,7 +89,7 @@ export const FEATURE_TOURS: FeatureTour[] = [
   hint('notes-switch-dashboard', 'notes', 'Switch to Notes dashboard', 'Tap Notebooks in the bottom navigation to enter your notes workspace.', '/notesdashboard', { target: '[data-tour="switch-to-notes"]' }),
   hint('notes-create-first', 'notes', 'Create your first note', 'Tap "+" on the Notes dashboard and pick a note type.', '/notesdashboard', { target: '[data-tour="new-note-button"]' }),
   hint('notes-create-notebook', 'notes', 'Create your first notebook', 'Open the Notebooks tab and tap "+" to create a color-coded notebook.', '/notebooks', { target: '[data-tour="add-notebook"]' }),
-  hint('notes-sketch', 'notes', 'Add a sketch note', 'Choose the Sketch note type to draw freehand with pens, colors & shapes.', '/notesdashboard', { target: '[data-tour="new-note-button"]' }),
+  hint('notes-sketch', 'notes', 'Add a sketch note', 'Choose the Sketch note type to draw freehand with pens, colors & shapes.', '/notesdashboard', { beforeStart: '[data-tour="n"]', target: '[data-tour="note-type-sketch"]', side: 'left' }),
   hint('notes-import', 'notes', 'Import notes', 'Bring notes in from Markdown or other apps via the notes ⋮ menu.', '/notesdashboard'),
   hint('notes-scan', 'notes', 'Scan notes from the editor toolbar', 'Inside any note, use the bottom toolbar scan button to capture handwritten pages.', '/notesdashboard', { premium: true }),
   hint('notes-editor-menu', 'notes', 'Explore all features in the notes editor menu', 'Open the ⋮ menu inside a note to unlock TOC, export, and more.', '/notesdashboard', { beforeStart: ['event:flowist-tour-open-first-regular-note', '[data-tour="note-options-menu"]'], target: '[data-tour="note-extract-group"]', side: 'left' }),
