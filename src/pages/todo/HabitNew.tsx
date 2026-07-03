@@ -125,6 +125,17 @@ const HabitNew = () => {
       setGoalType(h.goalType || 'all');
       if (h.goalAmount) setGoalAmount(h.goalAmount);
       if (h.goalUnit) setGoalUnit(h.goalUnit);
+      // Restore per-repeat schedule if habit already stores one reminder per repeat.
+      if (
+        h.goalType === 'amount' &&
+        (h.goalAmount ?? 0) > 1 &&
+        h.reminders &&
+        h.reminders.length === (h.goalAmount ?? 0) &&
+        h.reminders.every((r) => r.enabled && r.time)
+      ) {
+        setScheduleEachRepeat(true);
+        setRepeatTimes(h.reminders.map((r) => r.time));
+      }
       if (h.startDate) setStartDate(new Date(h.startDate));
       setGoalDays(h.goalDays || 0);
       if (h.sectionId) setSectionId(h.sectionId);
