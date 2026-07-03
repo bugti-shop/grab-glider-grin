@@ -16,6 +16,7 @@
     <!-- Foreground Service (for notifications) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- Microphone (for voice notes/recording) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -158,7 +159,7 @@
 
         <service
             android:name=".FocusForegroundService"
-            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="mediaPlayback|specialUse"
             android:exported="false">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="focus_timer" />
         </service>

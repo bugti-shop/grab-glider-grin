@@ -20,7 +20,7 @@ const COMPLETE_ID = 918274;
 const isNative = () => Capacitor.isNativePlatform();
 
 const FocusTimerNative = registerPlugin<{
-  start(opts: { taskTitle?: string; remainingSec: number; endAtMs?: number; running: boolean }): Promise<{ ok: boolean }>;
+  start(opts: { taskTitle?: string; remainingSec: number; endAtMs?: number; running: boolean; soundUrl?: string; soundVolume?: number }): Promise<{ ok: boolean }>;
   stop(): Promise<{ ok: boolean }>;
 }>('FocusTimerNative');
 
@@ -39,6 +39,8 @@ export interface FocusOngoingOpts {
   remainingSec: number;
   endAtMs?: number;   // when running
   running: boolean;
+  soundUrl?: string;
+  soundVolume?: number;
 }
 
 let lastPostedLabel = '';
@@ -54,6 +56,8 @@ export const showFocusOngoing = async (opts: FocusOngoingOpts) => {
         remainingSec: opts.remainingSec,
         endAtMs: opts.endAtMs,
         running: opts.running,
+        soundUrl: opts.soundUrl,
+        soundVolume: opts.soundVolume,
       });
       return;
     } catch {}
