@@ -28,7 +28,10 @@ import { uploadCategory } from '@/utils/googleDriveSync';
 // inside the incomplete section, regardless of list size.
 const COMPLETION_BATCH_MS = 120;
 const COMPLETION_RECONCILE_DEBOUNCE_MS = 80;
-const COMPLETION_GLOBAL_EVENT_DELAY_MS = -1;
+// Fire tasksUpdated ~250ms after a completion batch flushes so live consumers
+// (Virtual Journey, Progress screens, Eisenhower) sync near-instantly instead
+// of waiting for the next full-array save.
+const COMPLETION_GLOBAL_EVENT_DELAY_MS = 250;
 
 
 interface UseTodayActionsProps {

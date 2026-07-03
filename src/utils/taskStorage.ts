@@ -463,13 +463,14 @@ export const updateTaskInDB = async (taskId: string, updates: Partial<TodoItem>)
         if (updatedForSync) {
           scheduleTaskCloudPush([updatedForSync]);
         }
-        const isLightCompletionUpdate = Object.keys(updates).every((k) => k === 'completed' || k === 'completedAt' || k === 'modifiedAt');
-        dispatchTasksUpdated(isLightCompletionUpdate ? 1800 : 400);
+        // Was 1800ms for completions — too slow for Virtual Journey / progress
+        // to feel live. Journey advancement is idempotent per task id, so a
+        // short debounce is safe even for rapid bulk-completes.
+        dispatchTasksUpdated(200);
         resolve(true);
       };
       transaction.onerror = () => {
-        const isLightCompletionUpdate = Object.keys(updates).every((k) => k === 'completed' || k === 'completedAt' || k === 'modifiedAt');
-        dispatchTasksUpdated(isLightCompletionUpdate ? 1800 : 400);
+        dispatchTasksUpdated(200);
         resolve(true);
       };
     });
