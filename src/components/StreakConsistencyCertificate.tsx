@@ -199,43 +199,43 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         {/* Stats row at bottom */}
         <div style={{
           display: 'flex',
-          gap: 20,
-          marginTop: 20,
+          gap: 28,
+          marginTop: 28,
           position: 'relative',
           zIndex: 1,
         }}>
-          <div>
-            <p style={{ color: '#ffffff', fontSize: 18, fontWeight: 800, margin: 0 }}>{totalCompletions}</p>
-            <p style={{ color: '#ffffffaa', fontSize: 9, margin: 0, fontWeight: 500 }}>Tasks Done</p>
+          <div style={{ minWidth: 72 }}>
+            <p style={{ color: '#ffffff', fontSize: 22, fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{totalCompletions}</p>
+            <p style={{ color: '#ffffffaa', fontSize: 11, margin: '4px 0 0', fontWeight: 500 }}>Tasks Done</p>
           </div>
-          <div>
-            <p style={{ color: '#ffffff', fontSize: 18, fontWeight: 800, margin: 0 }}>{longestStreak}</p>
-            <p style={{ color: '#ffffffaa', fontSize: 9, margin: 0, fontWeight: 500 }}>Best Streak</p>
+          <div style={{ minWidth: 72 }}>
+            <p style={{ color: '#ffffff', fontSize: 22, fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{longestStreak}</p>
+            <p style={{ color: '#ffffffaa', fontSize: 11, margin: '4px 0 0', fontWeight: 500 }}>Best Streak</p>
           </div>
         </div>
 
         {/* Branding at bottom-right */}
         <div style={{
           position: 'absolute',
-          bottom: 16,
-          right: 20,
+          bottom: 20,
+          right: 24,
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
+          gap: 10,
           zIndex: 1,
         }}>
           <Suspense fallback={null}>
             <div style={{
               background: '#ffffff',
-              borderRadius: 6,
-              padding: 3,
+              borderRadius: 8,
+              padding: 4,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}>
               <QRCodeSVG
                 value="https://play.google.com/store/apps/details?id=nota.npd.com"
-                size={40}
+                size={52}
                 level="M"
                 bgColor="#ffffff"
                 fgColor="#000000"
@@ -243,8 +243,8 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
             </div>
           </Suspense>
           <div>
-            <p style={{ color: '#ffffffdd', fontSize: 11, fontWeight: 700, margin: 0 }}>Flowist</p>
-            <p style={{ color: '#ffffff99', fontSize: 7, margin: 0 }}>Notepad & To Do List</p>
+            <p style={{ color: '#ffffffdd', fontSize: 13, fontWeight: 700, margin: 0 }}>Flowist</p>
+            <p style={{ color: '#ffffff99', fontSize: 9, margin: '2px 0 0' }}>Notepad & To Do List</p>
           </div>
         </div>
 
