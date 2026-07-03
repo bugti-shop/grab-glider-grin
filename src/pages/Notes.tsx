@@ -161,6 +161,18 @@ const Notes = () => {
     }
   }, [showTagManager]);
 
+  // First-note milestone: run the "create your first notebook" coach-mark once
+  // after the user creates their very first note.
+  useEffect(() => {
+    if (notes.length >= 1) {
+      import('@/features/tours/useFeatureTour').then((m) =>
+        m.notifyOnboardingMilestone('first-note'),
+      );
+    }
+  }, [notes.length]);
+
+
+
 
   const handleSaveNote = useCallback((note: Note): boolean => {
     const isExisting = notes.some(n => n.id === note.id);
