@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { m as motion } from 'framer-motion';
-import { Share2, Edit3, Check, Copy } from 'lucide-react';
+import { Share2, Edit3, Check, Copy, Download } from 'lucide-react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { triggerHaptic } from '@/utils/haptics';
 import { shareImageBlob } from '@/utils/shareImage';
