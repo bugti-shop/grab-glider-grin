@@ -53,6 +53,7 @@ import {
 import { applySmartDetection, SmartDetectionSettings } from './richtext/richTextDetection';
 import {
   tryMarkdownBlockShortcut,
+  tryMarkdownCompletedBlockShortcut,
   tryMarkdownEnterShortcut,
   tryMarkdownInlineShortcut,
   markdownPasteToHtml,
@@ -1227,6 +1228,16 @@ export const RichTextEditor = ({
             editorRef.current.innerHTML = converted;
             hydrateSynced();
           }
+        } else if (
+          inputType === 'insertText' ||
+          inputType === 'insertReplacementText' ||
+          inputType === 'insertCompositionText'
+        ) {
+          // Safety net for mobile/IME/autocomplete paths that miss keydown or
+          // batch `# Heading` into one input event: convert after the text lands.
+          if (tryMarkdownCompletedBlockShortcut(editorRef.current)) {
+            hydrateSynced();
+          }
         }
 
         const rawHtml = editorRef.current.innerHTML;
@@ -1599,7 +1610,7 @@ export const RichTextEditor = ({
     // Hydrate any freshly-inserted code blocks / web-clips.
     hydrateSynced();
     handleInput();
-  }, [notesSettings.markdownShortcuts, hydrateSynced]);
+  }, [hydrateSynced]);
 
   // Android/mobile soft keyboards fire `keydown` with keyCode 229 and no `key`,
   // so our markdown block/inline shortcuts (which key off e.key===' '/'Enter'/'*'/etc.)
@@ -1669,7 +1680,7 @@ export const RichTextEditor = ({
         handleInput();
       }
     }
-  }, [notesSettings.markdownShortcuts, slashMenu.open, mentionMenu.open]);
+  }, [slashMenu.open, mentionMenu.open]);
 
   // Handle keydown - checklist Enter key and other keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
