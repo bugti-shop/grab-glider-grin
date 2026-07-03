@@ -180,7 +180,7 @@ export const JourneyCertificate = ({ open, onClose, journey, progress }: Journey
               borderWidth: 2,
               borderStyle: 'solid',
               borderRadius: 16,
-              padding: 28,
+              padding: 24,
               position: 'relative',
               overflow: 'hidden',
             }}
