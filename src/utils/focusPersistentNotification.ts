@@ -22,7 +22,40 @@ const isNative = () => Capacitor.isNativePlatform();
 const FocusTimerNative = registerPlugin<{
   start(opts: { taskTitle?: string; remainingSec: number; endAtMs?: number; running: boolean; soundUrl?: string; soundVolume?: number }): Promise<{ ok: boolean }>;
   stop(): Promise<{ ok: boolean }>;
+  setPaused(opts: { paused: boolean }): Promise<{ ok: boolean }>;
+  setMuted(opts: { muted: boolean }): Promise<{ ok: boolean }>;
+  setVolume(opts: { volume: number }): Promise<{ ok: boolean }>;
+  addListener(event: 'focusQuickControl', cb: (data: FocusQuickControlEvent) => void): Promise<{ remove: () => Promise<void> }>;
 }>('FocusTimerNative');
+
+export interface FocusQuickControlEvent {
+  /** Which action fired: pause | resume | mute | unmute | volume | stop */
+  action: 'pause' | 'resume' | 'mute' | 'unmute' | 'volume' | 'stop';
+  running: boolean;
+  muted: boolean;
+  volume: number;
+}
+
+/** Subscribe to Pause/Mute/Vol/Exit taps coming from the persistent notification. */
+export const onFocusQuickControl = (cb: (e: FocusQuickControlEvent) => void): (() => void) => {
+  if (!isNative()) return () => {};
+  let remove: (() => Promise<void>) | undefined;
+  FocusTimerNative.addListener('focusQuickControl', cb)
+    .then((h) => { remove = h.remove; })
+    .catch(() => {});
+  return () => { try { void remove?.(); } catch {} };
+};
+
+/** Fire-and-forget quick controls from the in-app UI. */
+export const setFocusPaused = (paused: boolean) => {
+  if (!isNative()) return; try { void FocusTimerNative.setPaused({ paused }); } catch {}
+};
+export const setFocusMuted = (muted: boolean) => {
+  if (!isNative()) return; try { void FocusTimerNative.setMuted({ muted }); } catch {}
+};
+export const setFocusVolume = (volume: number) => {
+  if (!isNative()) return; try { void FocusTimerNative.setVolume({ volume }); } catch {}
+};
 
 const fmt = (sec: number) => {
   const s = Math.max(0, Math.floor(sec));
