@@ -161,8 +161,34 @@ const HabitNew = () => {
     setQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
   };
 
+  // Keep repeatTimes array in sync with goalAmount. Defaults spread evenly
+  // across waking hours (08:00 → 20:00) the first time the user enables it.
+  useEffect(() => {
+    if (!scheduleEachRepeat) return;
+    setRepeatTimes((prev) => {
+      const n = Math.max(1, goalAmount);
+      if (prev.length === n) return prev;
+      const next = [...prev];
+      if (next.length < n) {
+        // Distribute new slots evenly between 08:00 and 20:00.
+        const startMin = 8 * 60;
+        const endMin = 20 * 60;
+        for (let i = next.length; i < n; i++) {
+          const t = n === 1 ? startMin : Math.round(startMin + ((endMin - startMin) * i) / (n - 1));
+          const hh = String(Math.floor(t / 60)).padStart(2, '0');
+          const mm = String(t % 60).padStart(2, '0');
+          next.push(`${hh}:${mm}`);
+        }
+      } else {
+        next.length = n;
+      }
+      return next;
+    });
+  }, [goalAmount, scheduleEachRepeat]);
+
   const goalLabel = useMemo(() => {
     if (goalType === 'all') return 'Achieve it all';
+    if (goalUnit === 'times' && goalAmount > 1) return `${goalAmount}× per day`;
     return `Reach ${goalAmount} ${goalUnit}`;
   }, [goalType, goalAmount, goalUnit]);
 
