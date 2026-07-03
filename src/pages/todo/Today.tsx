@@ -288,6 +288,12 @@ const Today = () => {
   // ready to learn about layout switching (Kanban/Timeline) and bulk power tools.
   // TourManager itself dedupes seen/dismissed state, so this is safe to re-run.
   useEffect(() => {
+    if (items.length >= 1) {
+      // First task ever → run the natural-language input coach-mark once.
+      import('@/features/tours/useFeatureTour').then((m) =>
+        m.notifyOnboardingMilestone('first-task'),
+      );
+    }
     if (items.length >= 5) {
       TourManager.startTour('task-views', { auto: true });
     }
@@ -295,6 +301,7 @@ const Today = () => {
       TourManager.queueTour('task-toolbar-power');
     }
   }, [items.length]);
+
 
   // Open a task when arriving via /todo/today?openTask=<id> OR via in-app mention event.
   useEffect(() => {

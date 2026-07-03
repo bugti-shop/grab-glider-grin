@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HelpCircle, X, Check, Sparkles, Crown, Rocket } from 'lucide-react';
 
 import {
@@ -206,6 +206,15 @@ export const FeatureGuideModal = ({ isOpen, onClose }: FeatureGuideModalProps) =
 /** Small header icon button that opens the Feature Guide. */
 export const FeatureGuideButton = ({ className }: { className?: string }) => {
   const [open, setOpen] = useState(false);
+
+  // Listen for global 'feature-guide:open' events so first-launch and milestone
+  // code can pop the modal from anywhere without prop drilling.
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener('feature-guide:open', handler);
+    return () => window.removeEventListener('feature-guide:open', handler);
+  }, []);
+
   return (
     <>
       <Button
@@ -225,3 +234,5 @@ export const FeatureGuideButton = ({ className }: { className?: string }) => {
     </>
   );
 };
+
+

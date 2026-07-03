@@ -28,12 +28,53 @@ export const useTourBootstrap = () => {
     ensureInstallDate().catch(() => {});
     hydrateFromCloud().catch(() => {});
 
+    // First-launch: open the Feature Guide modal once so new users see the map.
+    (async () => {
+      try {
+        const { getSetting, setSetting } = await import('@/utils/settingsStorage');
+        const shown = await getSetting<boolean>('feature-guide-first-launch-shown', false);
+        if (!shown) {
+          await setSetting('feature-guide-first-launch-shown', true, { skipCloudSync: true });
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('feature-guide:open'));
+          }, 900);
+        }
+      } catch {}
+    })();
+
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') hydrateFromCloud().catch(() => {});
     });
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
 };
+
+/**
+ * Fire a milestone-based tour exactly once per user.
+ * Called from feature code when the user completes an onboarding action
+ * (e.g. creates their first task or note).
+ */
+export const notifyOnboardingMilestone = async (
+  kind: 'first-task' | 'first-note' | 'first-notebook',
+) => {
+  try {
+    const { getSetting, setSetting } = await import('@/utils/settingsStorage');
+    const key = `onboarding-milestone-${kind}`;
+    const done = await getSetting<boolean>(key, false);
+    if (done) return;
+    await setSetting(key, true, { skipCloudSync: true });
+
+    const tourId =
+      kind === 'first-task'
+        ? 'task-natural-language'
+        : kind === 'first-note'
+        ? 'notes-create-notebook'
+        : 'notes-sketch';
+    // Small delay so the newly created UI has time to render.
+    setTimeout(() => TourManager.startTour(tourId, { auto: true }), 600);
+  } catch {}
+};
+
 
 /** Consumer hook: reactive seen-state + tour actions. */
 export const useFeatureTour = () => {
