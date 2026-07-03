@@ -105,6 +105,8 @@ class TourManagerImpl {
     });
 
     this.activeDriver = drv;
+    // Track which step index we're on so click handler can advance reliably.
+    let currentIndex = 0;
     try {
       drv.drive();
       // Click handler: advance for interactive steps, dismiss for the rest,
@@ -115,20 +117,41 @@ class TourManagerImpl {
         if (!target) return;
         if (target.closest('.driver-popover')) return;
 
-        const idx = drv.getActiveIndex();
-        const currentStep = typeof idx === 'number' ? tour.steps[idx] : undefined;
+        const idx = currentIndex;
+        const currentStep = tour.steps[idx];
         if (!currentStep) return;
         const sel = currentStep.elementSelector;
         if (!sel || !target.closest(sel)) return;
 
-        if (currentStep.interactive && idx! < tour.steps.length - 1) {
-          const nextSel = tour.steps[idx! + 1].elementSelector;
-          // Wait for the next target to appear (e.g. after navigation) then advance.
-          this.waitForSelector(nextSel, 3000).then((el) => {
+        if (currentStep.interactive && idx < tour.steps.length - 1) {
+          const nextStep = tour.steps[idx + 1];
+          const nextSel = nextStep.elementSelector;
+          // Hide the current popover immediately so it doesn't linger
+          // over the sheet/menu the user just opened.
+          const popEl = document.querySelector('.driver-popover') as HTMLElement | null;
+          if (popEl) popEl.style.visibility = 'hidden';
+          // Poll for the next target and re-highlight as soon as it exists,
+          // without waiting for driver.js's internal transition timers.
+          this.waitForSelector(nextSel, 4000).then((el) => {
             if (!this.activeDriver) return;
-            if (el) {
-              try { drv.moveNext(); } catch {}
-            } else {
+            if (!el) {
+              try { drv.destroy(); } catch {}
+              return;
+            }
+            currentIndex = idx + 1;
+            try {
+              drv.highlight({
+                element: nextSel,
+                popover: {
+                  title: nextStep.title,
+                  description: nextStep.description,
+                  side: nextStep.side ?? 'bottom',
+                  align: 'center',
+                  showButtons: ['next', 'close'],
+                  nextBtnText: idx + 1 === tour.steps.length - 1 ? 'Got it' : 'Next',
+                },
+              });
+            } catch {
               try { drv.destroy(); } catch {}
             }
           });
