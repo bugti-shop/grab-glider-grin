@@ -81,95 +81,102 @@ class TourManagerImpl {
 
     this.activeTourId = tourId;
 
-    const drv = driver({
-      showProgress: steps.length > 1,
-      allowClose: true,
-      overlayOpacity: 0.55,
-      stagePadding: 6,
-      stageRadius: 10,
-      smoothScroll: true,
-      popoverClass: 'flowist-tour-popover',
-      // Hide the Back button per user preference — only Next + Close.
-      showButtons: ['next', 'close'],
-      nextBtnText: 'Next',
-      doneBtnText: 'Got it',
-      progressText: '{{current}} of {{total}}',
-      steps,
-      onDestroyed: async () => {
-        this.activeDriver = null;
-        const finishedId = this.activeTourId;
-        this.activeTourId = null;
-        if (finishedId) await markTourSeen(finishedId);
-        this.drainQueue();
-      },
-    });
-
-    this.activeDriver = drv;
-    // Track which step index we're on so click handler can advance reliably.
+    // Flag lets us tear down a per-step driver without triggering the
+    // "tour is over" side-effects (mark seen, drain queue).
+    let suppressDestroy = false;
     let currentIndex = 0;
-    try {
-      drv.drive();
-      // Click handler: advance for interactive steps, dismiss for the rest,
-      // so tour UI never lingers over a sheet the user just opened.
-      const onTargetClick = (ev: MouseEvent) => {
-        if (!this.activeDriver) return;
-        const target = ev.target as Element | null;
-        if (!target) return;
-        if (target.closest('.driver-popover')) return;
+    let currentDrv: Driver | null = null;
 
-        const idx = currentIndex;
-        const currentStep = tour.steps[idx];
-        if (!currentStep) return;
-        const sel = currentStep.elementSelector;
-        if (!sel || !target.closest(sel)) return;
-
-        if (currentStep.interactive && idx < tour.steps.length - 1) {
-          const nextStep = tour.steps[idx + 1];
-          const nextSel = nextStep.elementSelector;
-          // Hide the current popover immediately so it doesn't linger
-          // over the sheet/menu the user just opened.
-          const popEl = document.querySelector('.driver-popover') as HTMLElement | null;
-          if (popEl) popEl.style.visibility = 'hidden';
-          // Poll for the next target and re-highlight as soon as it exists,
-          // without waiting for driver.js's internal transition timers.
-          this.waitForSelector(nextSel, 4000).then((el) => {
-            if (!this.activeDriver) return;
-            if (!el) {
-              try { drv.destroy(); } catch {}
-              return;
-            }
-            currentIndex = idx + 1;
-            try {
-              drv.highlight({
-                element: nextSel,
-                popover: {
-                  title: nextStep.title,
-                  description: nextStep.description,
-                  side: nextStep.side ?? 'bottom',
-                  align: 'center',
-                  showButtons: ['next', 'close'],
-                  nextBtnText: idx + 1 === tour.steps.length - 1 ? 'Got it' : 'Next',
-                },
-              });
-            } catch {
-              try { drv.destroy(); } catch {}
-            }
-          });
-        } else {
-          try { drv.destroy(); } catch {}
-        }
-      };
-      window.addEventListener('click', onTargetClick, true);
-      const cleanup = () => window.removeEventListener('click', onTargetClick, true);
-      const check = setInterval(() => {
-        if (!this.activeDriver) { cleanup(); clearInterval(check); }
-      }, 500);
-    } catch {
+    const finalize = async () => {
       this.activeDriver = null;
+      currentDrv = null;
+      const finishedId = this.activeTourId;
       this.activeTourId = null;
+      if (finishedId) await markTourSeen(finishedId);
       this.drainQueue();
-    }
+    };
+
+    const buildDriver = (stepIndex: number): Driver => {
+      const step = tour.steps[stepIndex];
+      const isLast = stepIndex === tour.steps.length - 1;
+      return driver({
+        allowClose: true,
+        overlayOpacity: 0.55,
+        stagePadding: 6,
+        stageRadius: 10,
+        smoothScroll: true,
+        popoverClass: 'flowist-tour-popover',
+        showButtons: ['next', 'close'],
+        nextBtnText: isLast ? 'Got it' : 'Next',
+        doneBtnText: 'Got it',
+        steps: [this.toDriverStep(step)],
+        onDestroyed: async () => {
+          if (suppressDestroy) {
+            suppressDestroy = false;
+            return;
+          }
+          await finalize();
+        },
+      });
+    };
+
+    const runStep = (stepIndex: number) => {
+      currentIndex = stepIndex;
+      const drv = buildDriver(stepIndex);
+      currentDrv = drv;
+      this.activeDriver = drv;
+      try {
+        drv.drive();
+      } catch {
+        finalize();
+      }
+    };
+
+    runStep(0);
+
+    // Global click handler: interactive step → advance to next by tearing
+    // down the current per-step driver and mounting a fresh one on the new
+    // target. Non-interactive step → dismiss so tour UI doesn't linger.
+    const onTargetClick = (ev: MouseEvent) => {
+      if (!this.activeDriver) return;
+      const target = ev.target as Element | null;
+      if (!target) return;
+      if (target.closest('.driver-popover')) return;
+
+      const idx = currentIndex;
+      const currentStep = tour.steps[idx];
+      if (!currentStep) return;
+      const sel = currentStep.elementSelector;
+      if (!sel || !target.closest(sel)) return;
+
+      if (currentStep.interactive && idx < tour.steps.length - 1) {
+        const nextStep = tour.steps[idx + 1];
+        // Immediately kill the current popover so it doesn't cover the
+        // sheet/menu the user just opened. Suppress the destroy side-effect
+        // so the tour isn't marked as finished mid-flow.
+        suppressDestroy = true;
+        try { currentDrv?.destroy(); } catch {}
+        this.activeDriver = null;
+
+        this.waitForSelector(nextStep.elementSelector, 4000).then((el) => {
+          if (!el) {
+            // Target never appeared — end the tour gracefully.
+            finalize();
+            return;
+          }
+          runStep(idx + 1);
+        });
+      } else {
+        try { currentDrv?.destroy(); } catch {}
+      }
+    };
+    window.addEventListener('click', onTargetClick, true);
+    const cleanup = () => window.removeEventListener('click', onTargetClick, true);
+    const check = setInterval(() => {
+      if (!this.activeDriver) { cleanup(); clearInterval(check); }
+    }, 500);
   }
+
 
 
   /** Queue a tour to run after the current one finishes (or immediately if idle). */
