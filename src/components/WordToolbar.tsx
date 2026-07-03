@@ -814,7 +814,7 @@ export const WordToolbar = ({
         )}
 
         {onScan && (
-          <IconBtn onClick={onScan} title={t('scanNote.scan', 'Scan')}>
+          <IconBtn onClick={onScan} title={t('scanNote.scan', 'Scan')} data-tour="editor-toolbar-scan">
             <Camera className="h-[18px] w-[18px]" strokeWidth={2.5} />
           </IconBtn>
         )}
