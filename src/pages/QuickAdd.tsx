@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { TaskInputSheet } from "@/components/TaskInputSheet";
 import { getSetting } from "@/utils/settingsStorage";
-import { loadTodoItems, saveTodoItems } from "@/utils/todoItemsStorage";
+import { saveTodoItem } from "@/utils/todoItemsStorage";
 import { genId } from "@/utils/genId";
 import { TodoItem, Folder, TaskSection } from "@/types/note";
 import { toast } from "sonner";
@@ -39,6 +39,35 @@ const QuickAdd = () => {
     })();
   }, []);
 
+  // Make the WebView + document transparent so the launcher shows through
+  // behind the sheet (fixes the white background on Android overlay).
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById("root");
+    const prev = {
+      htmlBg: html.style.background,
+      bodyBg: body.style.background,
+      rootBg: root?.style.background ?? "",
+      htmlColor: (html.style as CSSStyleDeclaration).backgroundColor,
+      bodyColor: (body.style as CSSStyleDeclaration).backgroundColor,
+    };
+    html.style.background = "transparent";
+    body.style.background = "transparent";
+    (html.style as CSSStyleDeclaration).backgroundColor = "transparent";
+    (body.style as CSSStyleDeclaration).backgroundColor = "transparent";
+    if (root) root.style.background = "transparent";
+    document.body.classList.add("quick-add-overlay");
+    return () => {
+      html.style.background = prev.htmlBg;
+      body.style.background = prev.bodyBg;
+      (html.style as CSSStyleDeclaration).backgroundColor = prev.htmlColor;
+      (body.style as CSSStyleDeclaration).backgroundColor = prev.bodyColor;
+      if (root) root.style.background = prev.rootBg;
+      document.body.classList.remove("quick-add-overlay");
+    };
+  }, []);
+
   const closeOverlay = useCallback(() => {
     setIsOpen(false);
     if (Capacitor.isNativePlatform()) {
@@ -49,11 +78,16 @@ const QuickAdd = () => {
   const handleAddTask = useCallback(
     async (task: Omit<TodoItem, "id" | "completed">) => {
       try {
-        const existing = await loadTodoItems();
         const newItem: TodoItem = { id: genId(), completed: false, ...task };
-        const updated = [newItem, ...existing];
-        await saveTodoItems(updated);
+        // Use per-item put (NOT full-list replace) so we never clobber tasks
+        // already in the main-app IndexedDB from this isolated overlay WebView.
+        const { persisted } = await saveTodoItem(newItem);
+        if (!persisted) throw new Error("persist failed");
         window.dispatchEvent(new Event("tasksUpdated"));
+        // Also broadcast to other WebView instances (main app) via storage event.
+        try {
+          localStorage.setItem("quickAdd:lastAddedAt", String(Date.now()));
+        } catch {}
         if (newItem.reminderTime) {
           import("@/utils/reminderScheduler").then(({ scheduleTaskReminder }) => {
             scheduleTaskReminder(
