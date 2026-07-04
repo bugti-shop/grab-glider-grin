@@ -292,6 +292,18 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, autoOpenScanner]);
 
+  // Hard-reset every child extractor sheet whenever the parent sheet closes.
+  // Without this the `showImageExtractor` / `showTextExtractor` booleans can
+  // survive across open/close cycles — so the next tap on "+" pops the
+  // scanner back up on its own, which is exactly the bug the user hit.
+  useEffect(() => {
+    if (isOpen) return;
+    setShowImageExtractor(false);
+    setShowTextExtractor(false);
+    setIsOpeningScanner(false);
+    openScannerLockRef.current = false;
+  }, [isOpen]);
+
   const folderColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 
