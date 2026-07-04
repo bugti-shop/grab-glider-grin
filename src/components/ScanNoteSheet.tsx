@@ -51,6 +51,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const [phase, setPhase] = useState<Phase>('idle');
   const [errorLabel, setErrorLabel] = useState<string | null>(null);
   const captureLockRef = useRef(false);
+  const capturedRef = useRef(false);
 
 
   useEffect(() => {
