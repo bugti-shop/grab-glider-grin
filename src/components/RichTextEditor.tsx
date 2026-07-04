@@ -1715,7 +1715,7 @@ export const RichTextEditor = ({
           handleInput();
           return;
         }
-      } else if ((e.key === '*' || e.key === '_' || e.key === '`' || e.key === '~') && !e.ctrlKey && !e.metaKey) {
+      } else if ((e.key === '*' || e.key === '_' || e.key === '`' || e.key === '~' || e.key === '=') && !e.ctrlKey && !e.metaKey) {
         if (tryMarkdownInlineShortcut(e.key, editorRef.current)) {
           e.preventDefault();
           handleInput();
