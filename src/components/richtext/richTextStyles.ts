@@ -865,6 +865,25 @@ export const RICH_TEXT_EDITOR_STYLES = `
     border-radius: 2px;
     cursor: help;
   }
+
+  /* ── Media embeds: YouTube / Spotify / Tweet ── */
+  .rt-embed {
+    display: block;
+    margin: 12px auto;
+    max-width: 640px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: hsl(var(--muted));
+  }
+  .rt-embed iframe { display: block; width: 100%; border: 0; }
+  .rt-yt { aspect-ratio: 16 / 9; }
+  .rt-yt iframe { width: 100%; height: 100%; }
+  .rt-spotify iframe { min-height: 152px; }
+  .rt-tweet {
+    max-width: 550px;
+    background: transparent;
+  }
+  .rt-tweet iframe { min-height: 420px; }
 `;
 
 
