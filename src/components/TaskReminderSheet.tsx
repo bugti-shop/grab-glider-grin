@@ -138,7 +138,7 @@ export const TaskReminderSheet = ({
 
   const handleAdd = () => {
     if (!isPro && drafts.length >= 1) {
-      showFeaturePaywall('multiple_task_reminders');
+      requireProFeature('multiple_task_reminders');
       return;
     }
     setDrafts((prev) => [...prev, seedDraft()]);
