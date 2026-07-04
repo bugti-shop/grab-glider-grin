@@ -130,7 +130,7 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
 
   const text = textBeforeCaretInBlock(block).replace(/\u00A0/g, ' ');
   // Only convert if the token is *all* that's typed so far on this line.
-  const match = text.match(/^(#{1,4}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>|```)$/i);
+  const match = text.match(/^(#{1,6}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>|```)$/i);
   if (!match) return false;
   const token = match[1];
 
@@ -183,7 +183,7 @@ export function tryMarkdownBlockShortcut(root: HTMLElement | null): boolean {
   const clearBlock = () => { block.textContent = ''; };
 
   // Headings ------------------------------------------------------------
-  if (/^#{1,4}$/.test(token)) {
+  if (/^#{1,6}$/.test(token)) {
     const level = token.length;
     const h = document.createElement(`h${level}`);
     h.innerHTML = '<br>';
@@ -305,9 +305,9 @@ export function tryMarkdownCompletedBlockShortcut(root: HTMLElement | null): boo
   const text = textBeforeCaretInBlock(block).replace(/\u00A0/g, ' ');
   // Primary: token + space + content (e.g. "# Heading", "- item")
   // Fallback: heading/quote without space (e.g. "#Heading", "##Sub", ">quote")
-  let match = text.match(/^(#{1,4}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>)\s+(.+)$/i);
+  let match = text.match(/^(#{1,6}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>)\s+(.+)$/i);
   if (!match) {
-    match = text.match(/^(#{1,4}|>)(\S.*)$/);
+    match = text.match(/^(#{1,6}|>)(\S.*)$/);
   }
   if (!match) return false;
 
@@ -315,7 +315,7 @@ export function tryMarkdownCompletedBlockShortcut(root: HTMLElement | null): boo
   const content = match[2];
   if (!content.trim()) return false;
 
-  if (/^#{1,4}$/.test(token)) {
+  if (/^#{1,6}$/.test(token)) {
     const level = token.length;
     const h = document.createElement(`h${level}`);
     h.textContent = content;
