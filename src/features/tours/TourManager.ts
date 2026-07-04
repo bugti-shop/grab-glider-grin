@@ -385,6 +385,7 @@ class TourManagerImpl {
       this.forcedActive = false;
       if (this.forcedGuard) { clearInterval(this.forcedGuard); this.forcedGuard = null; }
       try { delete document.body.dataset.tourActive; } catch {}
+      try { delete document.body.dataset.tourId; } catch {}
       try { delete document.body.dataset.tourForced; } catch {}
       emitTourActiveChange(false);
     }
