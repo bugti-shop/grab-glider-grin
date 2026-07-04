@@ -306,6 +306,11 @@ const WebClipper = () => {
         clipMode !== 'selection';
 
       if (shouldFetchFull) {
+        // Hard cap the full-page fetch so users never sit on a spinner
+        // indefinitely. If the edge function is slow or upstream stalls, we
+        // surface a clear timeout rather than falling back to partial/snapshot
+        // content silently.
+        const FETCH_TIMEOUT_MS = 45_000;
         try {
           setStage('fetching');
           setProgress(null);
@@ -321,10 +326,20 @@ const WebClipper = () => {
             hasAttachment: !!attachment,
             attachmentType,
             shareId: searchParams.get('shareId') || null,
+            timeoutMs: FETCH_TIMEOUT_MS,
           });
-          const { data, error } = await supabase.functions.invoke('fetch-article', {
-            body: { url, mode: 'article', webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined },
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            const id = window.setTimeout(() => {
+              reject(new DOMException('Timed out fetching full page', 'TimeoutError'));
+            }, FETCH_TIMEOUT_MS);
+            controller.signal.addEventListener('abort', () => window.clearTimeout(id), { once: true });
           });
+          const { data, error } = await Promise.race([
+            supabase.functions.invoke('fetch-article', {
+              body: { url, mode: 'article', webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined },
+            }),
+            timeoutPromise,
+          ]);
           const fetchMs = Math.round(performance.now() - fetchStartedAt);
           if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
           if (error) {
