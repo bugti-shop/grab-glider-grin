@@ -1893,68 +1893,8 @@ export const RichTextEditor = ({
       return;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Toolbar keyboard shortcuts (Ctrl on Win/Linux, Cmd on macOS).
-    // Mirrors the WordToolbar so every action is one keystroke away.
-    // ─────────────────────────────────────────────────────────────
-    const mod = e.ctrlKey || e.metaKey;
-    if (mod && !slashMenu.open && !mentionMenu.open) {
-      const k = e.key.toLowerCase();
-      const shift = e.shiftKey;
-      const alt = e.altKey;
+    // Toolbar keyboard shortcuts removed per user request.
 
-      // Bold / Italic / Underline — browser handles natively, but we still call
-      // our handler so activeStates + history update in sync.
-      if (!shift && !alt && k === 'b') { e.preventDefault(); handleBold(); handleInput(); return; }
-      if (!shift && !alt && k === 'i') { e.preventDefault(); handleItalic(); handleInput(); return; }
-      if (!shift && !alt && k === 'u') { e.preventDefault(); handleUnderline(); handleInput(); return; }
-
-      // Strikethrough:  Ctrl+Shift+X (Notion) or Ctrl+Shift+5 (Docs)
-      if (shift && (k === 'x' || k === '5')) { e.preventDefault(); handleStrikethrough(); handleInput(); return; }
-
-      // Highlight:  Ctrl+Shift+H (yellow default)
-      if (shift && k === 'h') { e.preventDefault(); handleHighlight('#FEF3C7'); handleInput(); return; }
-
-      // Lists
-      if (shift && k === '8') { e.preventDefault(); handleBulletList(); handleInput(); return; }   // Ctrl+Shift+8
-      if (shift && k === '7') { e.preventDefault(); handleNumberedList(); handleInput(); return; } // Ctrl+Shift+7
-      if (shift && k === '9') { e.preventDefault(); handleChecklist(); handleInput(); return; }    // Ctrl+Shift+9
-
-      // Headings: Ctrl+Alt+1..3, Ctrl+Alt+0 = normal paragraph
-      if (alt && k === '1') { e.preventDefault(); handleHeading(1); handleInput(); return; }
-      if (alt && k === '2') { e.preventDefault(); handleHeading(2); handleInput(); return; }
-      if (alt && k === '3') { e.preventDefault(); handleHeading(3); handleInput(); return; }
-      if (alt && k === '0') { e.preventDefault(); handleHeading('p'); handleInput(); return; }
-
-      // Alignment: Ctrl+Shift+L/E/R/J
-      if (shift && k === 'l') { e.preventDefault(); handleAlignment('left'); handleInput(); return; }
-      if (shift && k === 'e') { e.preventDefault(); handleAlignment('center'); handleInput(); return; }
-      if (shift && k === 'r') { e.preventDefault(); handleAlignment('right'); handleInput(); return; }
-      if (shift && k === 'j') { e.preventDefault(); handleAlignment('justify'); handleInput(); return; }
-
-      // Indent / Outdent — Tab handled elsewhere; also Ctrl+] / Ctrl+[
-      if (!shift && !alt && k === ']') { e.preventDefault(); document.execCommand('indent'); handleInput(); return; }
-      if (!shift && !alt && k === '[') { e.preventDefault(); document.execCommand('outdent'); handleInput(); return; }
-
-      // Block toggles
-      if (shift && k === 'q') { e.preventDefault(); handleBlockquote(); handleInput(); return; }   // Blockquote
-      if (shift && k === 'c') { e.preventDefault(); handleCodeBlock(); handleInput(); return; }    // Code block
-      if (shift && k === '-') { e.preventDefault(); handleHorizontalRule(); handleInput(); return; } // Horizontal rule
-
-      // Sub / Superscript
-      if (shift && k === ',') { e.preventDefault(); handleSubscript(); handleInput(); return; }   // Ctrl+Shift+,
-      if (shift && k === '.') { e.preventDefault(); handleSuperscript(); handleInput(); return; } // Ctrl+Shift+.
-
-      // Undo / Redo (Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z) — usually native, but wire
-      // so our history stack stays consistent.
-      if (!shift && !alt && k === 'z') { e.preventDefault(); handleUndo(); return; }
-      if (!alt && (k === 'y' || (shift && k === 'z'))) { e.preventDefault(); handleRedo(); return; }
-
-      // Zoom (Ctrl+= / Ctrl+- / Ctrl+0)
-      if (!shift && !alt && (k === '=' || k === '+')) { e.preventDefault(); setZoom((z) => Math.min(200, z + 10)); return; }
-      if (!shift && !alt && k === '-') { e.preventDefault(); setZoom((z) => Math.max(50, z - 10)); return; }
-      if (!shift && !alt && k === '0') { e.preventDefault(); setZoom(100); return; }
-    }
 
 
 
@@ -2593,22 +2533,8 @@ export const RichTextEditor = ({
     saveEditorSelection();
   };
 
-  const mobileQuickToolbar = (
-    <div className="sm:hidden px-3 pb-2">
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide rounded-full border border-border bg-card px-2 py-1.5 shadow-lg">
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleBold); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm font-bold", activeStates.isBold ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>B</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleItalic); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm italic", activeStates.isItalic ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>I</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleUnderline); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm underline", activeStates.isUnderline ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>U</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(() => handleHeading(1)); }} className="min-h-10 min-w-12 rounded-full bg-muted/60 px-3 text-sm font-bold text-foreground">H1</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleBulletList); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-lg leading-none", activeStates.isBulletList ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>•</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleNumberedList); }} className={cn("min-h-10 min-w-12 rounded-full px-3 text-sm", activeStates.isNumberedList ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>1.</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleChecklist); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm", activeStates.isChecklist ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>☑</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(() => handleInsertTable(3, 3)); }} className="min-h-10 min-w-10 rounded-full bg-muted/60 px-3 text-foreground" aria-label="Insert table"><Table className="h-4 w-4" /></button>
-        <button type="button" disabled={historyIndex <= 0} onPointerDown={(e) => { e.preventDefault(); if (historyIndex > 0) handleUndo(); }} className="min-h-10 min-w-10 rounded-full bg-muted/60 px-3 text-foreground disabled:opacity-40" aria-label="Undo"><Undo className="h-4 w-4" /></button>
-        <button type="button" disabled={historyIndex >= history.length - 1} onPointerDown={(e) => { e.preventDefault(); if (historyIndex < history.length - 1) handleRedo(); }} className="min-h-10 min-w-10 rounded-full bg-muted/60 px-3 text-foreground disabled:opacity-40" aria-label="Redo"><Redo className="h-4 w-4" /></button>
-      </div>
-    </div>
-  );
+  const mobileQuickToolbar = null;
+
 
   const toolbar = (
     <WordToolbar
