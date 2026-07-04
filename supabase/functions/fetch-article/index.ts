@@ -26,9 +26,9 @@ const corsHeaders = {
 };
 
 const MAX_HTML_BYTES = 100 * 1024 * 1024; // 100MB page cap (fetch) — heavy image-rich articles
-const MAX_CONTENT_HTML_BYTES = 500 * 1024; // 500KB cap on returned clip HTML
+const MAX_CONTENT_HTML_BYTES = 8 * 1024 * 1024; // 8MB cap so image-rich long articles do not become half clips
 const MAX_FULLPAGE_HTML_BYTES = 100 * 1024 * 1024; // 100MB cap for full-page raw HTML
-const FETCH_TIMEOUT_MS = 20_000;
+const FETCH_TIMEOUT_MS = 38_000;
 
 /** Extract safe, reachable absolute image URLs from an HTML string.
  *  - Only http/https (drops data:, blob:, javascript:, protocol-relative junk).
@@ -445,7 +445,7 @@ function cleanArticleDom(doc: Document): void {
 /** Inline ALL external stylesheets, scripts, images, and favicons into the
  *  document so the captured HTML renders fully offline. Budget-capped and
  *  best-effort: any asset that fails to fetch is left with its absolute URL
- *  so the snapshot degrades gracefully rather than breaking. */
+ *  so the captured page degrades gracefully rather than breaking. */
 async function inlineAllAssets(doc: Document, base: string): Promise<void> {
   const budget = { remaining: INLINE_TOTAL_BUDGET };
   const cache = new Map<string, string>();
@@ -960,6 +960,27 @@ function pickMeta(doc: Document, names: string[]): string {
   return "";
 }
 
+function stripUnsafeInteractiveHtml(html: string): string {
+  if (!html) return "";
+  try {
+    const { document } = parseHTML(`<main>${html}</main>`);
+    document.querySelectorAll("script, style, noscript, template, canvas, dialog, form, input, button").forEach((el: any) => el.remove());
+    document.querySelectorAll("a").forEach((a: any) => {
+      a.setAttribute("target", "_blank");
+      a.setAttribute("rel", "noopener noreferrer");
+    });
+    return (document.querySelector("main") as any)?.innerHTML || html;
+  } catch {
+    return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "");
+  }
+}
+
+function visiblePageFallback(doc: Document): string {
+  const root = doc.querySelector("article") || doc.querySelector("main") || doc.body;
+  const html = root ? (root as any).innerHTML || "" : "";
+  return stripUnsafeInteractiveHtml(html);
+}
+
 /** Robust author extraction. Tries (in order):
  *   1. JSON-LD schema (Article.author.name / Person.name)
  *   2. Meta tags (author, article:author, byl, twitter:creator, parsely-author)
@@ -1231,6 +1252,11 @@ Deno.serve(async (req) => {
       inlineEmbeds(document as any, base);
     }
 
+    // Preserve a visible-page fallback BEFORE article cleaning mutates the DOM.
+    // If Readability produces metadata-only/thin output, this gives the user
+    // whatever the server could actually see on the page instead of a stub.
+    const visibleFallbackHtml = !wantFullPage ? visiblePageFallback(document as any) : "";
+
     // FULL-PAGE MODE — return the entire raw HTML (start-to-end) without
     // Readability trimming. Icons, ads, everything the page shipped.
     if (wantFullPage) {
@@ -1251,7 +1277,7 @@ Deno.serve(async (req) => {
       // Serialize the ENTIRE document — DOCTYPE, <html>, <head> (title, meta,
       // links, icons), and <body> (all elements, ads, scripts-as-text). This
       // matches the raw HTML the browser rendered, with assets bundled inline
-      // so the offline snapshot loads without hitting the network.
+      // so the inline page capture loads without hitting the network.
       const docEl = document.documentElement as any;
       const outerHtml: string =
         (docEl && typeof docEl.outerHTML === "string" && docEl.outerHTML) ||
@@ -1314,10 +1340,9 @@ Deno.serve(async (req) => {
       console.warn("[fetch-article] Readability failed", e);
     }
 
-    // Fallback: whole <body> if Readability gave up.
+    // Fallback: visible page/article/main HTML if Readability gave up.
     const bodyFallback = () => {
-      const b = document.querySelector("article") || document.querySelector("main") || document.body;
-      return b ? (b as any).innerHTML : "";
+      return visibleFallbackHtml || visiblePageFallback(document as any);
     };
 
     const domAuthor = extractAuthor(document as any);
@@ -1351,11 +1376,18 @@ Deno.serve(async (req) => {
     }
 
     const importantLinks = extractImportantLinks(document as any, base, content);
-    const capped = capHtml(String(content || ""), MAX_CONTENT_HTML_BYTES);
+    const initialCapped = capHtml(String(content || ""), MAX_CONTENT_HTML_BYTES);
 
     // Always return the full extracted clip — no metadata-only card fallback.
-    // If Readability + jina both produced very little body, we still ship
-    // whatever HTML we have plus a small notice; the client can render it.
+    // If Readability + jina both produced very little body, swap to the
+    // preserved visible-page HTML so unsupported/JS-heavy pages still save
+    // whatever could be fetched instead of title/description only.
+    const initialBodyText = initialCapped.html.replace(/<[^>]+>/g, "").trim();
+    const visibleCapped = capHtml(visibleFallbackHtml, MAX_CONTENT_HTML_BYTES);
+    const visibleBodyText = visibleCapped.html.replace(/<[^>]+>/g, "").trim();
+    const capped = visibleBodyText.length > initialBodyText.length * 1.4 && initialBodyText.length < 1200
+      ? visibleCapped
+      : initialCapped;
     const bodyText = capped.html.replace(/<[^>]+>/g, "").trim();
     const isThin = bodyText.length < 200;
     let responseContent = capped.html;
