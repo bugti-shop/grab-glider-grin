@@ -84,20 +84,54 @@ if (typeof window !== 'undefined') {
   setTimeout(() => { void refreshFxRates(); }, 500);
 }
 
+// Common name → ISO 4217 aliases. Any ISO code returned by the FX API is
+// accepted directly (see resolveCurrency), so we only need to list nicknames
+// / non-standard shortcuts here.
 const CURRENCY_ALIASES: Record<string, string> = {
-  RS: 'PKR', PKR: 'PKR', RUPEE: 'PKR', RUPEES: 'PKR',
-  DOLLAR: 'USD', DOLLARS: 'USD', USD: 'USD',
-  EURO: 'EUR', EUROS: 'EUR', EUR: 'EUR',
-  POUND: 'GBP', POUNDS: 'GBP', GBP: 'GBP',
-  YEN: 'JPY', JPY: 'JPY',
-  YUAN: 'CNY', RMB: 'CNY', CNY: 'CNY',
-  DIRHAM: 'AED', AED: 'AED',
-  RIYAL: 'SAR', SAR: 'SAR',
-  INR: 'INR', BDT: 'BDT', CAD: 'CAD', AUD: 'AUD',
-  CHF: 'CHF', TRY: 'TRY', RUB: 'RUB', BRL: 'BRL',
-  ZAR: 'ZAR', SGD: 'SGD', HKD: 'HKD', KRW: 'KRW',
-  MXN: 'MXN', NZD: 'NZD', SEK: 'SEK', NOK: 'NOK', DKK: 'DKK',
+  // South Asia
+  RS: 'PKR', RUPEE: 'PKR', RUPEES: 'PKR', RUPIA: 'PKR',
+  INR: 'INR', INRUPEE: 'INR', // "inr" already handled by ISO fallback
+  TAKA: 'BDT', TK: 'BDT',
+  NPR: 'NPR', LKR: 'LKR',
+  // Western
+  DOLLAR: 'USD', DOLLARS: 'USD', BUCK: 'USD', BUCKS: 'USD',
+  EURO: 'EUR', EUROS: 'EUR',
+  POUND: 'GBP', POUNDS: 'GBP', STERLING: 'GBP', QUID: 'GBP',
+  FRANC: 'CHF', FRANCS: 'CHF',
+  // East Asia
+  YEN: 'JPY',
+  YUAN: 'CNY', RMB: 'CNY', RENMINBI: 'CNY',
+  WON: 'KRW',
+  // Middle East
+  DIRHAM: 'AED', DIRHAMS: 'AED',
+  RIYAL: 'SAR', RIYALS: 'SAR', SR: 'SAR',
+  DINAR: 'KWD', KD: 'KWD',
+  SHEKEL: 'ILS', SHEKELS: 'ILS',
+  LIRA: 'TRY', LIRAS: 'TRY', TL: 'TRY',
+  // Other regions
+  PESO: 'MXN', PESOS: 'MXN',
+  REAL: 'BRL', REAIS: 'BRL', BRL: 'BRL',
+  RAND: 'ZAR',
+  RUBLE: 'RUB', RUBLES: 'RUB',
+  KRONA: 'SEK', KRONE: 'NOK', KRONER: 'DKK',
+  // Crypto (not supported by fiat FX API, but map for future)
+  BITCOIN: 'BTC', BTC: 'BTC', ETHEREUM: 'ETH', ETH: 'ETH',
+  // Canada/Aus/NZ dollar synonyms
+  CAD: 'CAD', LOONIE: 'CAD',
+  AUD: 'AUD', AUSSIE: 'AUD',
+  NZD: 'NZD', KIWI: 'NZD',
 };
+
+/** Resolve any user-typed token to a currency code the API supports. */
+function resolveCurrency(token: string): string | null {
+  const upper = token.toUpperCase();
+  // Direct ISO code returned by API (covers ~160 codes automatically).
+  if (usdRates[upper]) return upper;
+  // Nickname / alias lookup.
+  const alias = CURRENCY_ALIASES[upper];
+  if (alias && usdRates[alias]) return alias;
+  return null;
+}
 
 let mathInstance: MathJsInstance | null = null;
 function getMath(): MathJsInstance {
@@ -136,8 +170,8 @@ function tryCurrency(expr: string): string | null {
   if (!m) return null;
   const amount = parseFloat(m[1].replace(/,/g, ''));
   if (!isFinite(amount)) return null;
-  const from = CURRENCY_ALIASES[m[2].toUpperCase()];
-  const to = CURRENCY_ALIASES[m[3].toUpperCase()];
+  const from = resolveCurrency(m[2]);
+  const to = resolveCurrency(m[3]);
   if (!from || !to) return null;
   const fromRate = usdRates[from];
   const toRate = usdRates[to];
