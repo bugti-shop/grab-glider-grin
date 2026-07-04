@@ -451,6 +451,68 @@ export function tryMarkdownInlineShortcut(char: string, root: HTMLElement | null
 }
 
 /**
+ * Mobile IME safety net for inline markdown. Runs on every `input` event
+ * (after the character lands). If the text node immediately before the caret
+ * ends with a complete `**X**`, `*X*`, `_X_`, `` `X` ``, `~~X~~`, or `==X==`
+ * pair, replace it with the wrapped element in place. Idempotent and
+ * cancel-free — works even when `beforeinput` isn't cancelable (Android/iOS
+ * composition, autocorrect, swipe-typing).
+ */
+export function tryMarkdownInlinePostInput(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  if (isInsideCode(root)) return false;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer;
+  if (node.nodeType !== 3) return false;
+  const textNode = node as Text;
+  const caret = range.startOffset;
+  const before = textNode.data.slice(0, caret);
+  if (before.length < 3) return false;
+
+  // Try in order of specificity so `**` beats `*` and `~~` beats `~`.
+  // Each regex captures the whole pair ending at the caret; look-behind avoids
+  // matching mid-word markers (e.g. `a*b*c` shouldn't convert on the 2nd `*`).
+  const patterns: Array<{ re: RegExp; token: string; tag: 'strong' | 'em' | 'code' | 'del' | 'mark' }> = [
+    { re: /(^|[^*])(\*\*([^*\s][^*]*[^*\s]|[^*\s])\*\*)$/, token: '**', tag: 'strong' },
+    { re: /(^|[^~])(~~([^~\s][^~]*[^~\s]|[^~\s])~~)$/, token: '~~', tag: 'del' },
+    { re: /(^|[^=])(==([^=\s][^=]*[^=\s]|[^=\s])==)$/, token: '==', tag: 'mark' },
+    { re: /(^|[^*\w])(\*([^*\s][^*]*[^*\s]|[^*\s])\*)$/, token: '*', tag: 'em' },
+    { re: /(^|[^_\w])(_([^_\s][^_]*[^_\s]|[^_\s])_)$/, token: '_', tag: 'em' },
+    { re: /(^|[^`])(`([^`\s][^`]*[^`\s]|[^`\s])`)$/, token: '`', tag: 'code' },
+  ];
+
+  for (const { re, tag } of patterns) {
+    const m = before.match(re);
+    if (!m) continue;
+    const full = m[2];
+    const inner = m[3];
+    if (!inner) continue;
+    const startDelete = before.length - full.length;
+
+    const parent = textNode.parentNode;
+    if (!parent) return false;
+    const wrap = document.createElement(tag);
+    wrap.textContent = inner;
+
+    const remainingAfter = textNode.data.slice(caret);
+    textNode.data = textNode.data.slice(0, startDelete);
+    parent.insertBefore(wrap, textNode.nextSibling);
+    const trailing = document.createTextNode('\u200B' + remainingAfter);
+    parent.insertBefore(trailing, wrap.nextSibling);
+
+    const newRange = document.createRange();
+    newRange.setStart(trailing, 1);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+    return true;
+  }
+  return false;
+}
+
+/**
  * Handle `)` keypress: convert `[text](url)` → link and `![alt](url)` → image
  * when the caret sits right after the matching pattern in a text node.
  * Returns true if a conversion happened.

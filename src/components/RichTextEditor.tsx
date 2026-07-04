@@ -56,6 +56,7 @@ import {
   tryMarkdownCompletedBlockShortcut,
   tryMarkdownEnterShortcut,
   tryMarkdownInlineShortcut,
+  tryMarkdownInlinePostInput,
   tryMarkdownLinkOrImageShortcut,
   tryMarkdownTableShortcut,
   tryMarkdownPipeTableEnter,
@@ -1284,6 +1285,12 @@ export const RichTextEditor = ({
           // Safety net for mobile/IME/autocomplete paths that miss keydown or
           // batch `# Heading` into one input event: convert after the text lands.
           if (tryMarkdownCompletedBlockShortcut(editorRef.current)) {
+            hydrateSynced();
+          }
+          // Mobile IME safety net for **bold**, *italic*, _italic_, `code`, ~~strike~~.
+          // beforeinput isn't cancelable during composition on Android/iOS, so we
+          // also scan after the character lands.
+          if (tryMarkdownInlinePostInput(editorRef.current)) {
             hydrateSynced();
           }
         }
