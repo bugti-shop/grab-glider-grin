@@ -442,7 +442,18 @@ class TourManagerImpl {
           resolve(el);
         } else if (Date.now() - started > timeoutMs) {
           observer.disconnect();
+        } else if (Date.now() - started > timeoutMs) {
+          observer.disconnect();
           resolve(null);
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      // Absolute timeout in case DOM never changes.
+      setTimeout(() => {
+        observer.disconnect();
+        resolve(this.getVisibleElement(selector));
+      }, timeoutMs);
+    });
   }
 
   /**
@@ -461,23 +472,11 @@ class TourManagerImpl {
       '[data-vaul-drawer][data-state="open"]',
     );
     for (const w of Array.from(openWrappers)) {
-      // If the tour's target lives inside this overlay, it's the tour-required
-      // sheet — leave it alone.
       if (w.querySelector(targetSelector)) continue;
-      // Also skip driver.js's own popover container.
       if (w.closest('.driver-popover')) continue;
       return true;
     }
     return false;
-  }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-      // Absolute timeout in case DOM never changes.
-      setTimeout(() => {
-        observer.disconnect();
-        resolve(this.getVisibleElement(selector));
-      }, timeoutMs);
-    });
   }
 
   private getVisibleElement(selector: string): Element | null {
