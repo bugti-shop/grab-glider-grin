@@ -493,6 +493,94 @@ export const cancelExtraReminder = async (taskId: string): Promise<void> => {
   }
 };
 
+// ---------- Multi-item extra reminders (Pro) ----------
+
+const scheduleExtraItemWebTimer = (
+  taskId: string,
+  taskText: string,
+  itemId: string,
+  reminderTime: Date,
+  recurring: ExtraReminderRecurring,
+  daysOfWeek?: number[]
+) => {
+  const key = extraItemKey(taskId, itemId);
+  const existing = extraTimers.get(key);
+  if (existing) clearTimeout(existing);
+  const delay = reminderTime.getTime() - Date.now();
+  if (delay <= 0) return;
+  const timer = setTimeout(async () => {
+    extraTimers.delete(key);
+    await fireExtraReminderEffects(taskId, taskText, reminderTime);
+    if (recurring !== 'none') {
+      const seed = advanceOnce(reminderTime, recurring);
+      const next = computeNextExtraReminder(seed, recurring, new Date(), daysOfWeek);
+      if (next) {
+        scheduleExtraItemWebTimer(taskId, taskText, itemId, next, recurring, daysOfWeek);
+      }
+    }
+  }, delay);
+  extraTimers.set(key, timer);
+};
+
+/**
+ * Schedule a list of extra reminders for a single task. Cancels all previous
+ * item-level timers/notifications for the task first. The legacy single
+ * `scheduleExtraReminder` remains for backward compatibility with the first
+ * item (mirrored into legacy task fields).
+ */
+export const scheduleExtraRemindersList = async (
+  taskId: string,
+  taskText: string,
+  items: Array<{ id: string; time: Date; recurring: ExtraReminderRecurring; daysOfWeek?: number[] }>
+): Promise<void> => {
+  await cancelAllExtraReminders(taskId);
+  for (const it of items) {
+    const first = computeNextExtraReminder(new Date(it.time), it.recurring, new Date(), it.daysOfWeek);
+    if (!first) continue;
+    scheduleExtraItemWebTimer(taskId, taskText, it.id, first, it.recurring, it.daysOfWeek);
+    if (Capacitor.isNativePlatform()) {
+      const notifId = hashStringToId(extraItemKey(taskId, it.id));
+      try {
+        await LocalNotifications.schedule({
+          notifications: [{
+            id: notifId,
+            title: '⏰ Extra Reminder',
+            body: taskText,
+            schedule: { at: first, allowWhileIdle: true },
+            channelId: 'task-reminders',
+            extra: { type: 'extra-reminder', taskId, itemId: it.id },
+          }],
+        });
+      } catch (e) {
+        console.warn('[Reminder] Failed to schedule native extra reminder item:', e);
+      }
+    }
+  }
+};
+
+/**
+ * Cancel every scheduled extra reminder (legacy + multi-item) for a task.
+ */
+export const cancelAllExtraReminders = async (taskId: string): Promise<void> => {
+  await cancelExtraReminder(taskId);
+  const prefix = `extra-${taskId}-`;
+  const toCancelIds: number[] = [];
+  for (const key of Array.from(extraTimers.keys())) {
+    if (!key.startsWith(prefix)) continue;
+    const t = extraTimers.get(key);
+    if (t) clearTimeout(t);
+    extraTimers.delete(key);
+    toCancelIds.push(hashStringToId(key));
+  }
+  if (Capacitor.isNativePlatform() && toCancelIds.length > 0) {
+    try {
+      await LocalNotifications.cancel({ notifications: toCancelIds.map((id) => ({ id })) });
+    } catch (e) {
+      console.warn('[Reminder] Cancel multi extra reminders failed:', e);
+    }
+  }
+};
+
 const restoreExtraReminderTimers = async (): Promise<void> => {
   try {
     const { loadTodoItems } = await import('@/utils/todoItemsStorage');
