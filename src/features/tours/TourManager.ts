@@ -268,6 +268,7 @@ class TourManagerImpl {
     if (!nextId) return;
     // Give the just-completed action's UI a moment to render (e.g. task row
     // appears in the list) before highlighting the next feature.
+    this.closeTransientUi();
     setTimeout(() => this.startTour(nextId, { chain: true }), 700);
   }
 
@@ -370,6 +371,11 @@ class TourManagerImpl {
   private closeTransientUi() {
     if (typeof window === 'undefined') return;
 
+    const dispatchCloseEvents = () => {
+      try { window.dispatchEvent(new CustomEvent('flowist-tour:close-overlays')); } catch {}
+      try { window.dispatchEvent(new CustomEvent('flowist-tour:close-task-overlays')); } catch {}
+    };
+
     const fireEscapeOn = (target: EventTarget | null) => {
       if (!target) return;
       const opts: KeyboardEventInit = {
@@ -381,6 +387,8 @@ class TourManagerImpl {
     };
 
     const pulse = () => {
+      dispatchCloseEvents();
+
       // Radix DismissableLayer listens on `document`; some primitives on `window`.
       // Also fire on the active element (usually a focused button inside the sheet)
       // so the event isn't swallowed by focus trapping.
@@ -430,10 +438,6 @@ class TourManagerImpl {
     setTimeout(pulse, 80);
     setTimeout(pulse, 180);
     setTimeout(pulse, 320);
-
-    try {
-      window.dispatchEvent(new CustomEvent('flowist-tour:close-overlays'));
-    } catch {}
   }
 }
 

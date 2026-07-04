@@ -208,6 +208,33 @@ export const TaskDetailPage = ({
     priority: 'sheet',
   });
 
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    const closeForTour = () => {
+      setShowSubtaskInput(false);
+      setIsSubtaskInputSheetOpen(false);
+      setShowDateTimePage(false);
+      setShowDependencySheet(false);
+      setShowExtraReminderSheet(false);
+      setShowSubtaskDetailSheet(false);
+      setSelectedSubtask(null);
+      setPreviewAttachment(null);
+      setShowPomodoro(false);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setPlayingVoiceId(null);
+      onClose();
+    };
+    window.addEventListener('flowist-tour:close-overlays', closeForTour);
+    window.addEventListener('flowist-tour:close-task-overlays', closeForTour);
+    return () => {
+      window.removeEventListener('flowist-tour:close-overlays', closeForTour);
+      window.removeEventListener('flowist-tour:close-task-overlays', closeForTour);
+    };
+  }, [isOpen, onClose]);
+
   
 
   if (!isOpen || !task) return null;
