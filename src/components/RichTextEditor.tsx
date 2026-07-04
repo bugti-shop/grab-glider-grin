@@ -175,16 +175,15 @@ export const RichTextEditor = ({
   // and `keydown` observe the same Space/Enter (some IMEs and desktops emit
   // both). Reset on the next macrotask.
   const slashLineFiringRef = useRef(false);
-  const runSlashLineOnce = useCallback((root: HTMLElement) => {
+  const runSlashLineOnce = (root: HTMLElement) => {
     if (slashLineFiringRef.current) return;
     slashLineFiringRef.current = true;
     void trySlashLineShortcut(root).then((ok) => {
       if (ok) handleInput();
     }).finally(() => {
-      // Release on next tick so the paired handler on the same key event is skipped.
       setTimeout(() => { slashLineFiringRef.current = false; }, 0);
     });
-  }, []);
+  };
   const savedRangeRef = useRef<Range | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
   const [history, setHistory] = useState<string[]>([content]);
