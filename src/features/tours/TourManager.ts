@@ -58,11 +58,20 @@ class TourManagerImpl {
 
     if (opts.auto) this.autoChainCount += 1;
 
+    // Chained / auto-fired tours must start from a clean slate — close any
+    // sheets, dropdowns, popovers, or dialogs the previous tour left open so
+    // the next feature isn't hidden behind a stale overlay.
+    if (opts.chain || opts.auto) {
+      this.closeTransientUi();
+      await this.wait(180);
+    }
+
     // Navigate to the correct screen first, then wait for the first target.
     if (this.navigate && typeof window !== 'undefined' && window.location.pathname !== tour.route) {
       this.navigate(tour.route);
       await this.wait(250);
     }
+
 
     // Optional pre-actions: click one or more triggers (e.g. open task detail,
     // then open its ⋮ menu) so the real target becomes visible before highlight.
@@ -119,7 +128,10 @@ class TourManagerImpl {
       if (opts.advanceChain && finishedId) {
         const nextId = nextOnboardingTourId(finishedId);
         if (nextId) {
-          setTimeout(() => this.startTour(nextId, { chain: true }), 250);
+          // Close whatever sheet/menu the previous tour opened before we
+          // navigate to and highlight the next feature.
+          this.closeTransientUi();
+          setTimeout(() => this.startTour(nextId, { chain: true }), 400);
           return;
         }
       }
@@ -341,6 +353,38 @@ class TourManagerImpl {
     try { el.click(); } catch {}
   }
 
+
+  /**
+   * Close any Radix / app overlays a previous tour may have left mounted
+   * (Sheet, Dialog, DropdownMenu, Popover, Drawer, command menu, etc.) so the
+   * next chained tour begins on a clean screen.
+   *
+   * Strategy:
+   *   1. Dispatch Escape at document — Radix primitives all listen for it and
+   *      call their onOpenChange(false), which cleanly unmounts state.
+   *   2. Fire a custom event any app-level sheet can subscribe to as a
+   *      belt-and-braces close signal.
+   *   3. Repeat a couple of times to catch nested overlays (dropdown inside a
+   *      sheet inside a dialog).
+   */
+  private closeTransientUi() {
+    if (typeof window === 'undefined') return;
+    const fireEscape = () => {
+      const opts: KeyboardEventInit = {
+        key: 'Escape', code: 'Escape', keyCode: 27, which: 27,
+        bubbles: true, cancelable: true, composed: true,
+      };
+      try { document.body.dispatchEvent(new KeyboardEvent('keydown', opts)); } catch {}
+      try { document.body.dispatchEvent(new KeyboardEvent('keyup', opts)); } catch {}
+    };
+    // Nested overlays: Radix closes one layer per Escape, so pulse a few times.
+    fireEscape();
+    setTimeout(fireEscape, 60);
+    setTimeout(fireEscape, 140);
+    try {
+      window.dispatchEvent(new CustomEvent('flowist-tour:close-overlays'));
+    } catch {}
+  }
 }
 
 export const TourManager = new TourManagerImpl();
