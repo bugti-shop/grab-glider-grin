@@ -913,6 +913,64 @@ export const RICH_TEXT_EDITOR_STYLES = `
     color: hsl(var(--primary));
     border-bottom-color: hsl(var(--primary));
   }
+
+  /* ── Unit converter help card ── */
+  .rt-unit-help {
+    display: block;
+    margin: 12px 0;
+    padding: 14px 18px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 12px;
+    background: hsl(var(--muted) / 0.4);
+    font-size: 13px;
+  }
+  .rt-unit-help-title {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: hsl(var(--muted-foreground));
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+  .rt-unit-help ul { list-style: none; padding: 0; margin: 0 0 10px 0; }
+  .rt-unit-help li { padding: 3px 0; }
+  .rt-unit-help code {
+    background: hsl(var(--background));
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+  }
+  .rt-unit-help-foot {
+    color: hsl(var(--muted-foreground));
+    font-size: 11px;
+    border-top: 1px dashed hsl(var(--border));
+    padding-top: 8px;
+  }
+  .rt-unit-help kbd {
+    background: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+    border-radius: 3px;
+    padding: 0 4px;
+    font-family: inherit;
+    font-size: 10px;
+  }
+  .rt-unit-error {
+    display: block;
+    margin: 8px 0;
+    padding: 8px 12px;
+    border-left: 3px solid hsl(var(--destructive));
+    background: hsl(var(--destructive) / 0.08);
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .rt-unit-error code {
+    background: hsl(var(--background));
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+  }
 `;
 
 
