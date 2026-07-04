@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
-import { CATEGORY_LABELS, FEATURE_TOURS, type TourCategory } from '@/features/tours/tourRegistry';
+import { CATEGORY_LABELS, FEATURE_TOURS, ONBOARDING_CHAIN, type TourCategory } from '@/features/tours/tourRegistry';
 import { useFeatureTour } from '@/features/tours/useFeatureTour';
+import { resetTour } from '@/features/tours/TourStateStore';
 
 interface FeatureGuideModalProps {
   isOpen: boolean;
