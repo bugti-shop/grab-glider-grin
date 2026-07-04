@@ -457,6 +457,7 @@ const AppRoutes = () => {
     <BrowserRouter>
       <ShareIntentBridge />
       <QuickAddSyncBridge />
+      <AuthDeepLinkBridge />
       <NavigationBackProvider>
         <NavigationLoader />
         <DashboardTracker />
