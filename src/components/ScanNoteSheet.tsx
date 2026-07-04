@@ -450,7 +450,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
         isOpen={showCamera}
         onClose={() => {
           setShowCamera(false);
-          if (!imageDataUrl && !isExtracting && !hasRun) onClose();
+          if (!capturedRef.current && !imageDataUrl && !isExtracting && !hasRun) onClose();
         }}
         title=""
         initialMode="note"
