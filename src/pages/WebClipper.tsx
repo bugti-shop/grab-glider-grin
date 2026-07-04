@@ -43,6 +43,23 @@ const inFlightClipKeys = new Set<string>();
 const clipKey = (mode: string, url: string, attachment: string, shareId: string) =>
   `${mode}::${(url || '').trim().toLowerCase()}::${(attachment || '').trim().toLowerCase()}::${shareId || 'manual'}`;
 
+const stripSnapshotArtifacts = (html: string): string => {
+  if (!html || typeof window === 'undefined') return html;
+  try {
+    const doc = new DOMParser().parseFromString(`<div id="__clip-root">${html}</div>`, 'text/html');
+    const root = doc.getElementById('__clip-root');
+    if (!root) return html;
+    root
+      .querySelectorAll(
+        '.flowist-web-clip-fullpage, [data-role="fullpage-snapshot"], [data-role="fullpage-open"], [data-role="fullpage-download"], iframe.flowist-web-clip-fullpage-frame',
+      )
+      .forEach((node) => node.remove());
+    return root.innerHTML;
+  } catch {
+    return html;
+  }
+};
+
 const WebClipper = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
