@@ -1701,6 +1701,71 @@ export const RichTextEditor = ({
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Toolbar keyboard shortcuts (Ctrl on Win/Linux, Cmd on macOS).
+    // Mirrors the WordToolbar so every action is one keystroke away.
+    // ─────────────────────────────────────────────────────────────
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && !slashMenu.open && !mentionMenu.open) {
+      const k = e.key.toLowerCase();
+      const shift = e.shiftKey;
+      const alt = e.altKey;
+
+      // Bold / Italic / Underline — browser handles natively, but we still call
+      // our handler so activeStates + history update in sync.
+      if (!shift && !alt && k === 'b') { e.preventDefault(); handleBold(); handleInput(); return; }
+      if (!shift && !alt && k === 'i') { e.preventDefault(); handleItalic(); handleInput(); return; }
+      if (!shift && !alt && k === 'u') { e.preventDefault(); handleUnderline(); handleInput(); return; }
+
+      // Strikethrough:  Ctrl+Shift+X (Notion) or Ctrl+Shift+5 (Docs)
+      if (shift && (k === 'x' || k === '5')) { e.preventDefault(); handleStrikethrough(); handleInput(); return; }
+
+      // Highlight:  Ctrl+Shift+H (yellow default)
+      if (shift && k === 'h') { e.preventDefault(); handleHighlight('#FEF3C7'); handleInput(); return; }
+
+      // Lists
+      if (shift && k === '8') { e.preventDefault(); handleBulletList(); handleInput(); return; }   // Ctrl+Shift+8
+      if (shift && k === '7') { e.preventDefault(); handleNumberedList(); handleInput(); return; } // Ctrl+Shift+7
+      if (shift && k === '9') { e.preventDefault(); handleChecklist(); handleInput(); return; }    // Ctrl+Shift+9
+
+      // Headings: Ctrl+Alt+1..3, Ctrl+Alt+0 = normal paragraph
+      if (alt && k === '1') { e.preventDefault(); handleHeading(1); handleInput(); return; }
+      if (alt && k === '2') { e.preventDefault(); handleHeading(2); handleInput(); return; }
+      if (alt && k === '3') { e.preventDefault(); handleHeading(3); handleInput(); return; }
+      if (alt && k === '0') { e.preventDefault(); handleHeading('p'); handleInput(); return; }
+
+      // Alignment: Ctrl+Shift+L/E/R/J
+      if (shift && k === 'l') { e.preventDefault(); handleAlignment('left'); handleInput(); return; }
+      if (shift && k === 'e') { e.preventDefault(); handleAlignment('center'); handleInput(); return; }
+      if (shift && k === 'r') { e.preventDefault(); handleAlignment('right'); handleInput(); return; }
+      if (shift && k === 'j') { e.preventDefault(); handleAlignment('justify'); handleInput(); return; }
+
+      // Indent / Outdent — Tab handled elsewhere; also Ctrl+] / Ctrl+[
+      if (!shift && !alt && k === ']') { e.preventDefault(); handleIndent(); handleInput(); return; }
+      if (!shift && !alt && k === '[') { e.preventDefault(); handleOutdent(); handleInput(); return; }
+
+      // Block toggles
+      if (shift && k === 'q') { e.preventDefault(); handleBlockquote(); handleInput(); return; }   // Blockquote
+      if (shift && k === 'c') { e.preventDefault(); handleCodeBlock(); handleInput(); return; }    // Code block
+      if (shift && k === '-') { e.preventDefault(); handleHorizontalRule(); handleInput(); return; } // Horizontal rule
+
+      // Sub / Superscript
+      if (shift && k === ',') { e.preventDefault(); handleSubscript(); handleInput(); return; }   // Ctrl+Shift+,
+      if (shift && k === '.') { e.preventDefault(); handleSuperscript(); handleInput(); return; } // Ctrl+Shift+.
+
+      // Undo / Redo (Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z) — usually native, but wire
+      // so our history stack stays consistent.
+      if (!shift && !alt && k === 'z') { e.preventDefault(); handleUndo(); return; }
+      if (!alt && (k === 'y' || (shift && k === 'z'))) { e.preventDefault(); handleRedo(); return; }
+
+      // Zoom (Ctrl+= / Ctrl+- / Ctrl+0)
+      if (!shift && !alt && (k === '=' || k === '+')) { e.preventDefault(); setZoom((z) => Math.min(200, z + 10)); return; }
+      if (!shift && !alt && k === '-') { e.preventDefault(); setZoom((z) => Math.max(50, z - 10)); return; }
+      if (!shift && !alt && k === '0') { e.preventDefault(); setZoom(100); return; }
+    }
+
+
+
+    // ─────────────────────────────────────────────────────────────
     // Markdown auto-format shortcuts (Notion/Bear-style).
     // Block conversions fire on Space when the line contains just a token:
     //   #, ##, ### → headings   -, *, + → bullet   1. → numbered
