@@ -48,8 +48,9 @@ const SHIFT = isMac ? '⇧' : 'Shift';
 
 function buildSections(): Section[] {
   return [
-
+    {
       title: 'Markdown block shortcuts',
+
       description: 'Type these tokens at the start of a line, then press Space.',
       rows: [
         { trigger: '# ', result: 'Heading 1' },
