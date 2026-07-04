@@ -43,12 +43,30 @@ class TourManagerImpl {
     const tour = getTour(tourId);
     if (!tour) return;
 
+    // A previous driver instance can occasionally remain referenced after its
+    // DOM has already been removed. That made every later tutorial request sit
+    // in the queue forever. Clear that stale state before deciding to queue.
+    if (this.activeDriver && typeof document !== 'undefined') {
+      const driverStillMounted = !!document.querySelector('.driver-popover, .driver-overlay');
+      if (!driverStillMounted) this.clearActiveTourState();
+    }
+
     if (!opts.force) {
       if (await isDismissedForever(tourId)) return;
       if ((opts.auto || opts.chain) && (await hasSeenTour(tourId))) return;
       // Chain runs are exempt from the auto-chain cap — the entire onboarding
       // sequence is intentional. Cap only unrelated auto-fires.
       if (opts.auto && !opts.chain && this.autoChainCount >= 1) return;
+    }
+
+    if (this.activeDriver) {
+      if (opts.force) {
+        try { this.activeDriver.destroy(); } catch {}
+        this.clearActiveTourState();
+      } else {
+        if (!this.queue.includes(tourId)) this.queue.push(tourId);
+        return;
+      }
     }
 
     if (this.activeDriver) {
@@ -333,6 +351,13 @@ class TourManagerImpl {
 
   private wait(ms: number) {
     return new Promise<void>((resolve) => setTimeout(resolve, ms));
+  }
+
+  private clearActiveTourState() {
+    this.activeDriver = null;
+    this.activeTourId = null;
+    try { delete document.body.dataset.tourActive; } catch {}
+    emitTourActiveChange(false);
   }
 
   /**
