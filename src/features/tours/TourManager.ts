@@ -7,7 +7,7 @@
 import { driver, type Driver, type DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
-import { getTour, type FeatureTour, type FeatureTourStep } from './tourRegistry';
+import { getTour, nextOnboardingTourId, type FeatureTour, type FeatureTourStep } from './tourRegistry';
 import {
   hasSeenTour,
   isDismissedForever,
@@ -39,15 +39,16 @@ class TourManagerImpl {
   }
 
   /** Start a tour immediately (or queue it if another one is running). */
-  async startTour(tourId: string, opts: { force?: boolean; auto?: boolean } = {}) {
+  async startTour(tourId: string, opts: { force?: boolean; auto?: boolean; chain?: boolean } = {}) {
     const tour = getTour(tourId);
     if (!tour) return;
 
     if (!opts.force) {
       if (await isDismissedForever(tourId)) return;
-      if (opts.auto && (await hasSeenTour(tourId))) return;
-      // Prevent noisy auto-chains: cap at 1 auto-tour per session boot.
-      if (opts.auto && this.autoChainCount >= 1) return;
+      if ((opts.auto || opts.chain) && (await hasSeenTour(tourId))) return;
+      // Chain runs are exempt from the auto-chain cap — the entire onboarding
+      // sequence is intentional. Cap only unrelated auto-fires.
+      if (opts.auto && !opts.chain && this.autoChainCount >= 1) return;
     }
 
     if (this.activeDriver) {
@@ -99,7 +100,12 @@ class TourManagerImpl {
     let currentIndex = 0;
     let currentDrv: Driver | null = null;
 
-    const finalize = async () => {
+    // If this tour is part of the onboarding chain, teach the popover that
+    // "Next" means "advance to the next feature" rather than "done".
+    const chainedNextId = nextOnboardingTourId(tourId);
+    const inChain = !!chainedNextId;
+
+    const finalize = async (opts: { advanceChain?: boolean } = {}) => {
       try { delete document.body.dataset.tourActive; } catch {}
       emitTourActiveChange(false);
       this.activeDriver = null;
@@ -107,12 +113,26 @@ class TourManagerImpl {
       const finishedId = this.activeTourId;
       this.activeTourId = null;
       if (finishedId) await markTourSeen(finishedId);
+      // Auto-advance the onboarding chain when a chained tour completes
+      // (Next click or action-completion path). We do NOT auto-advance when
+      // the user explicitly dismissed via the ✕ / overlay tap.
+      if (opts.advanceChain && finishedId) {
+        const nextId = nextOnboardingTourId(finishedId);
+        if (nextId) {
+          setTimeout(() => this.startTour(nextId, { chain: true }), 250);
+          return;
+        }
+      }
       this.drainQueue();
     };
 
     const buildDriver = (stepIndex: number): Driver => {
       const step = tour.steps[stepIndex];
       const isLast = stepIndex === tour.steps.length - 1;
+      // Popover button label: use "Next" whenever there's more to walk the
+      // user through — either more steps in this tour, or another chained
+      // tour queued up after it. "Got it" only appears at the very end.
+      const nextLabel = !isLast || inChain ? 'Next' : 'Got it';
       return driver({
         allowClose: true,
         overlayOpacity: 0.55,
@@ -121,9 +141,18 @@ class TourManagerImpl {
         smoothScroll: true,
         popoverClass: 'flowist-tour-popover',
         showButtons: ['next', 'close'],
-        nextBtnText: isLast ? 'Got it' : 'Next',
-        doneBtnText: 'Got it',
+        nextBtnText: nextLabel,
+        doneBtnText: nextLabel,
         steps: [this.toDriverStep(step)],
+        onNextClick: isLast
+          ? () => {
+              // Last step: mark done + advance onboarding chain if applicable.
+              suppressDestroy = true;
+              try { currentDrv?.destroy(); } catch {}
+              this.activeDriver = null;
+              void finalize({ advanceChain: inChain });
+            }
+          : undefined,
         onDestroyed: async () => {
           if (suppressDestroy) {
             suppressDestroy = false;
@@ -201,6 +230,35 @@ class TourManagerImpl {
     }
     if (!this.queue.includes(tourId)) this.queue.push(tourId);
   }
+
+  /**
+   * Advance the onboarding chain because the user just completed the action
+   * for `completedTourId` (e.g. added their first task). If that tour is
+   * currently visible, tear down its popover; then start the next chained
+   * tour with a small delay so the UI can settle first.
+   */
+  async advanceOnboardingChain(completedTourId: string) {
+    // Mark the completed tour as seen — even if it wasn't the active one, the
+    // user just performed the underlying action so they've clearly learned it.
+    try { await markTourSeen(completedTourId); } catch {}
+
+    // If a popover is currently pointing at this tour's target, kill it so
+    // the newly-created task/note/etc. isn't hidden behind the coach-mark.
+    if (this.activeDriver && this.activeTourId === completedTourId) {
+      try { this.activeDriver.destroy(); } catch {}
+      this.activeDriver = null;
+      this.activeTourId = null;
+      try { delete document.body.dataset.tourActive; } catch {}
+      emitTourActiveChange(false);
+    }
+
+    const nextId = nextOnboardingTourId(completedTourId);
+    if (!nextId) return;
+    // Give the just-completed action's UI a moment to render (e.g. task row
+    // appears in the list) before highlighting the next feature.
+    setTimeout(() => this.startTour(nextId, { chain: true }), 700);
+  }
+
 
   private drainQueue() {
     const next = this.queue.shift();

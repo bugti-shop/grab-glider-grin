@@ -206,21 +206,40 @@ export const FeatureGuideModal = ({ isOpen, onClose }: FeatureGuideModalProps) =
 /** Small header icon button that opens the Feature Guide. */
 export const FeatureGuideButton = ({ className }: { className?: string }) => {
   const [open, setOpen] = useState(false);
+  // Tracks whether THIS open was triggered by first-launch (so we know to
+  // kick off the onboarding chain when the user closes the sheet).
+  const [startChainOnClose, setStartChainOnClose] = useState(false);
 
   // Listen for global 'feature-guide:open' events so first-launch and milestone
   // code can pop the modal from anywhere without prop drilling.
   useEffect(() => {
-    const handler = () => setOpen(true);
+    const handler = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ startChainOnClose?: boolean }>).detail;
+      setStartChainOnClose(!!detail?.startChainOnClose);
+      setOpen(true);
+    };
     window.addEventListener('feature-guide:open', handler);
     return () => window.removeEventListener('feature-guide:open', handler);
   }, []);
+
+  const handleClose = () => {
+    setOpen(false);
+    if (startChainOnClose) {
+      setStartChainOnClose(false);
+      // Wait for the Dialog exit animation before highlighting the first
+      // feature — driver.js can't stage over Radix's fading overlay.
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('flowist-onboarding:start-chain'));
+      }, 320);
+    }
+  };
 
   return (
     <>
       <Button
         size="icon"
         variant="ghost"
-        onClick={() => setOpen(true)}
+        onClick={() => { setStartChainOnClose(false); setOpen(true); }}
         className={cn(
           'h-7 w-7 xs:h-8 xs:w-8 sm:h-9 sm:w-9 hover:bg-transparent active:bg-transparent touch-target',
           className,
@@ -230,9 +249,10 @@ export const FeatureGuideButton = ({ className }: { className?: string }) => {
       >
         <HelpCircle className="h-4 w-4 xs:h-5 xs:w-5" />
       </Button>
-      <FeatureGuideModal isOpen={open} onClose={() => setOpen(false)} />
+      <FeatureGuideModal isOpen={open} onClose={handleClose} />
     </>
   );
 };
+
 
 
