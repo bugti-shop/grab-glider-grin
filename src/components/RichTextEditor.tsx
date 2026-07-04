@@ -1740,8 +1740,8 @@ export const RichTextEditor = ({
       if (shift && k === 'j') { e.preventDefault(); handleAlignment('justify'); handleInput(); return; }
 
       // Indent / Outdent — Tab handled elsewhere; also Ctrl+] / Ctrl+[
-      if (!shift && !alt && k === ']') { e.preventDefault(); handleIndent(); handleInput(); return; }
-      if (!shift && !alt && k === '[') { e.preventDefault(); handleOutdent(); handleInput(); return; }
+      if (!shift && !alt && k === ']') { e.preventDefault(); document.execCommand('indent'); handleInput(); return; }
+      if (!shift && !alt && k === '[') { e.preventDefault(); document.execCommand('outdent'); handleInput(); return; }
 
       // Block toggles
       if (shift && k === 'q') { e.preventDefault(); handleBlockquote(); handleInput(); return; }   // Blockquote
