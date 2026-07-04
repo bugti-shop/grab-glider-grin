@@ -120,4 +120,31 @@ describe('Web Clipper inline content (no snapshot UI)', () => {
 
     document.body.removeChild(host);
   });
+
+  it('removes snapshot/download controls even when nested in fresh content before save', () => {
+    const host = document.createElement('div');
+    host.innerHTML = `
+      <section class="flowist-web-clip">
+        <div class="flowist-web-clip-body" data-role="body">
+          <p data-testid="real-inline-body">Full readable article text remains.</p>
+          <div>
+            <button type="button" data-role="fullpage-download">Download Captured HTML</button>
+            <button type="button" data-role="fullpage-open">Hide Article</button>
+            <iframe class="flowist-web-clip-fullpage-frame"></iframe>
+          </div>
+        </div>
+      </section>
+    `;
+    document.body.appendChild(host);
+
+    hydrateWebClipsIn(host);
+
+    expect(host.querySelector('[data-testid="real-inline-body"]')?.textContent).toMatch(/Full readable article text/);
+    expect(host.querySelectorAll('[data-role="fullpage-download"]')).toHaveLength(0);
+    expect(host.querySelectorAll('[data-role="fullpage-open"]')).toHaveLength(0);
+    expect(host.querySelectorAll('iframe.flowist-web-clip-fullpage-frame')).toHaveLength(0);
+    expect(host.textContent || '').not.toMatch(/Download Captured HTML|Hide Article/i);
+
+    document.body.removeChild(host);
+  });
 });

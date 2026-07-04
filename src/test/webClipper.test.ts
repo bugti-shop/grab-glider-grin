@@ -154,3 +154,17 @@ describe('webClipper.buildClipperUrl', () => {
     expect((parsed.get('content') || '').length).toBe(MAX_LENGTHS.content);
   });
 });
+
+describe('webClipper repeated shares', () => {
+  it('emits a unique share id for independent captures without changing the article URL', () => {
+    const first = buildClipperUrl({ url: 'https://example.com/story', mode: 'article', shareId: 'share-a' });
+    const second = buildClipperUrl({ url: 'https://example.com/story', mode: 'article', shareId: 'share-b' });
+    const a = new URLSearchParams(first.split('?')[1]);
+    const b = new URLSearchParams(second.split('?')[1]);
+
+    expect(a.get('url')).toBe('https://example.com/story');
+    expect(b.get('url')).toBe('https://example.com/story');
+    expect(a.get('shareId')).toBe('share-a');
+    expect(b.get('shareId')).toBe('share-b');
+  });
+});
