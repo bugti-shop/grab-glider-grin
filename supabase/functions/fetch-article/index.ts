@@ -1261,66 +1261,13 @@ Deno.serve(async (req) => {
 
 
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    let html = "";
-    let status = 0;
-    try {
-      const res = await safeFetch(target.toString(), {
-        signal: controller.signal,
-        headers: {
-          "user-agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36 Flowist-Clipper/1.0",
-          "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "accept-language": "en-US,en;q=0.9",
-        },
-      });
-      if (!res) {
-        clearTimeout(timer);
-        return new Response(
-          JSON.stringify({ error: "blocked: target host is not reachable or points at a private/internal address", code: "blocked_host" }),
-          { status: 400, headers: { ...corsHeaders, "content-type": "application/json" } },
-        );
-      }
-      status = res.status;
-      if (!res.ok) {
-
-        const fallback = await fetchJinaFallback(target);
-        if (fallback) {
-          return new Response(JSON.stringify(fallback), {
-            status: 200,
-            headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "public, max-age=300" },
-          });
-        }
-        const code =
-          status === 401 || status === 403 ? "paywall" :
-          status === 404 ? "not_found" :
-          status === 429 ? "rate_limited" :
-          "upstream_error";
-        return new Response(JSON.stringify({ error: `fetch failed ${status}`, code, status }), {
-          status: 502,
-          headers: { ...corsHeaders, "content-type": "application/json" },
-        });
-      }
-      const buf = await res.arrayBuffer();
-      if (buf.byteLength > MAX_HTML_BYTES) {
-        return new Response(JSON.stringify({ error: "page too large", code: "too_large" }), {
-          status: 413,
-          headers: { ...corsHeaders, "content-type": "application/json" },
-        });
-      }
-      html = new TextDecoder("utf-8").decode(buf);
-    } catch (err) {
-      if ((err as Error).name === "AbortError") {
-        return new Response(JSON.stringify({ error: "fetch timed out", code: "timeout" }), {
-          status: 504,
-          headers: { ...corsHeaders, "content-type": "application/json" },
-        });
-      }
-      throw err;
-    } finally {
-      clearTimeout(timer);
-    }
+    // Initial upstream fetch — use the "real browser" UA first. Subsequent
+    // re-fetches (see the extraction retry loop below) rotate through
+    // UA_VARIANTS so bot-friendly or mobile-rendered variants can rescue
+    // meta-only / half-article responses.
+    const initialFetch = await fetchTargetHtml(target, UA_VARIANTS[0]);
+    if (initialFetch.terminal) return initialFetch.terminal;
+    let html = initialFetch.html || "";
 
     const { document } = parseHTML(html);
     const base = target.toString();
