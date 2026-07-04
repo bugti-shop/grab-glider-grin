@@ -31,7 +31,6 @@ import { useWebClipperQuota } from '@/hooks/useWebClipperQuota';
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
   { id: 'article',   icon: FileText, titleKey: 'webClipper.modeArticle',   descKey: 'webClipper.modeArticleDesc',   fallbackTitle: 'Article',     fallbackDesc: 'Save the readable article body' },
   { id: 'selection', icon: Quote,    titleKey: 'webClipper.modeSelection', descKey: 'webClipper.modeSelectionDesc', fallbackTitle: 'Selection',   fallbackDesc: 'Save only the highlighted text' },
-  { id: 'fullpage',  icon: Globe,    titleKey: 'webClipper.modeFullPage',  descKey: 'webClipper.modeFullPageDesc',  fallbackTitle: 'Full page',   fallbackDesc: 'Save the entire page content' },
 ];
 
 type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
@@ -135,8 +134,9 @@ const WebClipper = () => {
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.hash || ''}`);
   };
 
-  // Explicit mode OR an attachment payload auto-prepares immediately (no picker).
-  const explicitMode = searchParams.has('mode') || !!attachment;
+  // URL shares, explicit modes, and attachments auto-prepare immediately.
+  // The picker is only for rare text-only/manual entry cases.
+  const explicitMode = searchParams.has('mode') || !!attachment || !!url;
   const [mode, setMode] = useState<ClipMode>(initialMode);
   const [picking, setPicking] = useState(!explicitMode);
   const payloadSignature = searchParams.toString();
