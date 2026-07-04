@@ -139,8 +139,12 @@ function tryCurrency(expr: string): string | null {
   const from = CURRENCY_ALIASES[m[2].toUpperCase()];
   const to = CURRENCY_ALIASES[m[3].toUpperCase()];
   if (!from || !to) return null;
-  const usd = amount * CURRENCY_TO_USD[from];
-  const out = usd / CURRENCY_TO_USD[to];
+  const fromRate = usdRates[from];
+  const toRate = usdRates[to];
+  if (!fromRate || !toRate) return null;
+  // usdRates[X] = how many X per 1 USD.
+  const usd = amount / fromRate;
+  const out = usd * toRate;
   const rounded = Math.round(out * 100) / 100;
   return `≈ ${rounded.toLocaleString()} ${to}`;
 }
