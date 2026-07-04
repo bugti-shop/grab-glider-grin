@@ -296,14 +296,29 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
               onChange={(e) => setEmail(e.target.value)}
               className="h-12 rounded-xl"
             />
-            <Input
-              type="password"
-              autoComplete="new-password"
-              placeholder={t('emailAuth.passwordPlaceholder', 'Password (8+ characters)')}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-12 rounded-xl"
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                placeholder={t('emailAuth.passwordPlaceholder', 'Password (8+ characters)')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-12 rounded-xl pr-11"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={
+                  showPassword
+                    ? t('emailAuth.hidePassword', 'Hide password')
+                    : t('emailAuth.showPassword', 'Show password')
+                }
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-[#666] hover:text-[#1a1a1a] rounded-md"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             <Button onClick={handleStartSignup} disabled={loading} className="w-full h-12 rounded-xl font-bold">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
               {t('emailAuth.sendCode', 'Send verification code')}
