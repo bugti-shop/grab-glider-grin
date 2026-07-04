@@ -1740,7 +1740,18 @@ export const RichTextEditor = ({
         {
           const root = editorRef.current;
           if (root) {
-            const trimmed = (findEnclosingBlockText(root) || '').trim();
+            const sel = window.getSelection();
+            let trimmed = '';
+            if (sel && sel.rangeCount > 0) {
+              let el: Node | null = sel.getRangeAt(0).startContainer;
+              while (el && el !== root) {
+                if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
+                  trimmed = (el.textContent || '').trim();
+                  break;
+                }
+                el = el.parentNode;
+              }
+            }
             if (/^\/(lorem|color|qr|mermaid|chess)\b/i.test(trimmed)) {
               e.preventDefault();
               void trySlashLineShortcut(root).then((ok) => {
