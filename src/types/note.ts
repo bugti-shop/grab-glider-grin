@@ -154,12 +154,18 @@ export interface TodoItem {
   reminderTime?: Date;
   multiReminder?: MultiReminder; // Support for multiple reminders throughout the day
   locationReminder?: LocationReminder; // Location-based reminder
-  /** Extra reminder, completely independent of dueDate / reminderTime. */
+  /** Extra reminder (legacy single reminder), completely independent of dueDate / reminderTime. */
   extraReminderTime?: Date;
   /** Recurrence pattern for extraReminderTime ('none' = one-shot). */
-  extraReminderRecurring?: 'none' | 'daily' | 'weekly' | 'monthly';
+  extraReminderRecurring?: 'none' | 'hourly' | 'daily' | 'weekly' | 'monthly';
   /** Optional notification id for the extra reminder, used to cancel scheduling. */
   extraReminderNotificationId?: number;
+  /**
+   * Multiple extra reminders (Pro). If present it supersedes the legacy
+   * single `extraReminderTime` field, though the first item is mirrored
+   * back into the legacy fields for backward compatibility.
+   */
+  extraReminders?: ExtraReminderItem[];
   repeatType?: RepeatType;
   repeatDays?: number[];
   advancedRepeat?: AdvancedRepeatPattern;
