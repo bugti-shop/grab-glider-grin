@@ -320,7 +320,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
             </div>
             <Button onClick={handleStartSignup} disabled={loading} className="w-full h-12 rounded-xl font-bold">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
-              {t('emailAuth.sendCode', 'Send verification code')}
+              {t('emailAuth.sendVerifyLink', 'Send verification link')}
             </Button>
             <p className="text-center text-[13px] text-[#666]">
               {t('emailAuth.alreadyHave', 'Already have an account?')}{' '}
