@@ -25,14 +25,44 @@ function generateToken(): string {
     .join('')
 }
 
-// Auth note: this function uses verify_jwt = true in config.toml, so Supabase's
-// gateway validates the caller's JWT (anon or service_role) before the request
-// reaches this code. No in-function auth check is needed.
+// Auth note: this function accepts fully server-authored payloads (arbitrary
+// recipient and template data). It MUST only be callable by trusted backend
+// callers using the service_role key. The Supabase gateway (verify_jwt = true)
+// confirms the JWT signature; we additionally require the payload's `role`
+// claim to equal `service_role`. Without this, anyone holding the public anon
+// key could send phishing/spam through the app's verified sending domain.
+function decodeJwtPayload(jwt: string): Record<string, unknown> | null {
+  try {
+    const parts = jwt.split('.')
+    if (parts.length !== 3) return null
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+    return JSON.parse(atob(padded))
+  } catch {
+    return null
+  }
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
+  }
+
+  // Reject any caller that isn't presenting a service_role JWT. The gateway
+  // has already validated the signature; we only need to inspect the role
+  // claim to keep out anon/user callers.
+  const authHeader = req.headers.get('Authorization') ?? ''
+  const jwt = authHeader.replace(/^Bearer\s+/i, '')
+  const claims = decodeJwtPayload(jwt)
+  if (!claims || claims.role !== 'service_role') {
+    return new Response(
+      JSON.stringify({ error: 'Forbidden: service role required' }),
+      {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    )
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -48,6 +78,7 @@ Deno.serve(async (req) => {
       }
     )
   }
+
 
   // Parse request body
   let templateName: string
