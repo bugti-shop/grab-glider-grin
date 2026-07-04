@@ -357,13 +357,18 @@ class TourManagerImpl {
     // user just performed the underlying action so they've clearly learned it.
     try { await markTourSeen(completedTourId); } catch {}
 
+    const wasForced = this.forcedActive && this.activeTourId === completedTourId;
+
     // If a popover is currently pointing at this tour's target, kill it so
     // the newly-created task/note/etc. isn't hidden behind the coach-mark.
     if (this.activeDriver && this.activeTourId === completedTourId) {
       try { this.activeDriver.destroy(); } catch {}
       this.activeDriver = null;
       this.activeTourId = null;
+      this.forcedActive = false;
+      if (this.forcedGuard) { clearInterval(this.forcedGuard); this.forcedGuard = null; }
       try { delete document.body.dataset.tourActive; } catch {}
+      try { delete document.body.dataset.tourForced; } catch {}
       emitTourActiveChange(false);
     }
 
@@ -372,7 +377,7 @@ class TourManagerImpl {
     // Give the just-completed action's UI a moment to render (e.g. task row
     // appears in the list) before highlighting the next feature.
     await this.closeTransientUi();
-    setTimeout(() => this.startTour(nextId, { chain: true }), ACTION_CHAIN_DELAY_MS);
+    setTimeout(() => this.startTour(nextId, { chain: true, forced: wasForced }), ACTION_CHAIN_DELAY_MS);
   }
 
 
