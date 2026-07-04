@@ -7,7 +7,7 @@
 import { driver, type Driver, type DriveStep } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
-import { getTour, type FeatureTour, type FeatureTourStep } from './tourRegistry';
+import { getTour, nextOnboardingTourId, type FeatureTour, type FeatureTourStep } from './tourRegistry';
 import {
   hasSeenTour,
   isDismissedForever,
