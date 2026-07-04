@@ -1131,7 +1131,7 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "content-type": "application/json" } },
       );
     }
-    const quotaConsumed: { identifier: string; date: string } | null = null;
+    
 
 
 
