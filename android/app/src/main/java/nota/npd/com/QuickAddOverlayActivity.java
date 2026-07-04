@@ -1,5 +1,7 @@
 package nota.npd.com;
 
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 
 import com.getcapacitor.BridgeActivity;
@@ -7,16 +9,12 @@ import com.getcapacitor.BridgeActivity;
 /**
  * Translucent overlay activity launched by the Quick-Add home-screen widget.
  *
- * Instead of building a hand-rolled native UI, this hosts a full Capacitor
- * WebView loading the real React app at the dedicated "/quick-add" route,
- * which renders the SAME <TaskInputSheet/> component the in-app "Add Task"
- * flow uses — with the full provider tree (Subscription, i18n, GlobalTags,
- * IndexedDB) and the same task-persistence path.
+ * Hosts a Capacitor WebView loading the React app at "/quick-add", which
+ * renders the SAME <TaskInputSheet/> the in-app "Add Task" flow uses.
  *
- * The theme (AppTheme.QuickAddOverlay) makes the window translucent so the
- * launcher home screen shows through behind the sheet. excludeFromRecents +
- * empty taskAffinity keep this out of the recents stack and prevent it from
- * resurrecting MainActivity.
+ * The theme + explicit transparent Window / WebView background make sure the
+ * launcher home screen shows through behind the floating sheet — no white
+ * flash while the JS bundle boots.
  */
 public class QuickAddOverlayActivity extends BridgeActivity {
 
@@ -27,6 +25,13 @@ public class QuickAddOverlayActivity extends BridgeActivity {
         registerPlugin(QuickAddOverlayPlugin.class);
         super.onCreate(savedInstanceState);
 
+        // Force the whole window chain to TRANSPARENT. Any single opaque
+        // layer here produces the white flash users report during hydration.
+        try {
+            getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            getWindow().getDecorView().setBackgroundColor(Color.TRANSPARENT);
+        } catch (Throwable ignored) {}
+
         // BridgeActivity's default load points the WebView at "/" which briefly
         // renders the full app (AppContent) before React Router can redirect —
         // producing the "opens full app instead of overlay" flash users see.
@@ -36,6 +41,17 @@ public class QuickAddOverlayActivity extends BridgeActivity {
         // handler thread after the bridge finishes its own setup.
         try {
             final android.webkit.WebView wv = getBridge().getWebView();
+
+            // Transparent WebView + parent container so no white paint bleeds
+            // through before the React sheet mounts.
+            wv.setBackgroundColor(Color.TRANSPARENT);
+            try {
+                android.view.ViewParent p = wv.getParent();
+                if (p instanceof android.view.View) {
+                    ((android.view.View) p).setBackgroundColor(Color.TRANSPARENT);
+                }
+            } catch (Throwable ignored) {}
+
             String base = getBridge().getLocalUrl();
             if (base == null || base.isEmpty()) base = "https://localhost";
             final String target = base + "/quick-add";
