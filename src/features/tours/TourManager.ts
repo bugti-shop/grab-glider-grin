@@ -265,9 +265,24 @@ class TourManagerImpl {
         const step = tour.steps[currentIndex];
         if (!step) return;
         const el = this.getVisibleElement(step.elementSelector);
-        if (el) return;
-        // Target missing → try re-opening whatever the tour needs open, then
-        // wait (up to 10 min) for the selector to reappear and remount.
+
+        // Foreign-sheet interceptor: if any Radix Sheet / Dialog / Drawer /
+        // DropdownMenu is open that does NOT contain the tour's target
+        // element, the user has wandered off into some other UI while the
+        // tutorial is still pending. Close it and force them back onto the
+        // tour-required sheet.
+        const foreignSheetOpen = this.hasForeignOverlayOpen(step.elementSelector);
+        if (foreignSheetOpen) {
+          await this.closeTransientUi();
+          // Fall through so the beforeStart pulse below re-opens the
+          // tour-required sheet in the same tick.
+        }
+
+        if (el && !foreignSheetOpen) return;
+
+        // Target missing (or a foreign sheet was just closed) → re-open
+        // whatever the tour needs open, then wait (up to 10 min) for the
+        // selector to reappear and remount the current step.
         if (tour.beforeStart) {
           const preSelectors = Array.isArray(tour.beforeStart) ? tour.beforeStart : [tour.beforeStart];
           for (const sel of preSelectors) {
@@ -437,6 +452,29 @@ class TourManagerImpl {
         resolve(this.getVisibleElement(selector));
       }, timeoutMs);
     });
+  }
+
+  /**
+   * Forced-mode helper: detect whether any Radix Sheet / Dialog / Drawer /
+   * DropdownMenu / Popover is currently open that does NOT contain the
+   * tour's required target. If so, the user has navigated into some other
+   * UI while the tutorial is still pending and we need to intercept.
+   */
+  private hasForeignOverlayOpen(targetSelector: string): boolean {
+    if (typeof document === 'undefined') return false;
+    const openWrappers = document.querySelectorAll<HTMLElement>(
+      '[data-state="open"][role="dialog"], ' +
+      '[data-state="open"][role="alertdialog"], ' +
+      '[data-state="open"][role="menu"], ' +
+      '[data-state="open"][data-radix-popper-content-wrapper], ' +
+      '[data-vaul-drawer][data-state="open"]',
+    );
+    for (const w of Array.from(openWrappers)) {
+      if (w.querySelector(targetSelector)) continue;
+      if (w.closest('.driver-popover')) continue;
+      return true;
+    }
+    return false;
   }
 
   private getVisibleElement(selector: string): Element | null {
