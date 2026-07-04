@@ -38,13 +38,8 @@ interface Section {
   rows: Row[];
 }
 
-/** Detect mac so we can display ⌘ instead of Ctrl. */
-const isMac =
-  typeof navigator !== 'undefined' &&
-  /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
-const MOD = isMac ? '⌘' : 'Ctrl';
-const ALT = isMac ? '⌥' : 'Alt';
-const SHIFT = isMac ? '⇧' : 'Shift';
+
+
 
 function buildSections(): Section[] {
   return [
