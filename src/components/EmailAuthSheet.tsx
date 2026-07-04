@@ -1,20 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Mail, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { X, Loader2, Mail, ArrowLeft, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
   startEmailSignup,
-  resendSignupOtp,
-  verifySignupOtp,
   signInWithEmailPassword,
   sendPasswordReset,
-  classifyOtpError,
 } from '@/utils/emailAuth';
+import { supabase } from '@/integrations/supabase/client';
 import type { GoogleUser } from '@/utils/googleAuth';
 
-type Mode = 'signin' | 'signup' | 'otp' | 'forgot';
+type Mode = 'signin' | 'signup' | 'verify-link' | 'forgot';
 
 interface Props {
   open: boolean;
@@ -120,16 +118,12 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
     try {
       await startEmailSignup(email.trim(), password, name.trim() || undefined);
       toast({
-        title: t('emailAuth.otpSent', 'Verification code sent'),
-        description: t('emailAuth.otpSentDesc', 'Check your inbox for a 6-digit code from Flowist.'),
+        title: t('emailAuth.linkSent', 'Verification email sent'),
+        description: t('emailAuth.linkSentDesc', 'Check your inbox and click the link to verify your email.'),
       });
-      setOtp('');
       setOtpError(null);
-      startCooldown();
-      setMode('otp');
+      setMode('verify-link');
     } catch (err: any) {
-      // Detect "already registered" so returning users don't create a
-      // duplicate and get confused when the OTP screen appears.
       const raw = String(err?.message || '').toLowerCase();
       const code = String(err?.code || err?.name || '').toLowerCase();
       const status = Number(err?.status ?? err?.statusCode ?? 0);
@@ -162,65 +156,70 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (otp.length < 6) {
-      setOtpError(t('emailAuth.enterOtp', 'Enter the 6-digit code'));
-      return;
-    }
+  // While the user is on the "check your email" screen, listen for the Supabase
+  // session that appears the moment they click the verification link — whether
+  // that happens in this same WebView (link opens the app via deep link) or on
+  // a different tab (Supabase broadcasts via storage events). When it appears,
+  // we're already signed in — just close the sheet.
+  useEffect(() => {
+    if (mode !== 'verify-link') return;
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session?.user) return;
+      try {
+        // Re-hydrate our local GoogleUser cache from the fresh session.
+        const u = await signInWithEmailPassword(email.trim(), password).catch(async () => {
+          // If password sign-in fails (edge case: user already fully signed in
+          // via the link in the same WebView), fall back to session data.
+          const meta = (session.user.user_metadata || {}) as Record<string, unknown>;
+          return {
+            email: session.user.email || email,
+            name: (meta.full_name as string) || (meta.name as string) || session.user.email || email,
+            picture: '',
+            accessToken: session.access_token,
+            uid: session.user.id,
+            accessTokenExpiresAt: Date.now() + 3500 * 1000,
+            expiresAt: Date.now() + 365 * 24 * 3600 * 1000,
+          } as GoogleUser;
+        });
+        toast({
+          title: t('emailAuth.accountReady', 'Account verified'),
+          description: t('emailAuth.syncEnabled', 'Cloud sync is now active on this device.'),
+        });
+        onSignedIn?.(u);
+        close();
+      } catch {
+        /* ignore */
+      }
+    });
+    return () => { sub.subscription.unsubscribe(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
+  // Manual "I've verified — sign me in" fallback for mobile flows where the
+  // link opens an external browser and the app WebView never sees the session.
+  // Reuses the password the user just typed — no re-entry needed.
+  const handleManualContinue = async () => {
     setLoading(true);
-    setOtpError(null);
     try {
-      // Cloud sync + session only persist AFTER Supabase confirms this OTP.
-      const u = await verifySignupOtp(email.trim(), otp);
-      toast({
-        title: t('emailAuth.accountReady', 'Account verified'),
-        description: t('emailAuth.syncEnabled', 'Cloud sync is now active on this device.'),
-      });
+      const u = await signInWithEmailPassword(email.trim(), password);
+      toast({ title: t('emailAuth.accountReady', 'Account verified') });
       onSignedIn?.(u);
       close();
     } catch (err: any) {
-      const info = classifyOtpError(err);
-      setOtpError(info.message);
-      toast({
-        title:
-          info.code === 'expired' ? t('emailAuth.otpExpired', 'Code expired')
-          : info.code === 'invalid' ? t('emailAuth.otpWrong', 'Wrong code')
-          : info.code === 'network' ? t('emailAuth.networkError', 'Connection problem')
-          : info.code === 'timeout' ? t('emailAuth.networkError', 'Connection problem')
-          : t('emailAuth.otpInvalid', 'Verification failed'),
-        description: info.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendCooldown > 0 || loading) return;
-    setLoading(true);
-    setOtpError(null);
-    try {
-      await resendSignupOtp(email.trim());
-      startCooldown();
-      toast({
-        title: t('emailAuth.otpResent', 'New code sent'),
-        description: t('emailAuth.otpResentDesc', 'Check your inbox for the latest 6-digit code.'),
-      });
-    } catch (err: any) {
-      const info = classifyOtpError(err);
-      if (info.code === 'cooldown' && info.retryAfter) {
-        setResendCooldown(info.retryAfter);
+      const raw = String(err?.message || '').toLowerCase();
+      if (raw.includes('email not confirmed') || raw.includes('not confirmed')) {
+        toast({
+          title: t('emailAuth.notVerifiedYet', 'Not verified yet'),
+          description: t('emailAuth.notVerifiedYetDesc', 'Please click the verification link in your email first, then tap Continue.'),
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: t('emailAuth.signInFailed', 'Sign-in failed'),
+          description: err?.message || '',
+          variant: 'destructive',
+        });
       }
-      toast({
-        title:
-          info.code === 'cooldown' ? t('emailAuth.tooSoon', 'Please wait')
-          : info.code === 'rate_limited' ? t('emailAuth.rateLimited', 'Too many attempts')
-          : info.code === 'network' || info.code === 'timeout' ? t('emailAuth.networkError', 'Connection problem')
-          : t('emailAuth.resendFailed', 'Could not resend code'),
-        description: info.message,
-        variant: 'destructive',
-      });
     } finally {
       setLoading(false);
     }
@@ -248,7 +247,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
 
   const title =
     mode === 'signup' ? t('emailAuth.createAccount', 'Create your Flowist account')
-    : mode === 'otp' ? t('emailAuth.verifyEmail', 'Verify your email')
+    : mode === 'verify-link' ? t('emailAuth.verifyEmail', 'Verify your email')
     : mode === 'forgot' ? t('emailAuth.resetPassword', 'Reset password')
     : t('emailAuth.signInTitle', 'Sign in with email');
 
@@ -265,7 +264,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             {mode !== 'signin' && mode !== 'signup' && (
-              <button onClick={() => setMode(mode === 'otp' ? 'signup' : 'signin')} className="p-1 -ml-1">
+              <button onClick={() => setMode(mode === 'verify-link' ? 'signup' : 'signin')} className="p-1 -ml-1">
                 <ArrowLeft className="h-5 w-5 text-[#1a1a1a]" />
               </button>
             )}
@@ -321,7 +320,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
             </div>
             <Button onClick={handleStartSignup} disabled={loading} className="w-full h-12 rounded-xl font-bold">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
-              {t('emailAuth.sendCode', 'Send verification code')}
+              {t('emailAuth.sendVerifyLink', 'Send verification link')}
             </Button>
             <p className="text-center text-[13px] text-[#666]">
               {t('emailAuth.alreadyHave', 'Already have an account?')}{' '}
@@ -380,44 +379,39 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
           </div>
         )}
 
-        {mode === 'otp' && (
-          <div className="space-y-3">
-            <p className="text-[13px] text-[#666] text-center">
-              {t('emailAuth.otpInstructions', 'We sent a 6-digit code to {{email}}. Enter it below to finish creating your account.', { email })}
-            </p>
-            <Input
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              placeholder="••••••"
-              value={otp}
-              onChange={(e) => {
-                setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
-                if (otpError) setOtpError(null);
-              }}
-              className={`h-14 rounded-xl text-center text-2xl font-bold tracking-[0.5em] ${otpError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-            />
+        {mode === 'verify-link' && (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center text-center gap-2 pt-1">
+              <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
+                <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+              </div>
+              <p className="text-[15px] font-bold text-[#1a1a1a]">
+                {t('emailAuth.checkYourInbox', 'Check your inbox')}
+              </p>
+              <p className="text-[13px] text-[#666] leading-relaxed">
+                {t(
+                  'emailAuth.linkInstructions',
+                  'We sent a verification link to {{email}}. Tap the link in that email — it will open Flowist and sign you in automatically.',
+                  { email },
+                )}
+              </p>
+            </div>
+            <Button
+              onClick={handleManualContinue}
+              disabled={loading}
+              className="w-full h-12 rounded-xl font-bold"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {t('emailAuth.iClickedLink', "I've verified — continue")}
+            </Button>
             {otpError && (
               <p className="text-[12px] text-red-600 text-center -mt-1">{otpError}</p>
             )}
-            <Button onClick={handleVerifyOtp} disabled={loading || otp.length < 6} className="w-full h-12 rounded-xl font-bold">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <KeyRound className="h-4 w-4 mr-2" />}
-              {loading
-                ? t('emailAuth.verifying', 'Verifying…')
-                : t('emailAuth.verify', 'Verify & continue')}
-            </Button>
-            <button
-              onClick={handleResend}
-              disabled={loading || resendCooldown > 0}
-              className="w-full text-center text-[13px] text-[#666] underline py-1 disabled:no-underline disabled:opacity-60"
-            >
-              {resendCooldown > 0
-                ? t('emailAuth.resendIn', 'Resend code in {{s}}s', { s: resendCooldown })
-                : t('emailAuth.resend', 'Resend code')}
-            </button>
             <p className="text-[11px] text-[#999] text-center leading-relaxed">
-              {t('emailAuth.syncNote', 'Cloud sync activates the moment your code is verified.')}
+              {t(
+                'emailAuth.linkSyncNote',
+                "Didn't get it? Check your spam folder. The link expires in 30 minutes.",
+              )}
             </p>
           </div>
         )}

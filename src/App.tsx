@@ -43,6 +43,7 @@ import { PerfDiagnosticsPanel } from "@/components/PerfDiagnosticsPanel";
 import { FocusBackgroundBar } from "@/components/focus/FocusBackgroundBar";
 import { RadixPointerEventsRescue } from "@/components/RadixPointerEventsRescue";
 import { DesktopSidebar } from "@/components/desktop/DesktopSidebar";
+import { AuthDeepLinkBridge } from "@/components/AuthDeepLinkBridge";
 import { WidgetAddTask, WidgetNewSticky, WidgetNewLined, WidgetNewRegular, WidgetNewSketch } from "@/pages/WidgetEntry";
 import { useTourBootstrap } from "@/features/tours/useFeatureTour";
 
@@ -103,6 +104,7 @@ const Landing = lazy(() => import("./pages/Landing"));
 const PremiumUnlock = lazy(() => import("./pages/PremiumUnlock"));
 const PublicNote = lazy(() => import("./pages/PublicNote"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 // Eager import: /quick-add is the sole route rendered inside the Android
 // widget overlay WebView. Lazy-loading it would add a network round-trip on
 // cold-open — the exact metric we're optimising here.
@@ -456,6 +458,7 @@ const AppRoutes = () => {
     <BrowserRouter>
       <ShareIntentBridge />
       <QuickAddSyncBridge />
+      <AuthDeepLinkBridge />
       <NavigationBackProvider>
         <NavigationLoader />
         <DashboardTracker />
@@ -509,6 +512,7 @@ const AppRoutes = () => {
             <Route path="/quick-add" element={<QuickAdd />} />
             <Route path="/p/:slug" element={<PublicNote />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="*" element={<NotFound />} />
 
 
@@ -886,6 +890,7 @@ const AppContent = () => {
               <Route path="/mustafabugti890" element={<PremiumUnlock />} />
               <Route path="/p/:slug" element={<PublicNote />} />
               <Route path="/invite/:token" element={<AcceptInvite />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="*" element={<Landing />} />
 
             </Routes>
