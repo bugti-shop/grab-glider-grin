@@ -30,6 +30,36 @@ const MAX_CONTENT_HTML_BYTES = 8 * 1024 * 1024; // 8MB cap so image-rich long ar
 const MAX_FULLPAGE_HTML_BYTES = 100 * 1024 * 1024; // 100MB cap for full-page raw HTML
 const FETCH_TIMEOUT_MS = 38_000;
 
+// ── Content-completeness validation ──────────────────────────────────────
+// When the upstream page ships mostly a shell (SPA / paywall / bot wall) the
+// first fetch often yields only meta tags or a half-truncated article. We
+// treat the extraction as incomplete when the visible body text is shorter
+// than MIN_ACCEPTABLE_BODY_CHARS *or* not meaningfully larger than the
+// metadata description we would already have shown as an excerpt. In that
+// case we re-fetch the page with a different user-agent (googlebot, mobile
+// Safari, facebookexternalhit) so bot-friendly / mobile-rendered variants
+// expose the full article, then keep whichever attempt produced the longest
+// clean body. This runs BEFORE any Jina fallback so we exhaust direct
+// options first.
+const UA_VARIANTS: readonly string[] = [
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36 Flowist-Clipper/1.0",
+  "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+];
+const MIN_ACCEPTABLE_BODY_CHARS = 600;
+const HALF_ARTICLE_RATIO = 1.4; // body must be >1.4× excerpt length to count as "more than meta"
+
+/** True when the extracted body looks like meta-only or a half-truncated
+ *  fragment relative to what we already know from meta tags. */
+function looksIncomplete(bodyText: string, excerpt: string): boolean {
+  const len = (bodyText || "").length;
+  if (len < MIN_ACCEPTABLE_BODY_CHARS) return true;
+  const excerptLen = (excerpt || "").length;
+  if (excerptLen > 120 && len < excerptLen * HALF_ARTICLE_RATIO) return true;
+  return false;
+}
+
 /** Extract safe, reachable absolute image URLs from an HTML string.
  *  - Only http/https (drops data:, blob:, javascript:, protocol-relative junk).
  *  - Filters obvious tracking pixels (1x1, /pixel, /beacon, /track, /impression).
