@@ -341,21 +341,44 @@ export const RICH_TEXT_EDITOR_STYLES = `
   /* === Headings (override inline fontSize on the contentEditable host) === */
   .rich-text-editor h1 {
     font-size: 2em !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     line-height: 1.25 !important;
     margin: 0.6em 0 0.3em !important;
   }
   .rich-text-editor h2 {
-    font-size: 1.5em !important;
+    font-size: 1.6em !important;
     font-weight: 700 !important;
     line-height: 1.3 !important;
     margin: 0.55em 0 0.3em !important;
   }
   .rich-text-editor h3 {
-    font-size: 1.22em !important;
-    font-weight: 600 !important;
+    font-size: 1.3em !important;
+    font-weight: 700 !important;
     line-height: 1.35 !important;
     margin: 0.5em 0 0.25em !important;
+  }
+  .rich-text-editor h4 {
+    font-size: 1.1em !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    margin: 0.5em 0 0.2em !important;
+  }
+  .rich-text-editor h5 {
+    font-size: 1em !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    margin: 0.45em 0 0.2em !important;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .rich-text-editor h6 {
+    font-size: 0.9em !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+    margin: 0.4em 0 0.2em !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.75;
   }
 
   /* === Columns layout === */
