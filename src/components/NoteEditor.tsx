@@ -16,6 +16,7 @@ import { FloatingImageLayer, FloatingImageLayerHandle } from './FloatingImageLay
 import { LinkedInTextFormatter } from './LinkedInTextFormatter';
 import { getTableStyles, TableStyle } from './TableEditor';
 import { InlineFindReplace } from './InlineFindReplace';
+import ShortcutsCheatSheet from './richtext/ShortcutsCheatSheet';
 
 import { VirtualizedCodeEditor } from './VirtualizedCodeEditor';
 import { lazy, Suspense } from 'react';
@@ -55,7 +56,7 @@ import 'katex/dist/katex.min.css';
 import { ErrorBoundary } from './ErrorBoundary';
 import { PdfExportSuccessDialog } from './PdfExportSuccessDialog';
 import { PdfExportOptionsSheet, PdfExportSettings } from './PdfExportOptionsSheet';
-import { ArrowLeft, Folder as FolderIcon, Plus, CalendarIcon, History, FileDown, Link2, ChevronDown, FileText, BookOpen, BarChart3, MoreVertical, Mic, Share2, Search, Image, Table, Minus, SeparatorHorizontal, MessageSquare, FileSymlink, FileType, Bell, Clock, Repeat, Trash2, Mail, Phone, LinkIcon, Copy, Replace, Palette, Hash, Crown, ListFilter, CaseLower, Tag as TagIcon, Camera, Sparkles, Globe } from 'lucide-react';
+import { ArrowLeft, Folder as FolderIcon, Plus, CalendarIcon, History, FileDown, Link2, ChevronDown, FileText, BookOpen, BarChart3, MoreVertical, Mic, Share2, Search, Image, Table, Minus, SeparatorHorizontal, MessageSquare, FileSymlink, FileType, Bell, Clock, Repeat, Trash2, Mail, Phone, LinkIcon, Copy, Replace, Palette, Hash, Crown, ListFilter, CaseLower, Tag as TagIcon, Camera, Sparkles, Globe, Keyboard } from 'lucide-react';
 import { exportNoteToPdf, getPageBreakCount, PdfExportResult } from '@/utils/exportToPdf';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -208,6 +209,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
+  const [isShortcutsSheetOpen, setIsShortcutsSheetOpen] = useState(false);
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
   const [showToc, setShowToc] = useState(false);
   const [tocMaxLevel, setTocMaxLevel] = useState<number>(6);
@@ -1272,6 +1274,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <Search className="h-4 w-4 mr-2" />
                   {t('editor.findReplace')}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsShortcutsSheetOpen(true)}>
+                  <Keyboard className="h-4 w-4 mr-2" />
+                  {t('editor.shortcutsCheatSheet', 'Shortcuts cheat sheet')}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
                   if (!requireFeature('ai_dictation')) return;
                   setShowExtractTasks(true);
@@ -1858,6 +1864,12 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         editorRef={editorRef}
         onContentChange={setContent}
         content={content}
+      />
+
+      {/* Shortcuts cheat sheet */}
+      <ShortcutsCheatSheet
+        isOpen={isShortcutsSheetOpen}
+        onClose={() => setIsShortcutsSheetOpen(false)}
       />
 
       {/* Word Count Stats Bar with Page Indicator - only shows when enabled */}
