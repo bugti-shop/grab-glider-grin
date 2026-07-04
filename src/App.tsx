@@ -43,6 +43,7 @@ import { PerfDiagnosticsPanel } from "@/components/PerfDiagnosticsPanel";
 import { FocusBackgroundBar } from "@/components/focus/FocusBackgroundBar";
 import { RadixPointerEventsRescue } from "@/components/RadixPointerEventsRescue";
 import { DesktopSidebar } from "@/components/desktop/DesktopSidebar";
+import { AuthDeepLinkBridge } from "@/components/AuthDeepLinkBridge";
 import { WidgetAddTask, WidgetNewSticky, WidgetNewLined, WidgetNewRegular, WidgetNewSketch } from "@/pages/WidgetEntry";
 import { useTourBootstrap } from "@/features/tours/useFeatureTour";
 
