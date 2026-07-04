@@ -153,6 +153,17 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
     priority: 'sheet',
   });
 
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    const closeForTour = () => onClose();
+    window.addEventListener('flowist-tour:close-overlays', closeForTour);
+    window.addEventListener('flowist-tour:close-task-overlays', closeForTour);
+    return () => {
+      window.removeEventListener('flowist-tour:close-overlays', closeForTour);
+      window.removeEventListener('flowist-tour:close-task-overlays', closeForTour);
+    };
+  }, [isOpen, onClose]);
+
   const { requireFeature, isRecurringSubscriber, isPro, isLocalTrial, isAdminBypass, isRevenueCatTrial, requireCapacity } = useSubscription();
   const isStripeTrialing = typeof window !== 'undefined' && Boolean((window as any).__stripeIsTrialing);
   const isPaidTrial = isStripeTrialing || isRevenueCatTrial;
