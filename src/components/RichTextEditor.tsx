@@ -65,6 +65,7 @@ import {
 import { tryMathShortcut } from './richtext/mathShortcut';
 import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut } from './richtext/extraShortcuts';
 import { tryUnitShortcut } from './richtext/unitConvert';
+import { trySmartQuote, tryDashEllipsis, trySymbolShortcut } from './richtext/textReplacements';
 import { hydrateExtrasIn } from './richtext/extraHydration';
 import 'katex/dist/katex.min.css';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
@@ -1713,6 +1714,12 @@ export const RichTextEditor = ({
     if (mdEnabled && !slashMenu.open && !mentionMenu.open && !isInsideCode(editorRef.current)) {
 
       if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Text auto-replace: `--` → em-dash, `...` → ellipsis (fires before space is inserted).
+        // Does not consume the event — the space still inserts normally.
+        if (tryDashEllipsis(editorRef.current)) {
+          handleInput();
+          // continue — do not return, other space handlers may still fire
+        }
         // Greek/math symbol shortcut runs first (\alpha → α).
         if (tryGreekShortcut(editorRef.current)) {
           e.preventDefault();
@@ -1780,7 +1787,7 @@ export const RichTextEditor = ({
                 el = el.parentNode;
               }
             }
-            if (/^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x)\b/i.test(trimmed)) {
+            if (/^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc)\b/i.test(trimmed)) {
               e.preventDefault();
               void trySlashLineShortcut(root).then((ok) => {
                 if (ok) handleInput();
@@ -1795,7 +1802,20 @@ export const RichTextEditor = ({
           return;
         }
       } else if (e.key === ')' && !e.ctrlKey && !e.metaKey) {
+        // (c) → ©, (tm) → ™, (r) → ®
+        if (trySymbolShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
         if (tryMarkdownLinkOrImageShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
+      } else if ((e.key === '"' || e.key === "'") && !e.ctrlKey && !e.metaKey) {
+        // Smart quotes: " → “ ” and ' → ‘ ’ based on context
+        if (trySmartQuote(editorRef.current, e.key)) {
           e.preventDefault();
           handleInput();
           return;

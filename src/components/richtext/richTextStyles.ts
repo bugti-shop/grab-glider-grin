@@ -884,6 +884,35 @@ export const RICH_TEXT_EDITOR_STYLES = `
     background: transparent;
   }
   .rt-tweet iframe { min-height: 420px; }
+
+  /* ── Table of contents block ── */
+  .rt-toc {
+    display: block;
+    margin: 16px 0;
+    padding: 14px 18px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 12px;
+    background: hsl(var(--muted) / 0.4);
+  }
+  .rt-toc-title {
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: hsl(var(--muted-foreground));
+    margin-bottom: 8px;
+  }
+  .rt-toc ul { list-style: none; padding: 0; margin: 0; }
+  .rt-toc li { padding: 2px 0; }
+  .rt-toc a {
+    color: hsl(var(--foreground));
+    text-decoration: none;
+    border-bottom: 1px dashed transparent;
+  }
+  .rt-toc a:hover {
+    color: hsl(var(--primary));
+    border-bottom-color: hsl(var(--primary));
+  }
 `;
 
 
