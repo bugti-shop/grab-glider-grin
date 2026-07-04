@@ -366,8 +366,51 @@ export async function trySlashLineShortcut(root: HTMLElement | null): Promise<bo
     return true;
   }
 
+  // ── /unit <expr>  → e.g. "/unit 10 km in miles" → "10 km = 6.21371 mi"
+  //    /unit  or  /unit help  → inserts an inline help card with examples.
+  if (cmd === 'unit' || cmd === 'convert') {
+    if (!arg || /^help$/i.test(arg)) {
+      replaceBlockHtml(block, UNIT_HELP_HTML, root);
+      return true;
+    }
+    const { convertExpression } = await import('./unitConvert');
+    const conv = convertExpression(arg);
+    if (!conv) {
+      replaceBlockHtml(
+        block,
+        `<div class="rt-unit-error" contenteditable="false">` +
+        `Could not convert <code>${escapeHtml(arg)}</code>. ` +
+        `Try <code>10 km in miles</code> or <code>100 f to c</code>.` +
+        `</div><p><br></p>`,
+        root,
+      );
+      return true;
+    }
+    replaceBlockHtml(block, `<p>${escapeHtml(conv.text)}</p>`, root);
+    return true;
+  }
+
   return false;
 }
+
+const UNIT_HELP_HTML =
+  `<div class="rt-unit-help" contenteditable="false">` +
+  `<div class="rt-unit-help-title">Unit converter — examples</div>` +
+  `<ul>` +
+  `<li><code>/unit 10 km in miles</code> → length</li>` +
+  `<li><code>/unit 100 f to c</code> → temperature</li>` +
+  `<li><code>/unit 5 gb as mb</code> → data</li>` +
+  `<li><code>/unit 2 h in min</code> → time</li>` +
+  `<li><code>/unit 1 bar in psi</code> → pressure</li>` +
+  `<li><code>/unit 50 mph in kmh</code> → speed</li>` +
+  `<li><code>/unit 200 lbs in kg</code> → mass</li>` +
+  `<li><code>/unit 1 acre in m2</code> → area</li>` +
+  `<li><code>/unit 100 kcal in kj</code> → energy</li>` +
+  `<li><code>/unit 25 mpg in l100km</code> → fuel economy</li>` +
+  `</ul>` +
+  `<div class="rt-unit-help-foot">Tip: same syntax works inline — just type it and press <kbd>Space</kbd>.</div>` +
+  `</div><p><br></p>`;
+
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'section';
