@@ -1622,6 +1622,71 @@ export const RichTextEditor = ({
     handleInput();
   }, [hydrateSynced]);
 
+  // Mobile equivalent of the desktop WordToolbar keyboard shortcuts. Phones
+  // have no Ctrl/Cmd, so we let users type the toolbar action as a slash
+  // command on its own line (e.g. `/bold`, `/h1`, `/center`, `/hl`, `/undo`)
+  // and trigger it with Space or Enter — the same triggers other shortcuts use.
+  const tryToolbarSlashShortcut = useCallback((root: HTMLDivElement | null): boolean => {
+    if (!root) return false;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return false;
+    let el: Node | null = sel.getRangeAt(0).startContainer;
+    let block: HTMLElement | null = null;
+    while (el && el !== root) {
+      if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
+        block = el as HTMLElement;
+        break;
+      }
+      el = el.parentNode;
+    }
+    if (!block) return false;
+    const text = (block.textContent || '').trim();
+    const m = text.match(/^\/([a-z][a-z0-9]*)(?:\s+(.+))?$/i);
+    if (!m) return false;
+    const cmd = m[1].toLowerCase();
+    const arg = (m[2] || '').trim();
+    const clear = () => {
+      block!.innerHTML = '<br>';
+      const r = document.createRange();
+      r.setStart(block!, 0);
+      r.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    };
+    const run = (fn: () => void) => { clear(); fn(); handleInput(); return true; };
+    switch (cmd) {
+      case 'bold': case 'b': return run(handleBold);
+      case 'italic': case 'em': return run(handleItalic);
+      case 'underline': case 'ul-': return run(handleUnderline);
+      case 'strike': case 'strikethrough': case 'del': return run(handleStrikethrough);
+      case 'sub': case 'subscript': return run(handleSubscript);
+      case 'sup': case 'superscript': return run(handleSuperscript);
+      case 'highlight': case 'hl': case 'mark': return run(() => handleHighlight(arg || '#FEF3C7'));
+      case 'color': case 'textcolor': case 'fg': return run(() => handleTextColor(arg || 'inherit'));
+      case 'clear': case 'clearformat': case 'clearformatting': case 'plain':
+        return run(handleClearFormatting);
+      case 'codeblock': case 'inlinecode': return run(() => { handleCodeBlock(); });
+      case 'hr': case 'divider': case 'rule': return run(handleHorizontalRule);
+      case 'quote': case 'blockquote': case 'bq': return run(handleBlockquote);
+      case 'bullet': case 'bullets': case 'ul': return run(handleBulletList);
+      case 'numbered': case 'number': case 'ol': return run(handleNumberedList);
+      case 'check': case 'checklist': case 'task': case 'tasks': return run(handleChecklist);
+      case 'p': case 'paragraph': case 'normal': return run(() => handleHeading('p'));
+      case 'left': case 'alignleft': return run(() => handleAlignment('left'));
+      case 'center': case 'aligncenter': return run(() => handleAlignment('center'));
+      case 'right': case 'alignright': return run(() => handleAlignment('right'));
+      case 'justify': case 'alignjustify': return run(() => handleAlignment('justify'));
+      case 'indent': return run(() => document.execCommand('indent'));
+      case 'outdent': return run(() => document.execCommand('outdent'));
+      case 'undo': clear(); handleUndo(); return true;
+      case 'redo': clear(); handleRedo(); return true;
+      case 'zoomin': clear(); setZoom((z) => Math.min(200, z + 10)); handleInput(); return true;
+      case 'zoomout': clear(); setZoom((z) => Math.max(50, z - 10)); handleInput(); return true;
+      case 'zoomreset': case 'zoom100': clear(); setZoom(100); handleInput(); return true;
+      default: return false;
+    }
+  }, []);
+
   // Android/mobile soft keyboards fire `keydown` with keyCode 229 and no `key`,
   // so our markdown block/inline shortcuts (which key off e.key===' '/'Enter'/'*'/etc.)
   // never trigger on phones. `beforeinput` fires reliably on every platform with
@@ -1629,8 +1694,27 @@ export const RichTextEditor = ({
   const handleBeforeInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     const ie = e.nativeEvent as InputEvent;
     // Markdown shortcuts always enabled
-    if (slashMenu.open || mentionMenu.open) return;
+    if (mentionMenu.open) return;
     if (isInsideCode(editorRef.current)) return;
+
+    // Toolbar slash commands work even while the slash menu is open, since the
+    // user's intent (`/bold␣`, `/h1⏎`) is unambiguous once Space/Enter fires.
+    const ieType = (e.nativeEvent as InputEvent).inputType;
+    const ieData = (e.nativeEvent as InputEvent).data || '';
+    if (
+      (ieType === 'insertText' && ieData === ' ') ||
+      (ieType === 'insertText' && ieData.length > 1 && ieData.endsWith(' ')) ||
+      ieType === 'insertParagraph' ||
+      ieType === 'insertLineBreak'
+    ) {
+      if (tryToolbarSlashShortcut(editorRef.current)) {
+        e.preventDefault();
+        closeSlash();
+        return;
+      }
+    }
+    if (slashMenu.open) return;
+
 
     const type = ie.inputType;
     const data = ie.data || '';
