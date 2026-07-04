@@ -16,10 +16,10 @@ export const MAX_LENGTHS = {
 
 /** Hard caps on shared attachments. Surface friendly errors past these. */
 export const ATTACHMENT_LIMITS = {
-  /** 15 MB — keeps notes light and IndexedDB happy. */
-  imageBytes: 15 * 1024 * 1024,
-  /** 25 MB — PDFs we'll fetch & extract text from. */
-  pdfBytes: 25 * 1024 * 1024,
+  /** 100 MB — heavy image-rich articles need headroom. */
+  imageBytes: 100 * 1024 * 1024,
+  /** 100 MB — PDFs we'll fetch & extract text from. */
+  pdfBytes: 100 * 1024 * 1024,
 } as const;
 
 /** MIME allow-lists. Anything else is rejected with a friendly error. */

@@ -25,9 +25,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const MAX_HTML_BYTES = 25 * 1024 * 1024; // 25MB page cap (fetch)
+const MAX_HTML_BYTES = 100 * 1024 * 1024; // 100MB page cap (fetch) — heavy image-rich articles
 const MAX_CONTENT_HTML_BYTES = 500 * 1024; // 500KB cap on returned clip HTML
-const MAX_FULLPAGE_HTML_BYTES = 20 * 1024 * 1024; // 20MB cap for full-page raw HTML
+const MAX_FULLPAGE_HTML_BYTES = 100 * 1024 * 1024; // 100MB cap for full-page raw HTML
 const FETCH_TIMEOUT_MS = 20_000;
 
 /** Extract safe, reachable absolute image URLs from an HTML string.
