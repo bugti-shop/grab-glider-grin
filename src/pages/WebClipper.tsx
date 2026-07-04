@@ -364,7 +364,22 @@ const WebClipper = () => {
           internal:       { titleKey: 'webClipper.errInternalTitle',  titleFallback: 'Clipper hit an error',          descKey: 'webClipper.errInternalDesc',  descFallback: 'Something went wrong on our side while parsing the page. Retry, or open the page in your browser first, then share again.' },
         };
         const info = map[failure.code] || map.internal;
-        failWith(info.titleKey, info.titleFallback, info.descKey, info.descFallback);
+        failWith(info.titleKey, info.titleFallback, info.descKey, info.descFallback, {
+          code: failure.code,
+          httpStatus: failure.status,
+          upstreamMessage: failure.message,
+          targetUrl: url || undefined,
+          requestedMode: clipMode,
+          attachmentUrl: attachment || undefined,
+          attachmentType,
+          receivedTitle: title,
+          receivedSelectionChars: selection?.length ?? 0,
+          receivedContentChars: content?.length ?? 0,
+          articleHtmlChars: articleHtml.length,
+          fallbackAttempted: articleIsFallback,
+          stage: 'fetching',
+          at: new Date().toISOString(),
+        });
         return;
       }
 
