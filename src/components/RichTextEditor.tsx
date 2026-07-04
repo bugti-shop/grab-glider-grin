@@ -310,6 +310,44 @@ export const RichTextEditor = ({
   }, []);
   useEffect(() => () => { syncedUnsubRef.current?.(); }, []);
 
+  // Cheat sheet "click to apply" bridge: when a slash-command row is tapped
+  // in ShortcutsCheatSheet, insert the trigger text at the end of the editor
+  // and run the same slash-line pipeline the user would trigger by typing.
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const detail = (ev as CustomEvent<{ text?: string }>).detail;
+      const raw = (detail?.text ?? '').trim();
+      if (!raw.startsWith('/')) return;
+
+      editor.focus();
+
+      // Append a fresh paragraph containing the command text + trailing space
+      // so trySlashLineShortcut sees a "just typed and pressed Space" line.
+      const p = document.createElement('p');
+      p.textContent = raw + ' ';
+      editor.appendChild(p);
+
+      // Place the caret at the end of that paragraph.
+      const range = document.createRange();
+      const textNode = p.firstChild as Text | null;
+      if (textNode) {
+        range.setStart(textNode, textNode.length);
+      } else {
+        range.selectNodeContents(p);
+        range.collapse(false);
+      }
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+
+      runSlashLineOnce(editor);
+    };
+    window.addEventListener('flowist:apply-slash-command', handler as EventListener);
+    return () => window.removeEventListener('flowist:apply-slash-command', handler as EventListener);
+  }, []);
+
 
   
   // Active formatting states
