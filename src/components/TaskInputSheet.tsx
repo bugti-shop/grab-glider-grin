@@ -257,9 +257,13 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
     openScannerLockRef.current = true;
     setIsOpeningScanner(true);
     try {
+      // 1) Subscription gate FIRST — unsubscribed users see the paywall
+      //    before we ever ask them to sign in.
+      if (!requireFeature('ai_dictation')) return;
+      // 2) Then require sign-in — subscribed users who aren't signed in
+      //    get the "please sign in to use scan" prompt.
       const { ensureSignedInForAi } = await import('@/utils/aiAccessGuard');
       if (!(await ensureSignedInForAi({ intent: 'scan-tasks' }))) return;
-      if (!requireFeature('ai_dictation')) return;
       const seen = typeof window !== 'undefined' && localStorage.getItem(SCAN_COACHMARK_KEY) === '1';
       if (!seen) {
         setShowScanCoachmark(true);
