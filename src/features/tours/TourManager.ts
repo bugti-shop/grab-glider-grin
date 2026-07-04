@@ -100,7 +100,10 @@ class TourManagerImpl {
 
     // Optional pre-actions: click one or more triggers (e.g. open task detail,
     // then open its ⋮ menu) so the real target becomes visible before highlight.
-    const firstTargetAlreadyVisible = !!document.querySelector(tour.steps[0]?.elementSelector ?? '');
+    const firstTargetSelector = tour.steps[0]?.elementSelector;
+    const firstTargetAlreadyVisible = firstTargetSelector
+      ? !!this.getVisibleElement(firstTargetSelector)
+      : false;
     if (tour.beforeStart && !firstTargetAlreadyVisible) {
       const preSelectors = Array.isArray(tour.beforeStart) ? tour.beforeStart : [tour.beforeStart];
       for (const sel of preSelectors) {
@@ -334,11 +337,11 @@ class TourManagerImpl {
 
   private waitForSelector(selector: string, timeoutMs: number): Promise<Element | null> {
     return new Promise((resolve) => {
-      const found = document.querySelector(selector);
+      const found = this.getVisibleElement(selector);
       if (found) return resolve(found);
       const started = Date.now();
       const observer = new MutationObserver(() => {
-        const el = document.querySelector(selector);
+        const el = this.getVisibleElement(selector);
         if (el) {
           observer.disconnect();
           resolve(el);
@@ -351,9 +354,19 @@ class TourManagerImpl {
       // Absolute timeout in case DOM never changes.
       setTimeout(() => {
         observer.disconnect();
-        resolve(document.querySelector(selector));
+        resolve(this.getVisibleElement(selector));
       }, timeoutMs);
     });
+  }
+
+  private getVisibleElement(selector: string): Element | null {
+    const elements = Array.from(document.querySelectorAll(selector));
+    return elements.find((el) => {
+      if (!(el instanceof HTMLElement)) return true;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      return true;
+    }) ?? null;
   }
 
   private wait(ms: number) {
