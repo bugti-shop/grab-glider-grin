@@ -493,7 +493,7 @@ export function isSlashLineShortcutReady(text: string): boolean {
  */
 export function isSlashLineShortcutAutoReady(text: string): boolean {
   const t = text.trim();
-  return /^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|today|now|tomorrow|yesterday|toc)\s*$/i.test(t);
+  return /^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|today|now|tomorrow|yesterday|toc|chess)\s*$/i.test(t);
 }
 
 const UNIT_HELP_HTML =
