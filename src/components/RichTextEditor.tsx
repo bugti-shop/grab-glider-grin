@@ -62,6 +62,7 @@ import {
   markdownPasteToHtml,
   isInsideCode,
 } from './richtext/markdownShortcuts';
+import { tryMathShortcut } from './richtext/mathShortcut';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
 import {
   reattachTableListenersOnElement,
@@ -1735,6 +1736,12 @@ export const RichTextEditor = ({
           return;
         }
       } else if ((e.key === '*' || e.key === '_' || e.key === '`' || e.key === '~' || e.key === '=') && !e.ctrlKey && !e.metaKey) {
+        // Math auto-evaluation runs first on `=` (e.g. "2+3=" → "2+3= 5").
+        if (e.key === '=' && tryMathShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
         if (tryMarkdownInlineShortcut(e.key, editorRef.current)) {
           e.preventDefault();
           handleInput();
