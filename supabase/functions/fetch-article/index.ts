@@ -1366,45 +1366,128 @@ Deno.serve(async (req) => {
     }
 
 
-    // ── Clean up the DOM BEFORE Readability runs ─────────────────────────
-    // The user wants a genuine article: title, headings, images (with their
-    // captions), links, references. Everything else — ads, share buttons,
-    // navigation, footers, "related stories", newsletter prompts, comments —
-    // gets stripped in place so Readability has a clean tree to score.
-    cleanArticleDom(document as any);
+    // ── Article extraction with meta-only / half-response retry loop ─────
+    // Some sites return an SPA shell, a paywall stub, or a mid-transfer
+    // truncated payload on first fetch. We run the full extraction pipeline
+    // once, then validate the produced body against `looksIncomplete()`. If
+    // it looks like meta-only or a half-article response we re-fetch the
+    // upstream with the next UA variant (googlebot, mobile Safari, FB crawler)
+    // and re-run extraction. We keep the attempt that produced the longest
+    // clean body text so the user always gets the most complete version.
+    let bestPayload: Record<string, unknown> | null = null;
+    let bestBodyLen = -1;
+    let bestExcerptLen = 0;
+    // The initial fetch already populated `document` / `html`. Reuse it for
+    // attempt 0; subsequent attempts re-fetch and re-parse from scratch.
+    let currentDoc: any = document;
+    for (let attempt = 0; attempt < UA_VARIANTS.length; attempt++) {
+      if (attempt > 0) {
+        const next = await fetchTargetHtml(target, UA_VARIANTS[attempt]);
+        if (next.terminal || !next.html) break;
+        html = next.html;
+        const parsed = parseHTML(html);
+        currentDoc = parsed.document;
+        absolutizeDoc(currentDoc, base);
+      }
 
-    let article: any = null;
-    try {
-      const reader = new Readability(document as any, {
-        charThreshold: 200,
-        keepClasses: false,
+      inlineEmbeds(currentDoc, base);
+      const visibleFallbackHtml = visiblePageFallback(currentDoc);
+      cleanArticleDom(currentDoc);
+
+      let article: any = null;
+      try {
+        article = new Readability(currentDoc, {
+          charThreshold: 200,
+          keepClasses: false,
+        }).parse();
+      } catch (e) {
+        console.warn("[fetch-article] Readability failed", e);
+      }
+
+      const domAuthor = extractAuthor(currentDoc);
+      const title = (article?.title || metaTitle || target.hostname).trim();
+      const byline = (article?.byline || metaAuthor || domAuthor || "").trim();
+      const siteName = (article?.siteName || metaSite || "").trim();
+      const excerpt = (article?.excerpt || metaDescription || "").trim();
+      const content = article?.content || visibleFallbackHtml || "";
+      const textContent = (article?.textContent || "").trim();
+      const leadImage = metaImage ? absolutize(metaImage, base) : "";
+      const length = article?.length || textContent.length;
+
+      const importantLinks = extractImportantLinks(currentDoc, base, content);
+      const initialCapped = capHtml(String(content || ""), MAX_CONTENT_HTML_BYTES);
+      const initialBodyText = initialCapped.html.replace(/<[^>]+>/g, "").trim();
+      const visibleCapped = capHtml(visibleFallbackHtml, MAX_CONTENT_HTML_BYTES);
+      const visibleBodyText = visibleCapped.html.replace(/<[^>]+>/g, "").trim();
+      const capped = visibleBodyText.length > initialBodyText.length * 1.4 && initialBodyText.length < 1200
+        ? visibleCapped
+        : initialCapped;
+      const bodyText = capped.html.replace(/<[^>]+>/g, "").trim();
+      const isThin = bodyText.length < 200;
+      let responseContent = capped.html;
+      if (isThin) {
+        const safeTitle = escapeHtml(title);
+        const hero = leadImage
+          ? `<p><img src="${leadImage}" alt="${safeTitle}" referrerpolicy="no-referrer" style="max-width:100%;height:auto;border-radius:8px" /></p>`
+          : "";
+        responseContent =
+          `<section class="flowist-web-clip-body">` +
+          (hero || "") +
+          (capped.html || `<h1>${safeTitle}</h1>`) +
+          `<p><em>Some sections may be missing — the page renders extra content with JavaScript. Open the original for the complete article.</em></p>` +
+          `</section>`;
+      }
+      const images = extractImageUrls(responseContent);
+
+      const payload: Record<string, unknown> = {
+        url: base,
+        title,
+        byline,
+        author: byline,
+        siteName,
+        excerpt,
+        leadImage,
+        publishedTime: metaPublished,
+        content: responseContent,
+        contentHtml: responseContent,
+        images,
+        textContent,
+        length,
+        truncated: capped.truncated,
+        fallback: false,
+        embeds: [] as string[],
+        importantLinks,
+      };
+
+      // Track the best attempt so the final response is always the most
+      // complete version we saw, even if the last attempt regressed.
+      if (bodyText.length > bestBodyLen) {
+        bestBodyLen = bodyText.length;
+        bestExcerptLen = excerpt.length;
+        bestPayload = payload;
+      }
+
+      const incomplete = looksIncomplete(bodyText, excerpt);
+      console.info("[fetch-article] extraction attempt", {
+        attempt,
+        ua: UA_VARIANTS[attempt].slice(0, 40),
+        bodyLen: bodyText.length,
+        excerptLen: excerpt.length,
+        incomplete,
       });
-      article = reader.parse();
-    } catch (e) {
-      console.warn("[fetch-article] Readability failed", e);
+      if (!incomplete) break;
     }
 
-    // Fallback: visible page/article/main HTML if Readability gave up.
-    const bodyFallback = () => {
-      return visibleFallbackHtml || visiblePageFallback(document as any);
-    };
-
-    const domAuthor = extractAuthor(document as any);
-    const title = (article?.title || metaTitle || target.hostname).trim();
-    const byline = (article?.byline || metaAuthor || domAuthor || "").trim();
-    const siteName = (article?.siteName || metaSite || "").trim();
-    const excerpt = (article?.excerpt || metaDescription || "").trim();
-    const content = article?.content || bodyFallback();
-    const textContent = (article?.textContent || "").trim();
-    const leadImage = metaImage ? absolutize(metaImage, base) : "";
-    const length = article?.length || textContent.length;
-
-    if (length < 800 || !content || content.trim().length < 1200) {
+    // If every attempt still looks meta-only / half, ask Jina Reader as a
+    // final rescue. Only replace `bestPayload` when Jina genuinely returned
+    // more content than any direct attempt.
+    if (looksIncomplete(String((bestPayload?.textContent as string) || "").length ? String(bestPayload?.textContent) : "".padEnd(bestBodyLen, "x"), String(bestPayload?.excerpt || "")) || bestBodyLen < 800) {
       const fallback = await fetchJinaFallback(target);
-      if (fallback && fallback.length > length) {
+      const fallbackLen = Number(fallback?.length || 0);
+      if (fallback && fallbackLen > Math.max(bestBodyLen, Number(bestPayload?.length || 0))) {
         const capped = capHtml(String(fallback.content || ""), MAX_CONTENT_HTML_BYTES);
         const images = extractImageUrls(capped.html);
-        const enriched = {
+        bestPayload = {
           ...fallback,
           contentHtml: capped.html,
           author: fallback.byline || "",
@@ -1412,66 +1495,11 @@ Deno.serve(async (req) => {
           truncated: capped.truncated,
           fallback: false,
         };
-        return new Response(JSON.stringify(enriched), {
-          status: 200,
-          headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "public, max-age=300" },
-        });
       }
     }
 
-    const importantLinks = extractImportantLinks(document as any, base, content);
-    const initialCapped = capHtml(String(content || ""), MAX_CONTENT_HTML_BYTES);
-
-    // Always return the full extracted clip — no metadata-only card fallback.
-    // If Readability + jina both produced very little body, swap to the
-    // preserved visible-page HTML so unsupported/JS-heavy pages still save
-    // whatever could be fetched instead of title/description only.
-    const initialBodyText = initialCapped.html.replace(/<[^>]+>/g, "").trim();
-    const visibleCapped = capHtml(visibleFallbackHtml, MAX_CONTENT_HTML_BYTES);
-    const visibleBodyText = visibleCapped.html.replace(/<[^>]+>/g, "").trim();
-    const capped = visibleBodyText.length > initialBodyText.length * 1.4 && initialBodyText.length < 1200
-      ? visibleCapped
-      : initialCapped;
-    const bodyText = capped.html.replace(/<[^>]+>/g, "").trim();
-    const isThin = bodyText.length < 200;
-    let responseContent = capped.html;
-    if (isThin) {
-      const safeTitle = escapeHtml(title);
-      const hero = leadImage
-        ? `<p><img src="${leadImage}" alt="${safeTitle}" referrerpolicy="no-referrer" style="max-width:100%;height:auto;border-radius:8px" /></p>`
-        : "";
-      // Wrap the (thin) extracted content so nothing is discarded — user sees
-      // headings/images we DID find, plus a small notice at the end.
-      responseContent =
-        `<section class="flowist-web-clip-body">` +
-        (hero || "") +
-        (capped.html || `<h1>${safeTitle}</h1>`) +
-        `<p><em>Some sections may be missing — the page renders extra content with JavaScript. Open the original for the complete article.</em></p>` +
-        `</section>`;
-    }
-    const images = extractImageUrls(responseContent);
-
-
     return new Response(
-      JSON.stringify({
-        url: base,
-        title,
-        byline,
-        author: byline,           // spec alias
-        siteName,
-        excerpt,
-        leadImage,
-        publishedTime: metaPublished,
-        content: responseContent,
-        contentHtml: responseContent, // spec alias
-        images,
-        textContent,
-        length,
-        truncated: capped.truncated,
-        fallback: false,
-        embeds: [] as string[], // embeds are now inlined into `content` at their original position
-        importantLinks,  // [{ href, text }]
-      }),
+      JSON.stringify(bestPayload ?? { url: base, error: "no content extracted", code: "empty" }),
       {
         status: 200,
         headers: {
