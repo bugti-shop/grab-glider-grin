@@ -88,6 +88,7 @@ export const ImageTaskExtractorSheet = ({
   const [phase, setPhase] = useState<'idle' | 'capturing' | 'uploading' | 'processing' | 'done' | 'error'>('idle');
   const [errorLabel, setErrorLabel] = useState<string | null>(null);
   const captureLockRef = useRef(false);
+  const capturedRef = useRef(false);
 
 
   // Reset on close
@@ -101,6 +102,7 @@ export const ImageTaskExtractorSheet = ({
       setPhase('idle');
       setErrorLabel(null);
       captureLockRef.current = false;
+      capturedRef.current = false;
       releaseAllAiLocks();
     }
   }, [isOpen]);
@@ -720,7 +722,7 @@ export const ImageTaskExtractorSheet = ({
         onClose={() => {
           setShowCamera(false);
           // If user cancelled without capturing, dismiss the whole flow too.
-          if (!imageDataUrl && !isExtracting && !hasRun) onClose();
+          if (!capturedRef.current && !imageDataUrl && !isExtracting && !hasRun) onClose();
         }}
         title=""
         initialMode="note"
@@ -729,6 +731,7 @@ export const ImageTaskExtractorSheet = ({
           return await fetchObjectCountResult(dataUrl);
         }}
         onConfirmObjectCount={(dataUrl, result) => {
+          capturedRef.current = true;
           setShowCamera(false);
           applyObjectCountResult(dataUrl, result);
         }}
@@ -747,6 +750,7 @@ export const ImageTaskExtractorSheet = ({
             : null
         }
         onCapture={async (dataUrl) => {
+          capturedRef.current = true;
           setShowCamera(false);
           setImageDataUrl(dataUrl);
           await runExtraction(dataUrl);
