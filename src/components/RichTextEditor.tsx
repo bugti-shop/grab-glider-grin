@@ -1363,6 +1363,16 @@ export const RichTextEditor = ({
         if (!isLargeContent) {
           // Try auto-calculation for math expressions ending with =
           tryAutoCalculate();
+          // No-`=` auto-eval: after typing a space following a math segment
+          // like "2+3 " or "sqrt(16) ", auto-append "= <result>".
+          if (
+            (inputType === 'insertText' ||
+              inputType === 'insertReplacementText' ||
+              inputType === 'insertCompositionText') &&
+            tryMathAutoOnSpace(editorRef.current)
+          ) {
+            // caret was updated inside the helper; let the normal flow continue.
+          }
         
           // Smart Detection: check for URLs, emails, phone numbers after space or punctuation
           const selection = window.getSelection();
