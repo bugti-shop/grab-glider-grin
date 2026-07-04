@@ -243,9 +243,56 @@ function buildSections(): Section[] {
 
 }
 
-export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
-  const [query, setQuery] = useState('');
-  const sections = useMemo(buildSections, []);
+/**
+ * Sweep every section and pull out rows whose `trigger` starts with `/`
+ * (excluding the plain "/" row that just opens the slash menu). All of them
+ * get consolidated into a single dedicated block at the top so the user can
+ * click any command and have it applied to the editor immediately.
+ */
+function consolidateSlashCommands(sections: Section[]): Section[] {
+  const slashRows: Row[] = [];
+  const cleaned: Section[] = sections.map((s) => {
+    const kept: Row[] = [];
+    for (const r of s.rows) {
+      const t = r.trigger.trim();
+      // Only pull rows that start with `/word` — leave the bare "/" (opens menu)
+      // and tokens like "/text" inside descriptive prose alone.
+      if (/^\/[a-zA-Z]/.test(t)) {
+        slashRows.push(r);
+      } else {
+        kept.push(r);
+      }
+    }
+    return { ...s, rows: kept };
+  }).filter((s) => s.rows.length > 0);
+
+  if (slashRows.length === 0) return cleaned;
+
+  const slashBlock: Section = {
+    title: 'Slash commands (click to apply)',
+    description: 'Tap any command below — the cheat sheet closes and it runs in the editor instantly.',
+    rows: slashRows,
+    applySlash: true,
+  };
+  return [slashBlock, ...cleaned];
+}
+
+/**
+ * Sanitize a cheat-sheet trigger before dispatching it to the editor:
+ *   - strip `<url>` / `<...>` placeholders
+ *   - strip ellipsis characters
+ *   - collapse whitespace
+ * The remainder is inserted verbatim + trailing space so `trySlashLineShortcut`
+ * runs it. Commands with only a `/word` prefix left over remain typed for the
+ * user to complete their argument.
+ */
+function sanitizeSlashTrigger(trigger: string): string {
+  return trigger
+    .replace(/<[^>]*>/g, '')
+    .replace(/…/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
