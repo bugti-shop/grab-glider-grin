@@ -48,35 +48,7 @@ const SHIFT = isMac ? '⇧' : 'Shift';
 
 function buildSections(): Section[] {
   return [
-    {
-      title: 'Keyboard shortcuts',
-      description: `Use ${MOD} on ${isMac ? 'macOS' : 'Windows/Linux'}. Works everywhere in the editor.`,
-      rows: [
-        { trigger: `${MOD} + B`, result: 'Bold' },
-        { trigger: `${MOD} + I`, result: 'Italic' },
-        { trigger: `${MOD} + U`, result: 'Underline' },
-        { trigger: `${MOD} + ${SHIFT} + X`, result: 'Strikethrough', hint: `or ${MOD} + ${SHIFT} + 5` },
-        { trigger: `${MOD} + ${SHIFT} + H`, result: 'Highlight (yellow)' },
-        { trigger: `${MOD} + ${SHIFT} + 8`, result: 'Bullet list' },
-        { trigger: `${MOD} + ${SHIFT} + 7`, result: 'Numbered list' },
-        { trigger: `${MOD} + ${SHIFT} + 9`, result: 'Checklist / to-do' },
-        { trigger: `${MOD} + ${ALT} + 1/2/3`, result: 'Heading 1 / 2 / 3' },
-        { trigger: `${MOD} + ${ALT} + 0`, result: 'Normal paragraph' },
-        { trigger: `${MOD} + ${SHIFT} + L / E / R / J`, result: 'Align left / center / right / justify' },
-        { trigger: `${MOD} + ]  /  ${MOD} + [`, result: 'Indent / Outdent' },
-        { trigger: `${MOD} + ${SHIFT} + Q`, result: 'Blockquote' },
-        { trigger: `${MOD} + ${SHIFT} + C`, result: 'Code block' },
-        { trigger: `${MOD} + ${SHIFT} + -`, result: 'Horizontal rule' },
-        { trigger: `${MOD} + ${SHIFT} + ,`, result: 'Subscript' },
-        { trigger: `${MOD} + ${SHIFT} + .`, result: 'Superscript' },
-        { trigger: `${MOD} + K`, result: 'Insert link (from selection)' },
-        { trigger: `${MOD} + Z`, result: 'Undo' },
-        { trigger: `${MOD} + Y   /   ${MOD} + ${SHIFT} + Z`, result: 'Redo' },
-        { trigger: `${MOD} + =  /  ${MOD} + -`, result: 'Zoom in / out' },
-        { trigger: `${MOD} + 0`, result: 'Reset zoom' },
-      ],
-    },
-    {
+
       title: 'Markdown block shortcuts',
       description: 'Type these tokens at the start of a line, then press Space.',
       rows: [
