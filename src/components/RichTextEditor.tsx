@@ -1972,6 +1972,29 @@ export const RichTextEditor = ({
     // Slash / mention menu keyboard navigation
     if (slashMenu.open || mentionMenu.open) {
       const isMention = mentionMenu.open;
+      if (!isMention && e.key === 'Enter' && !e.shiftKey) {
+        const root = editorRef.current;
+        const sel = window.getSelection();
+        let trimmed = '';
+        if (root && sel && sel.rangeCount > 0) {
+          let el: Node | null = sel.getRangeAt(0).startContainer;
+          while (el) {
+            if (el === root || (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName))) {
+              trimmed = (el.textContent || '').trim();
+              break;
+            }
+            el = el.parentNode;
+          }
+        }
+        if (root && isSlashLineShortcutText(trimmed)) {
+          e.preventDefault();
+          closeSlash();
+          void trySlashLineShortcut(root).then((ok) => {
+            if (ok) handleInput();
+          });
+          return;
+        }
+      }
       const total = isMention ? mentionMenu.itemCount : SLASH_ITEMS_COUNT_FOR_QUERY(slashMenu.query);
       if (e.key === 'Escape') { e.preventDefault(); closeSlash(); closeMention(); return; }
       if (total > 0) {
