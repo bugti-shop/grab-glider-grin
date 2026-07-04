@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HelpCircle, X, Check, Sparkles, Crown, Rocket } from 'lucide-react';
+import { HelpCircle, X, Check, Sparkles, Crown, Rocket, PlayCircle } from 'lucide-react';
 
 import {
   Dialog,
