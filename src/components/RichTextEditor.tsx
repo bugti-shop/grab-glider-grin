@@ -62,6 +62,7 @@ import {
   markdownPasteToHtml,
   isInsideCode,
 } from './richtext/markdownShortcuts';
+import { tryMathShortcut } from './richtext/mathShortcut';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
 import {
   reattachTableListenersOnElement,
