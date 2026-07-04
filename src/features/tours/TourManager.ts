@@ -442,8 +442,6 @@ class TourManagerImpl {
           resolve(el);
         } else if (Date.now() - started > timeoutMs) {
           observer.disconnect();
-        } else if (Date.now() - started > timeoutMs) {
-          observer.disconnect();
           resolve(null);
         }
       });
