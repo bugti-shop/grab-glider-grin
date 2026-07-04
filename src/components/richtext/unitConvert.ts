@@ -58,7 +58,7 @@ const CATEGORIES: Category[] = [
       { symbol: 'mg', aliases: ['mg', 'milligram', 'milligrams'], toBase: 1e-6 },
       { symbol: 'μg', aliases: ['ug', 'microgram', 'micrograms', 'μg'], toBase: 1e-9 },
       { symbol: 't', aliases: ['t', 'tonne', 'tonnes', 'metricton', 'metrictons'], toBase: 1000 },
-      { symbol: 'lb', aliases: ['lb', 'lbs', 'pound', 'pounds'], toBase: 0.45359237 },
+      { symbol: 'lb', aliases: ['lb', 'lbs', 'lbm', 'lbav', 'pound', 'pounds', 'poundmass'], toBase: 0.45359237 },
       { symbol: 'oz', aliases: ['oz', 'ounce', 'ounces'], toBase: 0.028349523125 },
       { symbol: 'st', aliases: ['st', 'stone', 'stones'], toBase: 6.35029318 },
       { symbol: 'shortton', aliases: ['shortton', 'shorttons', 'uston', 'ustons'], toBase: 907.18474 },
