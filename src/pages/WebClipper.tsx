@@ -176,10 +176,17 @@ const WebClipper = () => {
     abortRef.current.abort();
   };
 
-  const failWith = (titleKey: string, titleFallback: string, descKey: string, descFallback: string) => {
+  const failWith = (
+    titleKey: string,
+    titleFallback: string,
+    descKey: string,
+    descFallback: string,
+    debug?: ErrorDebug,
+  ) => {
     const titleMsg = t(titleKey, titleFallback);
     const descMsg = t(descKey, descFallback);
-    setError({ title: titleMsg, description: descMsg });
+    setError({ title: titleMsg, description: descMsg, debug });
+    setShowErrorDebug(false);
     toast({ title: titleMsg, description: descMsg, variant: 'destructive' });
     setStage('idle');
     setProgress(null);
