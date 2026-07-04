@@ -223,6 +223,7 @@ export const RichTextEditor = ({
     hydrateWebClipsIn(editorRef.current);
     hydrateCodeBlocksIn(editorRef.current);
     hydrateImageMediaIn(editorRef.current);
+    void hydrateExtrasIn(editorRef.current);
   }, []);
   useEffect(() => () => { syncedUnsubRef.current?.(); }, []);
 
