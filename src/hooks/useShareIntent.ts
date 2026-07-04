@@ -60,6 +60,23 @@ export function useShareIntent() {
     const handlePayload = (raw: SendIntentResult | null | undefined) => {
       if (cancelled || !raw) return;
 
+      // ── Raw payload logging ────────────────────────────────────────────
+      // Everything the OS handed us, verbatim, so we can diagnose why some
+      // sites (Chrome vs. Twitter vs. news apps) forward URL vs. title vs.
+      // selection differently. Truncate long fields to keep logs readable.
+      const trunc = (v: unknown, n = 200) => {
+        const s = typeof v === 'string' ? v : v == null ? '' : String(v);
+        return s.length > n ? `${s.slice(0, n)}…(+${s.length - n})` : s;
+      };
+      console.info('[shareIntent] raw payload received', {
+        title: trunc(raw.title),
+        description: trunc(raw.description),
+        type: raw.type || null,
+        url: trunc(raw.url),
+        webUrl: trunc(raw.webUrl),
+        additionalItemsCount: Array.isArray(raw.additionalItems) ? raw.additionalItems.length : 0,
+      });
+
       // 1. Try to interpret raw.url as a direct file/asset reference first
       //    (image share from gallery, PDF share from Files, etc.).
       const directUrl = raw.url || raw.webUrl || '';
@@ -76,11 +93,24 @@ export function useShareIntent() {
       const url = attachmentKind ? '' : parsedUrl;
       const attachment = attachmentKind && safeDirect ? safeDirect : undefined;
 
-      if (!url && !text && !attachment) return;
+      console.info('[shareIntent] parsed payload', {
+        attachmentKind,
+        resolvedUrl: trunc(url),
+        resolvedText: trunc(text),
+        textChars: (text || '').length,
+        attachment: trunc(attachment),
+        blobChars: blob.length,
+      });
+
+      if (!url && !text && !attachment) {
+        console.warn('[shareIntent] payload contained no usable url/text/attachment — ignoring');
+        return;
+      }
 
       // 3. De-dup repeated fires (cold start + resume + sendIntentReceived).
       const signature = buildShareSignature({ url: url || attachment, text, attachment });
       if (handledThisMount.has(signature) || isDuplicateShare(signature)) {
+        console.info('[shareIntent] duplicate share suppressed', { signature: trunc(signature) });
         markNativeShareConsumed();
         return;
       }
@@ -106,6 +136,13 @@ export function useShareIntent() {
         attachmentType: attachmentKind,
         mode,
         shareId: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      });
+      console.info('[shareIntent] navigating to clipper', {
+        mode,
+        hasUrl: !!url,
+        hasSelection: !!text,
+        hasAttachment: !!attachment,
+        targetPreview: trunc(target, 300),
       });
       markNativeShareConsumed();
       navigate(target, { replace: true });
