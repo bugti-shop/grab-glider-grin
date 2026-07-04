@@ -39,15 +39,16 @@ class TourManagerImpl {
   }
 
   /** Start a tour immediately (or queue it if another one is running). */
-  async startTour(tourId: string, opts: { force?: boolean; auto?: boolean } = {}) {
+  async startTour(tourId: string, opts: { force?: boolean; auto?: boolean; chain?: boolean } = {}) {
     const tour = getTour(tourId);
     if (!tour) return;
 
     if (!opts.force) {
       if (await isDismissedForever(tourId)) return;
-      if (opts.auto && (await hasSeenTour(tourId))) return;
-      // Prevent noisy auto-chains: cap at 1 auto-tour per session boot.
-      if (opts.auto && this.autoChainCount >= 1) return;
+      if ((opts.auto || opts.chain) && (await hasSeenTour(tourId))) return;
+      // Chain runs are exempt from the auto-chain cap — the entire onboarding
+      // sequence is intentional. Cap only unrelated auto-fires.
+      if (opts.auto && !opts.chain && this.autoChainCount >= 1) return;
     }
 
     if (this.activeDriver) {
