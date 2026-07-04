@@ -51,6 +51,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const [phase, setPhase] = useState<Phase>('idle');
   const [errorLabel, setErrorLabel] = useState<string | null>(null);
   const captureLockRef = useRef(false);
+  const capturedRef = useRef(false);
 
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       setPhase('idle');
       setErrorLabel(null);
       captureLockRef.current = false;
+      capturedRef.current = false;
       releaseAllAiLocks();
     }
   }, [isOpen]);
@@ -448,7 +450,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
         isOpen={showCamera}
         onClose={() => {
           setShowCamera(false);
-          if (!imageDataUrl && !isExtracting && !hasRun) onClose();
+          if (!capturedRef.current && !imageDataUrl && !isExtracting && !hasRun) onClose();
         }}
         title=""
         initialMode="note"
@@ -457,6 +459,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           return await fetchObjectCountResult(dataUrl);
         }}
         onConfirmObjectCount={(dataUrl, result) => {
+          capturedRef.current = true;
           setShowCamera(false);
           applyObjectCountResult(dataUrl, result);
         }}
@@ -480,11 +483,13 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             : null
         }
         onCapture={async (dataUrl, opts) => {
+          capturedRef.current = true;
           setShowCamera(false);
           setImageDataUrl(dataUrl);
           await runExtraction(dataUrl, opts);
         }}
         onBatchNote={async (pages, opts) => {
+          capturedRef.current = true;
           if (!pages.length) return;
           if (!(await ensureScannerAccess())) return;
           setShowCamera(false);
