@@ -100,7 +100,8 @@ class TourManagerImpl {
 
     // Optional pre-actions: click one or more triggers (e.g. open task detail,
     // then open its ⋮ menu) so the real target becomes visible before highlight.
-    if (tour.beforeStart) {
+    const firstTargetAlreadyVisible = !!document.querySelector(tour.steps[0]?.elementSelector ?? '');
+    if (tour.beforeStart && !firstTargetAlreadyVisible) {
       const preSelectors = Array.isArray(tour.beforeStart) ? tour.beforeStart : [tour.beforeStart];
       for (const sel of preSelectors) {
         if (sel.startsWith('event:')) {

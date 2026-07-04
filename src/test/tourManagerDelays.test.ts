@@ -62,4 +62,22 @@ describe('TourManager delayed tutorial targets', () => {
     expect(driveMock).not.toHaveBeenCalled();
     expect(stateStore.markTourSeen).not.toHaveBeenCalledWith('personalize-app-lock');
   });
+
+  it('does not collapse an already-open settings target before highlighting it', async () => {
+    const { TourManager } = await import('@/features/tours/TourManager');
+    window.history.replaceState({}, '', '/todo/settings');
+    document.body.innerHTML = `
+      <button data-tour="settings-more-tabs">More Tabs</button>
+      <button data-tour="settings-eisenhower-matrix">Eisenhower Matrix</button>
+    `;
+    const moreTabs = document.querySelector('[data-tour="settings-more-tabs"]') as HTMLButtonElement;
+    moreTabs.addEventListener('click', () => {
+      document.querySelector('[data-tour="settings-eisenhower-matrix"]')?.remove();
+    });
+
+    await TourManager.startTour('task-eisenhower', { force: true });
+
+    expect(document.querySelector('[data-tour="settings-eisenhower-matrix"]')).not.toBeNull();
+    expect(driveMock).toHaveBeenCalledTimes(1);
+  });
 });
