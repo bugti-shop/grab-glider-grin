@@ -1718,6 +1718,26 @@ export const RichTextEditor = ({
           handleInput();
           return;
         }
+        // Relative date: +3d, +2w, +1m, +1y
+        if (tryRelativeDateShortcut(editorRef.current)) {
+          e.preventDefault();
+          document.execCommand('insertText', false, ' ');
+          handleInput();
+          return;
+        }
+        // Weekday: @friday → next Friday's date
+        if (tryWeekdayShortcut(editorRef.current)) {
+          e.preventDefault();
+          document.execCommand('insertText', false, ' ');
+          handleInput();
+          return;
+        }
+        // Repeated word (the the) → wrap second occurrence
+        if (tryRepeatedWordShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
         if (tryMarkdownTableShortcut(editorRef.current)) {
           e.preventDefault();
           handleInput();
