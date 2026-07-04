@@ -44,12 +44,17 @@ export const startEmailSignup = async (
   password: string,
   name?: string,
 ): Promise<void> => {
+  // We always redirect to https://flowist.me/auth/callback so the same link
+  // works on desktop web AND opens the installed Flowist app via
+  // Universal Links (iOS) / App Links (Android). The /auth/callback route
+  // hydrates the Supabase session from the URL hash and signs the user in
+  // automatically — no second sign-in step required.
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: name ? { full_name: name, name } : undefined,
-      emailRedirectTo: `${window.location.origin}/`,
+      emailRedirectTo: 'https://flowist.me/auth/callback',
     },
   });
   if (error) throw error;
