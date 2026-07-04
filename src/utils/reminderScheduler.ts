@@ -288,35 +288,58 @@ export const cancelNoteReminder = async (noteId: string): Promise<void> => {
 
 // ========== Extra reminders (independent of dueDate / reminderTime) ==========
 
-export type ExtraReminderRecurring = 'none' | 'daily' | 'weekly' | 'monthly';
+export type ExtraReminderRecurring = 'none' | 'hourly' | 'daily' | 'weekly' | 'monthly';
 
 const extraTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const extraReminderKey = (taskId: string) => `extra-${taskId}`;
+const extraItemKey = (taskId: string, itemId: string) => `extra-${taskId}-${itemId}`;
+
+/**
+ * Advance a date to the next occurrence for the given recurrence pattern.
+ * Does NOT compare against `now`; the caller is expected to loop until the
+ * result lies in the future.
+ */
+const advanceOnce = (d: Date, recurring: ExtraReminderRecurring): Date => {
+  const next = new Date(d);
+  if (recurring === 'hourly') next.setHours(next.getHours() + 1);
+  else if (recurring === 'daily') next.setDate(next.getDate() + 1);
+  else if (recurring === 'weekly') next.setDate(next.getDate() + 7);
+  else if (recurring === 'monthly') next.setMonth(next.getMonth() + 1);
+  return next;
+};
 
 /**
  * Compute the next occurrence of an extra reminder.
  * For 'none' returns null when in the past. For recurring, rolls forward
- * until the resulting date is in the future.
+ * until the resulting date is in the future. When `daysOfWeek` is provided
+ * the next occurrence is additionally rolled forward one day at a time until
+ * it lands on an allowed weekday.
  */
 export const computeNextExtraReminder = (
   from: Date,
   recurring: ExtraReminderRecurring,
-  now: Date = new Date()
+  now: Date = new Date(),
+  daysOfWeek?: number[]
 ): Date | null => {
   let next = new Date(from);
   if (recurring === 'none') {
     return next.getTime() > now.getTime() ? next : null;
   }
+  const allowedDays = daysOfWeek && daysOfWeek.length > 0 && daysOfWeek.length < 7
+    ? new Set(daysOfWeek)
+    : null;
   // Safety cap to avoid runaway loops.
   let guard = 0;
-  while (next.getTime() <= now.getTime() && guard < 1000) {
-    if (recurring === 'daily') next.setDate(next.getDate() + 1);
-    else if (recurring === 'weekly') next.setDate(next.getDate() + 7);
-    else if (recurring === 'monthly') next.setMonth(next.getMonth() + 1);
+  while (guard < 10000) {
+    const inFuture = next.getTime() > now.getTime();
+    const dayOk = !allowedDays || allowedDays.has(next.getDay());
+    if (inFuture && dayOk) return next;
+    next = advanceOnce(next, recurring);
     guard++;
   }
-  return next;
+  return null;
 };
+
 
 const persistExtraReminderTime = async (taskId: string, newTime: Date | null) => {
   try {
