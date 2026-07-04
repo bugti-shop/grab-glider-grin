@@ -398,6 +398,8 @@ export function tryRepeatedWordShortcut(root: HTMLElement | null): boolean {
   if (!m) return false;
   if (!/\s/.test(m[3])) return false; // require at least one whitespace char in separator
   if (m[2].toLowerCase() !== m[4].toLowerCase()) return false;
+  if (isInsideCodeBlock(textNode, root)) return false;
+
 
 
   // Split textNode so we can wrap word2 in a span.
