@@ -63,7 +63,7 @@ import {
   isInsideCode,
 } from './richtext/markdownShortcuts';
 import { tryMathShortcut } from './richtext/mathShortcut';
-import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut } from './richtext/extraShortcuts';
+import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut, isSlashLineShortcutText } from './richtext/extraShortcuts';
 import { tryUnitShortcut } from './richtext/unitConvert';
 import { trySmartQuote, tryDashEllipsis, trySymbolShortcut } from './richtext/textReplacements';
 import { hydrateExtrasIn } from './richtext/extraHydration';
@@ -1660,89 +1660,6 @@ export const RichTextEditor = ({
     handleInput();
   }, [hydrateSynced]);
 
-  // Mobile equivalent of the desktop WordToolbar keyboard shortcuts. Phones
-  // have no Ctrl/Cmd, so we let users type the toolbar action as a slash
-  // command on its own line (e.g. `/bold`, `/h1`, `/center`, `/hl`, `/undo`)
-  // and trigger it with Space or Enter — the same triggers other shortcuts use.
-  const tryToolbarSlashShortcut = useCallback((root: HTMLDivElement | null): boolean => {
-    if (!root) return false;
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return false;
-    const range = sel.getRangeAt(0);
-    let el: Node | null = range.startContainer;
-    let block: HTMLElement | null = null;
-    if (el === root || el.parentNode === root) {
-      block = root;
-    }
-    while (el && el !== root) {
-      if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
-        block = el as HTMLElement;
-        break;
-      }
-      el = el.parentNode;
-    }
-    if (!block) return false;
-    const text = (block.textContent || '').trim();
-    const m = text.match(/^\/([a-z][a-z0-9]*)(?:\s+(.+))?$/i);
-    if (!m) return false;
-    const cmd = m[1].toLowerCase();
-    const arg = (m[2] || '').trim();
-    const clear = () => {
-      block!.innerHTML = '<br>';
-      const r = document.createRange();
-      r.setStart(block!, 0);
-      r.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(r);
-    };
-    const escapeText = (value: string) => value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-    const insertInlineArg = (tag: 'strong' | 'em' | 'u' | 's' | 'code' | 'mark') => {
-      clear();
-      document.execCommand('insertHTML', false, `<${tag}>${escapeText(arg)}</${tag}>`);
-      handleInput();
-      return true;
-    };
-    const run = (fn: () => void) => { clear(); fn(); handleInput(); return true; };
-    switch (cmd) {
-      case 'bold': case 'b': return arg ? insertInlineArg('strong') : run(handleBold);
-      case 'italic': case 'em': return arg ? insertInlineArg('em') : run(handleItalic);
-      case 'underline': case 'ul-': return arg ? insertInlineArg('u') : run(handleUnderline);
-      case 'strike': case 'strikethrough': case 'del': return arg ? insertInlineArg('s') : run(handleStrikethrough);
-      case 'sub': case 'subscript': return run(handleSubscript);
-      case 'sup': case 'superscript': return run(handleSuperscript);
-      case 'highlight': case 'hl': case 'mark': return arg && !arg.startsWith('#') ? insertInlineArg('mark') : run(() => handleHighlight(arg || '#FEF3C7'));
-      case 'color': case 'textcolor': case 'fg': return run(() => handleTextColor(arg || 'inherit'));
-      case 'clear': case 'clearformat': case 'clearformatting': case 'plain':
-        return run(handleClearFormatting);
-      case 'codeblock': case 'inlinecode': case 'code': return arg ? insertInlineArg('code') : run(() => { handleCodeBlock(); });
-      case 'hr': case 'divider': case 'rule': return run(handleHorizontalRule);
-      case 'quote': case 'blockquote': case 'bq': return run(handleBlockquote);
-      case 'bullet': case 'bullets': case 'ul': return run(handleBulletList);
-      case 'numbered': case 'number': case 'ol': return run(handleNumberedList);
-      case 'check': case 'checklist': case 'task': case 'tasks': return run(handleChecklist);
-      case 'h1': case 'heading1': return run(() => handleHeading(1));
-      case 'h2': case 'heading2': return run(() => handleHeading(2));
-      case 'h3': case 'heading3': return run(() => handleHeading(3));
-      case 'p': case 'paragraph': case 'normal': return run(() => handleHeading('p'));
-      case 'left': case 'alignleft': return run(() => handleAlignment('left'));
-      case 'center': case 'aligncenter': return run(() => handleAlignment('center'));
-      case 'right': case 'alignright': return run(() => handleAlignment('right'));
-      case 'justify': case 'alignjustify': return run(() => handleAlignment('justify'));
-      case 'indent': return run(() => document.execCommand('indent'));
-      case 'outdent': return run(() => document.execCommand('outdent'));
-      case 'undo': clear(); handleUndo(); return true;
-      case 'redo': clear(); handleRedo(); return true;
-      case 'zoomin': clear(); setZoom((z) => Math.min(200, z + 10)); handleInput(); return true;
-      case 'zoomout': clear(); setZoom((z) => Math.max(50, z - 10)); handleInput(); return true;
-      case 'zoomreset': case 'zoom100': clear(); setZoom(100); handleInput(); return true;
-      default: return false;
-    }
-  }, []);
-
   // Android/mobile soft keyboards fire `keydown` with keyCode 229 and no `key`,
   // so our markdown block/inline shortcuts (which key off e.key===' '/'Enter'/'*'/etc.)
   // never trigger on phones. `beforeinput` fires reliably on every platform with
@@ -1753,20 +1670,29 @@ export const RichTextEditor = ({
     if (mentionMenu.open) return;
     if (isInsideCode(editorRef.current)) return;
 
-    // Toolbar slash commands work even while the slash menu is open, since the
-    // user's intent (`/bold␣`, `/h1⏎`) is unambiguous once Space/Enter fires.
     const ieType = (e.nativeEvent as InputEvent).inputType;
     const ieData = (e.nativeEvent as InputEvent).data || '';
-    if (
-      (ieType === 'insertText' && ieData === ' ') ||
-      (ieType === 'insertText' && ieData.length > 1 && ieData.endsWith(' ')) ||
-      ieType === 'insertParagraph' ||
-      ieType === 'insertLineBreak'
-    ) {
-      if (tryToolbarSlashShortcut(editorRef.current)) {
-        e.preventDefault();
-        closeSlash();
-        return;
+    if (ieType === 'insertParagraph' || ieType === 'insertLineBreak') {
+      const root = editorRef.current;
+      if (root) {
+        const sel = window.getSelection();
+        let trimmed = '';
+        if (sel && sel.rangeCount > 0) {
+          let el: Node | null = sel.getRangeAt(0).startContainer;
+          while (el) {
+            if (el === root || (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName))) {
+              trimmed = (el.textContent || '').trim();
+              break;
+            }
+            el = el.parentNode;
+          }
+        }
+        if (isSlashLineShortcutText(trimmed)) {
+          e.preventDefault();
+          closeSlash();
+          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          return;
+        }
       }
     }
     if (slashMenu.open) return;
@@ -1828,7 +1754,7 @@ export const RichTextEditor = ({
             el = el.parentNode;
           }
         }
-        if (/^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc|unit|convert)\b/i.test(trimmed)) {
+        if (isSlashLineShortcutText(trimmed)) {
           e.preventDefault();
           void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
           return;
@@ -1985,7 +1911,7 @@ export const RichTextEditor = ({
                 el = el.parentNode;
               }
             }
-            if (/^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc|unit|convert)\b/i.test(trimmed)) {
+            if (isSlashLineShortcutText(trimmed)) {
               e.preventDefault();
               void trySlashLineShortcut(root).then((ok) => {
                 if (ok) handleInput();
