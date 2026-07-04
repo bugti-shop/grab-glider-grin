@@ -1107,6 +1107,12 @@ body.onboarding-active [data-vaul-drawer] {
   text-shadow: none;
   cursor: pointer;
 }
+.flowist-tour-popover .driver-popover-next-btn {
+  min-width: 96px;
+  min-height: 42px;
+  padding: 10px 18px;
+  font-size: 14px;
+}
 .flowist-tour-popover .driver-popover-prev-btn {
   background: hsl(var(--muted));
   color: hsl(var(--foreground));
