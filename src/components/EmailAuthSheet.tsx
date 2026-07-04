@@ -1,20 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Mail, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { X, Loader2, Mail, ArrowLeft, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import {
   startEmailSignup,
-  resendSignupOtp,
-  verifySignupOtp,
   signInWithEmailPassword,
   sendPasswordReset,
-  classifyOtpError,
 } from '@/utils/emailAuth';
+import { supabase } from '@/integrations/supabase/client';
 import type { GoogleUser } from '@/utils/googleAuth';
 
-type Mode = 'signin' | 'signup' | 'otp' | 'forgot';
+type Mode = 'signin' | 'signup' | 'verify-link' | 'forgot';
 
 interface Props {
   open: boolean;
