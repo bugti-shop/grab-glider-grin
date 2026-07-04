@@ -196,16 +196,9 @@ export const RichTextEditor = ({
   // and `keydown` observe the same Space/Enter (some IMEs and desktops emit
   // both). Reset on the next macrotask.
   const slashLineFiringRef = useRef(false);
-  const slashLineLastRunRef = useRef<{ text: string; at: number } | null>(null);
   const runSlashLineOnce = (root: HTMLElement) => {
-    const text = getCurrentRichTextBlockText(root);
-    const now = Date.now();
     if (slashLineFiringRef.current) return false;
-    if (text && slashLineLastRunRef.current?.text === text && now - slashLineLastRunRef.current.at < 500) {
-      return false;
-    }
     slashLineFiringRef.current = true;
-    slashLineLastRunRef.current = { text, at: now };
     void trySlashLineShortcut(root).then((ok) => {
       if (ok) handleInput();
     }).finally(() => {
