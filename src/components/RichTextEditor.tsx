@@ -63,6 +63,9 @@ import {
   isInsideCode,
 } from './richtext/markdownShortcuts';
 import { tryMathShortcut } from './richtext/mathShortcut';
+import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut } from './richtext/extraShortcuts';
+import { hydrateExtrasIn } from './richtext/extraHydration';
+import 'katex/dist/katex.min.css';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
 import {
   reattachTableListenersOnElement,
@@ -220,6 +223,7 @@ export const RichTextEditor = ({
     hydrateWebClipsIn(editorRef.current);
     hydrateCodeBlocksIn(editorRef.current);
     hydrateImageMediaIn(editorRef.current);
+    void hydrateExtrasIn(editorRef.current);
   }, []);
   useEffect(() => () => { syncedUnsubRef.current?.(); }, []);
 
@@ -1708,6 +1712,12 @@ export const RichTextEditor = ({
     if (mdEnabled && !slashMenu.open && !mentionMenu.open && !isInsideCode(editorRef.current)) {
 
       if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Greek/math symbol shortcut runs first (\alpha → α).
+        if (tryGreekShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
         if (tryMarkdownTableShortcut(editorRef.current)) {
           e.preventDefault();
           handleInput();
@@ -1724,6 +1734,33 @@ export const RichTextEditor = ({
           handleInput();
           return;
         }
+        // Slash-line commands: /lorem, /color, /qr, /mermaid, /chess.
+        // Fire-and-forget async — preventDefault + handleInput happen when it
+        // consumes the line.
+        {
+          const root = editorRef.current;
+          if (root) {
+            const sel = window.getSelection();
+            let trimmed = '';
+            if (sel && sel.rangeCount > 0) {
+              let el: Node | null = sel.getRangeAt(0).startContainer;
+              while (el && el !== root) {
+                if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
+                  trimmed = (el.textContent || '').trim();
+                  break;
+                }
+                el = el.parentNode;
+              }
+            }
+            if (/^\/(lorem|color|qr|mermaid|chess)\b/i.test(trimmed)) {
+              e.preventDefault();
+              void trySlashLineShortcut(root).then((ok) => {
+                if (ok) handleInput();
+              });
+              return;
+            }
+          }
+        }
         if (tryMarkdownEnterShortcut(editorRef.current)) {
           e.preventDefault();
           handleInput();
@@ -1735,6 +1772,15 @@ export const RichTextEditor = ({
           handleInput();
           return;
         }
+      } else if (e.key === '$' && !e.ctrlKey && !e.metaKey) {
+        // Inline LaTeX: $E=mc^2$ renders as user types the closing `$`.
+        e.preventDefault();
+        // Insert the `$` first so tryLatexShortcut can see the matched pair.
+        document.execCommand('insertText', false, '$');
+        void tryLatexShortcut(editorRef.current).then((ok) => {
+          if (ok) handleInput();
+        });
+        return;
       } else if ((e.key === '*' || e.key === '_' || e.key === '`' || e.key === '~' || e.key === '=') && !e.ctrlKey && !e.metaKey) {
         // Math auto-evaluation runs first on `=` (e.g. "2+3=" → "2+3= 5").
         if (e.key === '=' && tryMathShortcut(editorRef.current)) {
