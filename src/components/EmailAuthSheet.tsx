@@ -264,7 +264,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             {mode !== 'signin' && mode !== 'signup' && (
-              <button onClick={() => setMode(mode === 'otp' ? 'signup' : 'signin')} className="p-1 -ml-1">
+              <button onClick={() => setMode(mode === 'verify-link' ? 'signup' : 'signin')} className="p-1 -ml-1">
                 <ArrowLeft className="h-5 w-5 text-[#1a1a1a]" />
               </button>
             )}
