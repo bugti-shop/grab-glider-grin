@@ -1346,6 +1346,13 @@ export const RichTextEditor = ({
           if (tryMarkdownInlinePostInput(editorRef.current)) {
             hydrateSynced();
           }
+
+          // Mobile/IME path: line slash commands such as /today, /now,
+          // /toc, /lorem 3, /tz tokyo should execute as soon as the command
+          // is complete — no extra Space or Enter required.
+          if (maybeRunSlashLineShortcut(editorRef.current, 'ready')) {
+            return;
+          }
         }
 
         const rawHtml = editorRef.current.innerHTML;
@@ -1747,25 +1754,9 @@ export const RichTextEditor = ({
     if (mentionMenu.open) return;
     if (ieType === 'insertParagraph' || ieType === 'insertLineBreak') {
       const root = editorRef.current;
-      if (root) {
-        const sel = window.getSelection();
-        let trimmed = '';
-        if (sel && sel.rangeCount > 0) {
-          let el: Node | null = sel.getRangeAt(0).startContainer;
-          while (el) {
-            if (el === root || (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName))) {
-              trimmed = (el.textContent || '').trim();
-              break;
-            }
-            el = el.parentNode;
-          }
-        }
-        if (isSlashLineShortcutText(trimmed)) {
-          e.preventDefault();
-          closeSlash();
-          runSlashLineOnce(root);
-          return;
-        }
+      if (maybeRunSlashLineShortcut(root, 'any')) {
+        e.preventDefault();
+        return;
       }
     }
     if (slashMenu.open) return;
@@ -1779,25 +1770,9 @@ export const RichTextEditor = ({
     if ((type === 'insertText' || type === 'insertReplacementText') && data === ' ') {
       // Slash-line commands fire on Space too (not only Enter) once they look
       // complete: e.g. "/today", "/now", "/tz tokyo", "/lorem 3".
-      if (root) {
-        const sel = window.getSelection();
-        let trimmed = '';
-        if (sel && sel.rangeCount > 0) {
-          let el: Node | null = sel.getRangeAt(0).startContainer;
-          while (el && el !== root) {
-            if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
-              trimmed = (el.textContent || '').trim();
-              break;
-            }
-            el = el.parentNode;
-          }
-        }
-        if (isSlashLineShortcutReady(trimmed)) {
-          e.preventDefault();
-          closeSlash();
-          runSlashLineOnce(root);
-          return;
-        }
+      if (maybeRunSlashLineShortcut(root, 'ready')) {
+        e.preventDefault();
+        return;
       }
       // Non-consuming: mutate before caret; space still inserts after.
       tryDashEllipsis(root);
@@ -1823,24 +1798,8 @@ export const RichTextEditor = ({
       document.execCommand('insertText', false, token);
       tryDashEllipsis(root);
       // Slash-line commands ready after batched Space (Android IME).
-      if (root) {
-        const sel = window.getSelection();
-        let trimmed = '';
-        if (sel && sel.rangeCount > 0) {
-          let el: Node | null = sel.getRangeAt(0).startContainer;
-          while (el && el !== root) {
-            if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
-              trimmed = (el.textContent || '').trim();
-              break;
-            }
-            el = el.parentNode;
-          }
-        }
-        if (isSlashLineShortcutReady(trimmed)) {
-          closeSlash();
-          runSlashLineOnce(root);
-          return;
-        }
+      if (maybeRunSlashLineShortcut(root, 'ready')) {
+        return;
       }
       if (tryGreekShortcut(root)) { handleInput(); return; }
       if (tryRelativeDateShortcut(root)) { document.execCommand('insertText', false, ' '); handleInput(); return; }
@@ -1856,24 +1815,11 @@ export const RichTextEditor = ({
     // ── Enter typed ──
     if (type === 'insertParagraph' || type === 'insertLineBreak') {
       // Slash-line commands: /lorem, /unit, /toc, /tz, /youtube, etc.
+      if (maybeRunSlashLineShortcut(root, 'any')) {
+        e.preventDefault();
+        return;
+      }
       if (root) {
-        const sel = window.getSelection();
-        let trimmed = '';
-        if (sel && sel.rangeCount > 0) {
-          let el: Node | null = sel.getRangeAt(0).startContainer;
-          while (el && el !== root) {
-            if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
-              trimmed = (el.textContent || '').trim();
-              break;
-            }
-            el = el.parentNode;
-          }
-        }
-        if (isSlashLineShortcutText(trimmed)) {
-          e.preventDefault();
-          runSlashLineOnce(root);
-          return;
-        }
         if (tryMarkdownPipeTableEnter(root)) { e.preventDefault(); handleInput(); return; }
       }
       if (tryMarkdownEnterShortcut(root)) {
