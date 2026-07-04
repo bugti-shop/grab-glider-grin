@@ -70,7 +70,6 @@ describe('evaluateMathExpression – statistics', () => {
     it(i, () => expect(evaluateMathExpression(i)).toBe(e));
 });
 
-describe('evaluateMathExpression – constants', () => {
 describe('evaluateMathExpression – constants (used inside expressions)', () => {
   it('pi*2', () => expect(String(evaluateMathExpression('pi*2') ?? '')).toMatch(/6\.283/));
   it('e*1', () => expect(String(evaluateMathExpression('e*1') ?? '')).toMatch(/2\.71828/));
