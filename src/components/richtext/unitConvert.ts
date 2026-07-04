@@ -357,7 +357,7 @@ export type ConvertResult = {
  */
 export function convertExpression(input: string): ConvertResult | null {
   const trimmed = input.trim();
-  const m = /^(-?\d+(?:\.\d+)?)\s*([A-Za-z°²³\/]+)\s+(?:in|to|as|->|=)\s+([A-Za-z°²³\/]+)$/i.exec(trimmed);
+  const m = /^(-?\d+(?:\.\d+)?)\s*([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)\s+(?:in|to|as|->|=)\s+([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)$/i.exec(trimmed);
   if (!m) return null;
 
   const value = parseFloat(m[1]);
