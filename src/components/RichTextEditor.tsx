@@ -1769,6 +1769,26 @@ export const RichTextEditor = ({
       e.preventDefault();
       document.execCommand('insertText', false, token);
       tryDashEllipsis(root);
+      // Slash-line commands ready after batched Space (Android IME).
+      if (root) {
+        const sel = window.getSelection();
+        let trimmed = '';
+        if (sel && sel.rangeCount > 0) {
+          let el: Node | null = sel.getRangeAt(0).startContainer;
+          while (el && el !== root) {
+            if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
+              trimmed = (el.textContent || '').trim();
+              break;
+            }
+            el = el.parentNode;
+          }
+        }
+        if (isSlashLineShortcutReady(trimmed)) {
+          closeSlash();
+          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          return;
+        }
+      }
       if (tryGreekShortcut(root)) { handleInput(); return; }
       if (tryRelativeDateShortcut(root)) { document.execCommand('insertText', false, ' '); handleInput(); return; }
       if (tryWeekdayShortcut(root)) { document.execCommand('insertText', false, ' '); handleInput(); return; }
