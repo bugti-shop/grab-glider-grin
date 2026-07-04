@@ -65,6 +65,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       setPhase('idle');
       setErrorLabel(null);
       captureLockRef.current = false;
+      capturedRef.current = false;
       releaseAllAiLocks();
     }
   }, [isOpen]);
