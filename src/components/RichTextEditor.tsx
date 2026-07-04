@@ -1733,6 +1733,13 @@ export const RichTextEditor = ({
           handleInput();
           return;
         }
+        // Unit conversion: "10 km in miles" → appends " = 6.21371 mi"
+        if (tryUnitShortcut(editorRef.current)) {
+          e.preventDefault();
+          document.execCommand('insertText', false, ' ');
+          handleInput();
+          return;
+        }
         // Repeated word (the the) → wrap second occurrence
         if (tryRepeatedWordShortcut(editorRef.current)) {
           e.preventDefault();
