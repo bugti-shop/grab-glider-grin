@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { TaskInputSheet } from "@/components/TaskInputSheet";
 import { getSetting } from "@/utils/settingsStorage";
-import { loadTodoItems, saveTodoItems } from "@/utils/todoItemsStorage";
+import { saveTodoItem } from "@/utils/todoItemsStorage";
 import { genId } from "@/utils/genId";
 import { TodoItem, Folder, TaskSection } from "@/types/note";
 import { toast } from "sonner";
