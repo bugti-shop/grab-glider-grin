@@ -130,7 +130,7 @@ const CATEGORIES: Category[] = [
       { symbol: 'km/h', aliases: ['kmh', 'kph', 'km/h', 'kilometersperhour', 'kmph'], toBase: 1 / 3.6 },
       { symbol: 'mph', aliases: ['mph', 'milesperhour', 'mi/h'], toBase: 0.44704 },
       { symbol: 'ft/s', aliases: ['fps', 'feetpersecond', 'ft/s'], toBase: 0.3048 },
-      { symbol: 'knot', aliases: ['knot', 'knots', 'kn', 'kt'], toBase: 0.514444444 },
+      { symbol: 'knot', aliases: ['knot', 'knots', 'kn', 'kt', 'kts', 'kts.', 'knotsperhour', 'nauticalmileperhour', 'nauticalmilesperhour'], toBase: 0.514444444 },
       { symbol: 'mach', aliases: ['mach'], toBase: 343 },
       { symbol: 'c', aliases: ['lightspeed', 'speedoflight'], toBase: 299792458 },
     ],
