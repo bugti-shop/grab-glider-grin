@@ -140,6 +140,7 @@ class TourManagerImpl {
     this.activeRoute = tour.route;
     this.forcedActive = !!opts.forced;
     try { document.body.dataset.tourActive = 'true'; } catch {}
+    try { document.body.dataset.tourId = tourId; } catch {}
     try {
       if (this.forcedActive) document.body.dataset.tourForced = 'true';
       else delete document.body.dataset.tourForced;
