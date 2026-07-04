@@ -444,11 +444,17 @@ const ShareIntentBridge = () => {
   return null;
 };
 
+const QuickAddSyncBridge = () => {
+  useQuickAddSync();
+  return null;
+};
+
 const AppRoutes = () => {
   useGlobalShortcuts();
   return (
     <BrowserRouter>
       <ShareIntentBridge />
+      <QuickAddSyncBridge />
       <NavigationBackProvider>
         <NavigationLoader />
         <DashboardTracker />
