@@ -443,7 +443,33 @@ class TourManagerImpl {
         } else if (Date.now() - started > timeoutMs) {
           observer.disconnect();
           resolve(null);
-        }
+  }
+
+  /**
+   * Forced-mode helper: detect whether any Radix Sheet / Dialog / Drawer /
+   * DropdownMenu / Popover is currently open that does NOT contain the
+   * tour's required target. If so, the user has navigated into some other
+   * UI while the tutorial is still pending and we need to intercept.
+   */
+  private hasForeignOverlayOpen(targetSelector: string): boolean {
+    if (typeof document === 'undefined') return false;
+    const openWrappers = document.querySelectorAll<HTMLElement>(
+      '[data-state="open"][role="dialog"], ' +
+      '[data-state="open"][role="alertdialog"], ' +
+      '[data-state="open"][role="menu"], ' +
+      '[data-state="open"][data-radix-popper-content-wrapper], ' +
+      '[data-vaul-drawer][data-state="open"]',
+    );
+    for (const w of Array.from(openWrappers)) {
+      // If the tour's target lives inside this overlay, it's the tour-required
+      // sheet — leave it alone.
+      if (w.querySelector(targetSelector)) continue;
+      // Also skip driver.js's own popover container.
+      if (w.closest('.driver-popover')) continue;
+      return true;
+    }
+    return false;
+  }
       });
       observer.observe(document.body, { childList: true, subtree: true });
       // Absolute timeout in case DOM never changes.
