@@ -54,11 +54,9 @@ const WebClipper = () => {
   const { toast } = useToast();
   const { t } = useTranslation();
   const { isAdminBypass, isPro } = useSubscription();
-  // Free users see a monthly quota bar; Pro users (or admin bypass) see nothing.
-  // isPro flips instantly when RevenueCat / user_entitlements Realtime fires,
-  // so upgrading unlocks unlimited clipping without a page refresh.
-  const showQuota = !isPro && !isAdminBypass;
-  const quota = useWebClipperQuota(showQuota);
+  // Web Clipper is unlimited for everyone — no free/Pro gate, no quota UI.
+  const showQuota = false;
+  const quota = useWebClipperQuota(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [stage, setStage] = useState<Stage>('idle');
