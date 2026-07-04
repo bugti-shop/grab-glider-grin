@@ -1606,6 +1606,16 @@ export const TaskDetailPage = ({
       <TaskReminderSheet
         isOpen={showExtraReminderSheet}
         onClose={() => setShowExtraReminderSheet(false)}
+        initialItems={
+          Array.isArray((task as any).extraReminders) && (task as any).extraReminders.length > 0
+            ? (task as any).extraReminders.map((r: any) => ({
+                id: String(r.id),
+                time: new Date(r.time),
+                recurring: (r.recurring || 'none') as any,
+                daysOfWeek: Array.isArray(r.daysOfWeek) ? r.daysOfWeek : undefined,
+              }))
+            : null
+        }
         initialValue={
           task.extraReminderTime
             ? {
@@ -1615,8 +1625,10 @@ export const TaskDetailPage = ({
             : null
         }
         onSave={handleSaveExtraReminder}
+        onSaveAll={handleSaveExtraRemindersList}
         onRemove={handleRemoveExtraReminder}
       />
+
 
       {/* TaskDependencySheet */}
       <TaskDependencySheet
