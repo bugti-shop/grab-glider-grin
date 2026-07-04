@@ -810,6 +810,55 @@ const WebClipper = () => {
                     )}
                   </div>
                 )}
+                {error.debug && (
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowErrorDebug((v) => !v)}
+                      className="text-[11px] underline underline-offset-2 opacity-80 hover:opacity-100"
+                    >
+                      {showErrorDebug
+                        ? t('webClipper.hideDebug', 'Hide technical details')
+                        : t('webClipper.showDebug', 'Show technical details')}
+                    </button>
+                    {showErrorDebug && (
+                      <div className="mt-2 rounded-md border border-destructive/30 bg-background/60 p-2 text-[11px] font-mono text-foreground/90 space-y-1 break-all">
+                        <div><span className="opacity-60">code:</span> {error.debug.code || '—'}</div>
+                        {typeof error.debug.httpStatus === 'number' && (
+                          <div><span className="opacity-60">http status:</span> {error.debug.httpStatus}</div>
+                        )}
+                        {error.debug.upstreamMessage && (
+                          <div><span className="opacity-60">upstream:</span> {error.debug.upstreamMessage}</div>
+                        )}
+                        <div><span className="opacity-60">stage:</span> {error.debug.stage || '—'}</div>
+                        <div><span className="opacity-60">requested mode:</span> {error.debug.requestedMode || '—'}</div>
+                        <div><span className="opacity-60">target url:</span> {error.debug.targetUrl || '—'}</div>
+                        {error.debug.attachmentUrl && (
+                          <div><span className="opacity-60">attachment ({error.debug.attachmentType || 'unknown'}):</span> {error.debug.attachmentUrl}</div>
+                        )}
+                        <div><span className="opacity-60">received title:</span> {error.debug.receivedTitle || '—'}</div>
+                        <div><span className="opacity-60">shared selection:</span> {error.debug.receivedSelectionChars ?? 0} chars</div>
+                        <div><span className="opacity-60">shared content:</span> {error.debug.receivedContentChars ?? 0} chars</div>
+                        <div><span className="opacity-60">article html:</span> {error.debug.articleHtmlChars ?? 0} chars</div>
+                        <div><span className="opacity-60">jina fallback used:</span> {error.debug.fallbackAttempted ? 'yes' : 'no'}</div>
+                        <div><span className="opacity-60">at:</span> {error.debug.at || '—'}</div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              const payload = JSON.stringify(error.debug, null, 2);
+                              void navigator.clipboard?.writeText(payload);
+                              toast({ title: t('webClipper.debugCopied', 'Debug info copied') });
+                            } catch { /* ignore */ }
+                          }}
+                          className="mt-1 underline underline-offset-2 opacity-80 hover:opacity-100"
+                        >
+                          {t('webClipper.copyDebug', 'Copy debug info')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </AlertDescription>
             </Alert>
           )}
