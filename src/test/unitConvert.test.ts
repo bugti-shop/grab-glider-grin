@@ -8,7 +8,7 @@ describe('convertExpression – cheat sheet examples', () => {
     ['5 km to miles', /^5 km = 3\.10686 mi$/],
     ['1 mile in km', /^1 mi = 1\.60934 km$/],
     ['100 cm in m', /^100 cm = 1 m$/],
-    ['12 in to cm', /^12 in = 30\.48 cm$/],
+    ['12 inch to cm', /^12 in = 30\.48 cm$/],
     // Mass
     ['2.5 kg to lb', /^2\.5 kg = 5\.51156 lb$/],
     ['16 oz in g', /^16 oz = 453\.592 g$/],
