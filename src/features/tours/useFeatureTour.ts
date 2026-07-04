@@ -58,7 +58,9 @@ export const useTourBootstrap = () => {
           const { hasSeenTour } = await import('./TourStateStore');
           for (const id of ONBOARDING_CHAIN) {
             if (!(await hasSeenTour(id))) {
-              TourManager.startTour(id, { chain: true });
+              // Compulsory: onboarding + "Start full tutorial" always run as
+              // forced tours so users can't dismiss mid-flow.
+              TourManager.startTour(id, { chain: true, forced: true });
               return;
             }
           }

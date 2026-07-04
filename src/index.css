@@ -1154,3 +1154,13 @@ body.onboarding-active [data-vaul-drawer] {
   border-radius: 10px;
 }
 
+/* Forced/compulsory tutorial: block dismissal via overlay tap and hide the ✕. */
+body[data-tour-forced="true"] .driver-overlay {
+  pointer-events: none !important;
+}
+.flowist-tour-popover.flowist-tour-forced .driver-popover-close-btn,
+.flowist-tour-popover.flowist-tour-forced .flowist-tour-dismiss {
+  display: none !important;
+}
+
+
