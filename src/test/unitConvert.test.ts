@@ -38,7 +38,7 @@ describe('convertExpression – cheat sheet examples', () => {
     ['1 ha to acre', /^1 ha = 2\.47105 acre$/],
     // Energy
     ['100 kcal in kj', /^100 kcal = 418\.4 kJ$/],
-    ['1 kwh to j', /^1 kWh = 3\.6 (?:e\+6 J|MJ|000000 J|3600000 J)/],
+    ['1 kwh to j', /^1 kWh = 3600000 J$/],
     // Fuel economy
     ['25 mpg in l100km', /^25 mpg = 9\.40858 L\/100km$/],
     // Angle
