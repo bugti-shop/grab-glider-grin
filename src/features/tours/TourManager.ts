@@ -131,7 +131,7 @@ class TourManagerImpl {
           // Close whatever sheet/menu the previous tour opened before we
           // navigate to and highlight the next feature.
           this.closeTransientUi();
-          setTimeout(() => this.startTour(nextId, { chain: true }), 400);
+          setTimeout(() => this.startTour(nextId, { chain: true }), 550);
           return;
         }
       }
@@ -369,18 +369,68 @@ class TourManagerImpl {
    */
   private closeTransientUi() {
     if (typeof window === 'undefined') return;
-    const fireEscape = () => {
+
+    const fireEscapeOn = (target: EventTarget | null) => {
+      if (!target) return;
       const opts: KeyboardEventInit = {
         key: 'Escape', code: 'Escape', keyCode: 27, which: 27,
         bubbles: true, cancelable: true, composed: true,
       };
-      try { document.body.dispatchEvent(new KeyboardEvent('keydown', opts)); } catch {}
-      try { document.body.dispatchEvent(new KeyboardEvent('keyup', opts)); } catch {}
+      try { target.dispatchEvent(new KeyboardEvent('keydown', opts)); } catch {}
+      try { target.dispatchEvent(new KeyboardEvent('keyup', opts)); } catch {}
     };
-    // Nested overlays: Radix closes one layer per Escape, so pulse a few times.
-    fireEscape();
-    setTimeout(fireEscape, 60);
-    setTimeout(fireEscape, 140);
+
+    const pulse = () => {
+      // Radix DismissableLayer listens on `document`; some primitives on `window`.
+      // Also fire on the active element (usually a focused button inside the sheet)
+      // so the event isn't swallowed by focus trapping.
+      fireEscapeOn(document);
+      fireEscapeOn(window);
+      fireEscapeOn(document.activeElement);
+
+      // Belt-and-braces: physically click every visible Radix close button in any
+      // currently-open sheet / dialog / drawer / popover. Radix marks the wrapper
+      // with data-state="open" and the close ✕ carries a `data-radix-*` prop or
+      // an aria-label of "Close".
+      const openWrappers = document.querySelectorAll<HTMLElement>(
+        '[data-state="open"][role="dialog"], ' +
+        '[data-state="open"][role="alertdialog"], ' +
+        '[data-state="open"][role="menu"], ' +
+        '[data-state="open"][data-radix-popper-content-wrapper], ' +
+        '[data-vaul-drawer][data-state="open"]',
+      );
+      openWrappers.forEach((wrapper) => {
+        const closeBtn = wrapper.querySelector<HTMLElement>(
+          'button[aria-label="Close"], button[aria-label="close"], ' +
+          '[data-radix-collection-item][data-close], [data-close-button]',
+        );
+        if (closeBtn) {
+          try { this.simulateActivation(closeBtn); } catch {}
+        }
+      });
+
+      // Any outstanding overlay backdrop — clicking it usually closes Radix
+      // primitives configured with pointer-outside dismiss.
+      const overlays = document.querySelectorAll<HTMLElement>(
+        '[data-radix-dialog-overlay], [data-radix-alert-dialog-overlay], [data-vaul-overlay]',
+      );
+      overlays.forEach((ov) => {
+        try {
+          const rect = ov.getBoundingClientRect();
+          const evt = new MouseEvent('pointerdown', {
+            bubbles: true, cancelable: true, clientX: rect.left + 4, clientY: rect.top + 4,
+          });
+          ov.dispatchEvent(evt);
+        } catch {}
+      });
+    };
+
+    // Pulse several times to peel nested overlays (menu inside sheet inside dialog).
+    pulse();
+    setTimeout(pulse, 80);
+    setTimeout(pulse, 180);
+    setTimeout(pulse, 320);
+
     try {
       window.dispatchEvent(new CustomEvent('flowist-tour:close-overlays'));
     } catch {}
