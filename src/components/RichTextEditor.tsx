@@ -130,6 +130,27 @@ interface RichTextEditorProps {
   onFloatingImageUpload?: () => void;
 }
 
+const RICH_TEXT_BLOCK_TAG_PATTERN = /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/;
+
+const getCurrentRichTextBlock = (root: HTMLElement | null): HTMLElement | null => {
+  if (!root) return null;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return null;
+
+  let el: Node | null = sel.getRangeAt(0).startContainer;
+  while (el) {
+    if (el === root) return root;
+    if (el.nodeType === 1 && RICH_TEXT_BLOCK_TAG_PATTERN.test((el as HTMLElement).tagName)) {
+      return el as HTMLElement;
+    }
+    el = el.parentNode;
+  }
+  return null;
+};
+
+const getCurrentRichTextBlockText = (root: HTMLElement | null): string =>
+  (getCurrentRichTextBlock(root)?.textContent || '').trim();
+
 
 export const RichTextEditor = ({
   content,
@@ -175,14 +196,22 @@ export const RichTextEditor = ({
   // and `keydown` observe the same Space/Enter (some IMEs and desktops emit
   // both). Reset on the next macrotask.
   const slashLineFiringRef = useRef(false);
+  const slashLineLastRunRef = useRef<{ text: string; at: number } | null>(null);
   const runSlashLineOnce = (root: HTMLElement) => {
-    if (slashLineFiringRef.current) return;
+    const text = getCurrentRichTextBlockText(root);
+    const now = Date.now();
+    if (slashLineFiringRef.current) return false;
+    if (text && slashLineLastRunRef.current?.text === text && now - slashLineLastRunRef.current.at < 500) {
+      return false;
+    }
     slashLineFiringRef.current = true;
+    slashLineLastRunRef.current = { text, at: now };
     void trySlashLineShortcut(root).then((ok) => {
       if (ok) handleInput();
     }).finally(() => {
       setTimeout(() => { slashLineFiringRef.current = false; }, 0);
     });
+    return true;
   };
   const savedRangeRef = useRef<Range | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
@@ -230,6 +259,17 @@ export const RichTextEditor = ({
 
   const closeSlash = useCallback(() => setSlashMenu(s => ({ ...s, open: false })), []);
   const closeMention = useCallback(() => setMentionMenu(m => ({ ...m, open: false })), []);
+
+  const maybeRunSlashLineShortcut = (root: HTMLElement | null, readiness: 'ready' | 'any' = 'ready') => {
+    if (!root) return false;
+    const trimmed = getCurrentRichTextBlockText(root);
+    const shouldRun = readiness === 'ready'
+      ? isSlashLineShortcutReady(trimmed)
+      : isSlashLineShortcutText(trimmed);
+    if (!shouldRun) return false;
+    closeSlash();
+    return runSlashLineOnce(root);
+  };
 
   const saveEditorSelection = useCallback(() => {
     const editor = editorRef.current;
