@@ -100,7 +100,12 @@ class TourManagerImpl {
     let currentIndex = 0;
     let currentDrv: Driver | null = null;
 
-    const finalize = async () => {
+    // If this tour is part of the onboarding chain, teach the popover that
+    // "Next" means "advance to the next feature" rather than "done".
+    const chainedNextId = nextOnboardingTourId(tourId);
+    const inChain = !!chainedNextId;
+
+    const finalize = async (opts: { advanceChain?: boolean } = {}) => {
       try { delete document.body.dataset.tourActive; } catch {}
       emitTourActiveChange(false);
       this.activeDriver = null;
@@ -108,12 +113,26 @@ class TourManagerImpl {
       const finishedId = this.activeTourId;
       this.activeTourId = null;
       if (finishedId) await markTourSeen(finishedId);
+      // Auto-advance the onboarding chain when a chained tour completes
+      // (Next click or action-completion path). We do NOT auto-advance when
+      // the user explicitly dismissed via the ✕ / overlay tap.
+      if (opts.advanceChain && finishedId) {
+        const nextId = nextOnboardingTourId(finishedId);
+        if (nextId) {
+          setTimeout(() => this.startTour(nextId, { chain: true }), 250);
+          return;
+        }
+      }
       this.drainQueue();
     };
 
     const buildDriver = (stepIndex: number): Driver => {
       const step = tour.steps[stepIndex];
       const isLast = stepIndex === tour.steps.length - 1;
+      // Popover button label: use "Next" whenever there's more to walk the
+      // user through — either more steps in this tour, or another chained
+      // tour queued up after it. "Got it" only appears at the very end.
+      const nextLabel = !isLast || inChain ? 'Next' : 'Got it';
       return driver({
         allowClose: true,
         overlayOpacity: 0.55,
@@ -122,9 +141,18 @@ class TourManagerImpl {
         smoothScroll: true,
         popoverClass: 'flowist-tour-popover',
         showButtons: ['next', 'close'],
-        nextBtnText: isLast ? 'Got it' : 'Next',
-        doneBtnText: 'Got it',
+        nextBtnText: nextLabel,
+        doneBtnText: nextLabel,
         steps: [this.toDriverStep(step)],
+        onNextClick: isLast
+          ? () => {
+              // Last step: mark done + advance onboarding chain if applicable.
+              suppressDestroy = true;
+              try { currentDrv?.destroy(); } catch {}
+              this.activeDriver = null;
+              void finalize({ advanceChain: inChain });
+            }
+          : undefined,
         onDestroyed: async () => {
           if (suppressDestroy) {
             suppressDestroy = false;
