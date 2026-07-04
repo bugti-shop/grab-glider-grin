@@ -373,129 +373,13 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
     clip.dataset.hydrated = '1';
   });
 
-  // Full-page snapshot placeholders — click to expand the gzipped raw HTML
-  // into a sandboxed iframe that renders exactly as the page was captured.
-  const snapshots = root.querySelectorAll<HTMLElement>(
-    '.flowist-web-clip-fullpage[data-role="fullpage-snapshot"]',
-  );
-  snapshots.forEach((fig) => {
-    if (fig.dataset.hydrated === '1') return;
-    fig.dataset.hydrated = '1';
-
-    const originalUrl = fig.getAttribute('data-url') || '';
-    const capturedAt = fig.getAttribute('data-captured-at') || '';
-
-    // Ensure a "Download captured HTML" button exists alongside the view button.
-    if (!fig.querySelector('button[data-role="fullpage-download"]')) {
-      const dl = document.createElement('button');
-      dl.type = 'button';
-      dl.className = 'flowist-web-clip-fullpage-btn';
-      dl.setAttribute('data-role', 'fullpage-download');
-      dl.setAttribute('contenteditable', 'false');
-      dl.textContent = '⬇ Download captured HTML';
-      const openBtn = fig.querySelector('button[data-role="fullpage-open"]');
-      if (openBtn && openBtn.parentNode) {
-        openBtn.parentNode.insertBefore(dl, openBtn.nextSibling);
-      } else {
-        fig.appendChild(dl);
-      }
-      dl.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const prev = dl.textContent;
-        dl.setAttribute('disabled', 'true');
-        dl.textContent = 'Preparing…';
-        try {
-          const gz = fig.getAttribute('data-compressed-gz') || '';
-          const { decompressHtml } = await import('@/utils/htmlCompression');
-          const html = await decompressHtml(gz);
-          const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-          const href = URL.createObjectURL(blob);
-          let host = 'page';
-          try { if (originalUrl) host = new URL(originalUrl).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
-          const stamp = (capturedAt || new Date().toISOString()).replace(/[:.]/g, '-');
-          const a = document.createElement('a');
-          a.href = href;
-          a.download = `flowist-clip-${host}-${stamp}.html`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(() => URL.revokeObjectURL(href), 4000);
-          dl.textContent = '✓ Downloaded';
-          setTimeout(() => { dl.textContent = prev || '⬇ Download captured HTML'; }, 1500);
-        } catch (err) {
-          console.error('[webClip] download failed', err);
-          dl.textContent = '⚠️ Download failed';
-          setTimeout(() => { dl.textContent = prev || '⬇ Download captured HTML'; }, 2000);
-        } finally {
-          dl.removeAttribute('disabled');
-        }
-      });
-    }
-
-    const btn = fig.querySelector<HTMLButtonElement>('button[data-role="fullpage-open"]');
-    if (!btn) return;
-
-    const openSnapshot = async () => {
-      if (fig.querySelector('iframe.flowist-web-clip-fullpage-frame')) return;
-      btn.dataset.originalLabel = btn.dataset.originalLabel || btn.textContent || 'View snapshot';
-      btn.textContent = 'Loading snapshot…';
-      btn.setAttribute('disabled', 'true');
-      try {
-        const gz = fig.getAttribute('data-compressed-gz') || '';
-        const { decompressHtml } = await import('@/utils/htmlCompression');
-        let html = await decompressHtml(gz);
-
-        if (originalUrl) {
-          const safeBase = originalUrl.replace(/"/g, '&quot;');
-          const baseTag = `<base href="${safeBase}" target="_blank">`;
-          if (/<base\s/i.test(html)) {
-            // leave existing <base> intact
-          } else if (/<head[^>]*>/i.test(html)) {
-            html = html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
-          } else if (/<html[^>]*>/i.test(html)) {
-            html = html.replace(/<html([^>]*)>/i, `<html$1><head>${baseTag}</head>`);
-          } else {
-            html = `<!DOCTYPE html><html><head>${baseTag}</head><body>${html}</body></html>`;
-          }
-        }
-
-        const iframe = document.createElement('iframe');
-        iframe.className = 'flowist-web-clip-fullpage-frame';
-        iframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox');
-        iframe.setAttribute('referrerpolicy', 'no-referrer');
-        iframe.setAttribute('loading', 'lazy');
-        iframe.setAttribute(
-          'style',
-          'width:100%;min-height:70vh;border:1px solid hsl(var(--border));border-radius:8px;margin-top:8px;background:#fff',
-        );
-        iframe.srcdoc = html;
-        fig.appendChild(iframe);
-        btn.textContent = '▴ Hide snapshot';
-      } catch (err) {
-        console.error('[webClip] snapshot expand failed', err);
-        btn.textContent = '⚠️ Could not open snapshot';
-      } finally {
-        btn.removeAttribute('disabled');
-      }
-    };
-
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const existing = fig.querySelector('iframe.flowist-web-clip-fullpage-frame');
-      if (existing) {
-        existing.remove();
-        btn.textContent = btn.dataset.originalLabel || 'View snapshot';
-        return;
-      }
-      void openSnapshot();
-    });
-
-    // Auto-expand snapshot on first hydration so the user sees the full clip
-    // immediately without having to click "View snapshot".
-    void openSnapshot();
-  });
+  // User preference: no snapshot placeholder, no "View / Hide snapshot"
+  // toggle, and no "Download captured HTML" button. Any legacy fullpage
+  // snapshot figures still stored in old notes are removed on hydration so
+  // the note renders the inline article content only.
+  root
+    .querySelectorAll<HTMLElement>('.flowist-web-clip-fullpage[data-role="fullpage-snapshot"]')
+    .forEach((fig) => fig.remove());
 };
 
 /* ────────────────────────────────────────────────────────────── */
