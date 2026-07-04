@@ -1712,6 +1712,12 @@ export const RichTextEditor = ({
     if (mdEnabled && !slashMenu.open && !mentionMenu.open && !isInsideCode(editorRef.current)) {
 
       if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Greek/math symbol shortcut runs first (\alpha → α).
+        if (tryGreekShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
         if (tryMarkdownTableShortcut(editorRef.current)) {
           e.preventDefault();
           handleInput();
@@ -1728,6 +1734,22 @@ export const RichTextEditor = ({
           handleInput();
           return;
         }
+        // Slash-line commands: /lorem, /color, /qr, /mermaid, /chess.
+        // Fire-and-forget async — preventDefault + handleInput happen when it
+        // consumes the line.
+        {
+          const root = editorRef.current;
+          if (root) {
+            const trimmed = (findEnclosingBlockText(root) || '').trim();
+            if (/^\/(lorem|color|qr|mermaid|chess)\b/i.test(trimmed)) {
+              e.preventDefault();
+              void trySlashLineShortcut(root).then((ok) => {
+                if (ok) handleInput();
+              });
+              return;
+            }
+          }
+        }
         if (tryMarkdownEnterShortcut(editorRef.current)) {
           e.preventDefault();
           handleInput();
@@ -1739,6 +1761,15 @@ export const RichTextEditor = ({
           handleInput();
           return;
         }
+      } else if (e.key === '$' && !e.ctrlKey && !e.metaKey) {
+        // Inline LaTeX: $E=mc^2$ renders as user types the closing `$`.
+        e.preventDefault();
+        // Insert the `$` first so tryLatexShortcut can see the matched pair.
+        document.execCommand('insertText', false, '$');
+        void tryLatexShortcut(editorRef.current).then((ok) => {
+          if (ok) handleInput();
+        });
+        return;
       } else if ((e.key === '*' || e.key === '_' || e.key === '`' || e.key === '~' || e.key === '=') && !e.ctrlKey && !e.metaKey) {
         // Math auto-evaluation runs first on `=` (e.g. "2+3=" → "2+3= 5").
         if (e.key === '=' && tryMathShortcut(editorRef.current)) {
