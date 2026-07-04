@@ -450,6 +450,155 @@ export function tryMarkdownInlineShortcut(char: string, root: HTMLElement | null
   return true;
 }
 
+/**
+ * Handle `)` keypress: convert `[text](url)` → link and `![alt](url)` → image
+ * when the caret sits right after the matching pattern in a text node.
+ * Returns true if a conversion happened.
+ */
+export function tryMarkdownLinkOrImageShortcut(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  if (isInsideCode(root)) return false;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer;
+  if (node.nodeType !== 3) return false;
+  const textNode = node as Text;
+  const caret = range.startOffset;
+  const before = textNode.data.slice(0, caret);
+
+  // Image first (leading `!`), then link.
+  const imgMatch = before.match(/(!\[([^\]]*)\]\(([^)\s]+)\))$/);
+  const linkMatch = !imgMatch ? before.match(/(?:^|[^!])(\[([^\]]+)\]\(([^)\s]+)\))$/) : null;
+
+  let full = '';
+  let el: HTMLElement | null = null;
+  if (imgMatch) {
+    full = imgMatch[1];
+    const img = document.createElement('img');
+    img.src = imgMatch[3];
+    img.alt = imgMatch[2] || '';
+    img.style.maxWidth = '100%';
+    el = img;
+  } else if (linkMatch) {
+    full = linkMatch[1];
+    const a = document.createElement('a');
+    a.href = linkMatch[3];
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = linkMatch[2];
+    el = a;
+  }
+  if (!el) return false;
+
+  const startDelete = before.length - full.length;
+  const parent = textNode.parentNode!;
+  const remainingAfter = textNode.data.slice(caret);
+  textNode.data = textNode.data.slice(0, startDelete);
+  parent.insertBefore(el, textNode.nextSibling);
+  const trailing = document.createTextNode('\u200B' + remainingAfter);
+  parent.insertBefore(trailing, el.nextSibling);
+
+  const newRange = document.createRange();
+  newRange.setStart(trailing, 1);
+  newRange.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+  return true;
+}
+
+/**
+ * Handle `|` + Enter or `||` + space at start of an empty block: insert a
+ * default 2-column markdown-style table with a header row.
+ * Also converts a completed `|a|b|` \n `|-|-|` header pattern into a real table.
+ */
+export function tryMarkdownTableShortcut(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  if (isInsideCode(root)) return false;
+  const block = getCaretBlock(root);
+  if (!block) return false;
+  if (block.closest('pre, code, table, .rt-codeblock')) return false;
+
+  const text = textBeforeCaretInBlock(block).replace(/\u00A0/g, ' ').trim();
+
+  // Quick default table: `||` on an empty line → 2x2 with header row.
+  if (text === '||') {
+    const tableHTML =
+      '<table style="border-collapse:collapse;width:100%;margin:8px 0;">' +
+      '<thead><tr>' +
+      '<th style="border:1px solid hsl(var(--border));padding:6px;text-align:left;">Header 1</th>' +
+      '<th style="border:1px solid hsl(var(--border));padding:6px;text-align:left;">Header 2</th>' +
+      '</tr></thead>' +
+      '<tbody>' +
+      '<tr><td style="border:1px solid hsl(var(--border));padding:6px;">&nbsp;</td>' +
+      '<td style="border:1px solid hsl(var(--border));padding:6px;">&nbsp;</td></tr>' +
+      '<tr><td style="border:1px solid hsl(var(--border));padding:6px;">&nbsp;</td>' +
+      '<td style="border:1px solid hsl(var(--border));padding:6px;">&nbsp;</td></tr>' +
+      '</tbody></table>';
+    const wrap = document.createElement('div');
+    wrap.innerHTML = tableHTML + '<p><br></p>';
+    const table = wrap.firstElementChild as HTMLElement;
+    const nextP = wrap.lastElementChild as HTMLElement;
+    if (root === block) {
+      root.replaceChildren(table, nextP);
+    } else {
+      block.replaceWith(table);
+      table.insertAdjacentElement('afterend', nextP);
+    }
+    moveCaretIntoStart(nextP);
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Called on Enter: if the previous block is a pipe header row and the current
+ * block matches a separator like `|---|---|`, convert both into a real table.
+ */
+export function tryMarkdownPipeTableEnter(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  if (isInsideCode(root)) return false;
+  const block = getCaretBlock(root);
+  if (!block) return false;
+  if (block.closest('pre, code, table, li, .rt-codeblock')) return false;
+
+  const curText = (block.textContent || '').trim();
+  const sepMatch = curText.match(/^\|?\s*(:?-{3,}:?\s*\|\s*)+:?-{3,}:?\s*\|?$/);
+  if (!sepMatch) return false;
+
+  const prev = block.previousElementSibling as HTMLElement | null;
+  if (!prev) return false;
+  const headerText = (prev.textContent || '').trim();
+  if (!/^\|.*\|$/.test(headerText)) return false;
+
+  const headers = headerText.slice(1, -1).split('|').map((s) => s.trim());
+  const sepCells = curText.replace(/^\||\|$/g, '').split('|');
+  if (headers.length !== sepCells.length || headers.length < 2) return false;
+
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const th = headers
+    .map((h) => `<th style="border:1px solid hsl(var(--border));padding:6px;text-align:left;">${esc(h) || '&nbsp;'}</th>`)
+    .join('');
+  const emptyRow =
+    '<tr>' +
+    headers.map(() => '<td style="border:1px solid hsl(var(--border));padding:6px;">&nbsp;</td>').join('') +
+    '</tr>';
+  const tableHTML =
+    '<table style="border-collapse:collapse;width:100%;margin:8px 0;">' +
+    `<thead><tr>${th}</tr></thead><tbody>${emptyRow}${emptyRow}</tbody></table>`;
+  const wrap = document.createElement('div');
+  wrap.innerHTML = tableHTML + '<p><br></p>';
+  const table = wrap.firstElementChild as HTMLElement;
+  const nextP = wrap.lastElementChild as HTMLElement;
+  prev.replaceWith(table);
+  block.replaceWith(nextP);
+  moveCaretIntoStart(nextP);
+  return true;
+}
+
+
+
 // ───────────────────────────────────────────────────────────────
 // Paste-time Markdown → HTML conversion
 // ───────────────────────────────────────────────────────────────
