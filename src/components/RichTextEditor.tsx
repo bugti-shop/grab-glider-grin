@@ -64,6 +64,7 @@ import {
 } from './richtext/markdownShortcuts';
 import { tryMathShortcut } from './richtext/mathShortcut';
 import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut } from './richtext/extraShortcuts';
+import { tryUnitShortcut } from './richtext/unitConvert';
 import { hydrateExtrasIn } from './richtext/extraHydration';
 import 'katex/dist/katex.min.css';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
@@ -1732,6 +1733,13 @@ export const RichTextEditor = ({
           handleInput();
           return;
         }
+        // Unit conversion: "10 km in miles" → appends " = 6.21371 mi"
+        if (tryUnitShortcut(editorRef.current)) {
+          e.preventDefault();
+          document.execCommand('insertText', false, ' ');
+          handleInput();
+          return;
+        }
         // Repeated word (the the) → wrap second occurrence
         if (tryRepeatedWordShortcut(editorRef.current)) {
           e.preventDefault();
@@ -1772,7 +1780,7 @@ export const RichTextEditor = ({
                 el = el.parentNode;
               }
             }
-            if (/^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday)\b/i.test(trimmed)) {
+            if (/^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x)\b/i.test(trimmed)) {
               e.preventDefault();
               void trySlashLineShortcut(root).then((ok) => {
                 if (ok) handleInput();
