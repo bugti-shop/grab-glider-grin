@@ -294,6 +294,10 @@ function sanitizeSlashTrigger(trigger: string): string {
     .trim();
 }
 
+export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
+  const [query, setQuery] = useState('');
+  const sections = useMemo(() => consolidateSlashCommands(buildSections()), []);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return sections;
@@ -310,6 +314,20 @@ function sanitizeSlashTrigger(trigger: string): string {
       }))
       .filter((s) => s.rows.length > 0);
   }, [query, sections]);
+
+  const applySlashRow = (trigger: string) => {
+    const text = sanitizeSlashTrigger(trigger);
+    if (!text.startsWith('/')) return;
+    // Close the sheet first so the editor regains focus, then dispatch.
+    onClose();
+    setTimeout(() => {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('flowist:apply-slash-command', { detail: { text } }),
+        );
+      } catch {}
+    }, 60);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
@@ -350,27 +368,53 @@ function sanitizeSlashTrigger(trigger: string): string {
               <div className="rounded-md border overflow-hidden">
                 <table className="w-full text-sm">
                   <tbody>
-                    {section.rows.map((row, i) => (
-                      <tr
-                        key={i}
-                        className={cn(
-                          'border-b last:border-b-0',
-                          i % 2 === 0 ? 'bg-muted/30' : 'bg-background',
-                        )}
-                      >
-                        <td className="px-3 py-2 align-top w-[45%]">
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono whitespace-pre-wrap break-words">
-                            {row.trigger}
-                          </code>
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          <div>{row.result}</div>
-                          {row.hint && (
-                            <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {section.rows.map((row, i) => {
+                      const clickable = !!section.applySlash;
+                      const rowClasses = cn(
+                        'border-b last:border-b-0 transition-colors',
+                        i % 2 === 0 ? 'bg-muted/30' : 'bg-background',
+                        clickable && 'cursor-pointer hover:bg-accent/60',
+                      );
+                      const handleClick = clickable
+                        ? () => applySlashRow(row.trigger)
+                        : undefined;
+                      const handleKey = clickable
+                        ? (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              applySlashRow(row.trigger);
+                            }
+                          }
+                        : undefined;
+                      return (
+                        <tr
+                          key={i}
+                          className={rowClasses}
+                          onClick={handleClick}
+                          onKeyDown={handleKey}
+                          role={clickable ? 'button' : undefined}
+                          tabIndex={clickable ? 0 : undefined}
+                          aria-label={clickable ? `Apply ${row.trigger}` : undefined}
+                        >
+                          <td className="px-3 py-2 align-top w-[45%]">
+                            <div className="flex items-center gap-2">
+                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono whitespace-pre-wrap break-words">
+                                {row.trigger}
+                              </code>
+                              {clickable && (
+                                <Play className="h-3 w-3 text-primary shrink-0" aria-hidden />
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 align-top">
+                            <div>{row.result}</div>
+                            {row.hint && (
+                              <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
