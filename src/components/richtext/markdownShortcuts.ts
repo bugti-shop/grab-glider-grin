@@ -410,7 +410,7 @@ export function tryMarkdownInlineShortcut(char: string, root: HTMLElement | null
   const before = textNode.data.slice(0, caret);
 
   let token = '';
-  let tag: 'strong' | 'em' | 'code' | 'del' | null = null;
+  let tag: 'strong' | 'em' | 'code' | 'del' | 'mark' | null = null;
 
   if (char === '*') {
     if (before.endsWith('*') && /\*\*[^*]+\*$/.test(before + '*')) { token = '**'; tag = 'strong'; }
@@ -421,12 +421,14 @@ export function tryMarkdownInlineShortcut(char: string, root: HTMLElement | null
     if (/`[^`\s][^`]*$/.test(before)) { token = '`'; tag = 'code'; }
   } else if (char === '~') {
     if (before.endsWith('~') && /~~[^~]+~$/.test(before + '~')) { token = '~~'; tag = 'del'; }
+  } else if (char === '=') {
+    if (before.endsWith('=') && /==[^=]+=$/.test(before + '=')) { token = '=='; tag = 'mark'; }
   }
   if (!tag || !token) return false;
 
   const openerIdx = before.lastIndexOf(token, before.length - token.length - 1);
   if (openerIdx < 0) return false;
-  const inner = before.slice(openerIdx + token.length, before.length - (token === '**' || token === '~~' ? 1 : 0));
+  const inner = before.slice(openerIdx + token.length, before.length - (token === '**' || token === '~~' || token === '==' ? 1 : 0));
   if (!inner || /\s$/.test(inner) || /^\s/.test(inner)) return false;
 
   const startDelete = openerIdx;
