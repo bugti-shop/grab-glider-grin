@@ -1297,16 +1297,9 @@ Deno.serve(async (req) => {
       "article:published_time", "og:published_time", "datePublished", "date",
     ]);
 
-    // Inline embeds into the DOM (preserves order vs. headings/images).
-    // Skip in full-page mode — user wants the raw page as-is.
-    if (!wantFullPage) {
-      inlineEmbeds(document as any, base);
-    }
-
-    // Preserve a visible-page fallback BEFORE article cleaning mutates the DOM.
-    // If Readability produces metadata-only/thin output, this gives the user
-    // whatever the server could actually see on the page instead of a stub.
-    const visibleFallbackHtml = !wantFullPage ? visiblePageFallback(document as any) : "";
+    // Embeds inlining + visible-fallback preservation happen inside the
+    // per-attempt retry loop below for article mode. In full-page mode we
+    // want the raw page as-is, so nothing to do here.
 
     // FULL-PAGE MODE — return the entire raw HTML (start-to-end) without
     // Readability trimming. Icons, ads, everything the page shipped.
