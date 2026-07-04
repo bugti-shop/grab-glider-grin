@@ -1787,7 +1787,7 @@ export const RichTextEditor = ({
                 el = el.parentNode;
               }
             }
-            if (/^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x)\b/i.test(trimmed)) {
+            if (/^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc)\b/i.test(trimmed)) {
               e.preventDefault();
               void trySlashLineShortcut(root).then((ok) => {
                 if (ok) handleInput();
