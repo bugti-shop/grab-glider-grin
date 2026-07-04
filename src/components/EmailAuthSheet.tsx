@@ -118,16 +118,12 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
     try {
       await startEmailSignup(email.trim(), password, name.trim() || undefined);
       toast({
-        title: t('emailAuth.otpSent', 'Verification code sent'),
-        description: t('emailAuth.otpSentDesc', 'Check your inbox for a 6-digit code from Flowist.'),
+        title: t('emailAuth.linkSent', 'Verification email sent'),
+        description: t('emailAuth.linkSentDesc', 'Check your inbox and click the link to verify your email.'),
       });
-      setOtp('');
       setOtpError(null);
-      startCooldown();
-      setMode('otp');
+      setMode('verify-link');
     } catch (err: any) {
-      // Detect "already registered" so returning users don't create a
-      // duplicate and get confused when the OTP screen appears.
       const raw = String(err?.message || '').toLowerCase();
       const code = String(err?.code || err?.name || '').toLowerCase();
       const status = Number(err?.status ?? err?.statusCode ?? 0);
@@ -160,65 +156,70 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
     }
   };
 
-  const handleVerifyOtp = async () => {
-    if (otp.length < 6) {
-      setOtpError(t('emailAuth.enterOtp', 'Enter the 6-digit code'));
-      return;
-    }
+  // While the user is on the "check your email" screen, listen for the Supabase
+  // session that appears the moment they click the verification link — whether
+  // that happens in this same WebView (link opens the app via deep link) or on
+  // a different tab (Supabase broadcasts via storage events). When it appears,
+  // we're already signed in — just close the sheet.
+  useEffect(() => {
+    if (mode !== 'verify-link') return;
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session?.user) return;
+      try {
+        // Re-hydrate our local GoogleUser cache from the fresh session.
+        const u = await signInWithEmailPassword(email.trim(), password).catch(async () => {
+          // If password sign-in fails (edge case: user already fully signed in
+          // via the link in the same WebView), fall back to session data.
+          const meta = (session.user.user_metadata || {}) as Record<string, unknown>;
+          return {
+            email: session.user.email || email,
+            name: (meta.full_name as string) || (meta.name as string) || session.user.email || email,
+            picture: '',
+            accessToken: session.access_token,
+            uid: session.user.id,
+            accessTokenExpiresAt: Date.now() + 3500 * 1000,
+            expiresAt: Date.now() + 365 * 24 * 3600 * 1000,
+          } as GoogleUser;
+        });
+        toast({
+          title: t('emailAuth.accountReady', 'Account verified'),
+          description: t('emailAuth.syncEnabled', 'Cloud sync is now active on this device.'),
+        });
+        onSignedIn?.(u);
+        close();
+      } catch {
+        /* ignore */
+      }
+    });
+    return () => { sub.subscription.unsubscribe(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
+
+  // Manual "I've verified — sign me in" fallback for mobile flows where the
+  // link opens an external browser and the app WebView never sees the session.
+  // Reuses the password the user just typed — no re-entry needed.
+  const handleManualContinue = async () => {
     setLoading(true);
-    setOtpError(null);
     try {
-      // Cloud sync + session only persist AFTER Supabase confirms this OTP.
-      const u = await verifySignupOtp(email.trim(), otp);
-      toast({
-        title: t('emailAuth.accountReady', 'Account verified'),
-        description: t('emailAuth.syncEnabled', 'Cloud sync is now active on this device.'),
-      });
+      const u = await signInWithEmailPassword(email.trim(), password);
+      toast({ title: t('emailAuth.accountReady', 'Account verified') });
       onSignedIn?.(u);
       close();
     } catch (err: any) {
-      const info = classifyOtpError(err);
-      setOtpError(info.message);
-      toast({
-        title:
-          info.code === 'expired' ? t('emailAuth.otpExpired', 'Code expired')
-          : info.code === 'invalid' ? t('emailAuth.otpWrong', 'Wrong code')
-          : info.code === 'network' ? t('emailAuth.networkError', 'Connection problem')
-          : info.code === 'timeout' ? t('emailAuth.networkError', 'Connection problem')
-          : t('emailAuth.otpInvalid', 'Verification failed'),
-        description: info.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendCooldown > 0 || loading) return;
-    setLoading(true);
-    setOtpError(null);
-    try {
-      await resendSignupOtp(email.trim());
-      startCooldown();
-      toast({
-        title: t('emailAuth.otpResent', 'New code sent'),
-        description: t('emailAuth.otpResentDesc', 'Check your inbox for the latest 6-digit code.'),
-      });
-    } catch (err: any) {
-      const info = classifyOtpError(err);
-      if (info.code === 'cooldown' && info.retryAfter) {
-        setResendCooldown(info.retryAfter);
+      const raw = String(err?.message || '').toLowerCase();
+      if (raw.includes('email not confirmed') || raw.includes('not confirmed')) {
+        toast({
+          title: t('emailAuth.notVerifiedYet', 'Not verified yet'),
+          description: t('emailAuth.notVerifiedYetDesc', 'Please click the verification link in your email first, then tap Continue.'),
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: t('emailAuth.signInFailed', 'Sign-in failed'),
+          description: err?.message || '',
+          variant: 'destructive',
+        });
       }
-      toast({
-        title:
-          info.code === 'cooldown' ? t('emailAuth.tooSoon', 'Please wait')
-          : info.code === 'rate_limited' ? t('emailAuth.rateLimited', 'Too many attempts')
-          : info.code === 'network' || info.code === 'timeout' ? t('emailAuth.networkError', 'Connection problem')
-          : t('emailAuth.resendFailed', 'Could not resend code'),
-        description: info.message,
-        variant: 'destructive',
-      });
     } finally {
       setLoading(false);
     }
