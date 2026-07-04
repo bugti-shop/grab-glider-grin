@@ -382,8 +382,18 @@ const WebClipper = () => {
           }
         } catch (err) {
           if (canceledRef.current || (err as Error)?.name === 'AbortError') throw err;
-          console.warn('[webClipper] full-article fetch threw', { url, error: (err as Error)?.message });
-          fetchFailure = { code: 'network', message: (err as Error)?.message };
+          const isTimeout = (err as Error)?.name === 'TimeoutError';
+          console.warn('[webClipper] full-article fetch threw', {
+            url,
+            timeout: isTimeout,
+            error: (err as Error)?.message,
+          });
+          fetchFailure = {
+            code: isTimeout ? 'timeout' : 'network',
+            message: isTimeout
+              ? t('webClipper.fetchTimeout', 'Fetching the full page took too long. Please try again.')
+              : (err as Error)?.message,
+          };
         }
       }
 
