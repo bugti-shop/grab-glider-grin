@@ -271,6 +271,47 @@ export async function trySlashLineShortcut(root: HTMLElement | null): Promise<bo
     return true;
   }
 
+  // ── /youtube <url>
+  if (cmd === 'youtube' || cmd === 'yt') {
+    const id = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|v\/))([\w-]{11})/.exec(arg)?.[1];
+    if (!id) return false;
+    const html =
+      `<div class="rt-embed rt-yt" contenteditable="false" data-url="${escapeHtml(arg)}">` +
+      `<iframe src="https://www.youtube.com/embed/${id}" loading="lazy" allowfullscreen ` +
+      `allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ` +
+      `frameborder="0"></iframe></div><p><br></p>`;
+    replaceBlockHtml(block, html, root);
+    return true;
+  }
+
+  // ── /spotify <url>
+  if (cmd === 'spotify') {
+    const m2 = /open\.spotify\.com\/(?:intl-\w+\/)?(track|album|playlist|episode|show|artist)\/([A-Za-z0-9]+)/.exec(arg);
+    if (!m2) return false;
+    const [, type, id] = m2;
+    const height = type === 'track' || type === 'episode' ? 152 : 380;
+    const html =
+      `<div class="rt-embed rt-spotify" contenteditable="false" data-url="${escapeHtml(arg)}">` +
+      `<iframe src="https://open.spotify.com/embed/${type}/${id}" height="${height}" ` +
+      `loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" ` +
+      `frameborder="0"></iframe></div><p><br></p>`;
+    replaceBlockHtml(block, html, root);
+    return true;
+  }
+
+  // ── /tweet <url>  (also /x /twitter)
+  if (cmd === 'tweet' || cmd === 'twitter' || cmd === 'x') {
+    const id = /(?:twitter\.com|x\.com)\/[^\/]+\/status(?:es)?\/(\d+)/.exec(arg)?.[1];
+    if (!id) return false;
+    const html =
+      `<div class="rt-embed rt-tweet" contenteditable="false" data-url="${escapeHtml(arg)}" data-tweet-id="${id}">` +
+      `<iframe src="https://platform.twitter.com/embed/Tweet.html?id=${id}&theme=light" ` +
+      `loading="lazy" frameborder="0" scrolling="no" allowtransparency="true"></iframe>` +
+      `</div><p><br></p>`;
+    replaceBlockHtml(block, html, root);
+    return true;
+  }
+
   return false;
 }
 
