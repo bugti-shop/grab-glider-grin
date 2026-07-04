@@ -1724,6 +1724,28 @@ export const RichTextEditor = ({
 
     // ── Space typed ──
     if ((type === 'insertText' || type === 'insertReplacementText') && data === ' ') {
+      // Slash-line commands fire on Space too (not only Enter) once they look
+      // complete: e.g. "/today", "/now", "/tz tokyo", "/lorem 3".
+      if (root) {
+        const sel = window.getSelection();
+        let trimmed = '';
+        if (sel && sel.rangeCount > 0) {
+          let el: Node | null = sel.getRangeAt(0).startContainer;
+          while (el && el !== root) {
+            if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
+              trimmed = (el.textContent || '').trim();
+              break;
+            }
+            el = el.parentNode;
+          }
+        }
+        if (isSlashLineShortcutReady(trimmed)) {
+          e.preventDefault();
+          closeSlash();
+          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          return;
+        }
+      }
       // Non-consuming: mutate before caret; space still inserts after.
       tryDashEllipsis(root);
       // Consuming shortcuts (space is either replaced or re-inserted).
