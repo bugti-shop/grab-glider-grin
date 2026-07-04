@@ -171,6 +171,7 @@ export const RichTextEditor = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const editorSelectionRef = useRef<Range | null>(null);
   const [history, setHistory] = useState<string[]>([content]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [fontPickerOpen, setFontPickerOpen] = useState(false);
@@ -215,6 +216,37 @@ export const RichTextEditor = ({
 
   const closeSlash = useCallback(() => setSlashMenu(s => ({ ...s, open: false })), []);
   const closeMention = useCallback(() => setMentionMenu(m => ({ ...m, open: false })), []);
+
+  const saveEditorSelection = useCallback(() => {
+    const editor = editorRef.current;
+    const sel = window.getSelection();
+    if (!editor || !sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (editor.contains(range.commonAncestorContainer)) {
+      editorSelectionRef.current = range.cloneRange();
+    }
+  }, []);
+
+  const restoreEditorSelection = useCallback(() => {
+    const editor = editorRef.current;
+    const sel = window.getSelection();
+    if (!editor || !sel) return false;
+    const current = sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+    if (current && editor.contains(current.commonAncestorContainer)) {
+      editorSelectionRef.current = current.cloneRange();
+      return true;
+    }
+    const saved = editorSelectionRef.current;
+    if (!saved) return false;
+    try {
+      editor.focus({ preventScroll: true });
+      sel.removeAllRanges();
+      sel.addRange(saved.cloneRange());
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   // Synced block picker + subscription cleanup
   const [syncedPickerOpen, setSyncedPickerOpen] = useState(false);
@@ -297,6 +329,8 @@ export const RichTextEditor = ({
         return;
       }
 
+      saveEditorSelection();
+
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) return;
 
@@ -321,7 +355,7 @@ export const RichTextEditor = ({
         window.clearTimeout(selectionDebounceRef.current);
       }
     };
-  }, [updateActiveStates]);
+  }, [saveEditorSelection, updateActiveStates]);
 
   // Setup audio progress tracking and event delegation for inline voice recordings
   // Use a ref for the click handler to avoid recreating on every content change
@@ -632,11 +666,14 @@ export const RichTextEditor = ({
       
       // Save selection before focus
       const sel = window.getSelection();
-      const savedRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+      const currentRange = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+      const savedRange = currentRange && editor.contains(currentRange.commonAncestorContainer)
+        ? currentRange.cloneRange()
+        : editorSelectionRef.current?.cloneRange() || null;
       
       // Only focus if not already focused (prevents blink)
       if (document.activeElement !== editor) {
-        editor.focus();
+        editor.focus({ preventScroll: true });
         // Restore selection after focus shift
         if (savedRange && sel) {
           sel.removeAllRanges();
@@ -648,6 +685,7 @@ export const RichTextEditor = ({
       isUserInputRef.current = true;
       
       document.execCommand(command, false, value);
+      saveEditorSelection();
       
       // Sync lastContentRef and fire onChange immediately (don't wait for input event)
       if (editor) {
@@ -663,7 +701,7 @@ export const RichTextEditor = ({
     } catch (error) {
       console.error('Error executing command:', command, error);
     }
-  }, [onChange, updateActiveStates]);
+  }, [onChange, saveEditorSelection, updateActiveStates]);
 
   const handleBold = () => execCommand('bold');
   const handleItalic = () => execCommand('italic');
@@ -1630,8 +1668,12 @@ export const RichTextEditor = ({
     if (!root) return false;
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return false;
-    let el: Node | null = sel.getRangeAt(0).startContainer;
+    const range = sel.getRangeAt(0);
+    let el: Node | null = range.startContainer;
     let block: HTMLElement | null = null;
+    if (el === root || el.parentNode === root) {
+      block = root;
+    }
     while (el && el !== root) {
       if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
         block = el as HTMLElement;
@@ -1653,24 +1695,38 @@ export const RichTextEditor = ({
       sel.removeAllRanges();
       sel.addRange(r);
     };
+    const escapeText = (value: string) => value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    const insertInlineArg = (tag: 'strong' | 'em' | 'u' | 's' | 'code' | 'mark') => {
+      clear();
+      document.execCommand('insertHTML', false, `<${tag}>${escapeText(arg)}</${tag}>`);
+      handleInput();
+      return true;
+    };
     const run = (fn: () => void) => { clear(); fn(); handleInput(); return true; };
     switch (cmd) {
-      case 'bold': case 'b': return run(handleBold);
-      case 'italic': case 'em': return run(handleItalic);
-      case 'underline': case 'ul-': return run(handleUnderline);
-      case 'strike': case 'strikethrough': case 'del': return run(handleStrikethrough);
+      case 'bold': case 'b': return arg ? insertInlineArg('strong') : run(handleBold);
+      case 'italic': case 'em': return arg ? insertInlineArg('em') : run(handleItalic);
+      case 'underline': case 'ul-': return arg ? insertInlineArg('u') : run(handleUnderline);
+      case 'strike': case 'strikethrough': case 'del': return arg ? insertInlineArg('s') : run(handleStrikethrough);
       case 'sub': case 'subscript': return run(handleSubscript);
       case 'sup': case 'superscript': return run(handleSuperscript);
-      case 'highlight': case 'hl': case 'mark': return run(() => handleHighlight(arg || '#FEF3C7'));
+      case 'highlight': case 'hl': case 'mark': return arg && !arg.startsWith('#') ? insertInlineArg('mark') : run(() => handleHighlight(arg || '#FEF3C7'));
       case 'color': case 'textcolor': case 'fg': return run(() => handleTextColor(arg || 'inherit'));
       case 'clear': case 'clearformat': case 'clearformatting': case 'plain':
         return run(handleClearFormatting);
-      case 'codeblock': case 'inlinecode': return run(() => { handleCodeBlock(); });
+      case 'codeblock': case 'inlinecode': case 'code': return arg ? insertInlineArg('code') : run(() => { handleCodeBlock(); });
       case 'hr': case 'divider': case 'rule': return run(handleHorizontalRule);
       case 'quote': case 'blockquote': case 'bq': return run(handleBlockquote);
       case 'bullet': case 'bullets': case 'ul': return run(handleBulletList);
       case 'numbered': case 'number': case 'ol': return run(handleNumberedList);
       case 'check': case 'checklist': case 'task': case 'tasks': return run(handleChecklist);
+      case 'h1': case 'heading1': return run(() => handleHeading(1));
+      case 'h2': case 'heading2': return run(() => handleHeading(2));
+      case 'h3': case 'heading3': return run(() => handleHeading(3));
       case 'p': case 'paragraph': case 'normal': return run(() => handleHeading('p'));
       case 'left': case 'alignleft': return run(() => handleAlignment('left'));
       case 'center': case 'aligncenter': return run(() => handleAlignment('center'));
@@ -2522,9 +2578,37 @@ export const RichTextEditor = ({
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       savedRangeRef.current = selection.getRangeAt(0);
+    } else {
+      restoreEditorSelection();
+      const restored = window.getSelection();
+      if (restored && restored.rangeCount > 0) savedRangeRef.current = restored.getRangeAt(0);
     }
     setShowLinkInput(true);
   };
+
+  const handleMobileCommand = (command: () => void) => {
+    restoreEditorSelection();
+    command();
+    handleInput();
+    saveEditorSelection();
+  };
+
+  const mobileQuickToolbar = (
+    <div className="sm:hidden px-3 pb-2">
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide rounded-full border border-border bg-card px-2 py-1.5 shadow-lg">
+        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleBold); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm font-bold", activeStates.isBold ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>B</button>
+        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleItalic); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm italic", activeStates.isItalic ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>I</button>
+        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleUnderline); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm underline", activeStates.isUnderline ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>U</button>
+        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(() => handleHeading(1)); }} className="min-h-10 min-w-12 rounded-full bg-muted/60 px-3 text-sm font-bold text-foreground">H1</button>
+        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleBulletList); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-lg leading-none", activeStates.isBulletList ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>•</button>
+        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleNumberedList); }} className={cn("min-h-10 min-w-12 rounded-full px-3 text-sm", activeStates.isNumberedList ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>1.</button>
+        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleChecklist); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm", activeStates.isChecklist ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>☑</button>
+        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(() => handleInsertTable(3, 3)); }} className="min-h-10 min-w-10 rounded-full bg-muted/60 px-3 text-foreground" aria-label="Insert table"><Table className="h-4 w-4" /></button>
+        <button type="button" disabled={historyIndex <= 0} onPointerDown={(e) => { e.preventDefault(); if (historyIndex > 0) handleUndo(); }} className="min-h-10 min-w-10 rounded-full bg-muted/60 px-3 text-foreground disabled:opacity-40" aria-label="Undo"><Undo className="h-4 w-4" /></button>
+        <button type="button" disabled={historyIndex >= history.length - 1} onPointerDown={(e) => { e.preventDefault(); if (historyIndex < history.length - 1) handleRedo(); }} className="min-h-10 min-w-10 rounded-full bg-muted/60 px-3 text-foreground disabled:opacity-40" aria-label="Redo"><Redo className="h-4 w-4" /></button>
+      </div>
+    </div>
+  );
 
   const toolbar = (
     <WordToolbar
@@ -2722,7 +2806,10 @@ export const RichTextEditor = ({
           className="fixed left-0 right-0 z-50 pointer-events-none"
           style={{ bottom: isAndroidNativeEditor ? '0px' : 'calc(var(--safe-bottom, 0px) + var(--keyboard-inset, 0px))' }}
         >
-          <div className="pointer-events-auto">{toolbar}</div>
+          <div className="pointer-events-auto">
+            {mobileQuickToolbar}
+            {toolbar}
+          </div>
         </div>
       )}
 

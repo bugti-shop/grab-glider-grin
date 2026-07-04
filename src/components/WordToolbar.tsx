@@ -460,9 +460,17 @@ export const WordToolbar = ({
   }) => (
     <button
       type="button"
-      onClick={onClick}
-      onMouseDown={(e) => e.preventDefault()}
-      onPointerDown={(e) => e.preventDefault()}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        if (!disabled) onClick?.();
+      }}
+      onKeyDown={(e) => {
+        if (disabled) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
       disabled={disabled}
       title={title}
       data-tour={dataTour}
