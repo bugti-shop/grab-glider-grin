@@ -15,7 +15,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Search, Keyboard } from 'lucide-react';
+import { Search, Keyboard, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -36,6 +36,8 @@ interface Section {
   title: string;
   description?: string;
   rows: Row[];
+  /** When true, rows in this section are clickable and dispatch an apply event. */
+  applySlash?: boolean;
 }
 
 
