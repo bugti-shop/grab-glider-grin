@@ -442,29 +442,57 @@ export const TaskDetailPage = ({
   };
 
   const handleSaveExtraReminder = async (value: ExtraReminderValue) => {
+    // Legacy single-value callback: kept for backward compatibility. The full
+    // list is now saved via `handleSaveExtraRemindersList`, but we still mirror
+    // the FIRST item into the legacy fields so older restore paths keep working.
     try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
     try {
       const { scheduleExtraReminder } = await import('@/utils/reminderScheduler');
-      const scheduled = await scheduleExtraReminder(task.id, task.text, value.time, value.recurring);
+      const legacyRecurring = (value.recurring === 'hourly' ? 'none' : value.recurring) as any;
+      const scheduled = await scheduleExtraReminder(task.id, task.text, value.time, legacyRecurring);
       const finalTime = scheduled ?? value.time;
       onUpdate({
         ...task,
         extraReminderTime: finalTime,
-        extraReminderRecurring: value.recurring,
+        extraReminderRecurring: value.recurring as any,
       });
-      toast.success(t('taskDetailToasts.extraReminderSaved', 'Extra reminder set'));
     } catch (e) {
       console.warn('Failed to save extra reminder:', e);
     }
   };
 
+  const handleSaveExtraRemindersList = async (
+    items: Array<{ id: string; time: Date; recurring: any; daysOfWeek?: number[] }>
+  ) => {
+    try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
+    try {
+      const { scheduleExtraRemindersList } = await import('@/utils/reminderScheduler');
+      await scheduleExtraRemindersList(task.id, task.text, items);
+    } catch (e) {
+      console.warn('Failed to schedule extra reminders list:', e);
+    }
+    const first = items[0];
+    onUpdate({
+      ...task,
+      extraReminders: items,
+      extraReminderTime: first?.time,
+      extraReminderRecurring: (first?.recurring ?? 'none') as any,
+    } as any);
+    toast.success(
+      t(
+        'taskDetailToasts.extraReminderSaved',
+        items.length > 1 ? `${items.length} reminders set` : 'Reminder set'
+      )
+    );
+  };
+
   const handleRemoveExtraReminder = async () => {
     try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
     try {
-      const { cancelExtraReminder } = await import('@/utils/reminderScheduler');
-      await cancelExtraReminder(task.id);
+      const { cancelAllExtraReminders } = await import('@/utils/reminderScheduler');
+      await cancelAllExtraReminders(task.id);
     } catch {}
-    const { extraReminderTime, extraReminderRecurring, extraReminderNotificationId, ...rest } = task as any;
+    const { extraReminderTime, extraReminderRecurring, extraReminderNotificationId, extraReminders, ...rest } = task as any;
     onUpdate(rest);
     toast.success(t('taskDetailToasts.extraReminderRemoved', 'Extra reminder removed'));
   };
