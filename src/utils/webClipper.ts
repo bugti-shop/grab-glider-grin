@@ -92,21 +92,17 @@ export function validateAttachment(
 
 export type ClipMode = 'article' | 'selection' | 'fullpage' | 'image' | 'pdf';
 
-/** Window (ms) within which an identical share payload is treated as a duplicate. */
-export const SHARE_DEDUP_WINDOW_MS = 8000;
+/** Window (ms) within which native duplicate events for the same payload are ignored. */
+export const SHARE_DEDUP_WINDOW_MS = 2500;
 
 /**
  * Native share intents can survive Activity restores. Keep a longer consumed
  * record so reopening the app cannot re-process the last shared article again.
  */
-// Keep this short. A long window silently swallows legitimate repeat
-// shares of the same URL (user hits "Share to Flowist" twice → app just
-// opens with nothing happening). 60s is enough to absorb Android's
-// cold-start + resume + sendIntentReceived triple-fire without blocking
-// intentional re-shares.
-export const SHARE_CONSUMED_WINDOW_MS = 60 * 1000;
+// Keep equal to the native event dedupe window. Long persisted windows silently
+// swallow legitimate repeat shares of the same URL.
+export const SHARE_CONSUMED_WINDOW_MS = SHARE_DEDUP_WINDOW_MS;
 const SHARE_SESSION_KEY = '__flowist_last_share__';
-const SHARE_CONSUMED_KEY = '__flowist_consumed_shares__';
 
 /** Allow http/https only. Reject `javascript:`, `data:`, malformed strings, etc. */
 export function validateUrl(urlString: string): string {
@@ -171,20 +167,9 @@ export function isDuplicateShare(
   signature: string,
   now: number = Date.now(),
   storage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof sessionStorage !== 'undefined' ? sessionStorage : null,
-  consumedStorage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof localStorage !== 'undefined' ? localStorage : null,
+  _consumedStorage: Pick<Storage, 'getItem' | 'setItem'> | null = typeof localStorage !== 'undefined' ? localStorage : null,
 ): boolean {
   if (!signature) return false;
-  try {
-    const consumedRaw = consumedStorage?.getItem(SHARE_CONSUMED_KEY);
-    const consumed = consumedRaw ? JSON.parse(consumedRaw) as Record<string, number> : {};
-    const lastConsumedAt = Number(consumed[signature] || 0);
-    if (lastConsumedAt && now - lastConsumedAt < SHARE_CONSUMED_WINDOW_MS) {
-      return true;
-    }
-  } catch {
-    /* localStorage unavailable — continue with session-only dedup */
-  }
-
   try {
     const raw = storage?.getItem(SHARE_SESSION_KEY);
     if (raw) {
@@ -201,20 +186,6 @@ export function isDuplicateShare(
     storage?.setItem(SHARE_SESSION_KEY, JSON.stringify({ sig: signature, t: now }));
   } catch {
     /* ignore */
-  }
-
-  try {
-    const consumedRaw = consumedStorage?.getItem(SHARE_CONSUMED_KEY);
-    const consumed = consumedRaw ? JSON.parse(consumedRaw) as Record<string, number> : {};
-    const cutoff = now - SHARE_CONSUMED_WINDOW_MS;
-    const compacted: Record<string, number> = {};
-    for (const [sig, t] of Object.entries(consumed)) {
-      if (Number(t) >= cutoff) compacted[sig] = Number(t);
-    }
-    compacted[signature] = now;
-    consumedStorage?.setItem(SHARE_CONSUMED_KEY, JSON.stringify(compacted));
-  } catch {
-    /* localStorage unavailable — fall through */
   }
   return false;
 }

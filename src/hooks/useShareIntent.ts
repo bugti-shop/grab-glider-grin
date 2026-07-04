@@ -22,6 +22,7 @@ import {
   extractUrlAndText,
   isDuplicateShare,
   parseClipMode,
+  SHARE_DEDUP_WINDOW_MS,
   validateUrl,
 } from '@/utils/webClipper';
 
@@ -47,7 +48,7 @@ export function useShareIntent() {
     if (!Capacitor.isNativePlatform()) return;
 
     let cancelled = false;
-    const handledThisMount = new Set<string>();
+    const handledThisMount = new Map<string, number>();
 
     const markNativeShareConsumed = () => {
       if (!Capacitor.isNativePlatform()) return;
@@ -109,12 +110,17 @@ export function useShareIntent() {
 
       // 3. De-dup repeated fires (cold start + resume + sendIntentReceived).
       const signature = buildShareSignature({ url: url || attachment, text, attachment });
-      if (handledThisMount.has(signature) || isDuplicateShare(signature)) {
+      const now = Date.now();
+      for (const [sig, t] of handledThisMount) {
+        if (now - t > SHARE_DEDUP_WINDOW_MS) handledThisMount.delete(sig);
+      }
+      const recentlyHandled = handledThisMount.has(signature) && now - (handledThisMount.get(signature) || 0) <= SHARE_DEDUP_WINDOW_MS;
+      if (recentlyHandled || isDuplicateShare(signature, now)) {
         console.info('[shareIntent] duplicate share suppressed', { signature: trunc(signature) });
         markNativeShareConsumed();
         return;
       }
-      handledThisMount.add(signature);
+      handledThisMount.set(signature, now);
 
       // 4. Mode selection: image/pdf attachments override; pure URL = article;
       //    pure text = selection.

@@ -69,19 +69,20 @@ describe('webClipper.isDuplicateShare', () => {
     };
   };
 
-  it('blocks stale native share payloads across app launches', () => {
+  it('blocks only immediate duplicate native share events', () => {
     const session = createStorage();
     const consumed = createStorage();
     const sig = buildShareSignature({ url: 'https://example.com/article', text: '' });
     expect(isDuplicateShare(sig, 1000, session, consumed)).toBe(false);
-    expect(isDuplicateShare(sig, 1000 + 60_000, createStorage(), consumed)).toBe(true);
+    expect(isDuplicateShare(sig, 1000 + 1000, session, consumed)).toBe(true);
   });
 
-  it('allows the same share again after the stale-intent window', () => {
+  it('allows the same article to be shared again after the short event window', () => {
+    const session = createStorage();
     const consumed = createStorage();
     const sig = buildShareSignature({ url: 'https://example.com/article', text: '' });
-    expect(isDuplicateShare(sig, 1000, createStorage(), consumed)).toBe(false);
-    expect(isDuplicateShare(sig, 1000 + SHARE_CONSUMED_WINDOW_MS + 1, createStorage(), consumed)).toBe(false);
+    expect(isDuplicateShare(sig, 1000, session, consumed)).toBe(false);
+    expect(isDuplicateShare(sig, 1000 + SHARE_CONSUMED_WINDOW_MS + 1, session, consumed)).toBe(false);
   });
 });
 
