@@ -303,7 +303,12 @@ export function tryMarkdownCompletedBlockShortcut(root: HTMLElement | null): boo
   }
 
   const text = textBeforeCaretInBlock(block).replace(/\u00A0/g, ' ');
-  const match = text.match(/^(#{1,4}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>)\s+(.+)$/i);
+  // Primary: token + space + content (e.g. "# Heading", "- item")
+  // Fallback: heading/quote without space (e.g. "#Heading", "##Sub", ">quote")
+  let match = text.match(/^(#{1,4}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>)\s+(.+)$/i);
+  if (!match) {
+    match = text.match(/^(#{1,4}|>)(\S.*)$/);
+  }
   if (!match) return false;
 
   const token = match[1];
