@@ -1723,7 +1723,7 @@ export const RichTextEditor = ({
         if (isSlashLineShortcutText(trimmed)) {
           e.preventDefault();
           closeSlash();
-          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          runSlashLineOnce(root);
           return;
         }
       }
@@ -1755,7 +1755,7 @@ export const RichTextEditor = ({
         if (isSlashLineShortcutReady(trimmed)) {
           e.preventDefault();
           closeSlash();
-          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          runSlashLineOnce(root);
           return;
         }
       }
@@ -1798,7 +1798,7 @@ export const RichTextEditor = ({
         }
         if (isSlashLineShortcutReady(trimmed)) {
           closeSlash();
-          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          runSlashLineOnce(root);
           return;
         }
       }
@@ -1831,7 +1831,7 @@ export const RichTextEditor = ({
         }
         if (isSlashLineShortcutText(trimmed)) {
           e.preventDefault();
-          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          runSlashLineOnce(root);
           return;
         }
         if (tryMarkdownPipeTableEnter(root)) { e.preventDefault(); handleInput(); return; }
@@ -1943,7 +1943,7 @@ export const RichTextEditor = ({
             if (isSlashLineShortcutReady(trimmed)) {
               e.preventDefault();
               closeSlash();
-              void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+              runSlashLineOnce(root);
               return;
             }
           }
