@@ -282,11 +282,50 @@ export const useTodayState = () => {
     window.addEventListener('sectionsRestored', handleSectionsFromSync);
     window.addEventListener('foldersRestored', handleFoldersFromSync);
     window.addEventListener('selectedFolderChanged', handleSelectedFolderChanged);
+
+    // Reload from IndexedDB whenever the app comes back to the foreground OR
+    // the tab becomes visible again. Critical for the Quick-Add widget/overlay
+    // flow: that overlay writes to shared IDB from a separate WebView, and
+    // without this refresh the debounced full-array save in the main app would
+    // overwrite the new task with the stale in-memory list.
+    const reloadFromDisk = async () => {
+      try {
+        await wrappedHandleTasksFromSync();
+      } catch (e) {
+        console.warn('[today] resume reload failed', e);
+      }
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') reloadFromDisk();
+    };
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'quickAdd:lastAddedAt') reloadFromDisk();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('storage', handleStorage);
+
+    let capResumeSub: { remove: () => void } | null = null;
+    (async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          const { App } = await import('@capacitor/app');
+          const sub = await App.addListener('appStateChange', ({ isActive }) => {
+            if (isActive) reloadFromDisk();
+          });
+          capResumeSub = sub;
+        }
+      } catch {}
+    })();
+
     return () => {
       window.removeEventListener('tasksRestored', wrappedHandleTasksFromSync);
       window.removeEventListener('sectionsRestored', handleSectionsFromSync);
       window.removeEventListener('foldersRestored', handleFoldersFromSync);
       window.removeEventListener('selectedFolderChanged', handleSelectedFolderChanged);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('storage', handleStorage);
+      capResumeSub?.remove();
     };
   }, []);
 
