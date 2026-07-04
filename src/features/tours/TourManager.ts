@@ -58,11 +58,20 @@ class TourManagerImpl {
 
     if (opts.auto) this.autoChainCount += 1;
 
+    // Chained / auto-fired tours must start from a clean slate — close any
+    // sheets, dropdowns, popovers, or dialogs the previous tour left open so
+    // the next feature isn't hidden behind a stale overlay.
+    if (opts.chain || opts.auto) {
+      this.closeTransientUi();
+      await this.wait(180);
+    }
+
     // Navigate to the correct screen first, then wait for the first target.
     if (this.navigate && typeof window !== 'undefined' && window.location.pathname !== tour.route) {
       this.navigate(tour.route);
       await this.wait(250);
     }
+
 
     // Optional pre-actions: click one or more triggers (e.g. open task detail,
     // then open its ⋮ menu) so the real target becomes visible before highlight.
