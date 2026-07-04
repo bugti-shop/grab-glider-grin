@@ -10,7 +10,7 @@
  *   ├─ `$` keydown ────────────────────────────
  *   │  $E=mc^2$   →  rendered KaTeX inline
  *   │
- *   ├─ Enter keydown (line-based) ─────────────
+ *   ├─ Enter / Space / mobile auto-run (line-based) ─────────────
  *   │  /lorem 3           →  3 dummy paragraphs
  *   │  /color red hi      →  <span style="color:red">hi</span>
  *   │  /qr hello          →  QR code image block
@@ -173,6 +173,52 @@ const COLOR_MAP: Record<string, string> = {
   sky: '#0284c7', emerald: '#059669',
 };
 
+const SIMPLE_BLOCK_COMMANDS: Record<string, () => string> = {
+  text: () => '<p><br></p>',
+  p: () => '<p><br></p>',
+  paragraph: () => '<p><br></p>',
+  h1: () => '<h1><br></h1>',
+  heading1: () => '<h1><br></h1>',
+  title: () => '<h1><br></h1>',
+  h2: () => '<h2><br></h2>',
+  heading2: () => '<h2><br></h2>',
+  h3: () => '<h3><br></h3>',
+  heading3: () => '<h3><br></h3>',
+  bullet: () => '<ul><li><br></li></ul>',
+  bullets: () => '<ul><li><br></li></ul>',
+  list: () => '<ul><li><br></li></ul>',
+  ul: () => '<ul><li><br></li></ul>',
+  numbered: () => '<ol><li><br></li></ol>',
+  number: () => '<ol><li><br></li></ol>',
+  ordered: () => '<ol><li><br></li></ol>',
+  ol: () => '<ol><li><br></li></ol>',
+  todo: () => '<ul class="checklist"><li class="checklist-item"><input type="checkbox" class="checklist-checkbox" /><span class="checklist-text">&nbsp;</span></li></ul>',
+  check: () => '<ul class="checklist"><li class="checklist-item"><input type="checkbox" class="checklist-checkbox" /><span class="checklist-text">&nbsp;</span></li></ul>',
+  checklist: () => '<ul class="checklist"><li class="checklist-item"><input type="checkbox" class="checklist-checkbox" /><span class="checklist-text">&nbsp;</span></li></ul>',
+  quote: () => '<blockquote><br></blockquote>',
+  blockquote: () => '<blockquote><br></blockquote>',
+  divider: () => '<hr><p><br></p>',
+  hr: () => '<hr><p><br></p>',
+  rule: () => '<hr><p><br></p>',
+  table: () => '<table style="border-collapse:collapse;width:100%;margin:8px 0;"><tbody><tr><td style="border:1px solid hsl(var(--border));padding:6px;">&nbsp;</td><td style="border:1px solid hsl(var(--border));padding:6px;">&nbsp;</td></tr><tr><td style="border:1px solid hsl(var(--border));padding:6px;">&nbsp;</td><td style="border:1px solid hsl(var(--border));padding:6px;">&nbsp;</td></tr></tbody></table><p><br></p>',
+};
+
+const INLINE_FORMAT_COMMANDS: Record<string, (body: string) => string> = {
+  bold: (body) => `<p><strong>${escapeHtml(body)}</strong></p>`,
+  strong: (body) => `<p><strong>${escapeHtml(body)}</strong></p>`,
+  italic: (body) => `<p><em>${escapeHtml(body)}</em></p>`,
+  italics: (body) => `<p><em>${escapeHtml(body)}</em></p>`,
+  em: (body) => `<p><em>${escapeHtml(body)}</em></p>`,
+  underline: (body) => `<p><u>${escapeHtml(body)}</u></p>`,
+  u: (body) => `<p><u>${escapeHtml(body)}</u></p>`,
+  strike: (body) => `<p><s>${escapeHtml(body)}</s></p>`,
+  strikethrough: (body) => `<p><s>${escapeHtml(body)}</s></p>`,
+  s: (body) => `<p><s>${escapeHtml(body)}</s></p>`,
+  code: (body) => `<p><code>${escapeHtml(body)}</code></p>`,
+  highlight: (body) => `<p><mark>${escapeHtml(body)}</mark></p>`,
+  mark: (body) => `<p><mark>${escapeHtml(body)}</mark></p>`,
+};
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!
@@ -196,6 +242,34 @@ export async function trySlashLineShortcut(root: HTMLElement | null): Promise<bo
   if (!m) return false;
   const cmd = m[1].toLowerCase();
   const arg = m[2].trim();
+
+  const simpleBlock = SIMPLE_BLOCK_COMMANDS[cmd];
+  if (simpleBlock && !arg) {
+    replaceBlockHtml(block, simpleBlock(), root);
+    return true;
+  }
+
+  if ((cmd === 'h1' || cmd === 'heading1' || cmd === 'title') && arg) {
+    replaceBlockHtml(block, `<h1>${escapeHtml(arg)}</h1>`, root);
+    return true;
+  }
+
+  if ((cmd === 'h2' || cmd === 'heading2') && arg) {
+    replaceBlockHtml(block, `<h2>${escapeHtml(arg)}</h2>`, root);
+    return true;
+  }
+
+  if ((cmd === 'h3' || cmd === 'heading3') && arg) {
+    replaceBlockHtml(block, `<h3>${escapeHtml(arg)}</h3>`, root);
+    return true;
+  }
+
+  const inlineFormatter = INLINE_FORMAT_COMMANDS[cmd];
+  if (inlineFormatter) {
+    if (!arg) return false;
+    replaceBlockHtml(block, inlineFormatter(arg), root);
+    return true;
+  }
 
   // ── /lorem N
   if (cmd === 'lorem') {
@@ -394,7 +468,7 @@ export async function trySlashLineShortcut(root: HTMLElement | null): Promise<bo
 }
 
 export function isSlashLineShortcutText(text: string): boolean {
-  return /^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc|unit|convert)\b/i.test(text.trim());
+  return /^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|bold|strong|italic|italics|em|underline|u|strike|strikethrough|s|code|highlight|mark|lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc|unit|convert)\b/i.test(text.trim());
 }
 
 /**
@@ -406,10 +480,20 @@ export function isSlashLineShortcutText(text: string): boolean {
 export function isSlashLineShortcutReady(text: string): boolean {
   const t = text.trim();
   // Arg-less commands (fire on bare command).
-  if (/^\/(today|now|tomorrow|yesterday|toc)\s*$/i.test(t)) return true;
+  if (/^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|today|now|tomorrow|yesterday|toc)\s*$/i.test(t)) return true;
   // Arg-taking commands (require at least one non-space char after the command).
-  if (/^\/(lorem|color|qr|mermaid|chess|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|unit|convert)\s+\S/i.test(t)) return true;
+  if (/^\/(bold|strong|italic|italics|em|underline|u|strike|strikethrough|s|code|highlight|mark|h1|heading1|title|h2|heading2|h3|heading3|lorem|color|qr|mermaid|chess|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|unit|convert)\s+\S/i.test(t)) return true;
   return false;
+}
+
+/**
+ * Commands safe to execute immediately after the final typed character. We only
+ * auto-run argument-free commands because free-text commands (/bold hello,
+ * /tz new york, /lorem 12) need Space/Enter to signal that typing is done.
+ */
+export function isSlashLineShortcutAutoReady(text: string): boolean {
+  const t = text.trim();
+  return /^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|today|now|tomorrow|yesterday|toc)\s*$/i.test(t);
 }
 
 const UNIT_HELP_HTML =

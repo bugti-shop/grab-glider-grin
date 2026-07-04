@@ -86,9 +86,13 @@ function buildSections(): Section[] {
       ],
     },
     {
-      title: 'Slash commands (type at line start, press Enter)',
-      description: 'Powerful block inserters. Full slash menu also opens with “/”.',
+      title: 'Slash commands',
+      description: 'Complete short commands run automatically; commands with text still run with Space or Enter.',
       rows: [
+        { trigger: '/h1', result: 'Heading 1', hint: 'also /h2, /h3' },
+        { trigger: '/bullet', result: 'Bulleted list', hint: 'also /numbered, /todo' },
+        { trigger: '/quote', result: 'Blockquote', hint: 'also /divider, /table' },
+        { trigger: '/bold text', result: 'Bold text', hint: 'also /italic, /underline, /strike, /code, /highlight' },
         { trigger: '/lorem 3', result: '3 paragraphs of Lorem ipsum (1–20)' },
         { trigger: '/color red Hello', result: 'Colored text (name or #hex)' },
         { trigger: '/qr https://…', result: 'QR-code image block' },
@@ -228,7 +232,7 @@ function buildSections(): Section[] {
       rows: [
         { trigger: 'Select text → tap bubble buttons', result: 'Bold, italic, underline, strike, code, link, comment, or Markdown convert.' },
         { trigger: '/bold text + Space', result: 'Turns “text” bold', hint: 'also /italic text, /underline text, /strike text, /code text, /highlight text' },
-        { trigger: '/h1 + Space', result: 'Heading 1', hint: 'also /h2, /h3, /bullet, /numbered, /check, /quote, /divider' },
+        { trigger: '/h1', result: 'Heading 1', hint: 'also /h2, /h3, /bullet, /numbered, /check, /quote, /divider' },
         { trigger: 'Type token + Space', result: 'Markdown shortcuts still work — headings, lists, todos, tables, dates, units, symbols.' },
         { trigger: 'Long-press a table cell', result: 'Opens the table menu (insert / delete row-col, styles).' },
       ],
