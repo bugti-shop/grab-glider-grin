@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { HelpCircle, X, Check, Sparkles, Crown, Rocket } from 'lucide-react';
+import { HelpCircle, X, Check, Sparkles, Crown, Rocket, PlayCircle } from 'lucide-react';
 
 import {
   Dialog,
@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
-import { CATEGORY_LABELS, FEATURE_TOURS, type TourCategory } from '@/features/tours/tourRegistry';
+import { CATEGORY_LABELS, FEATURE_TOURS, ONBOARDING_CHAIN, type TourCategory } from '@/features/tours/tourRegistry';
 import { useFeatureTour } from '@/features/tours/useFeatureTour';
+import { resetTour } from '@/features/tours/TourStateStore';
 
 interface FeatureGuideModalProps {
   isOpen: boolean;
@@ -60,6 +61,17 @@ export const FeatureGuideModal = ({ isOpen, onClose }: FeatureGuideModalProps) =
     }, 260);
   };
 
+  const handleStartFullTutorial = async () => {
+    // Reset every tour in the onboarding chain AND every listed feature tour
+    // so the walk-through visits them all, even ones already marked as seen.
+    const ids = Array.from(new Set([...ONBOARDING_CHAIN, ...FEATURE_TOURS.map((t) => t.id)]));
+    await Promise.all(ids.map((id) => resetTour(id).catch(() => {})));
+    onClose();
+    // Wait for the Dialog exit animation before starting the first coach-mark.
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('flowist-onboarding:start-chain'));
+    }, 320);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
@@ -99,6 +111,27 @@ export const FeatureGuideModal = ({ isOpen, onClose }: FeatureGuideModalProps) =
             value="features"
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4 space-y-5 m-0"
           >
+            {/* Start Full Tutorial — walks the user through every feature below */}
+            <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
+                <PlayCircle className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold leading-tight">Start full tutorial</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                  Walk through every feature below in order — tasks, notes, personalization and more.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={handleStartFullTutorial}
+                  className="mt-2.5 h-8 text-xs"
+                >
+                  <PlayCircle className="h-3.5 w-3.5 mr-1.5" />
+                  Start tutorial
+                </Button>
+              </div>
+            </div>
+
             {CATEGORY_ORDER.map((cat) => {
               const items = FEATURE_TOURS.filter((t) => t.category === cat);
               if (items.length === 0) return null;
