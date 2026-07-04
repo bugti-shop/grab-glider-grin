@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const driveMock = vi.fn();
 const destroyMock = vi.fn();
@@ -25,6 +25,10 @@ describe('TourManager delayed tutorial targets', () => {
     destroyMock.mockClear();
     document.body.innerHTML = '';
     window.history.replaceState({}, '', '/notesdashboard');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('waits beyond the old short timeout for slow notebook targets', async () => {
