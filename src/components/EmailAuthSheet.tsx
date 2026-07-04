@@ -379,44 +379,39 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
           </div>
         )}
 
-        {mode === 'otp' && (
-          <div className="space-y-3">
-            <p className="text-[13px] text-[#666] text-center">
-              {t('emailAuth.otpInstructions', 'We sent a 6-digit code to {{email}}. Enter it below to finish creating your account.', { email })}
-            </p>
-            <Input
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              placeholder="••••••"
-              value={otp}
-              onChange={(e) => {
-                setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
-                if (otpError) setOtpError(null);
-              }}
-              className={`h-14 rounded-xl text-center text-2xl font-bold tracking-[0.5em] ${otpError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-            />
+        {mode === 'verify-link' && (
+          <div className="space-y-4">
+            <div className="flex flex-col items-center text-center gap-2 pt-1">
+              <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
+                <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+              </div>
+              <p className="text-[15px] font-bold text-[#1a1a1a]">
+                {t('emailAuth.checkYourInbox', 'Check your inbox')}
+              </p>
+              <p className="text-[13px] text-[#666] leading-relaxed">
+                {t(
+                  'emailAuth.linkInstructions',
+                  'We sent a verification link to {{email}}. Tap the link in that email — it will open Flowist and sign you in automatically.',
+                  { email },
+                )}
+              </p>
+            </div>
+            <Button
+              onClick={handleManualContinue}
+              disabled={loading}
+              className="w-full h-12 rounded-xl font-bold"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {t('emailAuth.iClickedLink', "I've verified — continue")}
+            </Button>
             {otpError && (
               <p className="text-[12px] text-red-600 text-center -mt-1">{otpError}</p>
             )}
-            <Button onClick={handleVerifyOtp} disabled={loading || otp.length < 6} className="w-full h-12 rounded-xl font-bold">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <KeyRound className="h-4 w-4 mr-2" />}
-              {loading
-                ? t('emailAuth.verifying', 'Verifying…')
-                : t('emailAuth.verify', 'Verify & continue')}
-            </Button>
-            <button
-              onClick={handleResend}
-              disabled={loading || resendCooldown > 0}
-              className="w-full text-center text-[13px] text-[#666] underline py-1 disabled:no-underline disabled:opacity-60"
-            >
-              {resendCooldown > 0
-                ? t('emailAuth.resendIn', 'Resend code in {{s}}s', { s: resendCooldown })
-                : t('emailAuth.resend', 'Resend code')}
-            </button>
             <p className="text-[11px] text-[#999] text-center leading-relaxed">
-              {t('emailAuth.syncNote', 'Cloud sync activates the moment your code is verified.')}
+              {t(
+                'emailAuth.linkSyncNote',
+                "Didn't get it? Check your spam folder. The link expires in 30 minutes.",
+              )}
             </p>
           </div>
         )}
