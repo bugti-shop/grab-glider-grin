@@ -55,7 +55,7 @@ class TourManagerImpl {
 
 
   /** Start a tour immediately (or queue it if another one is running). */
-  async startTour(tourId: string, opts: { force?: boolean; auto?: boolean; chain?: boolean } = {}) {
+  async startTour(tourId: string, opts: { force?: boolean; auto?: boolean; chain?: boolean; forced?: boolean } = {}) {
     const tour = getTour(tourId);
     if (!tour) return;
 
