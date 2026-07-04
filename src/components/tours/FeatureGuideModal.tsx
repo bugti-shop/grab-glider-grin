@@ -73,7 +73,7 @@ export const FeatureGuideModal = ({ isOpen, onClose }: FeatureGuideModalProps) =
     }, 320);
   };
 
-
+  return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         className={cn(
