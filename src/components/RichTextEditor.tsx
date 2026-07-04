@@ -171,6 +171,19 @@ export const RichTextEditor = ({
   const [linkUrl, setLinkUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
+  // Guards against a slash-line command firing twice when both `beforeinput`
+  // and `keydown` observe the same Space/Enter (some IMEs and desktops emit
+  // both). Reset on the next macrotask.
+  const slashLineFiringRef = useRef(false);
+  const runSlashLineOnce = (root: HTMLElement) => {
+    if (slashLineFiringRef.current) return;
+    slashLineFiringRef.current = true;
+    void trySlashLineShortcut(root).then((ok) => {
+      if (ok) handleInput();
+    }).finally(() => {
+      setTimeout(() => { slashLineFiringRef.current = false; }, 0);
+    });
+  };
   const savedRangeRef = useRef<Range | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
   const [history, setHistory] = useState<string[]>([content]);
@@ -1710,7 +1723,7 @@ export const RichTextEditor = ({
         if (isSlashLineShortcutText(trimmed)) {
           e.preventDefault();
           closeSlash();
-          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          runSlashLineOnce(root);
           return;
         }
       }
@@ -1742,7 +1755,7 @@ export const RichTextEditor = ({
         if (isSlashLineShortcutReady(trimmed)) {
           e.preventDefault();
           closeSlash();
-          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          runSlashLineOnce(root);
           return;
         }
       }
@@ -1785,7 +1798,7 @@ export const RichTextEditor = ({
         }
         if (isSlashLineShortcutReady(trimmed)) {
           closeSlash();
-          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          runSlashLineOnce(root);
           return;
         }
       }
@@ -1818,7 +1831,7 @@ export const RichTextEditor = ({
         }
         if (isSlashLineShortcutText(trimmed)) {
           e.preventDefault();
-          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          runSlashLineOnce(root);
           return;
         }
         if (tryMarkdownPipeTableEnter(root)) { e.preventDefault(); handleInput(); return; }
@@ -1930,7 +1943,7 @@ export const RichTextEditor = ({
             if (isSlashLineShortcutReady(trimmed)) {
               e.preventDefault();
               closeSlash();
-              void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+              runSlashLineOnce(root);
               return;
             }
           }
@@ -2010,9 +2023,7 @@ export const RichTextEditor = ({
             }
             if (isSlashLineShortcutText(trimmed)) {
               e.preventDefault();
-              void trySlashLineShortcut(root).then((ok) => {
-                if (ok) handleInput();
-              });
+              runSlashLineOnce(root);
               return;
             }
           }
@@ -2086,9 +2097,7 @@ export const RichTextEditor = ({
         if (root && isSlashLineShortcutText(trimmed)) {
           e.preventDefault();
           closeSlash();
-          void trySlashLineShortcut(root).then((ok) => {
-            if (ok) handleInput();
-          });
+          runSlashLineOnce(root);
           return;
         }
       }

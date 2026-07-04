@@ -116,6 +116,11 @@ export const SlashCommandMenu = ({
           </button>
         );
       })}
+      <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-t border-border bg-muted/40 flex items-center gap-1.5">
+        Tip: press <kbd className="px-1 py-0.5 rounded border border-border bg-background font-mono text-[9px]">Space</kbd>
+        or <kbd className="px-1 py-0.5 rounded border border-border bg-background font-mono text-[9px]">Enter</kbd>
+        to run a slash command
+      </div>
     </div>
   );
 };
