@@ -55,7 +55,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
   const reset = () => {
     setMode('signin');
     setEmail(''); setPassword(''); setName(''); setOtp('');
-    setOtpError(null); setResendCooldown(0);
+    setOtpError(null); setResendCooldown(0); setShowPassword(false);
   };
 
   const close = () => { reset(); onClose(); };
