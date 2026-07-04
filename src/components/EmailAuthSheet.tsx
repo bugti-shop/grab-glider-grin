@@ -128,11 +128,35 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
       startCooldown();
       setMode('otp');
     } catch (err: any) {
-      toast({
-        title: t('emailAuth.signupFailed', 'Could not create account'),
-        description: err?.message || '',
-        variant: 'destructive',
-      });
+      // Detect "already registered" so returning users don't create a
+      // duplicate and get confused when the OTP screen appears.
+      const raw = String(err?.message || '').toLowerCase();
+      const code = String(err?.code || err?.name || '').toLowerCase();
+      const status = Number(err?.status ?? err?.statusCode ?? 0);
+      const looksLikeExisting =
+        code.includes('user_already_exists') ||
+        code.includes('email_exists') ||
+        raw.includes('already registered') ||
+        raw.includes('already been registered') ||
+        raw.includes('user already') ||
+        (status === 422 && raw.includes('registered'));
+      if (looksLikeExisting) {
+        toast({
+          title: t('emailAuth.existingAccountTitle', 'This email already has an account'),
+          description: t(
+            'emailAuth.existingAccountDesc',
+            'Please sign in with your password instead.',
+          ),
+          variant: 'destructive',
+        });
+        setMode('signin');
+      } else {
+        toast({
+          title: t('emailAuth.signupFailed', 'Could not create account'),
+          description: err?.message || '',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
