@@ -131,7 +131,7 @@ class TourManagerImpl {
           // Close whatever sheet/menu the previous tour opened before we
           // navigate to and highlight the next feature.
           this.closeTransientUi();
-          setTimeout(() => this.startTour(nextId, { chain: true }), 400);
+          setTimeout(() => this.startTour(nextId, { chain: true }), 550);
           return;
         }
       }
