@@ -417,7 +417,7 @@ export function tryUnitShortcut(root: HTMLElement | null): boolean {
 
   if (isInsideCodeLikeBlock(textNode, root)) return false;
 
-  const m = /(?:^|[\s(])(-?\d+(?:\.\d+)?\s*[A-Za-z°²³\/]+\s+(?:in|to|as|->|=)\s+[A-Za-z°²³\/]+)$/i.exec(before);
+  const m = /(?:^|[\s(])(-?\d+(?:\.\d+)?\s*[A-Za-z°²³\/][A-Za-z0-9°²³\/]*\s+(?:in|to|as|->|=)\s+[A-Za-z°²³\/][A-Za-z0-9°²³\/]*)$/i.exec(before);
   if (!m) return false;
 
   const conv = convertExpression(m[1]);
