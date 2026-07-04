@@ -442,29 +442,57 @@ export const TaskDetailPage = ({
   };
 
   const handleSaveExtraReminder = async (value: ExtraReminderValue) => {
+    // Legacy single-value callback: kept for backward compatibility. The full
+    // list is now saved via `handleSaveExtraRemindersList`, but we still mirror
+    // the FIRST item into the legacy fields so older restore paths keep working.
     try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
     try {
       const { scheduleExtraReminder } = await import('@/utils/reminderScheduler');
-      const scheduled = await scheduleExtraReminder(task.id, task.text, value.time, value.recurring);
+      const legacyRecurring = (value.recurring === 'hourly' ? 'none' : value.recurring) as any;
+      const scheduled = await scheduleExtraReminder(task.id, task.text, value.time, legacyRecurring);
       const finalTime = scheduled ?? value.time;
       onUpdate({
         ...task,
         extraReminderTime: finalTime,
-        extraReminderRecurring: value.recurring,
+        extraReminderRecurring: value.recurring as any,
       });
-      toast.success(t('taskDetailToasts.extraReminderSaved', 'Extra reminder set'));
     } catch (e) {
       console.warn('Failed to save extra reminder:', e);
     }
   };
 
+  const handleSaveExtraRemindersList = async (
+    items: Array<{ id: string; time: Date; recurring: any; daysOfWeek?: number[] }>
+  ) => {
+    try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
+    try {
+      const { scheduleExtraRemindersList } = await import('@/utils/reminderScheduler');
+      await scheduleExtraRemindersList(task.id, task.text, items);
+    } catch (e) {
+      console.warn('Failed to schedule extra reminders list:', e);
+    }
+    const first = items[0];
+    onUpdate({
+      ...task,
+      extraReminders: items,
+      extraReminderTime: first?.time,
+      extraReminderRecurring: (first?.recurring ?? 'none') as any,
+    } as any);
+    toast.success(
+      t(
+        'taskDetailToasts.extraReminderSaved',
+        items.length > 1 ? `${items.length} reminders set` : 'Reminder set'
+      )
+    );
+  };
+
   const handleRemoveExtraReminder = async () => {
     try { await Haptics.impact({ style: ImpactStyle.Light }); } catch {}
     try {
-      const { cancelExtraReminder } = await import('@/utils/reminderScheduler');
-      await cancelExtraReminder(task.id);
+      const { cancelAllExtraReminders } = await import('@/utils/reminderScheduler');
+      await cancelAllExtraReminders(task.id);
     } catch {}
-    const { extraReminderTime, extraReminderRecurring, extraReminderNotificationId, ...rest } = task as any;
+    const { extraReminderTime, extraReminderRecurring, extraReminderNotificationId, extraReminders, ...rest } = task as any;
     onUpdate(rest);
     toast.success(t('taskDetailToasts.extraReminderRemoved', 'Extra reminder removed'));
   };
@@ -1364,13 +1392,23 @@ export const TaskDetailPage = ({
             <Bell className="h-5 w-5 text-amber-500" />
             <span className="flex-1 text-left">{t('taskDetail.extraReminder', 'Extra reminder')}</span>
             <span className="text-sm text-muted-foreground truncate max-w-[55%] text-right">
-              {task.extraReminderTime
-                ? `${format(new Date(task.extraReminderTime), 'MMM d, h:mm a')}${
-                    task.extraReminderRecurring && task.extraReminderRecurring !== 'none'
-                      ? ` • ${task.extraReminderRecurring}`
-                      : ''
-                  }`
-                : t('taskDetail.notSet')}
+              {(() => {
+                const list = (task as any).extraReminders as Array<{ time: Date; recurring: string }> | undefined;
+                if (list && list.length > 0) {
+                  const first = list[0];
+                  const summary = `${format(new Date(first.time), 'MMM d, h:mm a')}${
+                    first.recurring && first.recurring !== 'none' ? ` • ${first.recurring}` : ''
+                  }`;
+                  return list.length > 1 ? `${summary} +${list.length - 1} more` : summary;
+                }
+                return task.extraReminderTime
+                  ? `${format(new Date(task.extraReminderTime), 'MMM d, h:mm a')}${
+                      task.extraReminderRecurring && task.extraReminderRecurring !== 'none'
+                        ? ` • ${task.extraReminderRecurring}`
+                        : ''
+                    }`
+                  : t('taskDetail.notSet');
+              })()}
             </span>
           </button>
 
@@ -1568,6 +1606,16 @@ export const TaskDetailPage = ({
       <TaskReminderSheet
         isOpen={showExtraReminderSheet}
         onClose={() => setShowExtraReminderSheet(false)}
+        initialItems={
+          Array.isArray((task as any).extraReminders) && (task as any).extraReminders.length > 0
+            ? (task as any).extraReminders.map((r: any) => ({
+                id: String(r.id),
+                time: new Date(r.time),
+                recurring: (r.recurring || 'none') as any,
+                daysOfWeek: Array.isArray(r.daysOfWeek) ? r.daysOfWeek : undefined,
+              }))
+            : null
+        }
         initialValue={
           task.extraReminderTime
             ? {
@@ -1577,8 +1625,10 @@ export const TaskDetailPage = ({
             : null
         }
         onSave={handleSaveExtraReminder}
+        onSaveAll={handleSaveExtraRemindersList}
         onRemove={handleRemoveExtraReminder}
       />
+
 
       {/* TaskDependencySheet */}
       <TaskDependencySheet

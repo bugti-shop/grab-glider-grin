@@ -26,6 +26,25 @@ export type Priority = 'high' | 'medium' | 'low' | 'none' | (string & {});
 export type RepeatType = 'none' | 'hourly' | 'daily' | 'weekly' | 'weekdays' | 'weekends' | 'monthly' | 'yearly' | 'custom';
 export type TaskStatus = 'not_started' | 'in_progress' | 'almost_done' | 'completed';
 
+/** Recurrence pattern for an extra task reminder. */
+export type ExtraReminderRecurring = 'none' | 'hourly' | 'daily' | 'weekly' | 'monthly';
+
+/** A single extra reminder entry attached to a task. */
+export interface ExtraReminderItem {
+  id: string;
+  /** Wall-clock instant this reminder should first fire. */
+  time: Date;
+  recurring: ExtraReminderRecurring;
+  /**
+   * Optional day-of-week filter (0 = Sun … 6 = Sat). When present the
+   * reminder is only allowed to fire on the listed weekdays; the scheduler
+   * rolls the next occurrence forward until it lands on a matching day.
+   * Empty / undefined means "every day".
+   */
+  daysOfWeek?: number[];
+}
+
+
 
 export interface AdvancedRepeatPattern {
   frequency: RepeatType;
@@ -154,12 +173,18 @@ export interface TodoItem {
   reminderTime?: Date;
   multiReminder?: MultiReminder; // Support for multiple reminders throughout the day
   locationReminder?: LocationReminder; // Location-based reminder
-  /** Extra reminder, completely independent of dueDate / reminderTime. */
+  /** Extra reminder (legacy single reminder), completely independent of dueDate / reminderTime. */
   extraReminderTime?: Date;
   /** Recurrence pattern for extraReminderTime ('none' = one-shot). */
-  extraReminderRecurring?: 'none' | 'daily' | 'weekly' | 'monthly';
+  extraReminderRecurring?: 'none' | 'hourly' | 'daily' | 'weekly' | 'monthly';
   /** Optional notification id for the extra reminder, used to cancel scheduling. */
   extraReminderNotificationId?: number;
+  /**
+   * Multiple extra reminders (Pro). If present it supersedes the legacy
+   * single `extraReminderTime` field, though the first item is mirrored
+   * back into the legacy fields for backward compatibility.
+   */
+  extraReminders?: ExtraReminderItem[];
   repeatType?: RepeatType;
   repeatDays?: number[];
   advancedRepeat?: AdvancedRepeatPattern;

@@ -288,35 +288,58 @@ export const cancelNoteReminder = async (noteId: string): Promise<void> => {
 
 // ========== Extra reminders (independent of dueDate / reminderTime) ==========
 
-export type ExtraReminderRecurring = 'none' | 'daily' | 'weekly' | 'monthly';
+export type ExtraReminderRecurring = 'none' | 'hourly' | 'daily' | 'weekly' | 'monthly';
 
 const extraTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const extraReminderKey = (taskId: string) => `extra-${taskId}`;
+const extraItemKey = (taskId: string, itemId: string) => `extra-${taskId}-${itemId}`;
+
+/**
+ * Advance a date to the next occurrence for the given recurrence pattern.
+ * Does NOT compare against `now`; the caller is expected to loop until the
+ * result lies in the future.
+ */
+const advanceOnce = (d: Date, recurring: ExtraReminderRecurring): Date => {
+  const next = new Date(d);
+  if (recurring === 'hourly') next.setHours(next.getHours() + 1);
+  else if (recurring === 'daily') next.setDate(next.getDate() + 1);
+  else if (recurring === 'weekly') next.setDate(next.getDate() + 7);
+  else if (recurring === 'monthly') next.setMonth(next.getMonth() + 1);
+  return next;
+};
 
 /**
  * Compute the next occurrence of an extra reminder.
  * For 'none' returns null when in the past. For recurring, rolls forward
- * until the resulting date is in the future.
+ * until the resulting date is in the future. When `daysOfWeek` is provided
+ * the next occurrence is additionally rolled forward one day at a time until
+ * it lands on an allowed weekday.
  */
 export const computeNextExtraReminder = (
   from: Date,
   recurring: ExtraReminderRecurring,
-  now: Date = new Date()
+  now: Date = new Date(),
+  daysOfWeek?: number[]
 ): Date | null => {
   let next = new Date(from);
   if (recurring === 'none') {
     return next.getTime() > now.getTime() ? next : null;
   }
+  const allowedDays = daysOfWeek && daysOfWeek.length > 0 && daysOfWeek.length < 7
+    ? new Set(daysOfWeek)
+    : null;
   // Safety cap to avoid runaway loops.
   let guard = 0;
-  while (next.getTime() <= now.getTime() && guard < 1000) {
-    if (recurring === 'daily') next.setDate(next.getDate() + 1);
-    else if (recurring === 'weekly') next.setDate(next.getDate() + 7);
-    else if (recurring === 'monthly') next.setMonth(next.getMonth() + 1);
+  while (guard < 10000) {
+    const inFuture = next.getTime() > now.getTime();
+    const dayOk = !allowedDays || allowedDays.has(next.getDay());
+    if (inFuture && dayOk) return next;
+    next = advanceOnce(next, recurring);
     guard++;
   }
-  return next;
+  return null;
 };
+
 
 const persistExtraReminderTime = async (taskId: string, newTime: Date | null) => {
   try {
@@ -470,13 +493,118 @@ export const cancelExtraReminder = async (taskId: string): Promise<void> => {
   }
 };
 
+// ---------- Multi-item extra reminders (Pro) ----------
+
+const scheduleExtraItemWebTimer = (
+  taskId: string,
+  taskText: string,
+  itemId: string,
+  reminderTime: Date,
+  recurring: ExtraReminderRecurring,
+  daysOfWeek?: number[]
+) => {
+  const key = extraItemKey(taskId, itemId);
+  const existing = extraTimers.get(key);
+  if (existing) clearTimeout(existing);
+  const delay = reminderTime.getTime() - Date.now();
+  if (delay <= 0) return;
+  const timer = setTimeout(async () => {
+    extraTimers.delete(key);
+    await fireExtraReminderEffects(taskId, taskText, reminderTime);
+    if (recurring !== 'none') {
+      const seed = advanceOnce(reminderTime, recurring);
+      const next = computeNextExtraReminder(seed, recurring, new Date(), daysOfWeek);
+      if (next) {
+        scheduleExtraItemWebTimer(taskId, taskText, itemId, next, recurring, daysOfWeek);
+      }
+    }
+  }, delay);
+  extraTimers.set(key, timer);
+};
+
+/**
+ * Schedule a list of extra reminders for a single task. Cancels all previous
+ * item-level timers/notifications for the task first. The legacy single
+ * `scheduleExtraReminder` remains for backward compatibility with the first
+ * item (mirrored into legacy task fields).
+ */
+export const scheduleExtraRemindersList = async (
+  taskId: string,
+  taskText: string,
+  items: Array<{ id: string; time: Date; recurring: ExtraReminderRecurring; daysOfWeek?: number[] }>
+): Promise<void> => {
+  await cancelAllExtraReminders(taskId);
+  for (const it of items) {
+    const first = computeNextExtraReminder(new Date(it.time), it.recurring, new Date(), it.daysOfWeek);
+    if (!first) continue;
+    scheduleExtraItemWebTimer(taskId, taskText, it.id, first, it.recurring, it.daysOfWeek);
+    if (Capacitor.isNativePlatform()) {
+      const notifId = hashStringToId(extraItemKey(taskId, it.id));
+      try {
+        await LocalNotifications.schedule({
+          notifications: [{
+            id: notifId,
+            title: '⏰ Extra Reminder',
+            body: taskText,
+            schedule: { at: first, allowWhileIdle: true },
+            channelId: 'task-reminders',
+            extra: { type: 'extra-reminder', taskId, itemId: it.id },
+          }],
+        });
+      } catch (e) {
+        console.warn('[Reminder] Failed to schedule native extra reminder item:', e);
+      }
+    }
+  }
+};
+
+/**
+ * Cancel every scheduled extra reminder (legacy + multi-item) for a task.
+ */
+export const cancelAllExtraReminders = async (taskId: string): Promise<void> => {
+  await cancelExtraReminder(taskId);
+  const prefix = `extra-${taskId}-`;
+  const toCancelIds: number[] = [];
+  for (const key of Array.from(extraTimers.keys())) {
+    if (!key.startsWith(prefix)) continue;
+    const t = extraTimers.get(key);
+    if (t) clearTimeout(t);
+    extraTimers.delete(key);
+    toCancelIds.push(hashStringToId(key));
+  }
+  if (Capacitor.isNativePlatform() && toCancelIds.length > 0) {
+    try {
+      await LocalNotifications.cancel({ notifications: toCancelIds.map((id) => ({ id })) });
+    } catch (e) {
+      console.warn('[Reminder] Cancel multi extra reminders failed:', e);
+    }
+  }
+};
+
 const restoreExtraReminderTimers = async (): Promise<void> => {
   try {
     const { loadTodoItems } = await import('@/utils/todoItemsStorage');
     const items = await loadTodoItems();
     let restored = 0;
     for (const item of items) {
-      if (!item.extraReminderTime || item.completed) continue;
+      if (item.completed) continue;
+      // New multi-item reminders take precedence over the legacy single field.
+      const multi = Array.isArray((item as any).extraReminders) ? (item as any).extraReminders : null;
+      if (multi && multi.length > 0) {
+        await scheduleExtraRemindersList(
+          item.id,
+          item.text,
+          multi.map((r: any) => ({
+            id: String(r.id),
+            time: new Date(r.time),
+            recurring: (r.recurring || 'none') as ExtraReminderRecurring,
+            daysOfWeek: Array.isArray(r.daysOfWeek) ? r.daysOfWeek : undefined,
+          }))
+        );
+        restored += multi.length;
+        continue;
+      }
+      if (!item.extraReminderTime) continue;
       const recurring = (item.extraReminderRecurring || 'none') as ExtraReminderRecurring;
       const scheduled = await scheduleExtraReminder(
         item.id,
