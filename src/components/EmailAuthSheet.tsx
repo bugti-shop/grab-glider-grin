@@ -34,6 +34,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpError, setOtpError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const cooldownTimer = useRef<number | null>(null);
 
   useEffect(() => {
