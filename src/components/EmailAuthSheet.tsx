@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Loader2, Mail, KeyRound, ArrowLeft } from 'lucide-react';
+import { X, Loader2, Mail, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpError, setOtpError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const cooldownTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -54,7 +55,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
   const reset = () => {
     setMode('signin');
     setEmail(''); setPassword(''); setName(''); setOtp('');
-    setOtpError(null); setResendCooldown(0);
+    setOtpError(null); setResendCooldown(0); setShowPassword(false);
   };
 
   const close = () => { reset(); onClose(); };
@@ -71,11 +72,36 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
       onSignedIn?.(u);
       close();
     } catch (err: any) {
-      toast({
-        title: t('emailAuth.signInFailed', 'Sign-in failed'),
-        description: err?.message || '',
-        variant: 'destructive',
-      });
+      // Supabase returns "Invalid login credentials" for both wrong-password
+      // and no-such-account. Nudge the user to Create Account first so a
+      // brand-new visitor doesn't get stuck on the sign-in tab.
+      const raw = String(err?.message || '').toLowerCase();
+      const code = String(err?.code || err?.name || '').toLowerCase();
+      const looksLikeNoAccount =
+        code.includes('invalid_credentials') ||
+        raw.includes('invalid login credentials') ||
+        raw.includes('invalid credentials') ||
+        raw.includes('user not found') ||
+        raw.includes('email not confirmed');
+      if (looksLikeNoAccount) {
+        toast({
+          title: t('emailAuth.noAccountTitle', 'Please create an account first'),
+          description: t(
+            'emailAuth.noAccountDesc',
+            "We couldn't find an account for that email. Tap Create account to sign up.",
+          ),
+          variant: 'destructive',
+        });
+        // Prefill the signup form with what they already typed so they can
+        // just add a name and hit Send verification code.
+        setMode('signup');
+      } else {
+        toast({
+          title: t('emailAuth.signInFailed', 'Sign-in failed'),
+          description: err?.message || '',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -102,11 +128,35 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
       startCooldown();
       setMode('otp');
     } catch (err: any) {
-      toast({
-        title: t('emailAuth.signupFailed', 'Could not create account'),
-        description: err?.message || '',
-        variant: 'destructive',
-      });
+      // Detect "already registered" so returning users don't create a
+      // duplicate and get confused when the OTP screen appears.
+      const raw = String(err?.message || '').toLowerCase();
+      const code = String(err?.code || err?.name || '').toLowerCase();
+      const status = Number(err?.status ?? err?.statusCode ?? 0);
+      const looksLikeExisting =
+        code.includes('user_already_exists') ||
+        code.includes('email_exists') ||
+        raw.includes('already registered') ||
+        raw.includes('already been registered') ||
+        raw.includes('user already') ||
+        (status === 422 && raw.includes('registered'));
+      if (looksLikeExisting) {
+        toast({
+          title: t('emailAuth.existingAccountTitle', 'This email already has an account'),
+          description: t(
+            'emailAuth.existingAccountDesc',
+            'Please sign in with your password instead.',
+          ),
+          variant: 'destructive',
+        });
+        setMode('signin');
+      } else {
+        toast({
+          title: t('emailAuth.signupFailed', 'Could not create account'),
+          description: err?.message || '',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -246,14 +296,29 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
               onChange={(e) => setEmail(e.target.value)}
               className="h-12 rounded-xl"
             />
-            <Input
-              type="password"
-              autoComplete="new-password"
-              placeholder={t('emailAuth.passwordPlaceholder', 'Password (8+ characters)')}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-12 rounded-xl"
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                placeholder={t('emailAuth.passwordPlaceholder', 'Password (8+ characters)')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-12 rounded-xl pr-11"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={
+                  showPassword
+                    ? t('emailAuth.hidePassword', 'Hide password')
+                    : t('emailAuth.showPassword', 'Show password')
+                }
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-[#666] hover:text-[#1a1a1a] rounded-md"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             <Button onClick={handleStartSignup} disabled={loading} className="w-full h-12 rounded-xl font-bold">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
               {t('emailAuth.sendCode', 'Send verification code')}
@@ -277,14 +342,29 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
               onChange={(e) => setEmail(e.target.value)}
               className="h-12 rounded-xl"
             />
-            <Input
-              type="password"
-              autoComplete="current-password"
-              placeholder={t('emailAuth.passwordPlaceholder', 'Password')}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-12 rounded-xl"
-            />
+            <div className="relative">
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder={t('emailAuth.passwordPlaceholder', 'Password')}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-12 rounded-xl pr-11"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={
+                  showPassword
+                    ? t('emailAuth.hidePassword', 'Hide password')
+                    : t('emailAuth.showPassword', 'Show password')
+                }
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-[#666] hover:text-[#1a1a1a] rounded-md"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             <Button onClick={handleSignIn} disabled={loading} className="w-full h-12 rounded-xl font-bold">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {t('emailAuth.signIn', 'Sign in')}
