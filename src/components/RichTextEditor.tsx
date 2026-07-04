@@ -1287,6 +1287,12 @@ export const RichTextEditor = ({
           if (tryMarkdownCompletedBlockShortcut(editorRef.current)) {
             hydrateSynced();
           }
+          // Mobile IME safety net for **bold**, *italic*, _italic_, `code`, ~~strike~~.
+          // beforeinput isn't cancelable during composition on Android/iOS, so we
+          // also scan after the character lands.
+          if (tryMarkdownInlinePostInput(editorRef.current)) {
+            hydrateSynced();
+          }
         }
 
         const rawHtml = editorRef.current.innerHTML;
