@@ -171,6 +171,20 @@ export const RichTextEditor = ({
   const [linkUrl, setLinkUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
+  // Guards against a slash-line command firing twice when both `beforeinput`
+  // and `keydown` observe the same Space/Enter (some IMEs and desktops emit
+  // both). Reset on the next macrotask.
+  const slashLineFiringRef = useRef(false);
+  const runSlashLineOnce = useCallback((root: HTMLElement) => {
+    if (slashLineFiringRef.current) return;
+    slashLineFiringRef.current = true;
+    void trySlashLineShortcut(root).then((ok) => {
+      if (ok) handleInput();
+    }).finally(() => {
+      // Release on next tick so the paired handler on the same key event is skipped.
+      setTimeout(() => { slashLineFiringRef.current = false; }, 0);
+    });
+  }, []);
   const savedRangeRef = useRef<Range | null>(null);
   const editorSelectionRef = useRef<Range | null>(null);
   const [history, setHistory] = useState<string[]>([content]);
