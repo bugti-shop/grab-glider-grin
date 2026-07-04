@@ -64,7 +64,7 @@ import {
   isInsideCode,
 } from './richtext/markdownShortcuts';
 import { tryMathShortcut } from './richtext/mathShortcut';
-import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut, isSlashLineShortcutText } from './richtext/extraShortcuts';
+import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut, isSlashLineShortcutText, isSlashLineShortcutReady } from './richtext/extraShortcuts';
 import { tryUnitShortcut } from './richtext/unitConvert';
 import { trySmartQuote, tryDashEllipsis, trySymbolShortcut } from './richtext/textReplacements';
 import { hydrateExtrasIn } from './richtext/extraHydration';
@@ -1724,6 +1724,28 @@ export const RichTextEditor = ({
 
     // ── Space typed ──
     if ((type === 'insertText' || type === 'insertReplacementText') && data === ' ') {
+      // Slash-line commands fire on Space too (not only Enter) once they look
+      // complete: e.g. "/today", "/now", "/tz tokyo", "/lorem 3".
+      if (root) {
+        const sel = window.getSelection();
+        let trimmed = '';
+        if (sel && sel.rangeCount > 0) {
+          let el: Node | null = sel.getRangeAt(0).startContainer;
+          while (el && el !== root) {
+            if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
+              trimmed = (el.textContent || '').trim();
+              break;
+            }
+            el = el.parentNode;
+          }
+        }
+        if (isSlashLineShortcutReady(trimmed)) {
+          e.preventDefault();
+          closeSlash();
+          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          return;
+        }
+      }
       // Non-consuming: mutate before caret; space still inserts after.
       tryDashEllipsis(root);
       // Consuming shortcuts (space is either replaced or re-inserted).
@@ -1747,6 +1769,26 @@ export const RichTextEditor = ({
       e.preventDefault();
       document.execCommand('insertText', false, token);
       tryDashEllipsis(root);
+      // Slash-line commands ready after batched Space (Android IME).
+      if (root) {
+        const sel = window.getSelection();
+        let trimmed = '';
+        if (sel && sel.rangeCount > 0) {
+          let el: Node | null = sel.getRangeAt(0).startContainer;
+          while (el && el !== root) {
+            if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
+              trimmed = (el.textContent || '').trim();
+              break;
+            }
+            el = el.parentNode;
+          }
+        }
+        if (isSlashLineShortcutReady(trimmed)) {
+          closeSlash();
+          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          return;
+        }
+      }
       if (tryGreekShortcut(root)) { handleInput(); return; }
       if (tryRelativeDateShortcut(root)) { document.execCommand('insertText', false, ' '); handleInput(); return; }
       if (tryWeekdayShortcut(root)) { document.execCommand('insertText', false, ' '); handleInput(); return; }
@@ -1869,6 +1911,30 @@ export const RichTextEditor = ({
     if (mdEnabled && !slashMenu.open && !mentionMenu.open && !isInsideCode(editorRef.current)) {
 
       if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Slash-line commands fire on Space too (not only Enter).
+        {
+          const root = editorRef.current;
+          if (root) {
+            const sel = window.getSelection();
+            let trimmed = '';
+            if (sel && sel.rangeCount > 0) {
+              let el: Node | null = sel.getRangeAt(0).startContainer;
+              while (el && el !== root) {
+                if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
+                  trimmed = (el.textContent || '').trim();
+                  break;
+                }
+                el = el.parentNode;
+              }
+            }
+            if (isSlashLineShortcutReady(trimmed)) {
+              e.preventDefault();
+              closeSlash();
+              void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+              return;
+            }
+          }
+        }
         // Text auto-replace: `--` → em-dash, `...` → ellipsis (fires before space is inserted).
         // Does not consume the event — the space still inserts normally.
         if (tryDashEllipsis(editorRef.current)) {

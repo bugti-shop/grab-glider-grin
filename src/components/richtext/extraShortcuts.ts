@@ -397,6 +397,21 @@ export function isSlashLineShortcutText(text: string): boolean {
   return /^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc|unit|convert)\b/i.test(text.trim());
 }
 
+/**
+ * Returns true when the slash-line text is fully typed and ready to fire on
+ * Space (no need to wait for Enter). Arg-less commands fire as soon as the
+ * command word is complete; arg-taking commands fire once at least one arg
+ * character is present.
+ */
+export function isSlashLineShortcutReady(text: string): boolean {
+  const t = text.trim();
+  // Arg-less commands (fire on bare command).
+  if (/^\/(today|now|tomorrow|yesterday|toc)\s*$/i.test(t)) return true;
+  // Arg-taking commands (require at least one non-space char after the command).
+  if (/^\/(lorem|color|qr|mermaid|chess|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|unit|convert)\s+\S/i.test(t)) return true;
+  return false;
+}
+
 const UNIT_HELP_HTML =
   `<div class="rt-unit-help" contenteditable="false">` +
   `<div class="rt-unit-help-title">Unit converter — examples</div>` +
