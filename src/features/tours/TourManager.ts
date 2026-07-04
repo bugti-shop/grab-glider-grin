@@ -137,7 +137,13 @@ class TourManagerImpl {
     }
 
     this.activeTourId = tourId;
+    this.activeRoute = tour.route;
+    this.forcedActive = !!opts.forced;
     try { document.body.dataset.tourActive = 'true'; } catch {}
+    try {
+      if (this.forcedActive) document.body.dataset.tourForced = 'true';
+      else delete document.body.dataset.tourForced;
+    } catch {}
     emitTourActiveChange(true);
 
     // Flag lets us tear down a per-step driver without triggering the
@@ -145,6 +151,7 @@ class TourManagerImpl {
     let suppressDestroy = false;
     let currentIndex = 0;
     let currentDrv: Driver | null = null;
+    const forced = this.forcedActive;
 
     // If this tour is part of the onboarding chain, teach the popover that
     // "Next" means "advance to the next feature" rather than "done".
@@ -153,9 +160,14 @@ class TourManagerImpl {
 
     const finalize = async (opts: { advanceChain?: boolean } = {}) => {
       try { delete document.body.dataset.tourActive; } catch {}
+      try { delete document.body.dataset.tourForced; } catch {}
       emitTourActiveChange(false);
       this.activeDriver = null;
       currentDrv = null;
+      this.remountCurrentStep = null;
+      this.activeRoute = null;
+      this.forcedActive = false;
+      if (this.forcedGuard) { clearInterval(this.forcedGuard); this.forcedGuard = null; }
       const finishedId = this.activeTourId;
       this.activeTourId = null;
       if (finishedId) await markTourSeen(finishedId);
@@ -168,7 +180,7 @@ class TourManagerImpl {
           // Close whatever sheet/menu the previous tour opened before we
           // navigate to and highlight the next feature.
           await this.closeTransientUi();
-          setTimeout(() => this.startTour(nextId, { chain: true }), BETWEEN_CHAIN_TOURS_DELAY_MS);
+          setTimeout(() => this.startTour(nextId, { chain: true, forced }), BETWEEN_CHAIN_TOURS_DELAY_MS);
           return;
         }
       }
@@ -183,13 +195,15 @@ class TourManagerImpl {
       // tour queued up after it. "Got it" only appears at the very end.
       const nextLabel = !isLast || inChain ? 'Next' : 'Got it';
       return driver({
-        allowClose: true,
+        // Forced tours cannot be dismissed by ✕ or overlay tap — user must
+        // walk through every step.
+        allowClose: !forced,
         overlayOpacity: 0.55,
         stagePadding: 6,
         stageRadius: 10,
         smoothScroll: true,
-        popoverClass: 'flowist-tour-popover',
-        showButtons: ['next', 'close'],
+        popoverClass: forced ? 'flowist-tour-popover flowist-tour-forced' : 'flowist-tour-popover',
+        showButtons: forced ? ['next'] : ['next', 'close'],
         nextBtnText: nextLabel,
         doneBtnText: nextLabel,
         steps: [this.toDriverStep(step)],
@@ -205,6 +219,12 @@ class TourManagerImpl {
         onDestroyed: async () => {
           if (suppressDestroy) {
             suppressDestroy = false;
+            return;
+          }
+          // Forced tours refuse dismissal: re-mount the same step instead of
+          // ending the tour.
+          if (forced && this.activeTourId === tourId) {
+            setTimeout(() => runStep(currentIndex), 60);
             return;
           }
           await finalize();
@@ -224,7 +244,53 @@ class TourManagerImpl {
       }
     };
 
+    this.remountCurrentStep = () => runStep(currentIndex);
+
     runStep(0);
+
+    // Forced-mode watchdog: (a) if the user navigates away from the tour's
+    // route, snap them back; (b) if the current step's target disappears
+    // (sheet closed, section still loading), re-run the pre-actions and
+    // remount the step. This is what keeps the tutorial locked on the
+    // target no matter what else the user tries to do.
+    if (forced) {
+      if (this.forcedGuard) clearInterval(this.forcedGuard);
+      this.forcedGuard = setInterval(async () => {
+        if (!this.activeDriver || this.activeTourId !== tourId) return;
+        // Route guard: pull the user back to the tour's screen.
+        if (this.navigate && typeof window !== 'undefined' && window.location.pathname !== tour.route) {
+          try { this.navigate(tour.route); } catch {}
+          return;
+        }
+        const step = tour.steps[currentIndex];
+        if (!step) return;
+        const el = this.getVisibleElement(step.elementSelector);
+        if (el) return;
+        // Target missing → try re-opening whatever the tour needs open, then
+        // wait (up to 10 min) for the selector to reappear and remount.
+        if (tour.beforeStart) {
+          const preSelectors = Array.isArray(tour.beforeStart) ? tour.beforeStart : [tour.beforeStart];
+          for (const sel of preSelectors) {
+            if (sel.startsWith('event:')) {
+              try { window.dispatchEvent(new CustomEvent(sel.slice('event:'.length))); } catch {}
+              continue;
+            }
+            const trigger = this.getVisibleElement(sel);
+            if (trigger instanceof HTMLElement) {
+              try { this.simulateActivation(trigger); } catch {}
+            }
+          }
+        }
+        const appeared = await this.waitForSelector(step.elementSelector, TOUR_TARGET_WAIT_MS);
+        if (appeared && this.activeTourId === tourId) {
+          suppressDestroy = true;
+          try { currentDrv?.destroy(); } catch {}
+          this.activeDriver = null;
+          runStep(currentIndex);
+        }
+      }, 700);
+    }
+
 
     // Global click handler: interactive step → advance to next by tearing
     // down the current per-step driver and mounting a fresh one on the new
