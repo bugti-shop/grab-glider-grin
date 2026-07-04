@@ -103,7 +103,7 @@ export const TaskReminderSheet = ({
   onSaveAll,
   onRemove,
 }: TaskReminderSheetProps) => {
-  const { isPro, showFeaturePaywall } = useSubscription();
+  const { isPro, requireProFeature } = useSubscription();
   const [drafts, setDrafts] = useState<DraftReminder[]>([]);
 
   useEffect(() => {
