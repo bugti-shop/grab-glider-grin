@@ -62,8 +62,8 @@ class TourManagerImpl {
     // sheets, dropdowns, popovers, or dialogs the previous tour left open so
     // the next feature isn't hidden behind a stale overlay.
     if (opts.chain || opts.auto) {
-      this.closeTransientUi();
-      await this.wait(180);
+      await this.closeTransientUi();
+      await this.wait(80);
     }
 
     // Navigate to the correct screen first, then wait for the first target.
@@ -130,7 +130,7 @@ class TourManagerImpl {
         if (nextId) {
           // Close whatever sheet/menu the previous tour opened before we
           // navigate to and highlight the next feature.
-          this.closeTransientUi();
+          await this.closeTransientUi();
           setTimeout(() => this.startTour(nextId, { chain: true }), 550);
           return;
         }
@@ -268,7 +268,7 @@ class TourManagerImpl {
     if (!nextId) return;
     // Give the just-completed action's UI a moment to render (e.g. task row
     // appears in the list) before highlighting the next feature.
-    this.closeTransientUi();
+    await this.closeTransientUi();
     setTimeout(() => this.startTour(nextId, { chain: true }), 700);
   }
 
@@ -368,7 +368,7 @@ class TourManagerImpl {
    *   3. Repeat a couple of times to catch nested overlays (dropdown inside a
    *      sheet inside a dialog).
    */
-  private closeTransientUi() {
+  private async closeTransientUi() {
     if (typeof window === 'undefined') return;
 
     const dispatchCloseEvents = () => {
@@ -434,10 +434,16 @@ class TourManagerImpl {
     };
 
     // Pulse several times to peel nested overlays (menu inside sheet inside dialog).
+    // Keep the pulses awaited here; if they are left as free setTimeouts they can
+    // fire after `beforeStart` opens the next tutorial sheet and immediately close
+    // the very UI the tour is trying to teach.
     pulse();
-    setTimeout(pulse, 80);
-    setTimeout(pulse, 180);
-    setTimeout(pulse, 320);
+    await this.wait(80);
+    pulse();
+    await this.wait(100);
+    pulse();
+    await this.wait(140);
+    pulse();
   }
 }
 
