@@ -56,6 +56,9 @@ import {
   tryMarkdownCompletedBlockShortcut,
   tryMarkdownEnterShortcut,
   tryMarkdownInlineShortcut,
+  tryMarkdownLinkOrImageShortcut,
+  tryMarkdownTableShortcut,
+  tryMarkdownPipeTableEnter,
   markdownPasteToHtml,
   isInsideCode,
 } from './richtext/markdownShortcuts';
