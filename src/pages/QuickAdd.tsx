@@ -84,9 +84,32 @@ const QuickAdd = () => {
         const { persisted } = await saveTodoItem(newItem);
         if (!persisted) throw new Error("persist failed");
         window.dispatchEvent(new Event("tasksUpdated"));
-        // Also broadcast to other WebView instances (main app) via storage event.
+        // Realtime cross-WebView signals so the main app instantly
+        // reconciles + routes to Today, even if it's already open in the
+        // background.  Three channels for max coverage:
+        //   1) BroadcastChannel — same-origin, same-device, sub-frame push
+        //   2) storage event    — cross-WebView on Android (shared origin)
+        //   3) localStorage flag — cold-start pickup when main app boots
+        const payload = {
+          type: "task-added" as const,
+          id: newItem.id,
+          at: Date.now(),
+          source: "quick-add" as const,
+        };
         try {
-          localStorage.setItem("quickAdd:lastAddedAt", String(Date.now()));
+          const bc = new BroadcastChannel("flowist:tasks");
+          bc.postMessage(payload);
+          bc.close();
+        } catch {}
+        try {
+          localStorage.setItem("quickAdd:lastAddedAt", String(payload.at));
+          localStorage.setItem("quickAdd:lastAddedId", payload.id);
+          // Tells the main app: on next resume, navigate to Today and
+          // highlight this task.  Consumed + cleared by useQuickAddSync.
+          localStorage.setItem(
+            "quickAdd:pendingNavigation",
+            JSON.stringify({ route: "/todo/today", taskId: payload.id, at: payload.at }),
+          );
         } catch {}
         if (newItem.reminderTime) {
           import("@/utils/reminderScheduler").then(({ scheduleTaskReminder }) => {
