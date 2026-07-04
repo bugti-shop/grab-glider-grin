@@ -391,11 +391,14 @@ export function tryRepeatedWordShortcut(root: HTMLElement | null): boolean {
   const textNode = node as Text;
   const caret = range.startOffset;
   const before = textNode.data.slice(0, caret);
-  // Match "word1 word2" at end where words are same (2+ letters).
-  const m = /(^|[\s.,;:!?(){}\[\]"'])([A-Za-z]{2,})(\s+)([A-Za-z]{2,})$/.exec(before);
+  // Match "word1<sep>word2" at end where words match case-insensitively.
+  // <sep> = any run of whitespace + punctuation (comma, semicolon, dash, etc.),
+  // so "The, the" or "the — the" also trigger.
+  const m = /(^|[\s.,;:!?(){}\[\]"'\-–—])([A-Za-z]{2,})([\s.,;:!?(){}\[\]"'\-–—]+)([A-Za-z]{2,})$/.exec(before);
   if (!m) return false;
+  if (!/\s/.test(m[3])) return false; // require at least one whitespace char in separator
   if (m[2].toLowerCase() !== m[4].toLowerCase()) return false;
-  if (isInsideCodeBlock(textNode, root)) return false;
+
 
   // Split textNode so we can wrap word2 in a span.
   const word2Start = caret - m[4].length;
