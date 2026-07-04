@@ -247,7 +247,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
 
   const title =
     mode === 'signup' ? t('emailAuth.createAccount', 'Create your Flowist account')
-    : mode === 'otp' ? t('emailAuth.verifyEmail', 'Verify your email')
+    : mode === 'verify-link' ? t('emailAuth.verifyEmail', 'Verify your email')
     : mode === 'forgot' ? t('emailAuth.resetPassword', 'Reset password')
     : t('emailAuth.signInTitle', 'Sign in with email');
 
