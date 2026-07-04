@@ -856,6 +856,15 @@ export const RICH_TEXT_EDITOR_STYLES = `
     overflow-x: auto;
   }
   .rt-mermaid svg, .rt-chess svg { max-width: 100%; height: auto; }
+
+  /* ── Repeated word marker (the the) ── */
+  .rt-dup-word {
+    text-decoration: underline wavy #f59e0b;
+    text-underline-offset: 3px;
+    background: rgba(245, 158, 11, 0.08);
+    border-radius: 2px;
+    cursor: help;
+  }
 `;
 
 
