@@ -1802,7 +1802,20 @@ export const RichTextEditor = ({
           return;
         }
       } else if (e.key === ')' && !e.ctrlKey && !e.metaKey) {
+        // (c) → ©, (tm) → ™, (r) → ®
+        if (trySymbolShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
         if (tryMarkdownLinkOrImageShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
+      } else if ((e.key === '"' || e.key === "'") && !e.ctrlKey && !e.metaKey) {
+        // Smart quotes: " → “ ” and ' → ‘ ’ based on context
+        if (trySmartQuote(editorRef.current, e.key)) {
           e.preventDefault();
           handleInput();
           return;
