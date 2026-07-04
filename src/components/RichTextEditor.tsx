@@ -63,7 +63,7 @@ import {
   isInsideCode,
 } from './richtext/markdownShortcuts';
 import { tryMathShortcut } from './richtext/mathShortcut';
-import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut } from './richtext/extraShortcuts';
+import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut } from './richtext/extraShortcuts';
 import { hydrateExtrasIn } from './richtext/extraHydration';
 import 'katex/dist/katex.min.css';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
@@ -1718,6 +1718,26 @@ export const RichTextEditor = ({
           handleInput();
           return;
         }
+        // Relative date: +3d, +2w, +1m, +1y
+        if (tryRelativeDateShortcut(editorRef.current)) {
+          e.preventDefault();
+          document.execCommand('insertText', false, ' ');
+          handleInput();
+          return;
+        }
+        // Weekday: @friday → next Friday's date
+        if (tryWeekdayShortcut(editorRef.current)) {
+          e.preventDefault();
+          document.execCommand('insertText', false, ' ');
+          handleInput();
+          return;
+        }
+        // Repeated word (the the) → wrap second occurrence
+        if (tryRepeatedWordShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
         if (tryMarkdownTableShortcut(editorRef.current)) {
           e.preventDefault();
           handleInput();
@@ -1752,7 +1772,7 @@ export const RichTextEditor = ({
                 el = el.parentNode;
               }
             }
-            if (/^\/(lorem|color|qr|mermaid|chess)\b/i.test(trimmed)) {
+            if (/^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday)\b/i.test(trimmed)) {
               e.preventDefault();
               void trySlashLineShortcut(root).then((ok) => {
                 if (ok) handleInput();

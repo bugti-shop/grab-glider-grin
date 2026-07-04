@@ -261,8 +261,154 @@ export async function trySlashLineShortcut(root: HTMLElement | null): Promise<bo
     return true;
   }
 
+  // ── /today  /now  /tomorrow  /yesterday   → inline date/time text
+  if (cmd === 'today' || cmd === 'now' || cmd === 'tomorrow' || cmd === 'yesterday') {
+    const d = new Date();
+    if (cmd === 'tomorrow') d.setDate(d.getDate() + 1);
+    if (cmd === 'yesterday') d.setDate(d.getDate() - 1);
+    const text = cmd === 'now' ? formatDateTime(d) : formatDate(d);
+    replaceBlockHtml(block, `<p>${escapeHtml(text)}</p>`, root);
+    return true;
+  }
+
   return false;
 }
+
+/* ────────────────────────────────────────────────────────────────
+ * 4. Date shortcuts on Space:  +3d  +2w  +1m  +1y  and  @friday
+ * ──────────────────────────────────────────────────────────────── */
+
+function formatDate(d: Date): string {
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+function formatDateTime(d: Date): string {
+  return d.toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  });
+}
+
+const WEEKDAYS: Record<string, number> = {
+  sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tues: 2, tuesday: 2,
+  wed: 3, weds: 3, wednesday: 3, thu: 4, thur: 4, thurs: 4, thursday: 4,
+  fri: 5, friday: 5, sat: 6, saturday: 6,
+};
+
+/** Replace `+3d`, `+2w`, `+1m`, `+1y` before caret with a formatted future date. */
+export function tryRelativeDateShortcut(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer;
+  if (node.nodeType !== 3) return false;
+  const textNode = node as Text;
+  const caret = range.startOffset;
+  const before = textNode.data.slice(0, caret);
+  const m = /(^|\s)([+-])(\d{1,3})([dwmy])$/i.exec(before);
+  if (!m) return false;
+  if (isInsideCodeBlock(textNode, root)) return false;
+
+  const sign = m[2] === '-' ? -1 : 1;
+  const n = parseInt(m[3], 10) * sign;
+  const unit = m[4].toLowerCase();
+  const d = new Date();
+  if (unit === 'd') d.setDate(d.getDate() + n);
+  else if (unit === 'w') d.setDate(d.getDate() + n * 7);
+  else if (unit === 'm') d.setMonth(d.getMonth() + n);
+  else if (unit === 'y') d.setFullYear(d.getFullYear() + n);
+
+  const replacement = formatDate(d);
+  const matchStart = caret - m[0].length + m[1].length; // preserve leading space
+  textNode.data = textNode.data.slice(0, matchStart) + replacement + textNode.data.slice(caret);
+  const nr = document.createRange();
+  nr.setStart(textNode, matchStart + replacement.length);
+  nr.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(nr);
+  return true;
+}
+
+/** Replace `@friday` (or `@fri`) before caret with the next Friday's date. */
+export function tryWeekdayShortcut(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer;
+  if (node.nodeType !== 3) return false;
+  const textNode = node as Text;
+  const caret = range.startOffset;
+  const before = textNode.data.slice(0, caret);
+  const m = /(^|\s)@([A-Za-z]{3,9})$/.exec(before);
+  if (!m) return false;
+  const target = WEEKDAYS[m[2].toLowerCase()];
+  if (target === undefined) return false;
+  if (isInsideCodeBlock(textNode, root)) return false;
+
+  const d = new Date();
+  let diff = (target - d.getDay() + 7) % 7;
+  if (diff === 0) diff = 7; // "next" occurrence, not today
+  d.setDate(d.getDate() + diff);
+
+  const replacement = formatDate(d);
+  const matchStart = caret - m[0].length + m[1].length;
+  textNode.data = textNode.data.slice(0, matchStart) + replacement + textNode.data.slice(caret);
+  const nr = document.createRange();
+  nr.setStart(textNode, matchStart + replacement.length);
+  nr.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(nr);
+  return true;
+}
+
+/* ────────────────────────────────────────────────────────────────
+ * 5. Repeated word detection (the the)
+ *    Runs on Space keydown. If the word just typed matches the
+ *    previous word (case-insensitive), wrap it in .rt-dup-word.
+ *    Returns true if it consumed the event (space is re-inserted).
+ * ──────────────────────────────────────────────────────────────── */
+
+export function tryRepeatedWordShortcut(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer;
+  if (node.nodeType !== 3) return false;
+  const textNode = node as Text;
+  const caret = range.startOffset;
+  const before = textNode.data.slice(0, caret);
+  // Match "word1 word2" at end where words are same (2+ letters).
+  const m = /(^|[\s.,;:!?(){}\[\]"'])([A-Za-z]{2,})(\s+)([A-Za-z]{2,})$/.exec(before);
+  if (!m) return false;
+  if (m[2].toLowerCase() !== m[4].toLowerCase()) return false;
+  if (isInsideCodeBlock(textNode, root)) return false;
+
+  // Split textNode so we can wrap word2 in a span.
+  const word2Start = caret - m[4].length;
+  const after = textNode.data.slice(caret);
+  const wordText = m[4];
+  textNode.data = textNode.data.slice(0, word2Start);
+
+  const span = document.createElement('span');
+  span.className = 'rt-dup-word';
+  span.title = 'Repeated word';
+  span.textContent = wordText;
+
+  const parent = textNode.parentNode!;
+  const tail = document.createTextNode(' ' + after);
+  parent.insertBefore(span, textNode.nextSibling);
+  parent.insertBefore(tail, span.nextSibling);
+
+  const nr = document.createRange();
+  nr.setStart(tail, 1); // caret after the space we just inserted
+  nr.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(nr);
+  return true;
+}
+
 
 /* ────────────────────────────────────────────────────────────────
  * Helpers
