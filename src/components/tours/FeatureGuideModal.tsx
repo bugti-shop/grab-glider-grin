@@ -61,8 +61,19 @@ export const FeatureGuideModal = ({ isOpen, onClose }: FeatureGuideModalProps) =
     }, 260);
   };
 
+  const handleStartFullTutorial = async () => {
+    // Reset every tour in the onboarding chain AND every listed feature tour
+    // so the walk-through visits them all, even ones already marked as seen.
+    const ids = Array.from(new Set([...ONBOARDING_CHAIN, ...FEATURE_TOURS.map((t) => t.id)]));
+    await Promise.all(ids.map((id) => resetTour(id).catch(() => {})));
+    onClose();
+    // Wait for the Dialog exit animation before starting the first coach-mark.
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('flowist-onboarding:start-chain'));
+    }, 320);
+  };
 
-  return (
+
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         className={cn(
