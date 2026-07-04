@@ -137,3 +137,113 @@ describe('tryUnitShortcut – inline = result insertion', () => {
     expect(tn.data).toBe('5 km to miles');
   });
 });
+
+/* ────────────── Extra time & velocity coverage ────────────── */
+describe('convertExpression – extended time conversions', () => {
+  const cases: Array<[string, RegExp]> = [
+    ['90 min to h', /^90 min = 1\.5 h$/],
+    ['120 min in h', /^120 min = 2 h$/],
+    ['1 day to hours', /^1 d = 24 h$/],
+    ['1 wk to h', /^1 wk = 168 h$/],
+    ['1 yr to d', /^1 yr = 365\.25 d$/],
+    ['1 yr to h', /^1 yr = 8766 h$/],
+    ['30 min in s', /^30 min = 1800 s$/],
+    ['5000 ms to s', /^5000 ms = 5 s$/],
+    ['2.5 h to min', /^2\.5 h = 150 min$/],
+    ['60 s to min', /^60 s = 1 min$/],
+    ['1 h to s', /^1 h = 3600 s$/],
+  ];
+  for (const [input, re] of cases) {
+    it(input, () => {
+      const r = convertExpression(input);
+      expect(r, `no result for "${input}"`).not.toBeNull();
+      expect(r!.text).toMatch(re);
+    });
+  }
+});
+
+describe('convertExpression – extended velocity conversions', () => {
+  const cases: Array<[string, RegExp]> = [
+    ['10 m/s to km/h', /^10 m\/s = 36 km\/h$/],
+    ['100 km/h to mph', /^100 km\/h = 62\.1371 mph$/],
+    ['60 mph to km/h', /^60 mph = 96\.5606 km\/h$/],
+    ['1000 mph to km/h', /^1000 mph = 1609\.34 km\/h$/],
+    ['1 knot to km/h', /^1 knot = 1\.852 km\/h$/],
+    ['1 mach to km/h', /^1 mach = 1234\.8 km\/h$/],
+    ['1 mach to mph', /^1 mach = 767\.269 mph$/],
+  ];
+  for (const [input, re] of cases) {
+    it(input, () => {
+      const r = convertExpression(input);
+      expect(r, `no result for "${input}"`).not.toBeNull();
+      expect(r!.text).toMatch(re);
+    });
+  }
+});
+
+/* ────────────── Formatting: large numbers & repeating decimals ────────────── */
+describe('convertExpression – large-number formatting', () => {
+  it('keeps integer form up to 12 digits', () => {
+    const r = convertExpression('1000000 km to m');
+    expect(r!.text).toBe('1000000 km = 1000000000 m');
+  });
+  it('switches to exponential for extreme magnitudes (≥1e12)', () => {
+    const r = convertExpression('1 ly to km');
+    expect(r!.text).toMatch(/^1 ly = 9\.4607e\+12 km$/);
+  });
+  it('handles very small (< 1e-4) with exponential notation', () => {
+    const r = convertExpression('1 pm to m');
+    expect(r!.text).toMatch(/^1 pm = 1\.0000e-12 m$/);
+  });
+});
+
+describe('convertExpression – repeating decimals round cleanly', () => {
+  it('100 °F → 37.7778 °C (rounds 37.777…)', () => {
+    const r = convertExpression('100 f to c');
+    expect(r!.text).toBe('100 °F = 37.7778 °C');
+  });
+  it('1000 °F → 537.778 °C (fewer decimals as magnitude grows)', () => {
+    const r = convertExpression('1000 f to c');
+    expect(r!.text).toBe('1000 °F = 537.778 °C');
+  });
+  it('1 m → 1.09361 yd (rounds 1.0936132…)', () => {
+    const r = convertExpression('1 m to yd');
+    expect(r!.text).toBe('1 m = 1.09361 yd');
+  });
+  it('10 kg → 22.0462 lb (rounds 22.04622…)', () => {
+    const r = convertExpression('10 kg to lb');
+    expect(r!.text).toBe('10 kg = 22.0462 lb');
+  });
+  it('0.333 m → 33.3 cm (trims fp noise like 33.30000…04)', () => {
+    const r = convertExpression('0.333 m to cm');
+    expect(r!.text).toBe('0.333 m = 33.3 cm');
+  });
+  it('preserves special unit symbols (°, km/h, m/s)', () => {
+    expect(convertExpression('1 c to f')!.text).toMatch(/°C = 33\.8 °F$/);
+    expect(convertExpression('10 m/s to km/h')!.text).toMatch(/m\/s = 36 km\/h$/);
+    expect(convertExpression('180 deg to rad')!.text).toMatch(/° = 3\.14159 rad$/);
+  });
+});
+
+/* ────────────── DOM: extra time & velocity fire immediately on Space ────────────── */
+describe('tryUnitShortcut – extended time & velocity render inline', () => {
+  const cases: Array<[string, RegExp]> = [
+    ['90 min to h', / = 1\.5 h$/],
+    ['1 day to hours', / = 24 h$/],
+    ['120 min in h', / = 2 h$/],
+    ['2.5 h to min', / = 150 min$/],
+    ['1 wk to h', / = 168 h$/],
+    ['100 km/h to mph', / = 62\.1371 mph$/],
+    ['60 mph to km/h', / = 96\.5606 km\/h$/],
+    ['1 knot to km/h', / = 1\.852 km\/h$/],
+    ['1 mach to km/h', / = 1234\.8 km\/h$/],
+  ];
+  for (const [input, re] of cases) {
+    it(`immediate result for "${input}"`, () => {
+      const { root, tn } = setup(input);
+      expect(tryUnitShortcut(root)).toBe(true);
+      expect(tn.data).toMatch(re);
+    });
+  }
+});
+
