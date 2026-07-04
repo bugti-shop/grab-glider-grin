@@ -247,10 +247,8 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   // AI vision: scan tasks from a paper / sticky-note image (Pro-gated)
   const [showImageExtractor, setShowImageExtractor] = useState(false);
   const [showTextExtractor, setShowTextExtractor] = useState(false);
-  const [showScanCoachmark, setShowScanCoachmark] = useState(false);
   const [isOpeningScanner, setIsOpeningScanner] = useState(false);
   const openScannerLockRef = useRef(false);
-  const SCAN_COACHMARK_KEY = 'scanTasksCoachmarkSeen_v1';
   const openImageExtractor = async () => {
     // Guard against rapid re-taps while the camera is initialising.
     if (openScannerLockRef.current || showImageExtractor) return;
@@ -264,17 +262,9 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       //    get the "please sign in to use scan" prompt.
       const { ensureSignedInForAi } = await import('@/utils/aiAccessGuard');
       if (!(await ensureSignedInForAi({ intent: 'scan-tasks' }))) return;
-      const seen = typeof window !== 'undefined' && localStorage.getItem(SCAN_COACHMARK_KEY) === '1';
-      if (!seen) {
-        setShowScanCoachmark(true);
-        try { localStorage.setItem(SCAN_COACHMARK_KEY, '1'); } catch {}
-        return;
-      }
       setShowImageExtractor(true);
     } finally {
       setIsOpeningScanner(false);
-      // Release the lock shortly after — long enough to swallow double-taps,
-      // short enough to not block a legitimate retry.
       setTimeout(() => { openScannerLockRef.current = false; }, 600);
     }
   };
@@ -282,10 +272,7 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
     if (!requireFeature('ai_dictation')) return;
     setShowTextExtractor(true);
   };
-  const dismissScanCoachmark = () => {
-    setShowScanCoachmark(false);
-    setShowImageExtractor(true);
-  };
+
   const handleExtractedTasksAdd = (
     tasks: Array<Omit<TodoItem, 'id' | 'completed'>>,
   ) => {
@@ -955,51 +942,20 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
               </button>
             ) : (
               <div className="flex items-center gap-1.5 flex-shrink-0">
-                <Popover open={showScanCoachmark} onOpenChange={(o) => !o && dismissScanCoachmark()}>
-                  <PopoverTrigger asChild>
-                    <button
-                      data-tour="task-input-scan-button"
-                      onClick={openImageExtractor}
-                      disabled={isOpeningScanner || showImageExtractor}
-                      className="w-10 h-10 rounded-lg bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors relative disabled:opacity-60 disabled:cursor-wait"
-                      aria-label={t('tasks.aiScanImage', 'Scan tasks from photo')}
-                      aria-busy={isOpeningScanner}
-                      title={t('tasks.aiScanImageHint', 'Scan a paper or sticky-note board to add tasks')}
-                    >
-                      {isOpeningScanner
-                        ? <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                        : <ScanLine className="h-5 w-5 text-primary" />}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    side="top"
-                    align="end"
-                    className="w-72 p-3 border-primary/20"
-                  >
-                    <div className="flex items-start gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <ScanLine className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <p className="text-sm font-medium leading-tight">
-                          {t('tasks.scanCoachmarkTitle', 'Scan tasks from photos')}
-                        </p>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {t(
-                            'tasks.scanCoachmarkBody',
-                            'Scan paper, sticky notes, or whiteboard photos — AI extracts each task automatically.',
-                          )}
-                        </p>
-                        <button
-                          onClick={dismissScanCoachmark}
-                          className="text-xs font-medium text-primary hover:underline"
-                        >
-                          {t('common.gotIt', 'Got it')}
-                        </button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <button
+                  data-tour="task-input-scan-button"
+                  onClick={openImageExtractor}
+                  disabled={isOpeningScanner || showImageExtractor}
+                  className="w-10 h-10 rounded-lg bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors relative disabled:opacity-60 disabled:cursor-wait"
+                  aria-label={t('tasks.aiScanImage', 'Scan tasks from photo')}
+                  aria-busy={isOpeningScanner}
+                  title={t('tasks.aiScanImageHint', 'Scan a paper or sticky-note board to add tasks')}
+                >
+                  {isOpeningScanner
+                    ? <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                    : <ScanLine className="h-5 w-5 text-primary" />}
+                </button>
+
                 <button
                   type="button"
                   onClick={openTextExtractor}
