@@ -1212,7 +1212,7 @@ Deno.serve(async (req) => {
     let html = "";
     let status = 0;
     try {
-      const res = await fetch(target.toString(), {
+      const res = await safeFetch(target.toString(), {
         signal: controller.signal,
         headers: {
           "user-agent":
@@ -1220,10 +1220,17 @@ Deno.serve(async (req) => {
           "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "accept-language": "en-US,en;q=0.9",
         },
-        redirect: "follow",
       });
+      if (!res) {
+        clearTimeout(timer);
+        return new Response(
+          JSON.stringify({ error: "blocked: target host is not reachable or points at a private/internal address", code: "blocked_host" }),
+          { status: 400, headers: { ...corsHeaders, "content-type": "application/json" } },
+        );
+      }
       status = res.status;
       if (!res.ok) {
+
         const fallback = await fetchJinaFallback(target);
         if (fallback) {
           return new Response(JSON.stringify(fallback), {
