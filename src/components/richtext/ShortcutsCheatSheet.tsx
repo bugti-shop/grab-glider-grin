@@ -225,14 +225,12 @@ function buildSections(): Section[] {
         { trigger: 'Backspace at line start', result: 'Convert heading / quote / list back to a paragraph' },
         { trigger: '/', result: 'Open slash-command menu' },
         { trigger: '@', result: 'Mention / link another note' },
-        { trigger: `${MOD} + F`, result: 'Open Find & Replace' },
       ],
     },
     {
       title: 'Mobile tips',
-      description: 'No Ctrl key needed on phones — use the quick bar, selection bubble, or simple typed commands.',
+      description: 'Use the selection bubble or simple typed commands — no keyboard shortcuts needed.',
       rows: [
-        { trigger: 'Tap B / I / U / H1 / • / 1. / ☑ / table', result: 'Applies the same action as Ctrl shortcuts from the mobile quick bar.' },
         { trigger: 'Select text → tap bubble buttons', result: 'Bold, italic, underline, strike, code, link, comment, or Markdown convert.' },
         { trigger: '/bold text + Space', result: 'Turns “text” bold', hint: 'also /italic text, /underline text, /strike text, /code text, /highlight text' },
         { trigger: '/h1 + Space', result: 'Heading 1', hint: 'also /h2, /h3, /bullet, /numbered, /check, /quote, /divider' },
@@ -241,6 +239,7 @@ function buildSections(): Section[] {
       ],
     },
   ];
+
 }
 
 export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
