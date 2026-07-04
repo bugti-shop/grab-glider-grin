@@ -888,6 +888,7 @@ const AppContent = () => {
               <Route path="/mustafabugti890" element={<PremiumUnlock />} />
               <Route path="/p/:slug" element={<PublicNote />} />
               <Route path="/invite/:token" element={<AcceptInvite />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="*" element={<Landing />} />
 
             </Routes>
