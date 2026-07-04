@@ -71,9 +71,10 @@ describe('evaluateMathExpression – statistics', () => {
 });
 
 describe('evaluateMathExpression – constants', () => {
-  it('pi', () => expect(String(evaluateMathExpression('pi') ?? '')).toMatch(/3\.14159/));
-  it('e', () => expect(String(evaluateMathExpression('e') ?? '')).toMatch(/2\.71828/));
-  it('tau', () => expect(String(evaluateMathExpression('tau') ?? '')).toMatch(/6\.2831/));
+describe('evaluateMathExpression – constants (used inside expressions)', () => {
+  it('pi*2', () => expect(String(evaluateMathExpression('pi*2') ?? '')).toMatch(/6\.283/));
+  it('e*1', () => expect(String(evaluateMathExpression('e*1') ?? '')).toMatch(/2\.71828/));
+  it('tau/2', () => expect(String(evaluateMathExpression('tau/2') ?? '')).toMatch(/3\.14159/));
 });
 
 describe('evaluateMathExpression – percentages', () => {
