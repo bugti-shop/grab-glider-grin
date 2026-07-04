@@ -231,6 +231,35 @@ class TourManagerImpl {
     if (!this.queue.includes(tourId)) this.queue.push(tourId);
   }
 
+  /**
+   * Advance the onboarding chain because the user just completed the action
+   * for `completedTourId` (e.g. added their first task). If that tour is
+   * currently visible, tear down its popover; then start the next chained
+   * tour with a small delay so the UI can settle first.
+   */
+  async advanceOnboardingChain(completedTourId: string) {
+    // Mark the completed tour as seen — even if it wasn't the active one, the
+    // user just performed the underlying action so they've clearly learned it.
+    try { await markTourSeen(completedTourId); } catch {}
+
+    // If a popover is currently pointing at this tour's target, kill it so
+    // the newly-created task/note/etc. isn't hidden behind the coach-mark.
+    if (this.activeDriver && this.activeTourId === completedTourId) {
+      try { this.activeDriver.destroy(); } catch {}
+      this.activeDriver = null;
+      this.activeTourId = null;
+      try { delete document.body.dataset.tourActive; } catch {}
+      emitTourActiveChange(false);
+    }
+
+    const nextId = nextOnboardingTourId(completedTourId);
+    if (!nextId) return;
+    // Give the just-completed action's UI a moment to render (e.g. task row
+    // appears in the list) before highlighting the next feature.
+    setTimeout(() => this.startTour(nextId, { chain: true }), 700);
+  }
+
+
   private drainQueue() {
     const next = this.queue.shift();
     if (next) {
