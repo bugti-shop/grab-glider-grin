@@ -62,7 +62,24 @@ const WebClipper = () => {
   const [stage, setStage] = useState<Stage>('idle');
   const [progress, setProgress] = useState<number | null>(null);
   const [progressLabel, setProgressLabel] = useState('');
-  const [error, setError] = useState<{ title: string; description: string } | null>(null);
+  type ErrorDebug = {
+    code?: string;
+    httpStatus?: number;
+    upstreamMessage?: string;
+    targetUrl?: string;
+    requestedMode?: ClipMode;
+    attachmentUrl?: string;
+    attachmentType?: 'image' | 'pdf' | null;
+    receivedTitle?: string;
+    receivedSelectionChars?: number;
+    receivedContentChars?: number;
+    articleHtmlChars?: number;
+    fallbackAttempted?: boolean;
+    stage?: Stage;
+    at?: string;
+  };
+  const [error, setError] = useState<{ title: string; description: string; debug?: ErrorDebug } | null>(null);
+  const [showErrorDebug, setShowErrorDebug] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
