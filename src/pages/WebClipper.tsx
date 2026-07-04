@@ -310,13 +310,34 @@ const WebClipper = () => {
           setStage('fetching');
           setProgress(null);
           setProgressLabel(t('webClipper.stageFetching', 'Fetching full page…'));
+          const fetchStartedAt = performance.now();
+          console.info('[webClipper] invoking fetch-article', {
+            url,
+            requestedMode: clipMode,
+            receivedTitle: title,
+            receivedTitleChars: title.length,
+            receivedSelectionChars: selection?.length ?? 0,
+            receivedContentChars: content?.length ?? 0,
+            hasAttachment: !!attachment,
+            attachmentType,
+            shareId: searchParams.get('shareId') || null,
+          });
           const { data, error } = await supabase.functions.invoke('fetch-article', {
             body: { url, mode: 'article', webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined },
           });
+          const fetchMs = Math.round(performance.now() - fetchStartedAt);
           if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
           if (error) {
+            console.warn('[webClipper] fetch-article transport error', { url, ms: fetchMs, message: error.message });
             fetchFailure = { code: 'network', message: error.message };
           } else if (data?.error) {
+            console.warn('[webClipper] fetch-article returned error', {
+              url,
+              ms: fetchMs,
+              code: data.code,
+              status: data.status,
+              error: data.error,
+            });
             fetchFailure = { code: String(data.code || 'upstream_error'), status: data.status, message: String(data.error) };
           } else if (data) {
             articleTitle = String(data.title || '').trim();
@@ -331,13 +352,26 @@ const WebClipper = () => {
             articleLinks = Array.isArray(data.importantLinks)
               ? data.importantLinks.filter((l: any) => l && typeof l.href === 'string' && typeof l.text === 'string')
               : [];
+            console.info('[webClipper] fetch-article ok', {
+              url,
+              ms: fetchMs,
+              titleChars: articleTitle.length,
+              excerptChars: articleExcerpt.length,
+              htmlChars: articleHtml.length,
+              embeds: articleEmbeds.length,
+              links: articleLinks.length,
+              siteName: articleSiteName || null,
+              leadImage: !!articleLeadImage,
+              fallback: articleIsFallback,
+            });
           }
         } catch (err) {
           if (canceledRef.current || (err as Error)?.name === 'AbortError') throw err;
-          console.warn('[webClipper] full-article fetch failed', err);
+          console.warn('[webClipper] full-article fetch threw', { url, error: (err as Error)?.message });
           fetchFailure = { code: 'network', message: (err as Error)?.message };
         }
       }
+
 
       // If we tried a full-page fetch and got nothing back, DO NOT silently
       // save a link-only stub — the user's complaint is exactly that.
