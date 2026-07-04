@@ -170,8 +170,8 @@ function tryCurrency(expr: string): string | null {
   if (!m) return null;
   const amount = parseFloat(m[1].replace(/,/g, ''));
   if (!isFinite(amount)) return null;
-  const from = CURRENCY_ALIASES[m[2].toUpperCase()];
-  const to = CURRENCY_ALIASES[m[3].toUpperCase()];
+  const from = resolveCurrency(m[2]);
+  const to = resolveCurrency(m[3]);
   if (!from || !to) return null;
   const fromRate = usdRates[from];
   const toRate = usdRates[to];
