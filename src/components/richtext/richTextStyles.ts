@@ -819,6 +819,44 @@ export const RICH_TEXT_EDITOR_STYLES = `
     .rt-lightbox-stage { padding: 12px; }
   }
   @keyframes rt-lightbox-in { from { opacity: 0; } to { opacity: 1; } }
+
+  /* ── Extra shortcut blocks: KaTeX / QR / Mermaid / Chess ── */
+  .rt-katex {
+    display: inline-block;
+    padding: 0 2px;
+    vertical-align: middle;
+    user-select: all;
+  }
+  .rt-katex .katex { font-size: 1em; }
+  .rt-qr {
+    display: block;
+    margin: 12px auto;
+    padding: 12px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 12px;
+    background: hsl(var(--card));
+    max-width: 280px;
+    text-align: center;
+  }
+  .rt-qr img { display: block; margin: 0 auto; border-radius: 4px; }
+  .rt-qr figcaption {
+    margin-top: 8px;
+    font-size: 11px;
+    color: hsl(var(--muted-foreground));
+    word-break: break-all;
+  }
+  .rt-mermaid, .rt-chess {
+    display: block;
+    margin: 12px 0;
+    padding: 12px;
+    border: 1px solid hsl(var(--border));
+    border-radius: 12px;
+    background: hsl(var(--card));
+    text-align: center;
+    overflow-x: auto;
+  }
+  .rt-mermaid svg, .rt-chess svg { max-width: 100%; height: auto; }
 `;
+
 
 
