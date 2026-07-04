@@ -483,11 +483,13 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             : null
         }
         onCapture={async (dataUrl, opts) => {
+          capturedRef.current = true;
           setShowCamera(false);
           setImageDataUrl(dataUrl);
           await runExtraction(dataUrl, opts);
         }}
         onBatchNote={async (pages, opts) => {
+          capturedRef.current = true;
           if (!pages.length) return;
           if (!(await ensureScannerAccess())) return;
           setShowCamera(false);
