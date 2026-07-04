@@ -27,35 +27,62 @@
 
 import { create, all, type MathJsInstance } from 'mathjs';
 
-// Static currency reference rates relative to USD. Approximate — for live
-// rates, wire an FX API and set these dynamically.
-const CURRENCY_TO_USD: Record<string, number> = {
-  USD: 1,
-  EUR: 1.08,
-  GBP: 1.27,
-  PKR: 0.0036,
-  INR: 0.012,
-  AED: 0.27,
-  SAR: 0.27,
-  JPY: 0.0064,
-  CNY: 0.14,
-  CAD: 0.73,
-  AUD: 0.66,
-  CHF: 1.12,
-  BDT: 0.0085,
-  TRY: 0.029,
-  RUB: 0.011,
-  BRL: 0.18,
-  ZAR: 0.055,
-  SGD: 0.74,
-  HKD: 0.13,
-  KRW: 0.00072,
-  MXN: 0.058,
-  NZD: 0.60,
-  SEK: 0.093,
-  NOK: 0.091,
-  DKK: 0.14,
+/**
+ * Currency reference rates relative to USD.
+ *
+ * Live rates are fetched from https://open.er-api.com/v6/latest/USD (free,
+ * no API key, ~160 currencies, updated every 24h). Cached in localStorage
+ * for 12h. Fallback static rates are used until the first fetch resolves,
+ * or if the network is unavailable.
+ */
+const FX_CACHE_KEY = 'flowist:fx:usd-rates:v1';
+const FX_CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12h
+const FX_ENDPOINT = 'https://open.er-api.com/v6/latest/USD';
+
+// Static fallback rates (approximate, relative to USD) — used until the live
+// fetch resolves.
+const FALLBACK_USD_RATES: Record<string, number> = {
+  USD: 1, EUR: 0.92, GBP: 0.79, PKR: 278, INR: 83, AED: 3.67, SAR: 3.75,
+  JPY: 156, CNY: 7.2, CAD: 1.37, AUD: 1.52, CHF: 0.89, BDT: 118, TRY: 34,
+  RUB: 92, BRL: 5.5, ZAR: 18.2, SGD: 1.35, HKD: 7.8, KRW: 1385, MXN: 17.2,
+  NZD: 1.66, SEK: 10.7, NOK: 11, DKK: 6.9,
 };
+
+// Live rates: 1 USD = <rate> <currency>. Populated by loadFxRates().
+let usdRates: Record<string, number> = { ...FALLBACK_USD_RATES };
+
+function loadCachedRates(): void {
+  try {
+    const raw = localStorage.getItem(FX_CACHE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as { ts: number; rates: Record<string, number> };
+    if (!parsed?.rates || typeof parsed.ts !== 'number') return;
+    usdRates = { ...FALLBACK_USD_RATES, ...parsed.rates };
+  } catch { /* ignore */ }
+}
+
+async function refreshFxRates(): Promise<void> {
+  try {
+    const cached = localStorage.getItem(FX_CACHE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached) as { ts: number };
+      if (Date.now() - parsed.ts < FX_CACHE_TTL_MS) return; // still fresh
+    }
+    const res = await fetch(FX_ENDPOINT);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data?.result !== 'success' || !data.rates) return;
+    usdRates = { ...FALLBACK_USD_RATES, ...data.rates };
+    localStorage.setItem(FX_CACHE_KEY, JSON.stringify({ ts: Date.now(), rates: data.rates }));
+  } catch { /* offline — keep cached/fallback */ }
+}
+
+// Initialise on module load.
+if (typeof window !== 'undefined') {
+  loadCachedRates();
+  // Fire-and-forget background refresh.
+  setTimeout(() => { void refreshFxRates(); }, 500);
+}
 
 const CURRENCY_ALIASES: Record<string, string> = {
   RS: 'PKR', PKR: 'PKR', RUPEE: 'PKR', RUPEES: 'PKR',
