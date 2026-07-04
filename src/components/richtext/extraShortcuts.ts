@@ -393,6 +393,10 @@ export async function trySlashLineShortcut(root: HTMLElement | null): Promise<bo
   return false;
 }
 
+export function isSlashLineShortcutText(text: string): boolean {
+  return /^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc|unit|convert)\b/i.test(text.trim());
+}
+
 const UNIT_HELP_HTML =
   `<div class="rt-unit-help" contenteditable="false">` +
   `<div class="rt-unit-help-title">Unit converter — examples</div>` +
@@ -648,6 +652,7 @@ function isInsideCodeBlock(node: Node, root: HTMLElement): boolean {
 }
 
 function findBlock(node: Node, root: HTMLElement): HTMLElement | null {
+  if (node === root || node.parentNode === root) return root;
   let el: Node | null = node.nodeType === 1 ? node : node.parentNode;
   while (el && el !== root) {
     if (el.nodeType === 1) {
@@ -665,10 +670,14 @@ function replaceBlockHtml(block: HTMLElement, html: string, root: HTMLElement) {
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
   const nodes = Array.from(tmp.childNodes);
+  if (block === root) {
+    root.replaceChildren(...nodes);
+  } else {
   const parent = block.parentNode!;
   const anchor = block.nextSibling;
   parent.removeChild(block);
   nodes.forEach((n) => parent.insertBefore(n, anchor));
+  }
   // Place caret after inserted content.
   const last = nodes[nodes.length - 1];
   if (last) {
