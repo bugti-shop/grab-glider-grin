@@ -63,7 +63,7 @@ import {
   markdownPasteToHtml,
   isInsideCode,
 } from './richtext/markdownShortcuts';
-import { tryMathShortcut } from './richtext/mathShortcut';
+import { tryMathShortcut, tryMathAutoOnSpace } from './richtext/mathShortcut';
 import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut, isSlashLineShortcutText, isSlashLineShortcutReady, isSlashLineShortcutAutoReady } from './richtext/extraShortcuts';
 import { tryUnitShortcut } from './richtext/unitConvert';
 import { trySmartQuote, tryDashEllipsis, trySymbolShortcut } from './richtext/textReplacements';
