@@ -102,6 +102,7 @@ export const ImageTaskExtractorSheet = ({
       setPhase('idle');
       setErrorLabel(null);
       captureLockRef.current = false;
+      capturedRef.current = false;
       releaseAllAiLocks();
     }
   }, [isOpen]);
