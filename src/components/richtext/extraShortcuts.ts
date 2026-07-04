@@ -294,7 +294,13 @@ const WEEKDAYS: Record<string, number> = {
   fri: 5, friday: 5, sat: 6, saturday: 6,
 };
 
-/** Replace `+3d`, `+2w`, `+1m`, `+1y` before caret with a formatted future date. */
+/**
+ * Replace a relative offset before caret with a formatted date/time.
+ *   Date units: d (day), w (week), mo (month), y (year)
+ *   Time units: h (hour), m (minute), s (second)
+ * Result uses date-only format for date units, date+time for time units.
+ * Examples: +3d, +2w, +1mo, +1y, +3h, +45m, -2h, -30s
+ */
 export function tryRelativeDateShortcut(root: HTMLElement | null): boolean {
   if (!root) return false;
   const sel = window.getSelection();
@@ -305,7 +311,8 @@ export function tryRelativeDateShortcut(root: HTMLElement | null): boolean {
   const textNode = node as Text;
   const caret = range.startOffset;
   const before = textNode.data.slice(0, caret);
-  const m = /(^|\s)([+-])(\d{1,3})([dwmy])$/i.exec(before);
+  // Time units first (mo before m so "mo" isn't eaten by "m").
+  const m = /(^|\s)([+-])(\d{1,4})(mo|d|w|y|h|m|s)$/i.exec(before);
   if (!m) return false;
   if (isInsideCodeBlock(textNode, root)) return false;
 
@@ -313,13 +320,17 @@ export function tryRelativeDateShortcut(root: HTMLElement | null): boolean {
   const n = parseInt(m[3], 10) * sign;
   const unit = m[4].toLowerCase();
   const d = new Date();
+  let isTime = false;
   if (unit === 'd') d.setDate(d.getDate() + n);
   else if (unit === 'w') d.setDate(d.getDate() + n * 7);
-  else if (unit === 'm') d.setMonth(d.getMonth() + n);
+  else if (unit === 'mo') d.setMonth(d.getMonth() + n);
   else if (unit === 'y') d.setFullYear(d.getFullYear() + n);
+  else if (unit === 'h') { d.setHours(d.getHours() + n); isTime = true; }
+  else if (unit === 'm') { d.setMinutes(d.getMinutes() + n); isTime = true; }
+  else if (unit === 's') { d.setSeconds(d.getSeconds() + n); isTime = true; }
 
-  const replacement = formatDate(d);
-  const matchStart = caret - m[0].length + m[1].length; // preserve leading space
+  const replacement = isTime ? formatDateTime(d) : formatDate(d);
+  const matchStart = caret - m[0].length + m[1].length;
   textNode.data = textNode.data.slice(0, matchStart) + replacement + textNode.data.slice(caret);
   const nr = document.createRange();
   nr.setStart(textNode, matchStart + replacement.length);
@@ -328,6 +339,7 @@ export function tryRelativeDateShortcut(root: HTMLElement | null): boolean {
   sel.addRange(nr);
   return true;
 }
+
 
 /** Replace `@friday` (or `@fri`) before caret with the next Friday's date. */
 export function tryWeekdayShortcut(root: HTMLElement | null): boolean {
