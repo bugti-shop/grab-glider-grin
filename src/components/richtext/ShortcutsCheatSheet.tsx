@@ -257,11 +257,14 @@ function buildSections(): Section[] {
     },
     {
       title: 'Mobile tips',
-      description: 'All Markdown, math, and slash shortcuts work on-device too.',
+      description: 'No Ctrl key needed on phones — use the quick bar, selection bubble, or simple typed commands.',
       rows: [
-        { trigger: 'Type token + Space', result: 'Same as desktop — headings, lists, todos, tables, dates, math all trigger.' },
+        { trigger: 'Tap B / I / U / H1 / • / 1. / ☑ / table', result: 'Applies the same action as Ctrl shortcuts from the mobile quick bar.' },
+        { trigger: 'Select text → tap bubble buttons', result: 'Bold, italic, underline, strike, code, link, comment, or Markdown convert.' },
+        { trigger: '/bold text + Space', result: 'Turns “text” bold', hint: 'also /italic text, /underline text, /strike text, /code text, /highlight text' },
+        { trigger: '/h1 + Space', result: 'Heading 1', hint: 'also /h2, /h3, /bullet, /numbered, /check, /quote, /divider' },
+        { trigger: 'Type token + Space', result: 'Markdown shortcuts still work — headings, lists, todos, tables, dates, units, symbols.' },
         { trigger: 'Long-press a table cell', result: 'Opens the table menu (insert / delete row-col, styles).' },
-        { trigger: 'Toolbar buttons', result: 'Every shortcut also has a button in the formatting toolbar.' },
       ],
     },
   ];
