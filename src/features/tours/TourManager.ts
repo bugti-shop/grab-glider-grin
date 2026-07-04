@@ -128,7 +128,10 @@ class TourManagerImpl {
       if (opts.advanceChain && finishedId) {
         const nextId = nextOnboardingTourId(finishedId);
         if (nextId) {
-          setTimeout(() => this.startTour(nextId, { chain: true }), 250);
+          // Close whatever sheet/menu the previous tour opened before we
+          // navigate to and highlight the next feature.
+          this.closeTransientUi();
+          setTimeout(() => this.startTour(nextId, { chain: true }), 400);
           return;
         }
       }
