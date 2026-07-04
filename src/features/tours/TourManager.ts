@@ -265,9 +265,24 @@ class TourManagerImpl {
         const step = tour.steps[currentIndex];
         if (!step) return;
         const el = this.getVisibleElement(step.elementSelector);
-        if (el) return;
-        // Target missing → try re-opening whatever the tour needs open, then
-        // wait (up to 10 min) for the selector to reappear and remount.
+
+        // Foreign-sheet interceptor: if any Radix Sheet / Dialog / Drawer /
+        // DropdownMenu is open that does NOT contain the tour's target
+        // element, the user has wandered off into some other UI while the
+        // tutorial is still pending. Close it and force them back onto the
+        // tour-required sheet.
+        const foreignSheetOpen = this.hasForeignOverlayOpen(step.elementSelector);
+        if (foreignSheetOpen) {
+          await this.closeTransientUi();
+          // Fall through so the beforeStart pulse below re-opens the
+          // tour-required sheet in the same tick.
+        }
+
+        if (el && !foreignSheetOpen) return;
+
+        // Target missing (or a foreign sheet was just closed) → re-open
+        // whatever the tour needs open, then wait (up to 10 min) for the
+        // selector to reappear and remount the current step.
         if (tour.beforeStart) {
           const preSelectors = Array.isArray(tour.beforeStart) ? tour.beforeStart : [tour.beforeStart];
           for (const sel of preSelectors) {
