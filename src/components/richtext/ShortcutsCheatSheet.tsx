@@ -15,7 +15,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Search, Keyboard } from 'lucide-react';
+import { Search, Keyboard, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -36,6 +36,8 @@ interface Section {
   title: string;
   description?: string;
   rows: Row[];
+  /** When true, rows in this section are clickable and dispatch an apply event. */
+  applySlash?: boolean;
 }
 
 
@@ -241,9 +243,60 @@ function buildSections(): Section[] {
 
 }
 
+/**
+ * Sweep every section and pull out rows whose `trigger` starts with `/`
+ * (excluding the plain "/" row that just opens the slash menu). All of them
+ * get consolidated into a single dedicated block at the top so the user can
+ * click any command and have it applied to the editor immediately.
+ */
+function consolidateSlashCommands(sections: Section[]): Section[] {
+  const slashRows: Row[] = [];
+  const cleaned: Section[] = sections.map((s) => {
+    const kept: Row[] = [];
+    for (const r of s.rows) {
+      const t = r.trigger.trim();
+      // Only pull rows that start with `/word` — leave the bare "/" (opens menu)
+      // and tokens like "/text" inside descriptive prose alone.
+      if (/^\/[a-zA-Z]/.test(t)) {
+        slashRows.push(r);
+      } else {
+        kept.push(r);
+      }
+    }
+    return { ...s, rows: kept };
+  }).filter((s) => s.rows.length > 0);
+
+  if (slashRows.length === 0) return cleaned;
+
+  const slashBlock: Section = {
+    title: 'Slash commands (click to apply)',
+    description: 'Tap any command below — the cheat sheet closes and it runs in the editor instantly.',
+    rows: slashRows,
+    applySlash: true,
+  };
+  return [slashBlock, ...cleaned];
+}
+
+/**
+ * Sanitize a cheat-sheet trigger before dispatching it to the editor:
+ *   - strip `<url>` / `<...>` placeholders
+ *   - strip ellipsis characters
+ *   - collapse whitespace
+ * The remainder is inserted verbatim + trailing space so `trySlashLineShortcut`
+ * runs it. Commands with only a `/word` prefix left over remain typed for the
+ * user to complete their argument.
+ */
+function sanitizeSlashTrigger(trigger: string): string {
+  return trigger
+    .replace(/<[^>]*>/g, '')
+    .replace(/…/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
   const [query, setQuery] = useState('');
-  const sections = useMemo(buildSections, []);
+  const sections = useMemo(() => consolidateSlashCommands(buildSections()), []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -261,6 +314,20 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
       }))
       .filter((s) => s.rows.length > 0);
   }, [query, sections]);
+
+  const applySlashRow = (trigger: string) => {
+    const text = sanitizeSlashTrigger(trigger);
+    if (!text.startsWith('/')) return;
+    // Close the sheet first so the editor regains focus, then dispatch.
+    onClose();
+    setTimeout(() => {
+      try {
+        window.dispatchEvent(
+          new CustomEvent('flowist:apply-slash-command', { detail: { text } }),
+        );
+      } catch {}
+    }, 60);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
@@ -301,27 +368,53 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
               <div className="rounded-md border overflow-hidden">
                 <table className="w-full text-sm">
                   <tbody>
-                    {section.rows.map((row, i) => (
-                      <tr
-                        key={i}
-                        className={cn(
-                          'border-b last:border-b-0',
-                          i % 2 === 0 ? 'bg-muted/30' : 'bg-background',
-                        )}
-                      >
-                        <td className="px-3 py-2 align-top w-[45%]">
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono whitespace-pre-wrap break-words">
-                            {row.trigger}
-                          </code>
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          <div>{row.result}</div>
-                          {row.hint && (
-                            <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {section.rows.map((row, i) => {
+                      const clickable = !!section.applySlash;
+                      const rowClasses = cn(
+                        'border-b last:border-b-0 transition-colors',
+                        i % 2 === 0 ? 'bg-muted/30' : 'bg-background',
+                        clickable && 'cursor-pointer hover:bg-accent/60',
+                      );
+                      const handleClick = clickable
+                        ? () => applySlashRow(row.trigger)
+                        : undefined;
+                      const handleKey = clickable
+                        ? (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              applySlashRow(row.trigger);
+                            }
+                          }
+                        : undefined;
+                      return (
+                        <tr
+                          key={i}
+                          className={rowClasses}
+                          onClick={handleClick}
+                          onKeyDown={handleKey}
+                          role={clickable ? 'button' : undefined}
+                          tabIndex={clickable ? 0 : undefined}
+                          aria-label={clickable ? `Apply ${row.trigger}` : undefined}
+                        >
+                          <td className="px-3 py-2 align-top w-[45%]">
+                            <div className="flex items-center gap-2">
+                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono whitespace-pre-wrap break-words">
+                                {row.trigger}
+                              </code>
+                              {clickable && (
+                                <Play className="h-3 w-3 text-primary shrink-0" aria-hidden />
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 align-top">
+                            <div>{row.result}</div>
+                            {row.hint && (
+                              <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
