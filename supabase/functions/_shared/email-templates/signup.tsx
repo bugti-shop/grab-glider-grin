@@ -30,22 +30,25 @@ export const SignupEmail = ({ confirmationUrl }: Props) => (
           <Img src={BRAND.logoUrl} width="32" height="32" alt={BRAND.name} style={styles.logo} />
         </Section>
 
-        <Heading style={styles.h1}>Confirm your email</Heading>
+        <Heading style={styles.h1}>Verify your email</Heading>
 
         <Text style={styles.text}>
-          Click the link below to verify your email address:
+          Verify your email by clicking the link below. It will open Flowist and
+          sign you in automatically — you won't need to enter your password again.
         </Text>
 
         <Section style={styles.buttonWrap}>
-          <Button href={confirmationUrl} style={styles.button}>Verify email</Button>
+          <Button href={confirmationUrl} style={styles.button}>Verify email &amp; open Flowist</Button>
         </Section>
 
         <Text style={styles.text}>
-          This link will expire 30 minutes after this email was sent.
+          Or paste this link into your browser:<br />
+          <a href={confirmationUrl} style={styles.link}>{confirmationUrl}</a>
         </Text>
 
         <Text style={styles.text}>
-          If you did not make this request, you can ignore this email.
+          This link expires 30 minutes after this email was sent. If you didn't
+          request this, you can safely ignore it.
         </Text>
       </Container>
     </Body>
