@@ -247,10 +247,8 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
   // AI vision: scan tasks from a paper / sticky-note image (Pro-gated)
   const [showImageExtractor, setShowImageExtractor] = useState(false);
   const [showTextExtractor, setShowTextExtractor] = useState(false);
-  const [showScanCoachmark, setShowScanCoachmark] = useState(false);
   const [isOpeningScanner, setIsOpeningScanner] = useState(false);
   const openScannerLockRef = useRef(false);
-  const SCAN_COACHMARK_KEY = 'scanTasksCoachmarkSeen_v1';
   const openImageExtractor = async () => {
     // Guard against rapid re-taps while the camera is initialising.
     if (openScannerLockRef.current || showImageExtractor) return;
@@ -264,17 +262,9 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       //    get the "please sign in to use scan" prompt.
       const { ensureSignedInForAi } = await import('@/utils/aiAccessGuard');
       if (!(await ensureSignedInForAi({ intent: 'scan-tasks' }))) return;
-      const seen = typeof window !== 'undefined' && localStorage.getItem(SCAN_COACHMARK_KEY) === '1';
-      if (!seen) {
-        setShowScanCoachmark(true);
-        try { localStorage.setItem(SCAN_COACHMARK_KEY, '1'); } catch {}
-        return;
-      }
       setShowImageExtractor(true);
     } finally {
       setIsOpeningScanner(false);
-      // Release the lock shortly after — long enough to swallow double-taps,
-      // short enough to not block a legitimate retry.
       setTimeout(() => { openScannerLockRef.current = false; }, 600);
     }
   };
@@ -282,10 +272,7 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
     if (!requireFeature('ai_dictation')) return;
     setShowTextExtractor(true);
   };
-  const dismissScanCoachmark = () => {
-    setShowScanCoachmark(false);
-    setShowImageExtractor(true);
-  };
+
   const handleExtractedTasksAdd = (
     tasks: Array<Omit<TodoItem, 'id' | 'completed'>>,
   ) => {
