@@ -1911,6 +1911,30 @@ export const RichTextEditor = ({
     if (mdEnabled && !slashMenu.open && !mentionMenu.open && !isInsideCode(editorRef.current)) {
 
       if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Slash-line commands fire on Space too (not only Enter).
+        {
+          const root = editorRef.current;
+          if (root) {
+            const sel = window.getSelection();
+            let trimmed = '';
+            if (sel && sel.rangeCount > 0) {
+              let el: Node | null = sel.getRangeAt(0).startContainer;
+              while (el && el !== root) {
+                if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
+                  trimmed = (el.textContent || '').trim();
+                  break;
+                }
+                el = el.parentNode;
+              }
+            }
+            if (isSlashLineShortcutReady(trimmed)) {
+              e.preventDefault();
+              closeSlash();
+              void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+              return;
+            }
+          }
+        }
         // Text auto-replace: `--` → em-dash, `...` → ellipsis (fires before space is inserted).
         // Does not consume the event — the space still inserts normally.
         if (tryDashEllipsis(editorRef.current)) {
