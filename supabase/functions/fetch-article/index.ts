@@ -1481,7 +1481,11 @@ Deno.serve(async (req) => {
     // If every attempt still looks meta-only / half, ask Jina Reader as a
     // final rescue. Only replace `bestPayload` when Jina genuinely returned
     // more content than any direct attempt.
-    if (looksIncomplete(String((bestPayload?.textContent as string) || "").length ? String(bestPayload?.textContent) : "".padEnd(bestBodyLen, "x"), String(bestPayload?.excerpt || "")) || bestBodyLen < 800) {
+    const shouldTryJina =
+      !bestPayload ||
+      bestBodyLen < 800 ||
+      (bestExcerptLen > 120 && bestBodyLen < bestExcerptLen * HALF_ARTICLE_RATIO);
+    if (shouldTryJina) {
       const fallback = await fetchJinaFallback(target);
       const fallbackLen = Number(fallback?.length || 0);
       if (fallback && fallbackLen > Math.max(bestBodyLen, Number(bestPayload?.length || 0))) {
