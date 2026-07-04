@@ -69,19 +69,20 @@ describe('webClipper.isDuplicateShare', () => {
     };
   };
 
-  it('blocks stale native share payloads across app launches', () => {
+  it('blocks only immediate duplicate native share events', () => {
     const session = createStorage();
     const consumed = createStorage();
     const sig = buildShareSignature({ url: 'https://example.com/article', text: '' });
     expect(isDuplicateShare(sig, 1000, session, consumed)).toBe(false);
-    expect(isDuplicateShare(sig, 1000 + 60_000, createStorage(), consumed)).toBe(true);
+    expect(isDuplicateShare(sig, 1000 + 1000, session, consumed)).toBe(true);
   });
 
-  it('allows the same share again after the stale-intent window', () => {
+  it('allows the same article to be shared again after the short event window', () => {
+    const session = createStorage();
     const consumed = createStorage();
     const sig = buildShareSignature({ url: 'https://example.com/article', text: '' });
-    expect(isDuplicateShare(sig, 1000, createStorage(), consumed)).toBe(false);
-    expect(isDuplicateShare(sig, 1000 + SHARE_CONSUMED_WINDOW_MS + 1, createStorage(), consumed)).toBe(false);
+    expect(isDuplicateShare(sig, 1000, session, consumed)).toBe(false);
+    expect(isDuplicateShare(sig, 1000 + SHARE_CONSUMED_WINDOW_MS + 1, session, consumed)).toBe(false);
   });
 });
 
@@ -151,5 +152,19 @@ describe('webClipper.buildClipperUrl', () => {
     const u = buildClipperUrl({ content: 'x'.repeat(MAX_LENGTHS.content + 500) });
     const parsed = new URLSearchParams(u.split('?')[1]);
     expect((parsed.get('content') || '').length).toBe(MAX_LENGTHS.content);
+  });
+});
+
+describe('webClipper repeated shares', () => {
+  it('emits a unique share id for independent captures without changing the article URL', () => {
+    const first = buildClipperUrl({ url: 'https://example.com/story', mode: 'article', shareId: 'share-a' });
+    const second = buildClipperUrl({ url: 'https://example.com/story', mode: 'article', shareId: 'share-b' });
+    const a = new URLSearchParams(first.split('?')[1]);
+    const b = new URLSearchParams(second.split('?')[1]);
+
+    expect(a.get('url')).toBe('https://example.com/story');
+    expect(b.get('url')).toBe('https://example.com/story');
+    expect(a.get('shareId')).toBe('share-a');
+    expect(b.get('shareId')).toBe('share-b');
   });
 });

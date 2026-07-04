@@ -378,8 +378,10 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
   // snapshot figures still stored in old notes are removed on hydration so
   // the note renders the inline article content only.
   root
-    .querySelectorAll<HTMLElement>('.flowist-web-clip-fullpage[data-role="fullpage-snapshot"]')
-    .forEach((fig) => fig.remove());
+    .querySelectorAll<HTMLElement>(
+      '.flowist-web-clip-fullpage, [data-role="fullpage-snapshot"], [data-role="fullpage-open"], [data-role="fullpage-download"], iframe.flowist-web-clip-fullpage-frame',
+    )
+    .forEach((el) => el.remove());
 };
 
 /* ────────────────────────────────────────────────────────────── */

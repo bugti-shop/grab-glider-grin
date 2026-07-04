@@ -97,7 +97,7 @@ export const sanitizeClippedArticle = (html: string): string => {
       'playsinline', 'autoplay', 'preload',
       'frameborder', 'allow', 'allowfullscreen', 'referrerpolicy',
       'alt', 'title', 'aria-label', 'data-caption',
-      'data-compressed-gz', 'data-bytes', 'data-url', 'data-captured-at',
+      'data-bytes', 'data-url', 'data-captured-at',
       'sandbox', 'srcdoc',
     ],
   }) as string;
