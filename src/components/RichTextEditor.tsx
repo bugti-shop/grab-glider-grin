@@ -1714,6 +1714,12 @@ export const RichTextEditor = ({
     if (mdEnabled && !slashMenu.open && !mentionMenu.open && !isInsideCode(editorRef.current)) {
 
       if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Text auto-replace: `--` → em-dash, `...` → ellipsis (fires before space is inserted).
+        // Does not consume the event — the space still inserts normally.
+        if (tryDashEllipsis(editorRef.current)) {
+          handleInput();
+          // continue — do not return, other space handlers may still fire
+        }
         // Greek/math symbol shortcut runs first (\alpha → α).
         if (tryGreekShortcut(editorRef.current)) {
           e.preventDefault();
