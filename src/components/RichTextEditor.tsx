@@ -56,6 +56,7 @@ import {
   tryMarkdownCompletedBlockShortcut,
   tryMarkdownEnterShortcut,
   tryMarkdownInlineShortcut,
+  tryMarkdownInlinePostInput,
   tryMarkdownLinkOrImageShortcut,
   tryMarkdownTableShortcut,
   tryMarkdownPipeTableEnter,
