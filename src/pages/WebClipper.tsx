@@ -138,11 +138,38 @@ const WebClipper = () => {
   const explicitMode = searchParams.has('mode') || !!attachment;
   const [mode, setMode] = useState<ClipMode>(initialMode);
   const [picking, setPicking] = useState(!explicitMode);
+  const payloadSignature = searchParams.toString();
+  const payloadRunKeyRef = useRef('');
 
   // Guard against React StrictMode double-invocation and any re-render that
   // could otherwise fire prepareClip() 2–3× for the same URL, producing
   // duplicate copies of the fetched article.
   const prepareStartedRef = useRef(false);
+
+  // Native share sheets can navigate to /webclipper again while this component
+  // is still mounted. Reset one-shot local state whenever a new query payload
+  // arrives, otherwise the previous preview/prepare guard can make it look as
+  // if "nothing happened".
+  useEffect(() => {
+    if (!payloadSignature || payloadRunKeyRef.current === payloadSignature) return;
+    payloadRunKeyRef.current = payloadSignature;
+    prepareStartedRef.current = false;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    canceledRef.current = false;
+    setMode(initialMode);
+    setPicking(!explicitMode);
+    setPreviewReady(false);
+    setPreviewTitle('');
+    setPreviewHtml('');
+    setSaved(false);
+    setError(null);
+    setStage('idle');
+    setProgress(null);
+    setSaving(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payloadSignature]);
+
   useEffect(() => {
     if (picking) return;
     if (prepareStartedRef.current) return;
@@ -159,7 +186,7 @@ const WebClipper = () => {
     prepareStartedRef.current = true;
     void prepareClip(mode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [picking]);
+  }, [picking, payloadSignature]);
 
   /** Try a HEAD request to learn content-length + MIME before downloading. */
   const probeAttachment = async (
