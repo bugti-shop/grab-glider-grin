@@ -459,6 +459,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
           return await fetchObjectCountResult(dataUrl);
         }}
         onConfirmObjectCount={(dataUrl, result) => {
+          capturedRef.current = true;
           setShowCamera(false);
           applyObjectCountResult(dataUrl, result);
         }}
