@@ -1274,6 +1274,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   <Search className="h-4 w-4 mr-2" />
                   {t('editor.findReplace')}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsShortcutsSheetOpen(true)}>
+                  <Keyboard className="h-4 w-4 mr-2" />
+                  {t('editor.shortcutsCheatSheet', 'Shortcuts cheat sheet')}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
                   if (!requireFeature('ai_dictation')) return;
                   setShowExtractTasks(true);
