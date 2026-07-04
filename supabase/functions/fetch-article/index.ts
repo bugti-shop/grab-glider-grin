@@ -124,13 +124,95 @@ function guessMimeFromUrl(u: string, fallback = "application/octet-stream"): str
 
 type FetchedAsset = { mime: string; bytes: Uint8Array; text?: string };
 
+// ── SSRF guard ───────────────────────────────────────────────────────────
+// We fetch fully user-supplied URLs (article target + inlined assets). Without
+// a guard, an authenticated user could point us at internal/cloud-metadata
+// hosts (e.g. 169.254.169.254, 127.0.0.1, RFC1918) and read the response
+// back through the parsed article. We resolve DNS ourselves and reject any
+// host that resolves to a loopback/link-local/private/reserved range, and we
+// follow redirects manually so every hop is re-validated.
+function isPrivateIpv4(ip: string): boolean {
+  const parts = ip.split(".").map((n) => Number(n));
+  if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  const [a, b] = parts;
+  if (a === 0) return true;                        // 0.0.0.0/8
+  if (a === 10) return true;                       // 10/8
+  if (a === 127) return true;                      // loopback
+  if (a === 169 && b === 254) return true;         // link-local + AWS metadata
+  if (a === 172 && b >= 16 && b <= 31) return true;// 172.16/12
+  if (a === 192 && b === 168) return true;         // 192.168/16
+  if (a === 192 && b === 0) return true;           // 192.0.0/24 + 192.0.2/24
+  if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking
+  if (a === 100 && b >= 64 && b <= 127) return true;    // CGNAT 100.64/10
+  if (a >= 224) return true;                       // multicast + reserved
+  return false;
+}
+function isPrivateIpv6(ip: string): boolean {
+  const lower = ip.toLowerCase();
+  if (lower === "::" || lower === "::1") return true;
+  if (lower.startsWith("fe80:") || lower.startsWith("fc") || lower.startsWith("fd")) return true;
+  if (lower.startsWith("ff")) return true;         // multicast
+  if (lower.startsWith("::ffff:")) {               // IPv4-mapped
+    return isPrivateIpv4(lower.slice(7));
+  }
+  return false;
+}
+function isIpLiteralUnsafe(host: string): boolean {
+  const h = host.replace(/^\[|\]$/g, "");
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) return isPrivateIpv4(h);
+  if (h.includes(":")) return isPrivateIpv6(h);
+  return false;
+}
+async function isSafeTarget(target: URL): Promise<boolean> {
+  if (!["http:", "https:"].includes(target.protocol)) return false;
+  const host = target.hostname.toLowerCase();
+  if (!host) return false;
+  // Block localhost aliases up front — DNS may not resolve these.
+  if (host === "localhost" || host.endsWith(".localhost")) return false;
+  // Reject non-standard ports that clearly point at internal services.
+  const port = target.port ? Number(target.port) : (target.protocol === "https:" ? 443 : 80);
+  if (port !== 80 && port !== 443 && port !== 8080 && port !== 8443) return false;
+  // IP literals are checked directly (no DNS needed).
+  if (isIpLiteralUnsafe(host.replace(/^\[|\]$/g, ""))) return false;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host) || host.includes(":")) return true;
+  // Real hostname: resolve and verify every returned address is public.
+  try {
+    const results = await Promise.allSettled([
+      Deno.resolveDns(host, "A"),
+      Deno.resolveDns(host, "AAAA"),
+    ]);
+    const ips: string[] = [];
+    for (const r of results) if (r.status === "fulfilled") ips.push(...r.value);
+    if (ips.length === 0) return false; // fail closed when DNS returns nothing
+    return ips.every((ip) => !(isPrivateIpv4(ip) || isPrivateIpv6(ip)));
+  } catch {
+    return false; // fail closed on resolver errors
+  }
+}
+async function safeFetch(u: string, init: RequestInit = {}, maxRedirects = 5): Promise<Response | null> {
+  let current = u;
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    let target: URL;
+    try { target = new URL(current); } catch { return null; }
+    if (!(await isSafeTarget(target))) return null;
+    const res = await fetch(current, { ...init, redirect: "manual" });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get("location");
+      if (!loc) return res;
+      try { current = new URL(loc, current).toString(); } catch { return null; }
+      continue;
+    }
+    return res;
+  }
+  return null;
+}
+
 async function fetchAsset(u: string): Promise<FetchedAsset | null> {
   try {
     const c = new AbortController();
     const t = setTimeout(() => c.abort(), INLINE_ASSET_TIMEOUT_MS);
-    const res = await fetch(u, {
+    const res = await safeFetch(u, {
       signal: c.signal,
-      redirect: "follow",
       headers: {
         "user-agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Flowist-Clipper/1.0",
@@ -145,6 +227,7 @@ async function fetchAsset(u: string): Promise<FetchedAsset | null> {
     return { mime, bytes: new Uint8Array(buf) };
   } catch { return null; }
 }
+
 
 async function fetchTextAsset(u: string): Promise<FetchedAsset | null> {
   const a = await fetchAsset(u);
