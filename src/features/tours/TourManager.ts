@@ -161,6 +161,7 @@ class TourManagerImpl {
 
     const finalize = async (opts: { advanceChain?: boolean } = {}) => {
       try { delete document.body.dataset.tourActive; } catch {}
+      try { delete document.body.dataset.tourId; } catch {}
       try { delete document.body.dataset.tourForced; } catch {}
       emitTourActiveChange(false);
       this.activeDriver = null;
