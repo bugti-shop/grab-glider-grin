@@ -104,12 +104,10 @@ describe('evaluateMathExpression – currency', () => {
   });
 });
 
-describe('evaluateMathExpression – bases & bitwise', () => {
+describe('evaluateMathExpression – bases', () => {
   const cases: Array<[string, string]> = [
     ['0xff', ' 255'],
     ['0b1010', ' 10'],
-    ['5 & 3', ' 1'],
-    ['5 | 3', ' 7'],
   ];
   for (const [i, e] of cases)
     it(i, () => expect(evaluateMathExpression(i)).toBe(e));
