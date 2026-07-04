@@ -382,14 +382,45 @@ const WebClipper = () => {
       // the user is in explicit Selection mode (where the highlight is
       // the whole point).
       const fetchAttemptedButEmpty = shouldFetchFull && !articleHtml;
-      if (fetchAttemptedButEmpty) {
+      // If the full-fetch failed BUT the share sheet already gave us something
+      // usable (selected text, article snippet, or at least a title + url),
+      // don't block the save with an error screen — the user's ask is
+      // explicitly "jo kuch tumy deek rha h wo paste kerddu fetch krddu".
+      // We synthesize a minimal article from what we have and continue.
+      const hasShareFallback =
+        !!(selection && selection.trim()) ||
+        !!(content && content.trim()) ||
+        !!(title && title !== 'Untitled Clip');
+      if (fetchAttemptedButEmpty && hasShareFallback) {
+        console.info('[webClipper] full-fetch empty — falling back to shared payload', {
+          url,
+          hasSelection: !!selection,
+          hasContent: !!content,
+          hasTitle: !!title,
+        });
+        const bodyText = (selection && selection.trim()) || (content && content.trim()) || '';
+        // Wrap into a tiny HTML snippet so the downstream rich-note pipeline
+        // still runs and users see paragraphs, not a wall of text.
+        const escaped = bodyText
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        const paragraphs = escaped
+          .split(/\n{2,}/)
+          .map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
+          .join('');
+        articleHtml = paragraphs || `<p>${escaped}</p>`;
+        articleTitle = title || articleTitle;
+        articleIsFallback = true;
+        // Note: articleExcerpt intentionally left empty — the body IS the excerpt.
+      } else if (fetchAttemptedButEmpty) {
         const failure = fetchFailure || { code: 'internal' };
         const map: Record<string, { titleKey: string; titleFallback: string; descKey: string; descFallback: string }> = {
           paywall:        { titleKey: 'webClipper.errPaywallTitle',   titleFallback: 'Site blocked access',           descKey: 'webClipper.errPaywallDesc',   descFallback: 'This page needs a login or blocks clippers. Try copying the text and using Selection mode.' },
           not_found:      { titleKey: 'webClipper.errNotFoundTitle',  titleFallback: 'Page not found',                descKey: 'webClipper.errNotFoundDesc',  descFallback: 'The URL returned 404. Double-check the link.' },
           rate_limited:   { titleKey: 'webClipper.errRateTitle',      titleFallback: 'Rate limited',                  descKey: 'webClipper.errRateDesc',      descFallback: 'The source site is throttling requests. Wait a moment and retry.' },
           timeout:        { titleKey: 'webClipper.errTimeoutTitle',   titleFallback: 'Fetch timed out',               descKey: 'webClipper.errTimeoutDesc',   descFallback: 'The page took too long to load. Retry, or open it once in the browser and share it back.' },
-          too_large:      { titleKey: 'webClipper.errTooLargeTitle',  titleFallback: 'Page too large',                descKey: 'webClipper.errTooLargeDesc',  descFallback: 'This page exceeds the 5 MB limit. Try Selection mode on the parts you need.' },
+          too_large:      { titleKey: 'webClipper.errTooLargeTitle',  titleFallback: 'Page too large',                descKey: 'webClipper.errTooLargeDesc',  descFallback: 'This page exceeds the 100 MB limit. Try Selection mode on the parts you need.' },
           bad_url:        { titleKey: 'webClipper.errBadUrlTitle',    titleFallback: 'Invalid URL',                   descKey: 'webClipper.errBadUrlDesc',    descFallback: 'That URL is not reachable.' },
           upstream_error: { titleKey: 'webClipper.errUpstreamTitle',  titleFallback: 'Source site returned an error', descKey: 'webClipper.errUpstreamDesc',  descFallback: failure.status ? `The site replied with HTTP ${failure.status}.` : 'The site did not respond properly.' },
           network:        { titleKey: 'webClipper.errNetworkTitle',   titleFallback: 'Could not reach article',       descKey: 'webClipper.errNetworkDesc',   descFallback: 'Network trouble fetching this page. Check your connection and retry.' },
