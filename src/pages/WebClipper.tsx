@@ -26,7 +26,6 @@ import {
   formatBytes,
   ATTACHMENT_LIMITS,
 } from '@/utils/webClipper';
-import { compressHtml, formatBytesShort } from '@/utils/htmlCompression';
 import { useWebClipperQuota } from '@/hooks/useWebClipperQuota';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
@@ -37,16 +36,12 @@ const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: strin
 
 type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
 
-/**
- * Session-scoped dedupe for the web clipper.
- * A single URL+mode+attachment key should only ever hit fetch-article ONCE per app session.
- * Prior bug: share-intent flows and StrictMode remounts caused the same page to be
- * fetched and downloaded 3–5×. Keyed at the module level so React remounts can't reset it.
- */
+/** StrictMode/remount guard for concurrent duplicate work only.
+ * Completed clips are intentionally NOT deduped: users can save the same URL
+ * multiple times from the share sheet and every explicit share must work. */
 const inFlightClipKeys = new Set<string>();
-const completedClipKeys = new Set<string>();
-const clipKey = (mode: string, url: string, attachment: string) =>
-  `${mode}::${(url || '').trim().toLowerCase()}::${(attachment || '').trim().toLowerCase()}`;
+const clipKey = (mode: string, url: string, attachment: string, shareId: string) =>
+  `${mode}::${(url || '').trim().toLowerCase()}::${(attachment || '').trim().toLowerCase()}::${shareId || 'manual'}`;
 
 const WebClipper = () => {
   const [searchParams] = useSearchParams();
@@ -89,7 +84,7 @@ const WebClipper = () => {
   const [previewReady, setPreviewReady] = useState(false);
   const [previewTitle, setPreviewTitle] = useState('');
   const [previewHtml, setPreviewHtml] = useState('');
-  /** Full-page raw HTML snapshot (compressed) — carried from prepareClip to commitClip. */
+  /** Legacy compatibility only. New clips never store snapshot HTML. */
   const [fullPageSnapshot, setFullPageSnapshot] = useState<Note['fullPageSnapshot'] | null>(null);
   const contentEditorRef = useRef<HTMLDivElement>(null);
 
@@ -138,13 +133,12 @@ const WebClipper = () => {
     if (prepareStartedRef.current) return;
     if (previewReady) return;
     if (!(title || url || content || selection || attachment)) return;
-    // Session-scoped dedupe: never re-fetch the same URL+mode+attachment,
-    // even if this component remounts (StrictMode, back-nav, share-intent replay).
-    const key = clipKey(mode, url || '', attachment || '');
-    if (inFlightClipKeys.has(key) || completedClipKeys.has(key)) {
-      console.warn('[webClipper] duplicate clip suppressed for key', key);
+    // Only suppress the exact same in-flight share/remount. Completed clips are
+    // never suppressed so the same article can be clipped again manually.
+    const key = clipKey(mode, url || '', attachment || '', searchParams.get('shareId') || '');
+    if (inFlightClipKeys.has(key)) {
+      console.warn('[webClipper] duplicate in-flight clip suppressed for key', key);
       prepareStartedRef.current = true;
-      clearClipperQuery();
       return;
     }
     prepareStartedRef.current = true;
@@ -205,11 +199,7 @@ const WebClipper = () => {
       console.warn('[webClipper] prepareClip already in flight — ignoring duplicate call');
       return;
     }
-    const dedupeKey = clipKey(clipMode, url || '', attachment || '');
-    if (completedClipKeys.has(dedupeKey)) {
-      console.warn('[webClipper] clip already completed this session — ignoring', dedupeKey);
-      return;
-    }
+    const dedupeKey = clipKey(clipMode, url || '', attachment || '', searchParams.get('shareId') || '');
     inFlightClipKeys.add(dedupeKey);
     prepareStartedRef.current = true;
     setSaving(true);
@@ -407,11 +397,9 @@ const WebClipper = () => {
       // the user is in explicit Selection mode (where the highlight is
       // the whole point).
       const fetchAttemptedButEmpty = shouldFetchFull && !articleHtml;
-      // If the full-fetch failed BUT the share sheet already gave us something
-      // usable (selected text, article snippet, or at least a title + url),
-      // don't block the save with an error screen — the user's ask is
-      // explicitly "jo kuch tumy deek rha h wo paste kerddu fetch krddu".
-      // We synthesize a minimal article from what we have and continue.
+      // If the server could not fetch a body, still save whatever the share
+      // sheet gave us. Never create metadata-only cards; always render inline
+      // visible text/content when present.
       const hasShareFallback =
         !!(selection && selection.trim()) ||
         !!(content && content.trim()) ||
@@ -538,7 +526,7 @@ const WebClipper = () => {
         if (selection) {
           parts.push(`<blockquote class="flowist-web-clip-selection">${sanitizeForDisplay(selection)}</blockquote>`);
         }
-        // Body wrapper — hydrator wires expand/collapse when word count is high.
+        // Body wrapper — always full inline content; no snapshot/toggle UI.
         parts.push(`<div class="flowist-web-clip-body" data-role="body">`);
         // User preference: render the full captured article inline directly —
         // no compressed snapshot placeholder, no "View / Hide snapshot" toggle,
@@ -574,8 +562,9 @@ const WebClipper = () => {
           `</footer>`,
         );
         parts.push(`</section>`);
-        // Single sanitize pass over the full assembled document (allows iframe/video for embeds).
-        noteContent = sanitizeClippedArticle(parts.join('\n'));
+        // Single sanitize pass over the full assembled document (allows iframe/video for embeds),
+        // then remove any legacy snapshot figures defensively before saving.
+        noteContent = stripSnapshotArtifacts(sanitizeClippedArticle(parts.join('\n')));
         setFullPageSnapshot(snapshotForNote);
       } else {
         const mergedContent = extractedPdfText
@@ -599,11 +588,8 @@ const WebClipper = () => {
       // Hand off to the editable preview — user can tweak title + content
       // before we persist. Nothing hits the DB until commitClip() runs.
       setPreviewTitle(finalTitle);
-      setPreviewHtml(noteContent);
+      setPreviewHtml(stripSnapshotArtifacts(noteContent));
       setPreviewReady(true);
-      // Mark this URL+mode as fully clipped so any later remount or share-intent
-      // replay is a no-op instead of re-hitting fetch-article.
-      completedClipKeys.add(dedupeKey);
       // Once the editable preview is built, consume the one-shot URL payload.
       // This prevents mobile Activity/webview restores from reopening the same
       // /webclipper?url=… route and fetching/saving duplicate copies later.
@@ -643,7 +629,7 @@ const WebClipper = () => {
       setStage('saving');
       setProgressLabel(t('webClipper.stageSaving', 'Saving to notes…'));
       const liveHtml = contentEditorRef.current?.innerHTML ?? previewHtml;
-      const cleanHtml = sanitizeClippedArticle(liveHtml);
+      const cleanHtml = stripSnapshotArtifacts(sanitizeClippedArticle(liveHtml));
       const cleanTitle = (previewTitle || 'Untitled Clip').substring(0, MAX_LENGTHS.title);
       const newNote: Note = {
         id: crypto.randomUUID(),
