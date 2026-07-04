@@ -312,8 +312,127 @@ export async function trySlashLineShortcut(root: HTMLElement | null): Promise<bo
     return true;
   }
 
+  // ── /tz <city>  → "Sat 4 Jul 2026, 21:30 (Asia/Tokyo)"
+  if (cmd === 'tz' || cmd === 'time' || cmd === 'timezone') {
+    if (!arg) return false;
+    const zone = resolveTimeZone(arg);
+    if (!zone) return false;
+    try {
+      const now = new Date();
+      const fmt = new Intl.DateTimeFormat(undefined, {
+        timeZone: zone,
+        weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      });
+      const text = `${fmt.format(now)} (${zone})`;
+      replaceBlockHtml(block, `<p>${escapeHtml(text)}</p>`, root);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // ── /toc  → auto table of contents from headings
+  if (cmd === 'toc') {
+    const headings = Array.from(root.querySelectorAll('h1, h2, h3, h4, h5, h6')) as HTMLElement[];
+    if (headings.length === 0) {
+      replaceBlockHtml(block, `<p><em>(No headings found for table of contents)</em></p>`, root);
+      return true;
+    }
+    const usedIds = new Set<string>();
+    const items = headings.map((h) => {
+      const text = (h.textContent || '').trim();
+      if (!text) return null;
+      let id = h.id || slugify(text);
+      let base = id, n = 1;
+      while (usedIds.has(id)) id = `${base}-${++n}`;
+      usedIds.add(id);
+      if (!h.id) h.id = id;
+      const level = parseInt(h.tagName[1], 10);
+      return { text, id, level };
+    }).filter(Boolean) as { text: string; id: string; level: number }[];
+
+    const minLevel = Math.min(...items.map((i) => i.level));
+    const html =
+      `<nav class="rt-toc" contenteditable="false">` +
+      `<div class="rt-toc-title">Table of Contents</div>` +
+      `<ul>` +
+      items.map((i) =>
+        `<li style="margin-left:${(i.level - minLevel) * 16}px">` +
+        `<a href="#${i.id}">${escapeHtml(i.text)}</a></li>`
+      ).join('') +
+      `</ul></nav><p><br></p>`;
+    replaceBlockHtml(block, html, root);
+    return true;
+  }
+
   return false;
 }
+
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'section';
+}
+
+/* ── Timezone city map (fallback: raw IANA name) ─────────── */
+
+const CITY_TZ: Record<string, string> = {
+  karachi: 'Asia/Karachi', lahore: 'Asia/Karachi', islamabad: 'Asia/Karachi',
+  tokyo: 'Asia/Tokyo', osaka: 'Asia/Tokyo', kyoto: 'Asia/Tokyo',
+  london: 'Europe/London', manchester: 'Europe/London', dublin: 'Europe/Dublin',
+  paris: 'Europe/Paris', berlin: 'Europe/Berlin', madrid: 'Europe/Madrid',
+  rome: 'Europe/Rome', amsterdam: 'Europe/Amsterdam', zurich: 'Europe/Zurich',
+  moscow: 'Europe/Moscow', istanbul: 'Europe/Istanbul', athens: 'Europe/Athens',
+  dubai: 'Asia/Dubai', abudhabi: 'Asia/Dubai', doha: 'Asia/Qatar',
+  riyadh: 'Asia/Riyadh', jeddah: 'Asia/Riyadh', mecca: 'Asia/Riyadh',
+  kuwait: 'Asia/Kuwait', bahrain: 'Asia/Bahrain', muscat: 'Asia/Muscat',
+  tehran: 'Asia/Tehran', baghdad: 'Asia/Baghdad', beirut: 'Asia/Beirut',
+  jerusalem: 'Asia/Jerusalem', telaviv: 'Asia/Jerusalem',
+  delhi: 'Asia/Kolkata', newdelhi: 'Asia/Kolkata', mumbai: 'Asia/Kolkata',
+  bangalore: 'Asia/Kolkata', chennai: 'Asia/Kolkata', kolkata: 'Asia/Kolkata',
+  hyderabad: 'Asia/Kolkata', pune: 'Asia/Kolkata',
+  dhaka: 'Asia/Dhaka', kathmandu: 'Asia/Kathmandu', colombo: 'Asia/Colombo',
+  singapore: 'Asia/Singapore', kualalumpur: 'Asia/Kuala_Lumpur',
+  jakarta: 'Asia/Jakarta', bangkok: 'Asia/Bangkok', hanoi: 'Asia/Ho_Chi_Minh',
+  hochiminh: 'Asia/Ho_Chi_Minh', saigon: 'Asia/Ho_Chi_Minh',
+  manila: 'Asia/Manila', taipei: 'Asia/Taipei',
+  hongkong: 'Asia/Hong_Kong', hk: 'Asia/Hong_Kong',
+  beijing: 'Asia/Shanghai', shanghai: 'Asia/Shanghai', shenzhen: 'Asia/Shanghai',
+  seoul: 'Asia/Seoul', busan: 'Asia/Seoul',
+  sydney: 'Australia/Sydney', melbourne: 'Australia/Melbourne',
+  brisbane: 'Australia/Brisbane', perth: 'Australia/Perth',
+  auckland: 'Pacific/Auckland', wellington: 'Pacific/Auckland',
+  newyork: 'America/New_York', nyc: 'America/New_York', ny: 'America/New_York',
+  washington: 'America/New_York', boston: 'America/New_York',
+  miami: 'America/New_York', atlanta: 'America/New_York',
+  chicago: 'America/Chicago', dallas: 'America/Chicago', houston: 'America/Chicago',
+  denver: 'America/Denver', phoenix: 'America/Phoenix',
+  losangeles: 'America/Los_Angeles', la: 'America/Los_Angeles',
+  sanfrancisco: 'America/Los_Angeles', sf: 'America/Los_Angeles',
+  seattle: 'America/Los_Angeles', vancouver: 'America/Vancouver',
+  toronto: 'America/Toronto', montreal: 'America/Toronto', ottawa: 'America/Toronto',
+  mexicocity: 'America/Mexico_City',
+  saopaulo: 'America/Sao_Paulo', rio: 'America/Sao_Paulo',
+  buenosaires: 'America/Argentina/Buenos_Aires',
+  santiago: 'America/Santiago', lima: 'America/Lima', bogota: 'America/Bogota',
+  cairo: 'Africa/Cairo', lagos: 'Africa/Lagos', nairobi: 'Africa/Nairobi',
+  johannesburg: 'Africa/Johannesburg', capetown: 'Africa/Johannesburg',
+  casablanca: 'Africa/Casablanca', addisababa: 'Africa/Addis_Ababa',
+  reykjavik: 'Atlantic/Reykjavik', honolulu: 'Pacific/Honolulu',
+  utc: 'UTC', gmt: 'UTC',
+};
+
+function resolveTimeZone(input: string): string | null {
+  const key = input.toLowerCase().replace(/[\s_-]+/g, '');
+  if (CITY_TZ[key]) return CITY_TZ[key];
+  // Try raw input as IANA name.
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone: input });
+    return input;
+  } catch {
+    return null;
+  }
+}
+
 
 /* ────────────────────────────────────────────────────────────────
  * 4. Date shortcuts on Space:  +3d  +2w  +1m  +1y  and  @friday
