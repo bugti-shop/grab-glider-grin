@@ -1163,4 +1163,30 @@ body[data-tour-forced="true"] .driver-overlay {
   display: none !important;
 }
 
+/* Task-input tour popovers (Natural language & Scan-from-image) sit above the
+ * task input sheet. driver.js adds ~10px offset + our 6px stagePadding, which
+ * looks like a big gap on iOS/Android where the sheet handle sits directly
+ * under the popover. Pull the popover down to hug the target — desktop keeps
+ * a subtle nudge, mobile closes the gap almost entirely. Arrow follows via
+ * inverse translation so it still lands on the target edge. */
+body[data-tour-id="task-natural-language"] .flowist-tour-popover.driver-popover-side-top,
+body[data-tour-id="task-scan-from-image"] .flowist-tour-popover.driver-popover-side-top {
+  transform: translateY(10px);
+}
+body[data-tour-id="task-natural-language"] .flowist-tour-popover.driver-popover-side-top .driver-popover-arrow,
+body[data-tour-id="task-scan-from-image"] .flowist-tour-popover.driver-popover-side-top .driver-popover-arrow {
+  transform: translateY(-10px);
+}
+@media (max-width: 768px) {
+  body[data-tour-id="task-natural-language"] .flowist-tour-popover.driver-popover-side-top,
+  body[data-tour-id="task-scan-from-image"] .flowist-tour-popover.driver-popover-side-top {
+    transform: translateY(16px);
+  }
+  body[data-tour-id="task-natural-language"] .flowist-tour-popover.driver-popover-side-top .driver-popover-arrow,
+  body[data-tour-id="task-scan-from-image"] .flowist-tour-popover.driver-popover-side-top .driver-popover-arrow {
+    transform: translateY(-16px);
+  }
+}
+
+
 

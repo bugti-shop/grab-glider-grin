@@ -140,6 +140,7 @@ class TourManagerImpl {
     this.activeRoute = tour.route;
     this.forcedActive = !!opts.forced;
     try { document.body.dataset.tourActive = 'true'; } catch {}
+    try { document.body.dataset.tourId = tourId; } catch {}
     try {
       if (this.forcedActive) document.body.dataset.tourForced = 'true';
       else delete document.body.dataset.tourForced;
@@ -160,6 +161,7 @@ class TourManagerImpl {
 
     const finalize = async (opts: { advanceChain?: boolean } = {}) => {
       try { delete document.body.dataset.tourActive; } catch {}
+      try { delete document.body.dataset.tourId; } catch {}
       try { delete document.body.dataset.tourForced; } catch {}
       emitTourActiveChange(false);
       this.activeDriver = null;
@@ -383,6 +385,7 @@ class TourManagerImpl {
       this.forcedActive = false;
       if (this.forcedGuard) { clearInterval(this.forcedGuard); this.forcedGuard = null; }
       try { delete document.body.dataset.tourActive; } catch {}
+      try { delete document.body.dataset.tourId; } catch {}
       try { delete document.body.dataset.tourForced; } catch {}
       emitTourActiveChange(false);
     }
@@ -495,6 +498,7 @@ class TourManagerImpl {
     this.activeDriver = null;
     this.activeTourId = null;
     try { delete document.body.dataset.tourActive; } catch {}
+    try { delete document.body.dataset.tourId; } catch {}
     emitTourActiveChange(false);
   }
 
