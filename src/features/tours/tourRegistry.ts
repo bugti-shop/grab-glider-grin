@@ -108,3 +108,51 @@ export const CATEGORY_LABELS: Record<TourCategory, string> = {
   notes: 'Notes',
   personalization: 'Personalization',
 };
+
+/**
+ * Ordered onboarding chain — matches the "Features" list in FeatureGuideModal
+ * top-to-bottom. New users are auto-walked through this sequence:
+ *   • The first tour fires when the welcome sheet closes.
+ *   • When the user completes the action (or clicks "Next"), the next tour
+ *     in the chain fires automatically.
+ * Tours already marked seen are skipped so no one is re-walked through
+ * features they've already learned.
+ */
+export const ONBOARDING_CHAIN: string[] = [
+  // Tasks
+  'task-create-first',
+  'task-natural-language',
+  'task-scan-from-image',
+  'task-set-priority',
+  'task-update-status',
+  'task-create-section',
+  'task-create-folder',
+  'task-focus-mode',
+  'task-switch-view',
+  'task-journey',
+  'task-create-habit',
+  'task-eisenhower',
+  'task-import',
+  'task-batch-add',
+  // Notes
+  'notes-switch-dashboard',
+  'notes-create-first',
+  'notes-create-notebook',
+  'notes-sketch',
+  'notes-import',
+  'notes-scan',
+  'notes-editor-menu',
+  // Personalization
+  'personalize-theme',
+  'personalize-app-lock',
+];
+
+/** ID of the tour that runs right after the given one finishes, or null at the end. */
+export const nextOnboardingTourId = (currentId: string): string | null => {
+  const idx = ONBOARDING_CHAIN.indexOf(currentId);
+  if (idx === -1 || idx === ONBOARDING_CHAIN.length - 1) return null;
+  return ONBOARDING_CHAIN[idx + 1];
+};
+
+export const firstOnboardingTourId = (): string => ONBOARDING_CHAIN[0];
+
