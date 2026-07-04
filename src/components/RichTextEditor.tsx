@@ -2533,22 +2533,8 @@ export const RichTextEditor = ({
     saveEditorSelection();
   };
 
-  const mobileQuickToolbar = (
-    <div className="sm:hidden px-3 pb-2">
-      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide rounded-full border border-border bg-card px-2 py-1.5 shadow-lg">
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleBold); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm font-bold", activeStates.isBold ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>B</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleItalic); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm italic", activeStates.isItalic ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>I</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleUnderline); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm underline", activeStates.isUnderline ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>U</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(() => handleHeading(1)); }} className="min-h-10 min-w-12 rounded-full bg-muted/60 px-3 text-sm font-bold text-foreground">H1</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleBulletList); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-lg leading-none", activeStates.isBulletList ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>•</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleNumberedList); }} className={cn("min-h-10 min-w-12 rounded-full px-3 text-sm", activeStates.isNumberedList ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>1.</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(handleChecklist); }} className={cn("min-h-10 min-w-10 rounded-full px-3 text-sm", activeStates.isChecklist ? "bg-primary/15 text-primary" : "bg-muted/60 text-foreground")}>☑</button>
-        <button type="button" onPointerDown={(e) => { e.preventDefault(); handleMobileCommand(() => handleInsertTable(3, 3)); }} className="min-h-10 min-w-10 rounded-full bg-muted/60 px-3 text-foreground" aria-label="Insert table"><Table className="h-4 w-4" /></button>
-        <button type="button" disabled={historyIndex <= 0} onPointerDown={(e) => { e.preventDefault(); if (historyIndex > 0) handleUndo(); }} className="min-h-10 min-w-10 rounded-full bg-muted/60 px-3 text-foreground disabled:opacity-40" aria-label="Undo"><Undo className="h-4 w-4" /></button>
-        <button type="button" disabled={historyIndex >= history.length - 1} onPointerDown={(e) => { e.preventDefault(); if (historyIndex < history.length - 1) handleRedo(); }} className="min-h-10 min-w-10 rounded-full bg-muted/60 px-3 text-foreground disabled:opacity-40" aria-label="Redo"><Redo className="h-4 w-4" /></button>
-      </div>
-    </div>
-  );
+  const mobileQuickToolbar = null;
+
 
   const toolbar = (
     <WordToolbar
