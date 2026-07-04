@@ -324,7 +324,7 @@ const WebClipper = () => {
       // the user is in explicit Selection mode (where the highlight is
       // the whole point).
       const fetchAttemptedButEmpty = shouldFetchFull && !articleHtml;
-      if (fetchAttemptedButEmpty && clipMode !== 'selection') {
+      if (fetchAttemptedButEmpty) {
         const failure = fetchFailure || { code: 'internal' };
         const map: Record<string, { titleKey: string; titleFallback: string; descKey: string; descFallback: string }> = {
           paywall:        { titleKey: 'webClipper.errPaywallTitle',   titleFallback: 'Site blocked access',           descKey: 'webClipper.errPaywallDesc',   descFallback: 'This page needs a login or blocks clippers. Try copying the text and using Selection mode.' },
