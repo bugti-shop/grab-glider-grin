@@ -1634,13 +1634,20 @@ export const RichTextEditor = ({
 
     const type = ie.inputType;
     const data = ie.data || '';
+    const root = editorRef.current;
 
-    // Space typed → try block shortcuts (#, -, 1., [], >, etc.)
+    // ── Space typed ──
     if ((type === 'insertText' || type === 'insertReplacementText') && data === ' ') {
-      if (tryMarkdownBlockShortcut(editorRef.current)) {
-        e.preventDefault();
-        handleInput();
-      }
+      // Non-consuming: mutate before caret; space still inserts after.
+      tryDashEllipsis(root);
+      // Consuming shortcuts (space is either replaced or re-inserted).
+      if (tryGreekShortcut(root)) { e.preventDefault(); handleInput(); return; }
+      if (tryRelativeDateShortcut(root)) { e.preventDefault(); document.execCommand('insertText', false, ' '); handleInput(); return; }
+      if (tryWeekdayShortcut(root)) { e.preventDefault(); document.execCommand('insertText', false, ' '); handleInput(); return; }
+      if (tryUnitShortcut(root)) { e.preventDefault(); document.execCommand('insertText', false, ' '); handleInput(); return; }
+      if (tryRepeatedWordShortcut(root)) { e.preventDefault(); handleInput(); return; }
+      if (tryMarkdownTableShortcut(root)) { e.preventDefault(); handleInput(); return; }
+      if (tryMarkdownBlockShortcut(root)) { e.preventDefault(); handleInput(); return; }
       return;
     }
     // Android GBoard / Samsung keyboard often batch the trigger token AND
@@ -1653,29 +1660,74 @@ export const RichTextEditor = ({
       const token = data.slice(0, -1);
       e.preventDefault();
       document.execCommand('insertText', false, token);
-      if (tryMarkdownBlockShortcut(editorRef.current)) {
-        handleInput();
-      } else {
-        document.execCommand('insertText', false, ' ');
-        handleInput();
-      }
+      tryDashEllipsis(root);
+      if (tryGreekShortcut(root)) { handleInput(); return; }
+      if (tryRelativeDateShortcut(root)) { document.execCommand('insertText', false, ' '); handleInput(); return; }
+      if (tryWeekdayShortcut(root)) { document.execCommand('insertText', false, ' '); handleInput(); return; }
+      if (tryUnitShortcut(root)) { document.execCommand('insertText', false, ' '); handleInput(); return; }
+      if (tryRepeatedWordShortcut(root)) { handleInput(); return; }
+      if (tryMarkdownTableShortcut(root)) { handleInput(); return; }
+      if (tryMarkdownBlockShortcut(root)) { handleInput(); return; }
+      document.execCommand('insertText', false, ' ');
+      handleInput();
       return;
     }
-    // Enter typed → try `---` → <hr> conversion
-    if (type === 'insertParagraph' || (type === 'insertLineBreak')) {
-      if (tryMarkdownEnterShortcut(editorRef.current)) {
+    // ── Enter typed ──
+    if (type === 'insertParagraph' || type === 'insertLineBreak') {
+      // Slash-line commands: /lorem, /unit, /toc, /tz, /youtube, etc.
+      if (root) {
+        const sel = window.getSelection();
+        let trimmed = '';
+        if (sel && sel.rangeCount > 0) {
+          let el: Node | null = sel.getRangeAt(0).startContainer;
+          while (el && el !== root) {
+            if (el.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/.test((el as HTMLElement).tagName)) {
+              trimmed = (el.textContent || '').trim();
+              break;
+            }
+            el = el.parentNode;
+          }
+        }
+        if (/^\/(lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc|unit|convert)\b/i.test(trimmed)) {
+          e.preventDefault();
+          void trySlashLineShortcut(root).then((ok) => { if (ok) handleInput(); });
+          return;
+        }
+        if (tryMarkdownPipeTableEnter(root)) { e.preventDefault(); handleInput(); return; }
+      }
+      if (tryMarkdownEnterShortcut(root)) {
         e.preventDefault();
         handleInput();
       }
       return;
     }
-    // Inline markers: *, _, `, ~
+    // ── Single char inline triggers ──
     if (type === 'insertText' && data && data.length === 1) {
+      // `)` → (c)/(tm)/(r) symbols, then markdown link
+      if (data === ')') {
+        if (trySymbolShortcut(root)) { e.preventDefault(); handleInput(); return; }
+        if (tryMarkdownLinkOrImageShortcut(root)) { e.preventDefault(); handleInput(); return; }
+        return;
+      }
+      // Smart quotes
+      if (data === '"' || data === "'") {
+        if (trySmartQuote(root, data as '"' | "'")) { e.preventDefault(); handleInput(); return; }
+        return;
+      }
+      // LaTeX `$…$`
+      if (data === '$') {
+        e.preventDefault();
+        document.execCommand('insertText', false, '$');
+        void tryLatexShortcut(root).then((ok) => { if (ok) handleInput(); });
+        return;
+      }
+      // Inline math on `=`
+      if (data === '=') {
+        if (tryMathShortcut(root)) { e.preventDefault(); handleInput(); return; }
+      }
+      // Markdown inline markers *, _, `, ~
       if (data === '*' || data === '_' || data === '`' || data === '~') {
-        if (tryMarkdownInlineShortcut(data, editorRef.current)) {
-          e.preventDefault();
-          handleInput();
-        }
+        if (tryMarkdownInlineShortcut(data, root)) { e.preventDefault(); handleInput(); return; }
       }
       return;
     }
@@ -1683,7 +1735,7 @@ export const RichTextEditor = ({
     if (type === 'insertText' && (data === '**' || data === '~~')) {
       e.preventDefault();
       document.execCommand('insertText', false, data[0]);
-      if (tryMarkdownInlineShortcut(data[1], editorRef.current)) {
+      if (tryMarkdownInlineShortcut(data[1], root)) {
         handleInput();
       } else {
         document.execCommand('insertText', false, data[1]);
@@ -1691,6 +1743,7 @@ export const RichTextEditor = ({
       }
     }
   }, [slashMenu.open, mentionMenu.open]);
+
 
   // Handle keydown - checklist Enter key and other keyboard shortcuts
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
