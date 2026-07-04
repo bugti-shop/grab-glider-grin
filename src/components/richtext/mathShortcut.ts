@@ -137,14 +137,14 @@ let mathInstance: MathJsInstance | null = null;
 function getMath(): MathJsInstance {
   if (mathInstance) return mathInstance;
   mathInstance = create(all, { number: 'number' });
-  // Disable dangerous functions.
+  // Disable dangerous meta-functions that could redefine the evaluator or
+  // register arbitrary units at runtime. NOTE: do NOT disable `evaluate`,
+  // `parse`, `simplify`, or `derivative` — mathjs uses these internally
+  // for every `math.evaluate(...)` call, so overriding them here would
+  // break the entire inline math shortcut.
   mathInstance.import({
     import: function () { throw new Error('disabled'); },
     createUnit: function () { throw new Error('disabled'); },
-    evaluate: function () { throw new Error('disabled'); },
-    parse: function () { throw new Error('disabled'); },
-    simplify: function () { throw new Error('disabled'); },
-    derivative: function () { throw new Error('disabled'); },
   }, { override: true });
   return mathInstance;
 }
