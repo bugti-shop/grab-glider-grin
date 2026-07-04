@@ -65,7 +65,7 @@ const WebClipper = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { isAdminBypass, isPro } = useSubscription();
+  const { isAdminBypass } = useSubscription();
   // Web Clipper is unlimited for everyone — no free/Pro gate, no quota UI.
   const showQuota = false;
   const quota = useWebClipperQuota(false);
@@ -101,8 +101,6 @@ const WebClipper = () => {
   const [previewReady, setPreviewReady] = useState(false);
   const [previewTitle, setPreviewTitle] = useState('');
   const [previewHtml, setPreviewHtml] = useState('');
-  /** Legacy compatibility only. New clips never store snapshot HTML. */
-  const [fullPageSnapshot, setFullPageSnapshot] = useState<Note['fullPageSnapshot'] | null>(null);
   const contentEditorRef = useRef<HTMLDivElement>(null);
 
   // Hydrate web-clip cards (adds expand/collapse toggle for long clips)
@@ -548,7 +546,6 @@ const WebClipper = () => {
         // User preference: render the full captured article inline directly —
         // no compressed snapshot placeholder, no "View / Hide snapshot" toggle,
         // and no "Download captured HTML" button.
-        const snapshotForNote: Note['fullPageSnapshot'] | null = null;
         parts.push(articleHtml);
         if (articleEmbeds.length && !articleEmbeds.every((e) => articleHtml.includes(e))) {
           parts.push(`<h3>${sanitizeForDisplay(t('webClipper.embedsHeading', 'Embedded media'))}</h3>`);
@@ -582,7 +579,6 @@ const WebClipper = () => {
         // Single sanitize pass over the full assembled document (allows iframe/video for embeds),
         // then remove any legacy snapshot figures defensively before saving.
         noteContent = stripSnapshotArtifacts(sanitizeClippedArticle(parts.join('\n')));
-        setFullPageSnapshot(snapshotForNote);
       } else {
         const mergedContent = extractedPdfText
           ? [content, extractedPdfText, pdfTruncated ? '_(PDF text truncated)_' : '']
@@ -598,7 +594,6 @@ const WebClipper = () => {
           attachment: attachment || undefined,
           attachmentType,
         });
-        setFullPageSnapshot(null);
       }
 
 
@@ -628,8 +623,8 @@ const WebClipper = () => {
       }
     } finally {
       abortRef.current = null;
-      // Release the in-flight lock. If the run succeeded, completedClipKeys
-      // already blocks re-runs; if it failed, releasing lets the user retry.
+      // Release the in-flight lock. Completed clips are not blocked so users
+      // can intentionally capture the same article multiple times.
       inFlightClipKeys.delete(dedupeKey);
       setSaving(false);
     }
@@ -654,7 +649,6 @@ const WebClipper = () => {
         title: cleanTitle,
         content: cleanHtml,
         voiceRecordings: [],
-        ...(fullPageSnapshot ? { fullPageSnapshot } : {}),
         createdAt: new Date(),
         updatedAt: new Date(),
       };
