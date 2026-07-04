@@ -5,6 +5,7 @@
       {
         "appIDs": ["TEAMID.com.flowist.app"],
         "components": [
+          { "/": "/auth/callback*", "comment": "Email verification / password reset — opens app + auto sign-in" },
           { "/": "/webclipper*", "comment": "Deep-link clipper into the app" },
           { "/": "/r/*", "comment": "Affiliate / referral links" },
           { "/": "/clip*" },
