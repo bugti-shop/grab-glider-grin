@@ -1866,6 +1866,12 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         content={content}
       />
 
+      {/* Shortcuts cheat sheet */}
+      <ShortcutsCheatSheet
+        isOpen={isShortcutsSheetOpen}
+        onClose={() => setIsShortcutsSheetOpen(false)}
+      />
+
       {/* Word Count Stats Bar with Page Indicator - only shows when enabled */}
       {showStats && (
         <div className="px-4 py-2 border-b bg-muted/50 flex items-center justify-between text-xs text-muted-foreground" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
