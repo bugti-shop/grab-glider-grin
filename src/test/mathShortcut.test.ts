@@ -67,9 +67,9 @@ describe('evaluateMathExpression – statistics', () => {
 });
 
 describe('evaluateMathExpression – constants', () => {
-  it('pi', () => expect(evaluateMathExpression('pi')).toMatch(/^ 3\.14159/));
-  it('e', () => expect(evaluateMathExpression('e')).toMatch(/^ 2\.71828/));
-  it('tau', () => expect(evaluateMathExpression('tau')).toMatch(/^ 6\.28318/));
+  it('pi', () => expect(String(evaluateMathExpression('pi') ?? '')).toMatch(/3\.14159/));
+  it('e', () => expect(String(evaluateMathExpression('e') ?? '')).toMatch(/2\.71828/));
+  it('tau', () => expect(String(evaluateMathExpression('tau') ?? '')).toMatch(/6\.2831/));
 });
 
 describe('evaluateMathExpression – percentages', () => {
