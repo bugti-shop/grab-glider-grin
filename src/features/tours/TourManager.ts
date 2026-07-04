@@ -18,6 +18,13 @@ import { emitTourActiveChange } from './useIsTourActive';
 
 type NavigateFn = (path: string) => void;
 
+const ROUTE_SETTLE_DELAY_MS = 80;
+const BETWEEN_CHAIN_TOURS_DELAY_MS = 160;
+const ACTION_CHAIN_DELAY_MS = 220;
+const QUEUE_DRAIN_DELAY_MS = 100;
+const PRE_ACTION_SETTLE_DELAY_MS = 180;
+const TOUR_TARGET_WAIT_MS = 10 * 60 * 1000;
+
 class TourManagerImpl {
   private navigate: NavigateFn | null = null;
   private activeDriver: Driver | null = null;
@@ -87,24 +94,28 @@ class TourManagerImpl {
     // Navigate to the correct screen first, then wait for the first target.
     if (this.navigate && typeof window !== 'undefined' && window.location.pathname !== tour.route) {
       this.navigate(tour.route);
-      await this.wait(250);
+      await this.wait(ROUTE_SETTLE_DELAY_MS);
     }
 
 
     // Optional pre-actions: click one or more triggers (e.g. open task detail,
     // then open its ⋮ menu) so the real target becomes visible before highlight.
-    if (tour.beforeStart) {
+    const firstTargetSelector = tour.steps[0]?.elementSelector;
+    const firstTargetAlreadyVisible = firstTargetSelector
+      ? !!this.getVisibleElement(firstTargetSelector)
+      : false;
+    if (tour.beforeStart && !firstTargetAlreadyVisible) {
       const preSelectors = Array.isArray(tour.beforeStart) ? tour.beforeStart : [tour.beforeStart];
       for (const sel of preSelectors) {
         if (sel.startsWith('event:')) {
           window.dispatchEvent(new CustomEvent(sel.slice('event:'.length)));
-          await this.wait(420);
+          await this.wait(PRE_ACTION_SETTLE_DELAY_MS);
           continue;
         }
-        const trigger = await this.waitForSelector(sel, 2000);
+        const trigger = await this.waitForSelector(sel, TOUR_TARGET_WAIT_MS);
         if (trigger instanceof HTMLElement) {
           try { this.simulateActivation(trigger); } catch {}
-          await this.wait(320);
+          await this.wait(PRE_ACTION_SETTLE_DELAY_MS);
         }
       }
     }
@@ -112,8 +123,7 @@ class TourManagerImpl {
 
     const steps = await this.buildSteps(tour);
     if (steps.length === 0) {
-      // Nothing to show — treat as seen so we don't retry every visit.
-      await markTourSeen(tourId);
+      // Target still did not appear; do not mark as seen so the tutorial can retry.
       return;
     }
 
@@ -149,7 +159,7 @@ class TourManagerImpl {
           // Close whatever sheet/menu the previous tour opened before we
           // navigate to and highlight the next feature.
           await this.closeTransientUi();
-          setTimeout(() => this.startTour(nextId, { chain: true }), 550);
+          setTimeout(() => this.startTour(nextId, { chain: true }), BETWEEN_CHAIN_TOURS_DELAY_MS);
           return;
         }
       }
@@ -231,7 +241,7 @@ class TourManagerImpl {
         try { currentDrv?.destroy(); } catch {}
         this.activeDriver = null;
 
-        this.waitForSelector(nextStep.elementSelector, 4000).then((el) => {
+        this.waitForSelector(nextStep.elementSelector, TOUR_TARGET_WAIT_MS).then((el) => {
           if (!el) {
             // Target never appeared — end the tour gracefully.
             finalize();
@@ -287,7 +297,7 @@ class TourManagerImpl {
     // Give the just-completed action's UI a moment to render (e.g. task row
     // appears in the list) before highlighting the next feature.
     await this.closeTransientUi();
-    setTimeout(() => this.startTour(nextId, { chain: true }), 700);
+    setTimeout(() => this.startTour(nextId, { chain: true }), ACTION_CHAIN_DELAY_MS);
   }
 
 
@@ -295,14 +305,14 @@ class TourManagerImpl {
     const next = this.queue.shift();
     if (next) {
       // Small delay so DOM settles between tours.
-      setTimeout(() => this.startTour(next, { auto: true }), 200);
+      setTimeout(() => this.startTour(next, { auto: true }), QUEUE_DRAIN_DELAY_MS);
     }
   }
 
   private async buildSteps(tour: FeatureTour): Promise<DriveStep[]> {
     const built: DriveStep[] = [];
     for (const step of tour.steps) {
-      const el = await this.waitForSelector(step.elementSelector, step.optional ? 400 : 1500);
+      const el = await this.waitForSelector(step.elementSelector, TOUR_TARGET_WAIT_MS);
       if (!el) {
         if (step.optional) continue;
         // Required target missing — bail out gracefully.
@@ -327,11 +337,11 @@ class TourManagerImpl {
 
   private waitForSelector(selector: string, timeoutMs: number): Promise<Element | null> {
     return new Promise((resolve) => {
-      const found = document.querySelector(selector);
+      const found = this.getVisibleElement(selector);
       if (found) return resolve(found);
       const started = Date.now();
       const observer = new MutationObserver(() => {
-        const el = document.querySelector(selector);
+        const el = this.getVisibleElement(selector);
         if (el) {
           observer.disconnect();
           resolve(el);
@@ -344,9 +354,19 @@ class TourManagerImpl {
       // Absolute timeout in case DOM never changes.
       setTimeout(() => {
         observer.disconnect();
-        resolve(document.querySelector(selector));
+        resolve(this.getVisibleElement(selector));
       }, timeoutMs);
     });
+  }
+
+  private getVisibleElement(selector: string): Element | null {
+    const elements = Array.from(document.querySelectorAll(selector));
+    return elements.find((el) => {
+      if (!(el instanceof HTMLElement)) return true;
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      return true;
+    }) ?? null;
   }
 
   private wait(ms: number) {
