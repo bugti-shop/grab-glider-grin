@@ -84,7 +84,6 @@ if (typeof window !== 'undefined') {
   setTimeout(() => { void refreshFxRates(); }, 500);
 }
 
-const CURRENCY_ALIASES: Record<string, string> = {
 // Common name → ISO 4217 aliases. Any ISO code returned by the FX API is
 // accepted directly (see resolveCurrency), so we only need to list nicknames
 // / non-standard shortcuts here.
