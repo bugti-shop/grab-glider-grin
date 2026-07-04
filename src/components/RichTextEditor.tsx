@@ -1667,11 +1667,24 @@ export const RichTextEditor = ({
   const handleBeforeInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     const ie = e.nativeEvent as InputEvent;
     // Markdown shortcuts always enabled
-    if (mentionMenu.open) return;
     if (isInsideCode(editorRef.current)) return;
 
     const ieType = (e.nativeEvent as InputEvent).inputType;
     const ieData = (e.nativeEvent as InputEvent).data || '';
+    if (
+      mentionMenu.open &&
+      ((ieType === 'insertText' && ieData === ' ') || (ieType === 'insertText' && ieData.length > 1 && ieData.endsWith(' ')))
+    ) {
+      if (tryWeekdayShortcut(editorRef.current)) {
+        e.preventDefault();
+        closeMention();
+        document.execCommand('insertText', false, ' ');
+        handleInput();
+        return;
+      }
+      return;
+    }
+    if (mentionMenu.open) return;
     if (ieType === 'insertParagraph' || ieType === 'insertLineBreak') {
       const root = editorRef.current;
       if (root) {
@@ -1820,6 +1833,17 @@ export const RichTextEditor = ({
     }
 
     // Toolbar keyboard shortcuts removed per user request.
+
+
+    if (mentionMenu.open && e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (tryWeekdayShortcut(editorRef.current)) {
+        e.preventDefault();
+        closeMention();
+        document.execCommand('insertText', false, ' ');
+        handleInput();
+        return;
+      }
+    }
 
 
 
