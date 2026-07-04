@@ -2097,9 +2097,7 @@ export const RichTextEditor = ({
         if (root && isSlashLineShortcutText(trimmed)) {
           e.preventDefault();
           closeSlash();
-          void trySlashLineShortcut(root).then((ok) => {
-            if (ok) handleInput();
-          });
+          runSlashLineOnce(root);
           return;
         }
       }
