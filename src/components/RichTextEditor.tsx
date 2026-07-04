@@ -1707,13 +1707,29 @@ export const RichTextEditor = ({
     if (mdEnabled && !slashMenu.open && !mentionMenu.open && !isInsideCode(editorRef.current)) {
 
       if (e.key === ' ' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (tryMarkdownTableShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
         if (tryMarkdownBlockShortcut(editorRef.current)) {
           e.preventDefault();
           handleInput();
           return;
         }
       } else if (e.key === 'Enter' && !e.shiftKey) {
+        if (tryMarkdownPipeTableEnter(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
         if (tryMarkdownEnterShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
+      } else if (e.key === ')' && !e.ctrlKey && !e.metaKey) {
+        if (tryMarkdownLinkOrImageShortcut(editorRef.current)) {
           e.preventDefault();
           handleInput();
           return;
