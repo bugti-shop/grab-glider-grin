@@ -65,6 +65,7 @@ import {
 import { tryMathShortcut } from './richtext/mathShortcut';
 import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut } from './richtext/extraShortcuts';
 import { tryUnitShortcut } from './richtext/unitConvert';
+import { trySmartQuote, tryDashEllipsis, trySymbolShortcut } from './richtext/textReplacements';
 import { hydrateExtrasIn } from './richtext/extraHydration';
 import 'katex/dist/katex.min.css';
 import { RICH_TEXT_EDITOR_STYLES } from './richtext/richTextStyles';
