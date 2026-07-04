@@ -99,7 +99,12 @@ export const SHARE_DEDUP_WINDOW_MS = 8000;
  * Native share intents can survive Activity restores. Keep a longer consumed
  * record so reopening the app cannot re-process the last shared article again.
  */
-export const SHARE_CONSUMED_WINDOW_MS = 24 * 60 * 60 * 1000;
+// Keep this short. A long window silently swallows legitimate repeat
+// shares of the same URL (user hits "Share to Flowist" twice → app just
+// opens with nothing happening). 60s is enough to absorb Android's
+// cold-start + resume + sendIntentReceived triple-fire without blocking
+// intentional re-shares.
+export const SHARE_CONSUMED_WINDOW_MS = 60 * 1000;
 const SHARE_SESSION_KEY = '__flowist_last_share__';
 const SHARE_CONSUMED_KEY = '__flowist_consumed_shares__';
 
