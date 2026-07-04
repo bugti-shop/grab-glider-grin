@@ -315,9 +315,17 @@ const WebClipper = () => {
         }
       }
 
-      // If the fetch failed but there's no fallback body to save, surface a
-      // clear error with retry — don't silently save a link-only stub.
-      if (fetchFailure && !articleHtml && !content && !selection) {
+      // If we tried a full-page fetch and got nothing back, DO NOT silently
+      // save a link-only stub — the user's complaint is exactly that.
+      // Chrome's share sheet forwards `[title]\n[url]` and our parser stuffs
+      // the title into `selection`, which used to satisfy the "we have
+      // something to save" check and produced a metadata-only note. Now
+      // any failed article fetch surfaces a clear error + retry, unless
+      // the user is in explicit Selection mode (where the highlight is
+      // the whole point).
+      const fetchAttemptedButEmpty = shouldFetchFull && !articleHtml;
+      if (fetchAttemptedButEmpty && clipMode !== 'selection') {
+        const failure = fetchFailure || { code: 'internal' };
         const map: Record<string, { titleKey: string; titleFallback: string; descKey: string; descFallback: string }> = {
           paywall:        { titleKey: 'webClipper.errPaywallTitle',   titleFallback: 'Site blocked access',           descKey: 'webClipper.errPaywallDesc',   descFallback: 'This page needs a login or blocks clippers. Try copying the text and using Selection mode.' },
           not_found:      { titleKey: 'webClipper.errNotFoundTitle',  titleFallback: 'Page not found',                descKey: 'webClipper.errNotFoundDesc',  descFallback: 'The URL returned 404. Double-check the link.' },
@@ -325,17 +333,17 @@ const WebClipper = () => {
           timeout:        { titleKey: 'webClipper.errTimeoutTitle',   titleFallback: 'Fetch timed out',               descKey: 'webClipper.errTimeoutDesc',   descFallback: 'The page took too long to load. Retry, or open it once in the browser and share it back.' },
           too_large:      { titleKey: 'webClipper.errTooLargeTitle',  titleFallback: 'Page too large',                descKey: 'webClipper.errTooLargeDesc',  descFallback: 'This page exceeds the 5 MB limit. Try Selection mode on the parts you need.' },
           bad_url:        { titleKey: 'webClipper.errBadUrlTitle',    titleFallback: 'Invalid URL',                   descKey: 'webClipper.errBadUrlDesc',    descFallback: 'That URL is not reachable.' },
-          upstream_error: { titleKey: 'webClipper.errUpstreamTitle',  titleFallback: 'Source site returned an error', descKey: 'webClipper.errUpstreamDesc',  descFallback: fetchFailure.status ? `The site replied with HTTP ${fetchFailure.status}.` : 'The site did not respond properly.' },
+          upstream_error: { titleKey: 'webClipper.errUpstreamTitle',  titleFallback: 'Source site returned an error', descKey: 'webClipper.errUpstreamDesc',  descFallback: failure.status ? `The site replied with HTTP ${failure.status}.` : 'The site did not respond properly.' },
           network:        { titleKey: 'webClipper.errNetworkTitle',   titleFallback: 'Could not reach article',       descKey: 'webClipper.errNetworkDesc',   descFallback: 'Network trouble fetching this page. Check your connection and retry.' },
-          monthly_limit_reached: { titleKey: 'webClipper.errLimitTitle', titleFallback: 'Monthly clip limit reached', descKey: 'webClipper.errLimitDesc', descFallback: fetchFailure.message || 'Free plan is limited to 10 web clips per month. Upgrade to Pro for unlimited clipping.' },
           auth_required:  { titleKey: 'webClipper.errAuthTitle',      titleFallback: 'Sign in required',              descKey: 'webClipper.errAuthDesc',      descFallback: 'Please sign in to use the Web Clipper.' },
           gate_error:     { titleKey: 'webClipper.errGateTitle',      titleFallback: 'Subscription check failed',     descKey: 'webClipper.errGateDesc',      descFallback: 'We could not verify your subscription. Please retry in a moment.' },
-          internal:       { titleKey: 'webClipper.errInternalTitle',  titleFallback: 'Clipper hit an error',          descKey: 'webClipper.errInternalDesc',  descFallback: 'Something went wrong on our side while parsing the page.' },
+          internal:       { titleKey: 'webClipper.errInternalTitle',  titleFallback: 'Clipper hit an error',          descKey: 'webClipper.errInternalDesc',  descFallback: 'Something went wrong on our side while parsing the page. Retry, or open the page in your browser first, then share again.' },
         };
-        const info = map[fetchFailure.code] || map.internal;
+        const info = map[failure.code] || map.internal;
         failWith(info.titleKey, info.titleFallback, info.descKey, info.descFallback);
         return;
       }
+
 
       setStage('embedding');
       setProgress(null);
