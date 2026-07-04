@@ -72,11 +72,36 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
       onSignedIn?.(u);
       close();
     } catch (err: any) {
-      toast({
-        title: t('emailAuth.signInFailed', 'Sign-in failed'),
-        description: err?.message || '',
-        variant: 'destructive',
-      });
+      // Supabase returns "Invalid login credentials" for both wrong-password
+      // and no-such-account. Nudge the user to Create Account first so a
+      // brand-new visitor doesn't get stuck on the sign-in tab.
+      const raw = String(err?.message || '').toLowerCase();
+      const code = String(err?.code || err?.name || '').toLowerCase();
+      const looksLikeNoAccount =
+        code.includes('invalid_credentials') ||
+        raw.includes('invalid login credentials') ||
+        raw.includes('invalid credentials') ||
+        raw.includes('user not found') ||
+        raw.includes('email not confirmed');
+      if (looksLikeNoAccount) {
+        toast({
+          title: t('emailAuth.noAccountTitle', 'Please create an account first'),
+          description: t(
+            'emailAuth.noAccountDesc',
+            "We couldn't find an account for that email. Tap Create account to sign up.",
+          ),
+          variant: 'destructive',
+        });
+        // Prefill the signup form with what they already typed so they can
+        // just add a name and hit Send verification code.
+        setMode('signup');
+      } else {
+        toast({
+          title: t('emailAuth.signInFailed', 'Sign-in failed'),
+          description: err?.message || '',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setLoading(false);
     }
