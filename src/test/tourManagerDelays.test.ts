@@ -56,7 +56,7 @@ describe('TourManager delayed tutorial targets', () => {
     TourManager.setNavigate((path) => window.history.replaceState({}, '', path));
 
     const start = TourManager.startTour('personalize-app-lock', { force: true });
-    await vi.advanceTimersByTimeAsync(10 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(10 * 60 * 1000 + 80);
     await start;
 
     expect(driveMock).not.toHaveBeenCalled();
