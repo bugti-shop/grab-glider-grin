@@ -111,6 +111,27 @@ export const FeatureGuideModal = ({ isOpen, onClose }: FeatureGuideModalProps) =
             value="features"
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4 space-y-5 m-0"
           >
+            {/* Start Full Tutorial — walks the user through every feature below */}
+            <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
+                <PlayCircle className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold leading-tight">Start full tutorial</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                  Walk through every feature below in order — tasks, notes, personalization and more.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={handleStartFullTutorial}
+                  className="mt-2.5 h-8 text-xs"
+                >
+                  <PlayCircle className="h-3.5 w-3.5 mr-1.5" />
+                  Start tutorial
+                </Button>
+              </div>
+            </div>
+
             {CATEGORY_ORDER.map((cat) => {
               const items = FEATURE_TOURS.filter((t) => t.category === cat);
               if (items.length === 0) return null;
