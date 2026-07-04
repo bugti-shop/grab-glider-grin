@@ -64,7 +64,7 @@ import {
   isInsideCode,
 } from './richtext/markdownShortcuts';
 import { tryMathShortcut } from './richtext/mathShortcut';
-import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut, isSlashLineShortcutText, isSlashLineShortcutReady } from './richtext/extraShortcuts';
+import { tryGreekShortcut, tryLatexShortcut, trySlashLineShortcut, tryRelativeDateShortcut, tryWeekdayShortcut, tryRepeatedWordShortcut, isSlashLineShortcutText, isSlashLineShortcutReady, isSlashLineShortcutAutoReady } from './richtext/extraShortcuts';
 import { tryUnitShortcut } from './richtext/unitConvert';
 import { trySmartQuote, tryDashEllipsis, trySymbolShortcut } from './richtext/textReplacements';
 import { hydrateExtrasIn } from './richtext/extraHydration';
@@ -260,12 +260,14 @@ export const RichTextEditor = ({
   const closeSlash = useCallback(() => setSlashMenu(s => ({ ...s, open: false })), []);
   const closeMention = useCallback(() => setMentionMenu(m => ({ ...m, open: false })), []);
 
-  const maybeRunSlashLineShortcut = (root: HTMLElement | null, readiness: 'ready' | 'any' = 'ready') => {
+  const maybeRunSlashLineShortcut = (root: HTMLElement | null, readiness: 'auto' | 'ready' | 'any' = 'ready') => {
     if (!root) return false;
     const trimmed = getCurrentRichTextBlockText(root);
-    const shouldRun = readiness === 'ready'
-      ? isSlashLineShortcutReady(trimmed)
-      : isSlashLineShortcutText(trimmed);
+    const shouldRun = readiness === 'auto'
+      ? isSlashLineShortcutAutoReady(trimmed)
+      : readiness === 'ready'
+        ? isSlashLineShortcutReady(trimmed)
+        : isSlashLineShortcutText(trimmed);
     if (!shouldRun) return false;
     closeSlash();
     return runSlashLineOnce(root);
@@ -1350,7 +1352,7 @@ export const RichTextEditor = ({
           // Mobile/IME path: line slash commands such as /today, /now,
           // /toc, /lorem 3, /tz tokyo should execute as soon as the command
           // is complete — no extra Space or Enter required.
-          if (maybeRunSlashLineShortcut(editorRef.current, 'ready')) {
+          if (maybeRunSlashLineShortcut(editorRef.current, 'auto')) {
             return;
           }
         }
