@@ -208,6 +208,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
+  const [isShortcutsSheetOpen, setIsShortcutsSheetOpen] = useState(false);
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
   const [showToc, setShowToc] = useState(false);
   const [tocMaxLevel, setTocMaxLevel] = useState<number>(6);
