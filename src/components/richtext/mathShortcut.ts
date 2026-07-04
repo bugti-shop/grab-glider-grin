@@ -194,61 +194,100 @@ function tryPercentOf(expr: string): string | null {
 }
 
 /**
- * Attempt to evaluate the text just before the caret as a math expression.
- * Returns the string to insert after the `=` (space + result), or null when
- * the input isn't recognisably math.
+ * Detailed evaluation result.
+ *   - kind:'not-math'  → segment doesn't look like math (silently ignore)
+ *   - kind:'ok'        → evaluated successfully; `text` is " <result>"
+ *   - kind:'error'     → segment looked like math but evaluation failed;
+ *                        `message` is a short human-readable reason.
  */
-export function evaluateMathExpression(rawBefore: string): string | null {
-  // Grab the trailing expression: continue backwards until a hard boundary
-  // (newline, `=`, or block start). Keep spaces so unit/currency phrases work.
+export type MathEvalResult =
+  | { kind: 'not-math' }
+  | { kind: 'ok'; text: string }
+  | { kind: 'error'; message: string };
+
+/**
+ * Full classifier + evaluator. Used by the `=` and space triggers so we can
+ * distinguish "not math" (do nothing) from "math but broken" (show inline
+ * error to the user instead of silently swallowing it).
+ */
+export function evaluateMathExpressionDetailed(rawBefore: string): MathEvalResult {
   const trimmed = rawBefore.replace(/\u00A0/g, ' ');
-  // Cut off any earlier `= …` results so re-typing `=` re-evaluates fresh.
   const lastEq = trimmed.lastIndexOf('=');
   const segment = (lastEq >= 0 ? trimmed.slice(0, lastEq) : trimmed).trim();
-  if (!segment) return null;
-  if (segment.length > 200) return null;
+  if (!segment) return { kind: 'not-math' };
+  if (segment.length > 200) return { kind: 'not-math' };
+
   // Must contain at least one digit or math function name.
   if (!/[\d]/.test(segment) && !/\b(pi|e|tau|phi|sqrt|sin|cos|tan|log|ln|exp|abs)\b/i.test(segment)) {
-    return null;
-  }
-  // Reject when it looks like prose (letters with no math operator/unit).
-  if (!/[+\-*/^%()!]|to |in |of |sqrt|sin|cos|tan|log|ln|exp|abs|round|floor|ceil|mean|median|std|gcd|lcm|combinations|permutations|factorial|deg|rad|hex|bin|oct/i.test(segment)
-      && !/^\s*[\d.,]+\s*[a-zA-Z]/.test(segment)) {
-    // Plain "hello" — not math.
-    if (!/^[\d\s.,+\-*/^%()!]+$/.test(segment)) return null;
+    return { kind: 'not-math' };
   }
 
-  // 1. Currency conversion shortcut
+  // Prose reject — needs an operator/keyword or must look numeric-with-unit.
+  const looksMathy =
+    /[+\-*/^%()!]|to |in |of |sqrt|sin|cos|tan|log|ln|exp|abs|round|floor|ceil|mean|median|std|gcd|lcm|combinations|permutations|factorial|deg|rad|hex|bin|oct/i.test(segment)
+    || /^\s*[\d.,]+\s*[a-zA-Z]/.test(segment);
+  if (!looksMathy) {
+    if (!/^[\d\s.,+\-*/^%()!]+$/.test(segment)) return { kind: 'not-math' };
+  }
+
+  // Currency conversion shortcut
   const cur = tryCurrency(segment);
-  if (cur) return ' ' + cur;
+  if (cur) return { kind: 'ok', text: ' ' + cur };
 
-  // 2. Percent-of shortcut
+  // Percent-of shortcut
   const pct = tryPercentOf(segment);
-  if (pct) return ' ' + pct;
+  if (pct) return { kind: 'ok', text: ' ' + pct };
 
-  // 3. Full mathjs evaluation (arithmetic, scientific, units, complex, etc.)
   const math = getMath();
   try {
-    // mathjs handles `%` as modulo; treat trailing "X%" (no operator after)
-    // as "X/100" for calculator-style percentage.
     let expr = segment;
     expr = expr.replace(/(\d+(?:\.\d+)?)\s*%(?!\s*\d)/g, '($1/100)');
     const result = math.evaluate(expr);
-    if (result === undefined || result === null) return null;
-    // Skip function references, matrices with functions, etc.
-    if (typeof result === 'function') return null;
+    if (result === undefined || result === null) {
+      return { kind: 'error', message: 'no result' };
+    }
+    if (typeof result === 'function') return { kind: 'not-math' };
     const formatted = formatResult(result);
-    if (!formatted || formatted === expr.trim()) return null;
-    return ' ' + formatted;
-  } catch {
-    return null;
+    if (!formatted) return { kind: 'error', message: 'no result' };
+    if (formatted === expr.trim()) return { kind: 'not-math' };
+    return { kind: 'ok', text: ' ' + formatted };
+  } catch (err: any) {
+    const raw = String(err?.message || err || 'error');
+    // Keep short + one line for inline display.
+    const message = raw.replace(/\s+/g, ' ').slice(0, 80);
+    return { kind: 'error', message };
   }
 }
 
 /**
- * Handle `=` keypress in the editor. If the text before the caret is a math
- * expression, inserts ` result` after the `=` and returns true.
- * Caller should preventDefault when true and fire handleInput.
+ * Back-compat: string result, or null if not math OR if evaluation failed.
+ * Prefer `evaluateMathExpressionDetailed` in new code.
+ */
+export function evaluateMathExpression(rawBefore: string): string | null {
+  const r = evaluateMathExpressionDetailed(rawBefore);
+  return r.kind === 'ok' ? r.text : null;
+}
+
+/**
+ * Helper: is the current text node inside a code/pre block? (skip shortcut).
+ */
+function isInsideCode(root: HTMLElement, node: Node): boolean {
+  let el: Node | null = node.parentNode;
+  while (el && el !== root) {
+    if (el.nodeType === 1) {
+      const tag = (el as HTMLElement).tagName;
+      if (tag === 'CODE' || tag === 'PRE') return true;
+      if ((el as HTMLElement).classList?.contains('rt-codeblock')) return true;
+    }
+    el = el.parentNode;
+  }
+  return false;
+}
+
+/**
+ * Handle `=` keypress. Inserts `= <result>` or `= ⚠ <error>` when the text
+ * before the caret is (or looks like) a math expression. Returns true if it
+ * consumed the keypress.
  */
 export function tryMathShortcut(root: HTMLElement | null): boolean {
   if (!root) return false;
@@ -261,22 +300,18 @@ export function tryMathShortcut(root: HTMLElement | null): boolean {
   const caret = range.startOffset;
   const before = textNode.data.slice(0, caret);
 
-  // Skip inside code blocks / inline code.
-  let el: Node | null = textNode.parentNode;
-  while (el && el !== root) {
-    if (el.nodeType === 1) {
-      const tag = (el as HTMLElement).tagName;
-      if (tag === 'CODE' || tag === 'PRE') return false;
-      if ((el as HTMLElement).classList?.contains('rt-codeblock')) return false;
-    }
-    el = el.parentNode;
+  if (isInsideCode(root, textNode)) return false;
+
+  const r = evaluateMathExpressionDetailed(before);
+  let insertion: string;
+  if (r.kind === 'ok') {
+    insertion = '=' + r.text;
+  } else if (r.kind === 'error') {
+    insertion = '= ⚠ ' + r.message;
+  } else {
+    return false;
   }
 
-  const result = evaluateMathExpression(before);
-  if (!result) return false;
-
-  // Insert "= result" at caret (the `=` keydown will be prevented; we type it ourselves).
-  const insertion = '=' + result;
   const after = textNode.data.slice(caret);
   textNode.data = before + insertion + after;
 
@@ -288,3 +323,82 @@ export function tryMathShortcut(root: HTMLElement | null): boolean {
   sel.addRange(newRange);
   return true;
 }
+
+/**
+ * Auto-evaluate on space. When the user types a space after a self-contained
+ * math expression (e.g. `2+3 `), append `= <result>` automatically so no `=`
+ * step is required. Runs only when the text right before the caret is a
+ * strong-math segment to avoid clobbering prose like "I ate 3 apples ".
+ *
+ * Called AFTER the space has already been inserted by the browser.
+ */
+export function tryMathAutoOnSpace(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+  const range = sel.getRangeAt(0);
+  const node = range.startContainer;
+  if (node.nodeType !== 3) return false;
+  const textNode = node as Text;
+  const caret = range.startOffset;
+  if (caret < 3) return false; // need at least "1+1 "
+  const beforeAll = textNode.data.slice(0, caret);
+  if (!/\s$/.test(beforeAll)) return false;
+  // Already has `=` in the trailing segment? Skip — user is in `=`-driven mode.
+  const trailingLine = beforeAll.split(/\n/).pop() || '';
+  if (trailingLine.includes('=')) return false;
+
+  // Extract the last whitespace-bounded expression segment.
+  // We allow the segment to itself contain spaces IF the whole segment matches
+  // a strong-math shape.
+  const segRaw = trailingLine.replace(/\s+$/, '');
+  if (!segRaw) return false;
+
+  // Take the trailing chunk starting after the last hard boundary (start of
+  // line, sentence terminator, or leading prose word).
+  // Strong-math patterns we auto-run:
+  //   1. Pure arithmetic: digits + operators + parens + %, must have operator.
+  //   2. Function-call form: name(...)  e.g. sqrt(16), gcd(12,18), factorial(5)
+  //   3. Unit / currency conversion: "5 km to miles", "100 usd to pkr"
+  //   4. Percent-of: "50% of 200"
+  //   5. Trailing "!" factorial: "5!"
+  const arithMatch = segRaw.match(/[\d.()%^*/+\-!]+$/);
+  const arithSeg = arithMatch ? arithMatch[0] : '';
+  const strongArith =
+    arithSeg.length >= 3 &&
+    /[+\-*/^%!]/.test(arithSeg) &&
+    /\d/.test(arithSeg) &&
+    /^[\d.\s+\-*/^%()!]+$/.test(arithSeg);
+
+  const funcMatch = segRaw.match(/\b(sqrt|sin|cos|tan|asin|acos|atan|log|ln|exp|abs|round|floor|ceil|factorial|gcd|lcm|mean|median|std|variance|combinations|permutations|hex|bin|oct)\s*\([^()]*\)$/i);
+
+  const convMatch = segRaw.match(/(?:^|[\s.,;:!?])([\d.,]+\s*[a-zA-Z°$€£¥₹]{1,6}\s+(?:to|in)\s+[a-zA-Z°$€£¥₹]{1,6})$/i);
+
+  const pctOfMatch = segRaw.match(/(?:^|\s)(\d+(?:\.\d+)?\s*%\s*of\s*\d+(?:\.\d+)?)$/i);
+
+  let target: string | null = null;
+  if (funcMatch) target = funcMatch[0];
+  else if (convMatch) target = convMatch[1];
+  else if (pctOfMatch) target = pctOfMatch[1];
+  else if (strongArith) target = arithSeg;
+
+  if (!target) return false;
+  if (isInsideCode(root, textNode)) return false;
+
+  const r = evaluateMathExpressionDetailed(target);
+  if (r.kind !== 'ok') return false; // don't spam errors on plain space
+
+  // Insert "= <result>" right after the trailing space we already have.
+  const insertion = '= ' + r.text.trimStart();
+  const after = textNode.data.slice(caret);
+  textNode.data = beforeAll + insertion + after;
+
+  const newRange = document.createRange();
+  const newCaret = beforeAll.length + insertion.length;
+  newRange.setStart(textNode, newCaret);
+  newRange.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+  return true;
+}
+
