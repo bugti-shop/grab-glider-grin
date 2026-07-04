@@ -38,46 +38,14 @@ interface Section {
   rows: Row[];
 }
 
-/** Detect mac so we can display ⌘ instead of Ctrl. */
-const isMac =
-  typeof navigator !== 'undefined' &&
-  /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
-const MOD = isMac ? '⌘' : 'Ctrl';
-const ALT = isMac ? '⌥' : 'Alt';
-const SHIFT = isMac ? '⇧' : 'Shift';
+
+
 
 function buildSections(): Section[] {
   return [
     {
-      title: 'Keyboard shortcuts',
-      description: `Use ${MOD} on ${isMac ? 'macOS' : 'Windows/Linux'}. Works everywhere in the editor.`,
-      rows: [
-        { trigger: `${MOD} + B`, result: 'Bold' },
-        { trigger: `${MOD} + I`, result: 'Italic' },
-        { trigger: `${MOD} + U`, result: 'Underline' },
-        { trigger: `${MOD} + ${SHIFT} + X`, result: 'Strikethrough', hint: `or ${MOD} + ${SHIFT} + 5` },
-        { trigger: `${MOD} + ${SHIFT} + H`, result: 'Highlight (yellow)' },
-        { trigger: `${MOD} + ${SHIFT} + 8`, result: 'Bullet list' },
-        { trigger: `${MOD} + ${SHIFT} + 7`, result: 'Numbered list' },
-        { trigger: `${MOD} + ${SHIFT} + 9`, result: 'Checklist / to-do' },
-        { trigger: `${MOD} + ${ALT} + 1/2/3`, result: 'Heading 1 / 2 / 3' },
-        { trigger: `${MOD} + ${ALT} + 0`, result: 'Normal paragraph' },
-        { trigger: `${MOD} + ${SHIFT} + L / E / R / J`, result: 'Align left / center / right / justify' },
-        { trigger: `${MOD} + ]  /  ${MOD} + [`, result: 'Indent / Outdent' },
-        { trigger: `${MOD} + ${SHIFT} + Q`, result: 'Blockquote' },
-        { trigger: `${MOD} + ${SHIFT} + C`, result: 'Code block' },
-        { trigger: `${MOD} + ${SHIFT} + -`, result: 'Horizontal rule' },
-        { trigger: `${MOD} + ${SHIFT} + ,`, result: 'Subscript' },
-        { trigger: `${MOD} + ${SHIFT} + .`, result: 'Superscript' },
-        { trigger: `${MOD} + K`, result: 'Insert link (from selection)' },
-        { trigger: `${MOD} + Z`, result: 'Undo' },
-        { trigger: `${MOD} + Y   /   ${MOD} + ${SHIFT} + Z`, result: 'Redo' },
-        { trigger: `${MOD} + =  /  ${MOD} + -`, result: 'Zoom in / out' },
-        { trigger: `${MOD} + 0`, result: 'Reset zoom' },
-      ],
-    },
-    {
       title: 'Markdown block shortcuts',
+
       description: 'Type these tokens at the start of a line, then press Space.',
       rows: [
         { trigger: '# ', result: 'Heading 1' },
@@ -252,14 +220,12 @@ function buildSections(): Section[] {
         { trigger: 'Backspace at line start', result: 'Convert heading / quote / list back to a paragraph' },
         { trigger: '/', result: 'Open slash-command menu' },
         { trigger: '@', result: 'Mention / link another note' },
-        { trigger: `${MOD} + F`, result: 'Open Find & Replace' },
       ],
     },
     {
       title: 'Mobile tips',
-      description: 'No Ctrl key needed on phones — use the quick bar, selection bubble, or simple typed commands.',
+      description: 'Use the selection bubble or simple typed commands — no keyboard shortcuts needed.',
       rows: [
-        { trigger: 'Tap B / I / U / H1 / • / 1. / ☑ / table', result: 'Applies the same action as Ctrl shortcuts from the mobile quick bar.' },
         { trigger: 'Select text → tap bubble buttons', result: 'Bold, italic, underline, strike, code, link, comment, or Markdown convert.' },
         { trigger: '/bold text + Space', result: 'Turns “text” bold', hint: 'also /italic text, /underline text, /strike text, /code text, /highlight text' },
         { trigger: '/h1 + Space', result: 'Heading 1', hint: 'also /h2, /h3, /bullet, /numbered, /check, /quote, /divider' },
@@ -268,6 +234,7 @@ function buildSections(): Section[] {
       ],
     },
   ];
+
 }
 
 export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
