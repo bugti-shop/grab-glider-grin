@@ -1392,13 +1392,23 @@ export const TaskDetailPage = ({
             <Bell className="h-5 w-5 text-amber-500" />
             <span className="flex-1 text-left">{t('taskDetail.extraReminder', 'Extra reminder')}</span>
             <span className="text-sm text-muted-foreground truncate max-w-[55%] text-right">
-              {task.extraReminderTime
-                ? `${format(new Date(task.extraReminderTime), 'MMM d, h:mm a')}${
-                    task.extraReminderRecurring && task.extraReminderRecurring !== 'none'
-                      ? ` • ${task.extraReminderRecurring}`
-                      : ''
-                  }`
-                : t('taskDetail.notSet')}
+              {(() => {
+                const list = (task as any).extraReminders as Array<{ time: Date; recurring: string }> | undefined;
+                if (list && list.length > 0) {
+                  const first = list[0];
+                  const summary = `${format(new Date(first.time), 'MMM d, h:mm a')}${
+                    first.recurring && first.recurring !== 'none' ? ` • ${first.recurring}` : ''
+                  }`;
+                  return list.length > 1 ? `${summary} +${list.length - 1} more` : summary;
+                }
+                return task.extraReminderTime
+                  ? `${format(new Date(task.extraReminderTime), 'MMM d, h:mm a')}${
+                      task.extraReminderRecurring && task.extraReminderRecurring !== 'none'
+                        ? ` • ${task.extraReminderRecurring}`
+                        : ''
+                    }`
+                  : t('taskDetail.notSet');
+              })()}
             </span>
           </button>
 
