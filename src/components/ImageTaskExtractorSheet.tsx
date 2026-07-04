@@ -88,6 +88,7 @@ export const ImageTaskExtractorSheet = ({
   const [phase, setPhase] = useState<'idle' | 'capturing' | 'uploading' | 'processing' | 'done' | 'error'>('idle');
   const [errorLabel, setErrorLabel] = useState<string | null>(null);
   const captureLockRef = useRef(false);
+  const capturedRef = useRef(false);
 
 
   // Reset on close
