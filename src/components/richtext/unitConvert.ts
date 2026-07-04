@@ -342,6 +342,64 @@ function formatNum(n: number): string {
 
 /* ── Main entry ────────────────────────────────────────────── */
 
+export type ConvertResult = {
+  value: number;
+  result: number;
+  fromSymbol: string;
+  toSymbol: string;
+  /** Formatted "X unit = Y unit" string. */
+  text: string;
+};
+
+/**
+ * Convert a free-form expression like "10 km in miles", "100 f to c",
+ * "5 gb as mb". Returns null if the parser can't resolve both sides.
+ */
+export function convertExpression(input: string): ConvertResult | null {
+  const trimmed = input.trim();
+  const m = /^(-?\d+(?:\.\d+)?)\s*([A-Za-z°²³\/]+)\s+(?:in|to|as|->|=)\s+([A-Za-z°²³\/]+)$/i.exec(trimmed);
+  if (!m) return null;
+
+  const value = parseFloat(m[1]);
+  const fromRes = resolveUnit(m[2]);
+  const toRes = resolveUnit(m[3]);
+  if (!fromRes || !toRes) return null;
+
+  let out: number | null = null;
+  let toSymbol = '';
+  let fromSymbol = m[2];
+
+  if (fromRes === 'temp' && toRes === 'temp') {
+    const from = m[2].toLowerCase().replace(/\s+/g, '');
+    const to = m[3].toLowerCase().replace(/\s+/g, '');
+    out = convertTemp(value, from, to);
+    toSymbol = to === 'c' ? '°C' : to === 'f' ? '°F' : to === 'r' ? '°R' : 'K';
+    fromSymbol = from === 'c' ? '°C' : from === 'f' ? '°F' : from === 'r' ? '°R' : 'K';
+  } else if (fromRes === 'fuel' && toRes === 'fuel') {
+    const from = m[2].toLowerCase().replace(/\s+/g, '');
+    const to = m[3].toLowerCase().replace(/\s+/g, '');
+    out = convertFuel(value, from, to);
+    toSymbol = to === 'kpl' ? 'km/L' : to === 'mpg' ? 'mpg' : to === 'mpguk' ? 'mpg (UK)' : 'L/100km';
+    fromSymbol = from === 'kpl' ? 'km/L' : from === 'mpg' ? 'mpg' : from === 'mpguk' ? 'mpg (UK)' : 'L/100km';
+  } else if (typeof fromRes === 'object' && typeof toRes === 'object' && fromRes.category === toRes.category) {
+    out = (value * fromRes.toBase) / toRes.toBase;
+    toSymbol = toRes.symbol;
+    fromSymbol = fromRes.symbol;
+  } else {
+    return null;
+  }
+
+  if (out === null || !Number.isFinite(out)) return null;
+
+  return {
+    value,
+    result: out,
+    fromSymbol,
+    toSymbol,
+    text: `${formatNum(value)} ${fromSymbol} = ${formatNum(out)} ${toSymbol}`,
+  };
+}
+
 /**
  * Detects "<num> <unit> (in|to|as) <unit>" at end of the current text node
  * and appends " = <converted> <symbol>". Fired on Space keydown.
@@ -357,40 +415,15 @@ export function tryUnitShortcut(root: HTMLElement | null): boolean {
   const caret = range.startOffset;
   const before = textNode.data.slice(0, caret);
 
-  // Guard: skip inside code blocks / KaTeX / etc.
   if (isInsideCodeLikeBlock(textNode, root)) return false;
 
-  const m = /(?:^|[\s(])(-?\d+(?:\.\d+)?)\s*([A-Za-z°²³\/]+)\s+(in|to|as|->|=)\s+([A-Za-z°²³\/]+)$/.exec(before);
+  const m = /(?:^|[\s(])(-?\d+(?:\.\d+)?\s*[A-Za-z°²³\/]+\s+(?:in|to|as|->|=)\s+[A-Za-z°²³\/]+)$/i.exec(before);
   if (!m) return false;
 
-  const value = parseFloat(m[1]);
-  const fromRes = resolveUnit(m[2]);
-  const toRes = resolveUnit(m[4]);
-  if (!fromRes || !toRes) return false;
+  const conv = convertExpression(m[1]);
+  if (!conv) return false;
 
-  let out: number | null = null;
-  let toSymbol = '';
-
-  if (fromRes === 'temp' && toRes === 'temp') {
-    const from = m[2].toLowerCase().replace(/\s+/g, '');
-    const to = m[4].toLowerCase().replace(/\s+/g, '');
-    out = convertTemp(value, from, to);
-    toSymbol = to === 'c' ? '°C' : to === 'f' ? '°F' : to === 'r' ? '°R' : 'K';
-  } else if (fromRes === 'fuel' && toRes === 'fuel') {
-    const from = m[2].toLowerCase().replace(/\s+/g, '');
-    const to = m[4].toLowerCase().replace(/\s+/g, '');
-    out = convertFuel(value, from, to);
-    toSymbol = to === 'kpl' ? 'km/L' : to === 'mpg' ? 'mpg' : to === 'mpguk' ? 'mpg (UK)' : 'L/100km';
-  } else if (typeof fromRes === 'object' && typeof toRes === 'object' && fromRes.category === toRes.category) {
-    out = (value * fromRes.toBase) / toRes.toBase;
-    toSymbol = toRes.symbol;
-  } else {
-    return false; // categories don't match
-  }
-
-  if (out === null || !Number.isFinite(out)) return false;
-
-  const insertion = ` = ${formatNum(out)} ${toSymbol}`;
+  const insertion = ` = ${formatNum(conv.result)} ${conv.toSymbol}`;
   const after = textNode.data.slice(caret);
   textNode.data = textNode.data.slice(0, caret) + insertion + after;
   const nr = document.createRange();
@@ -414,3 +447,4 @@ function isInsideCodeLikeBlock(node: Node, root: HTMLElement): boolean {
   }
   return false;
 }
+
