@@ -96,6 +96,7 @@ const WebClipper = () => {
   const [imageFailed, setImageFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const canceledRef = useRef(false);
+  const prepareRunIdRef = useRef(0);
 
   // Editable preview state — populated by prepareClip(), committed by commitClip().
   const [previewReady, setPreviewReady] = useState(false);
@@ -153,8 +154,12 @@ const WebClipper = () => {
   useEffect(() => {
     if (!payloadSignature || payloadRunKeyRef.current === payloadSignature) return;
     payloadRunKeyRef.current = payloadSignature;
+    prepareRunIdRef.current += 1;
     prepareStartedRef.current = false;
-    abortRef.current?.abort();
+    if (abortRef.current) {
+      canceledRef.current = true;
+      abortRef.current.abort();
+    }
     abortRef.current = null;
     canceledRef.current = false;
     setMode(initialMode);
@@ -242,6 +247,8 @@ const WebClipper = () => {
       return;
     }
     const dedupeKey = clipKey(clipMode, url || '', attachment || '', searchParams.get('shareId') || '');
+    const runId = ++prepareRunIdRef.current;
+    const isStaleRun = () => runId !== prepareRunIdRef.current;
     inFlightClipKeys.add(dedupeKey);
     prepareStartedRef.current = true;
     setSaving(true);
@@ -636,6 +643,7 @@ const WebClipper = () => {
       setStage('idle');
       setProgress(null);
     } catch (error) {
+      if (isStaleRun()) return;
       if (canceledRef.current || (error as Error)?.name === 'AbortError') {
         failWith(
           'webClipper.canceledTitle', 'Clip canceled',
@@ -649,11 +657,11 @@ const WebClipper = () => {
         );
       }
     } finally {
-      abortRef.current = null;
+      if (!isStaleRun()) abortRef.current = null;
       // Release the in-flight lock. Completed clips are not blocked so users
       // can intentionally capture the same article multiple times.
       inFlightClipKeys.delete(dedupeKey);
-      setSaving(false);
+      if (!isStaleRun()) setSaving(false);
     }
   };
 
