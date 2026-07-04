@@ -15,6 +15,7 @@ import { SubscriptionProvider, useSubscription } from "@/contexts/SubscriptionCo
 import { NotesProvider } from "@/contexts/NotesContext";
 import { GoogleAuthProvider } from "@/contexts/GoogleAuthContext";
 import { useGoogleDriveSync } from "@/hooks/useGoogleDriveSync";
+import { useQuickAddSync } from "@/hooks/useQuickAddSync";
 import { useCloudSync } from "@/hooks/useCloudSync";
 const PremiumPaywall = lazy(() => import("@/components/PremiumPaywall").then(m => ({ default: m.PremiumPaywall })));
 const OnboardingFlow = lazy(() => import("@/components/OnboardingFlow").then(m => ({ default: m.OnboardingFlow })));
