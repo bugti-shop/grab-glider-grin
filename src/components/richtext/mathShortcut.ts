@@ -365,7 +365,7 @@ export function tryMathAutoOnSpace(root: HTMLElement | null): boolean {
   const arithMatch = segRaw.match(/[\d.()%^*/+\-!]+$/);
   const arithSeg = arithMatch ? arithMatch[0] : '';
   const strongArith =
-    arithSeg.length >= 3 &&
+    arithSeg.length >= 2 &&
     /[+\-*/^%!]/.test(arithSeg) &&
     /\d/.test(arithSeg) &&
     /^[\d.\s+\-*/^%()!]+$/.test(arithSeg);
