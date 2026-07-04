@@ -498,6 +498,7 @@ class TourManagerImpl {
     this.activeDriver = null;
     this.activeTourId = null;
     try { delete document.body.dataset.tourActive; } catch {}
+    try { delete document.body.dataset.tourId; } catch {}
     emitTourActiveChange(false);
   }
 
