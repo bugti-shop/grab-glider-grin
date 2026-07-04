@@ -31,6 +31,10 @@ class TourManagerImpl {
   private activeTourId: string | null = null;
   private queue: string[] = [];
   private autoChainCount = 0;
+  private forcedActive = false;
+  private forcedGuard: ReturnType<typeof setInterval> | null = null;
+  private remountCurrentStep: (() => void) | null = null;
+  private activeRoute: string | null = null;
 
   /** Called once by <TourProvider/> so we can navigate before starting a tour. */
   setNavigate(fn: NavigateFn) {
@@ -41,9 +45,14 @@ class TourManagerImpl {
     return !!this.activeDriver;
   }
 
+  isForced() {
+    return this.forcedActive;
+  }
+
   activeId() {
     return this.activeTourId;
   }
+
 
   /** Start a tour immediately (or queue it if another one is running). */
   async startTour(tourId: string, opts: { force?: boolean; auto?: boolean; chain?: boolean } = {}) {
