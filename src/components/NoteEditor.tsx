@@ -16,6 +16,7 @@ import { FloatingImageLayer, FloatingImageLayerHandle } from './FloatingImageLay
 import { LinkedInTextFormatter } from './LinkedInTextFormatter';
 import { getTableStyles, TableStyle } from './TableEditor';
 import { InlineFindReplace } from './InlineFindReplace';
+import ShortcutsCheatSheet from './richtext/ShortcutsCheatSheet';
 
 import { VirtualizedCodeEditor } from './VirtualizedCodeEditor';
 import { lazy, Suspense } from 'react';
