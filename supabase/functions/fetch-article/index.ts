@@ -1139,6 +1139,80 @@ async function fetchJinaFallback(target: URL): Promise<any | null> {
   } catch { return null; }
 }
 
+/** Fetch a URL server-side with a specific User-Agent. Returns either the
+ *  decoded HTML or a terminal `Response` (paywall/blocked/timeout/too-large)
+ *  that the caller should return directly to the client without retrying. */
+async function fetchTargetHtml(
+  target: URL,
+  userAgent: string,
+): Promise<{ html?: string; terminal?: Response }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await safeFetch(target.toString(), {
+      signal: controller.signal,
+      headers: {
+        "user-agent": userAgent,
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.9",
+      },
+    });
+    if (!res) {
+      return {
+        terminal: new Response(
+          JSON.stringify({ error: "blocked: target host is not reachable or points at a private/internal address", code: "blocked_host" }),
+          { status: 400, headers: { ...corsHeaders, "content-type": "application/json" } },
+        ),
+      };
+    }
+    const status = res.status;
+    if (!res.ok) {
+      const fallback = await fetchJinaFallback(target);
+      if (fallback) {
+        return {
+          terminal: new Response(JSON.stringify(fallback), {
+            status: 200,
+            headers: { ...corsHeaders, "content-type": "application/json", "cache-control": "public, max-age=300" },
+          }),
+        };
+      }
+      const code =
+        status === 401 || status === 403 ? "paywall" :
+        status === 404 ? "not_found" :
+        status === 429 ? "rate_limited" :
+        "upstream_error";
+      return {
+        terminal: new Response(JSON.stringify({ error: `fetch failed ${status}`, code, status }), {
+          status: 502,
+          headers: { ...corsHeaders, "content-type": "application/json" },
+        }),
+      };
+    }
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > MAX_HTML_BYTES) {
+      return {
+        terminal: new Response(JSON.stringify({ error: "page too large", code: "too_large" }), {
+          status: 413,
+          headers: { ...corsHeaders, "content-type": "application/json" },
+        }),
+      };
+    }
+    return { html: new TextDecoder("utf-8").decode(buf) };
+  } catch (err) {
+    if ((err as Error).name === "AbortError") {
+      return {
+        terminal: new Response(JSON.stringify({ error: "fetch timed out", code: "timeout" }), {
+          status: 504,
+          headers: { ...corsHeaders, "content-type": "application/json" },
+        }),
+      };
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
