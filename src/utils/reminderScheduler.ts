@@ -587,7 +587,24 @@ const restoreExtraReminderTimers = async (): Promise<void> => {
     const items = await loadTodoItems();
     let restored = 0;
     for (const item of items) {
-      if (!item.extraReminderTime || item.completed) continue;
+      if (item.completed) continue;
+      // New multi-item reminders take precedence over the legacy single field.
+      const multi = Array.isArray((item as any).extraReminders) ? (item as any).extraReminders : null;
+      if (multi && multi.length > 0) {
+        await scheduleExtraRemindersList(
+          item.id,
+          item.text,
+          multi.map((r: any) => ({
+            id: String(r.id),
+            time: new Date(r.time),
+            recurring: (r.recurring || 'none') as ExtraReminderRecurring,
+            daysOfWeek: Array.isArray(r.daysOfWeek) ? r.daysOfWeek : undefined,
+          }))
+        );
+        restored += multi.length;
+        continue;
+      }
+      if (!item.extraReminderTime) continue;
       const recurring = (item.extraReminderRecurring || 'none') as ExtraReminderRecurring;
       const scheduled = await scheduleExtraReminder(
         item.id,
