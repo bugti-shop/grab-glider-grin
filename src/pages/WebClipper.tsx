@@ -896,7 +896,17 @@ const WebClipper = () => {
                   <span className="ml-auto text-xs text-muted-foreground tabular-nums">{progress}%</span>
                 )}
               </div>
-              <Progress value={typeof progress === 'number' ? progress : undefined} className="h-1.5" />
+              <Progress
+                value={
+                  typeof progress === 'number'
+                    ? progress
+                    : typeof fauxProgress === 'number'
+                    ? fauxProgress
+                    : 5
+                }
+                className="h-1.5"
+              />
+
               {stage === 'fetching' && (
                 <p className="text-[11px] text-muted-foreground">
                   {t('webClipper.fetchingHint', 'Downloading the page, extracting images, embeds, and article text…')}
