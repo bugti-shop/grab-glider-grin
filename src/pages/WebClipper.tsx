@@ -548,21 +548,26 @@ const WebClipper = () => {
               const snapshotFilename = `${filenameFromTitle(articleTitle || title, host)}.html`;
               triggerHtmlDownload(snapshotFilename, articleHtml);
               const sizeLabel = formatBytes(snapshotBytes);
-              const heroBlock = articleLeadImage
-                ? `<figure class="flowist-web-clip-hero"><img src="${articleLeadImage}" alt="" referrerpolicy="no-referrer" /></figure>`
-                : '';
-              const excerptBlock = articleExcerpt
-                ? `<p class="flowist-web-clip-excerpt-inline">${sanitizeForDisplay(articleExcerpt)}</p>`
-                : '';
               const banner =
-                `<aside class="flowist-offline-snapshot-info" data-snapshot-filename="${snapshotFilename.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
+                `<aside class="flowist-offline-snapshot-info" contenteditable="false" data-snapshot-filename="${snapshotFilename.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
                   `<strong>📥 ${sanitizeForDisplay(t('webClipper.offlineSnapshotSaved', 'Offline snapshot saved to your device'))}</strong>` +
                   `<span>${sanitizeForDisplay(snapshotFilename)} · ${sizeLabel}</span>` +
-                  `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'Open the downloaded .html file anytime — it contains the whole page (styles, images, fonts) bundled inline. No internet needed.'))}</em>` +
+                  `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'The full page below is captured start-to-finish and stays readable inside this note. Tap "Open" in the header to view the original.'))}</em>` +
                 `</aside>`;
-              // Replace the huge document body with the compact card so the
-              // note stays lightweight; the offline file lives on the device.
-              articleHtml = `${banner}${heroBlock}${excerptBlock}`;
+              // Embed the ENTIRE captured document (start-to-finish, with
+              // its own styles, images, fonts inlined) as a read-only iframe
+              // via srcdoc. This preserves the full page fidelity the user
+              // asked for — no excerpt-only card, no editable half article.
+              const escapedDoc = articleHtml
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;');
+              const iframe =
+                `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
+                `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+                `referrerpolicy="no-referrer" loading="lazy" ` +
+                `style="width:100%;height:80vh;border:1px solid hsl(var(--border));border-radius:12px;background:#fff;display:block;" ` +
+                `srcdoc="${escapedDoc}"></iframe>`;
+              articleHtml = `${banner}${iframe}`;
               articleEmbeds = [];
               articleLinks = [];
             }
@@ -1108,12 +1113,13 @@ const WebClipper = () => {
             </div>
           )}
 
-          {/* Editable preview — user reviews & tweaks EVERYTHING before saving. */}
+          {/* Read-only preview — the full captured page renders start-to-finish
+              inside the iframe. Save to keep it in your notes. */}
           {previewReady && !saved && (
             <div className="space-y-3 pt-2 border-t border-border">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Pencil className="h-3.5 w-3.5" />
-                {t('webClipper.previewHeading', 'Review & edit your clip')}
+                <FileText className="h-3.5 w-3.5" />
+                {t('webClipper.previewHeadingReadOnly', 'Preview (read-only) — full captured page')}
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
@@ -1127,18 +1133,13 @@ const WebClipper = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t('webClipper.previewContentLabel', 'Content (fully editable — tap to change anything)')}
-                </label>
                 <div
                   ref={contentEditorRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[55vh] overflow-y-auto rounded-lg border border-input bg-background p-4 focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[70vh] overflow-y-auto rounded-lg border border-input bg-background p-2"
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  {t('webClipper.previewHint', 'Everything the clipper found — images, videos, links, text — is above. Delete or edit anything before saving.')}
+                  {t('webClipper.previewHintReadOnly', 'The whole page (start to finish) is captured above. Save it to your notes to keep an offline, read-only copy.')}
                 </p>
               </div>
               <div className="flex gap-2 pt-1">
