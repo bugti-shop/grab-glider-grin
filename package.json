@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build",
+    "build:dev": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --mode development",
     "lint": "eslint .",
     "postinstall": "patch-package && node scripts/ensure-sonner.cjs",
     "preview": "vite preview",
