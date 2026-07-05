@@ -75,3 +75,26 @@ describe('implicit multiplication', () => {
     expect(r!.result).toBeCloseTo(450, 1);
   });
 });
+
+describe('unary plus/minus', () => {
+  it('-5 km to mi', () => {
+    const r = convertExpression('-5 km to mi');
+    expect(r).not.toBeNull();
+    expect(r!.result).toBeCloseTo(-3.10686, 3);
+  });
+  it('+5 km to mi', () => {
+    const r = convertExpression('+5 km to mi');
+    expect(r).not.toBeNull();
+    expect(r!.result).toBeCloseTo(3.10686, 3);
+  });
+  it('(-30 mpg * 15 gal) to mi', () => {
+    const r = convertExpression('(-30 mpg * 15 gal) to mi');
+    expect(r).not.toBeNull();
+    expect(r!.result).toBeCloseTo(-450, 1);
+  });
+  it('500 mi / -25 mpg to gal', () => {
+    const r = convertExpression('500 mi / -25 mpg to gal');
+    expect(r).not.toBeNull();
+    expect(r!.result).toBeCloseTo(-20, 2);
+  });
+});
