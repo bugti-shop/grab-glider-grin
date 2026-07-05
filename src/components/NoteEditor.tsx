@@ -747,7 +747,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
   const handleSave = useCallback(async () => {
     triggerTripleHeavyHaptic();
-    await commitNote({ full: true });
+    if (!isReadOnlyWebClip) {
+      await commitNote({ full: true });
+    }
   }, [commitNote]);
 
   // Use ref to always have access to the latest save function
@@ -786,7 +788,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         navigate(returnToRef.current!, { replace: true });
       }, 10);
     }
-  }, [commitNote, navigate, onClose]);
+  }, [commitNote, navigate, onClose, isReadOnlyWebClip]);
 
   const handleClose = useCallback(async () => {
     if (!isOpenRef.current) return;
