@@ -1145,6 +1145,7 @@ async function fetchJinaFallback(target: URL): Promise<any | null> {
 async function fetchTargetHtml(
   target: URL,
   userAgent: string,
+  allowReaderFallback = true,
 ): Promise<{ html?: string; terminal?: Response }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -1167,6 +1168,19 @@ async function fetchTargetHtml(
     }
     const status = res.status;
     if (!res.ok) {
+      if (!allowReaderFallback) {
+        const code =
+          status === 401 || status === 403 ? "paywall" :
+          status === 404 ? "not_found" :
+          status === 429 ? "rate_limited" :
+          "upstream_error";
+        return {
+          terminal: new Response(JSON.stringify({ error: `fetch failed ${status}`, code, status }), {
+            status: 502,
+            headers: { ...corsHeaders, "content-type": "application/json" },
+          }),
+        };
+      }
       const fallback = await fetchJinaFallback(target);
       if (fallback) {
         return {
@@ -1264,7 +1278,7 @@ Deno.serve(async (req) => {
     // re-fetches (see the extraction retry loop below) rotate through
     // UA_VARIANTS so bot-friendly or mobile-rendered variants can rescue
     // meta-only / half-article responses.
-    const initialFetch = await fetchTargetHtml(target, UA_VARIANTS[0]);
+    const initialFetch = await fetchTargetHtml(target, UA_VARIANTS[0], !wantFullPage);
     if (initialFetch.terminal) return initialFetch.terminal;
     let html = initialFetch.html || "";
 
