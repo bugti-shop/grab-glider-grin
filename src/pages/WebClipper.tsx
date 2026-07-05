@@ -1113,12 +1113,13 @@ const WebClipper = () => {
             </div>
           )}
 
-          {/* Editable preview — user reviews & tweaks EVERYTHING before saving. */}
+          {/* Read-only preview — the full captured page renders start-to-finish
+              inside the iframe. Save to keep it in your notes. */}
           {previewReady && !saved && (
             <div className="space-y-3 pt-2 border-t border-border">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Pencil className="h-3.5 w-3.5" />
-                {t('webClipper.previewHeading', 'Review & edit your clip')}
+                <FileText className="h-3.5 w-3.5" />
+                {t('webClipper.previewHeadingReadOnly', 'Preview (read-only) — full captured page')}
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
@@ -1132,18 +1133,13 @@ const WebClipper = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  {t('webClipper.previewContentLabel', 'Content (fully editable — tap to change anything)')}
-                </label>
                 <div
                   ref={contentEditorRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[55vh] overflow-y-auto rounded-lg border border-input bg-background p-4 focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[70vh] overflow-y-auto rounded-lg border border-input bg-background p-2"
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  {t('webClipper.previewHint', 'Everything the clipper found — images, videos, links, text — is above. Delete or edit anything before saving.')}
+                  {t('webClipper.previewHintReadOnly', 'The whole page (start to finish) is captured above. Save it to your notes to keep an offline, read-only copy.')}
                 </p>
               </div>
               <div className="flex gap-2 pt-1">
