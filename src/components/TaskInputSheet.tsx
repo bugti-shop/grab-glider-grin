@@ -506,8 +506,12 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
       assigneeId,
     };
 
-    // Add task first
+    // Add task first — mark the "just added" window so any incidental
+    // onClose() triggered by focus/keyboard/re-render is ignored and the
+    // sheet stays open for the user's next task.
+    justAddedAtRef.current = Date.now();
     onAddTask(mainTask);
+
     
     // Reset fields using setTimeout for native batching (prevents jerk/flicker)
     setTimeout(() => {
