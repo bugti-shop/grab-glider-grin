@@ -16,24 +16,39 @@ export default function FetchArticleTest() {
   const [meta, setMeta] = useState<Record<string, unknown> | null>(null);
   const [html, setHtml] = useState<string>("");
   const [downloadedHtml, setDownloadedHtml] = useState<string>("");
+  const [iframeHtml, setIframeHtml] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const parity = useMemo(() => {
-    if (!html || !downloadedHtml) return null;
-    const diffAt = firstDiffAt(downloadedHtml, html);
+    if (!downloadedHtml || !iframeHtml) return null;
+    const diffAt = firstDiffAt(downloadedHtml, iframeHtml);
     return {
       match: diffAt === -1,
       diffAt,
       downloadedChars: downloadedHtml.length,
-      sandboxChars: html.length,
+      sandboxChars: iframeHtml.length,
       downloadedBytes: snapshotBytes(downloadedHtml),
-      sandboxBytes: snapshotBytes(html),
+      sandboxBytes: snapshotBytes(iframeHtml),
       around: diffAt === -1 ? null : {
         downloaded: downloadedHtml.slice(Math.max(0, diffAt - 40), diffAt + 40),
-        sandbox: html.slice(Math.max(0, diffAt - 40), diffAt + 40),
+        sandbox: iframeHtml.slice(Math.max(0, diffAt - 40), diffAt + 40),
       },
     };
-  }, [downloadedHtml, html]);
+  }, [downloadedHtml, iframeHtml]);
+
+  useEffect(() => {
+    if (!html) {
+      setIframeHtml("");
+      return;
+    }
+
+    const id = window.requestAnimationFrame(() => {
+      const frame = iframeRef.current;
+      setIframeHtml(frame?.srcdoc || frame?.getAttribute("srcdoc") || "");
+    });
+
+    return () => window.cancelAnimationFrame(id);
+  }, [html]);
 
   useEffect(() => {
     if (!parity) return;
@@ -50,6 +65,7 @@ export default function FetchArticleTest() {
     setMeta(null);
     setHtml("");
     setDownloadedHtml("");
+    setIframeHtml("");
     const started = performance.now();
     try {
       const { data, error } = await supabase.functions.invoke("fetch-article", {
@@ -144,7 +160,7 @@ export default function FetchArticleTest() {
       )}
 
       {parity && (
-        <pre className={`p-3 rounded-md border text-xs overflow-auto max-h-64 ${parity.match ? "border-green-500 bg-green-500/10" : "border-destructive bg-destructive/10"}`}>
+        <pre className={`p-3 rounded-md border text-xs overflow-auto max-h-64 ${parity.match ? "border-primary bg-primary/10" : "border-destructive bg-destructive/10"}`}>
           {JSON.stringify(parity, null, 2)}
         </pre>
       )}
