@@ -446,18 +446,23 @@ function buildSections(): Section[] {
  * click any command and have it applied to the editor immediately.
  */
 function consolidateSlashCommands(sections: Section[]): Section[] {
-  const slashRows: Row[] = [];
+  const slashByGroup = new Map<string, Row[]>();
+  const pushSlash = (groupName: string, row: Row) => {
+    const arr = slashByGroup.get(groupName) ?? [];
+    arr.push(row);
+    slashByGroup.set(groupName, arr);
+  };
   const isSlash = (r: Row) => /^\/[a-zA-Z]/.test(r.trigger.trim());
   const cleaned: Section[] = sections.map((s) => {
     const kept: Row[] = [];
     for (const r of s.rows) {
-      if (isSlash(r)) slashRows.push(r);
+      if (isSlash(r)) pushSlash(s.title, r);
       else kept.push(r);
     }
     const cleanedGroups = (s.groups ?? []).map((g) => {
       const gk: Row[] = [];
       for (const r of g.rows) {
-        if (isSlash(r)) slashRows.push(r);
+        if (isSlash(r)) pushSlash(`${s.title} · ${g.title}`, r);
         else gk.push(r);
       }
       return { ...g, rows: gk };
@@ -465,12 +470,18 @@ function consolidateSlashCommands(sections: Section[]): Section[] {
     return { ...s, rows: kept, groups: cleanedGroups.length > 0 ? cleanedGroups : undefined };
   }).filter((s) => s.rows.length > 0 || (s.groups && s.groups.length > 0));
 
-  if (slashRows.length === 0) return cleaned;
+  if (slashByGroup.size === 0) return cleaned;
 
+  const groups: SubSection[] = Array.from(slashByGroup.entries()).map(([title, rows]) => ({
+    title,
+    rows,
+  }));
+  const totalRows = groups.reduce((n, g) => n + g.rows.length, 0);
   const slashBlock: Section = {
-    title: 'Slash commands (click to apply)',
-    description: 'Tap any command below — the cheat sheet closes and it runs in the editor instantly.',
-    rows: slashRows,
+    title: `Slash commands (click to apply) · ${totalRows}`,
+    description: 'Tap any command below — the cheat sheet closes and it runs in the editor instantly. Sub-categories collapsed — tap to expand.',
+    rows: [],
+    groups,
     applySlash: true,
   };
   return [slashBlock, ...cleaned];
