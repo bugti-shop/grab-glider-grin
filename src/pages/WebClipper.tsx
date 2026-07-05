@@ -31,7 +31,36 @@ import { useWebClipperQuota } from '@/hooks/useWebClipperQuota';
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
   { id: 'article',   icon: FileText, titleKey: 'webClipper.modeArticle',   descKey: 'webClipper.modeArticleDesc',   fallbackTitle: 'Article',     fallbackDesc: 'Save the readable article body' },
   { id: 'selection', icon: Quote,    titleKey: 'webClipper.modeSelection', descKey: 'webClipper.modeSelectionDesc', fallbackTitle: 'Selection',   fallbackDesc: 'Save only the highlighted text' },
+  { id: 'fullpage',  icon: Download, titleKey: 'webClipper.modeFullPage',  descKey: 'webClipper.modeFullPageDesc',  fallbackTitle: 'Full page (offline snapshot)', fallbackDesc: 'Download the entire page as a single-file HTML for offline reading' },
 ];
+
+/** Slugify a title into a safe filename stem. */
+const filenameFromTitle = (title: string, host: string): string => {
+  const base = (title || host || 'web-clip')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'web-clip';
+  return base;
+};
+
+/** Trigger a browser download of a single-file HTML snapshot. */
+const triggerHtmlDownload = (filename: string, html: string): void => {
+  try {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = filename.endsWith('.html') ? filename : `${filename}.html`;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
+  } catch (err) {
+    console.warn('[webClipper] snapshot download failed', err);
+  }
+};
 
 type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
 
@@ -443,7 +472,11 @@ const WebClipper = () => {
           });
           const { data, error } = await Promise.race([
             supabase.functions.invoke('fetch-article', {
-              body: { url, mode: 'article', webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined },
+              body: {
+                url,
+                mode: clipMode === 'fullpage' ? 'fullpage' : 'article',
+                webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
+              },
             }),
             timeoutPromise,
           ]);
@@ -477,6 +510,7 @@ const WebClipper = () => {
             console.info('[webClipper] fetch-article ok', {
               url,
               ms: fetchMs,
+              mode: clipMode,
               titleChars: articleTitle.length,
               excerptChars: articleExcerpt.length,
               htmlChars: articleHtml.length,
@@ -486,6 +520,39 @@ const WebClipper = () => {
               leadImage: !!articleLeadImage,
               fallback: articleIsFallback,
             });
+            // ── Full-page offline snapshot ─────────────────────────────
+            // The edge function returns the ENTIRE inlined document
+            // (DOCTYPE + <html> + <head> + <body>, with CSS/images/fonts
+            // as data: URIs). Save it to the device as a single-file
+            // .html so users can open it offline in any browser, then
+            // reduce the in-note body to a compact "snapshot saved" card
+            // with title/hero/excerpt only — we do NOT paste the raw
+            // document markup into the editor.
+            if (clipMode === 'fullpage' && articleHtml) {
+              const snapshotBytes = new Blob([articleHtml]).size;
+              let host = '';
+              try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+              const snapshotFilename = `${filenameFromTitle(articleTitle || title, host)}.html`;
+              triggerHtmlDownload(snapshotFilename, articleHtml);
+              const sizeLabel = formatBytes(snapshotBytes);
+              const heroBlock = articleLeadImage
+                ? `<figure class="flowist-web-clip-hero"><img src="${articleLeadImage}" alt="" referrerpolicy="no-referrer" /></figure>`
+                : '';
+              const excerptBlock = articleExcerpt
+                ? `<p class="flowist-web-clip-excerpt-inline">${sanitizeForDisplay(articleExcerpt)}</p>`
+                : '';
+              const banner =
+                `<aside class="flowist-offline-snapshot-info" data-snapshot-filename="${snapshotFilename.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
+                  `<strong>📥 ${sanitizeForDisplay(t('webClipper.offlineSnapshotSaved', 'Offline snapshot saved to your device'))}</strong>` +
+                  `<span>${sanitizeForDisplay(snapshotFilename)} · ${sizeLabel}</span>` +
+                  `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'Open the downloaded .html file anytime — it contains the whole page (styles, images, fonts) bundled inline. No internet needed.'))}</em>` +
+                `</aside>`;
+              // Replace the huge document body with the compact card so the
+              // note stays lightweight; the offline file lives on the device.
+              articleHtml = `${banner}${heroBlock}${excerptBlock}`;
+              articleEmbeds = [];
+              articleLinks = [];
+            }
           }
         } catch (err) {
           if (canceledRef.current || (err as Error)?.name === 'AbortError') throw err;
