@@ -130,14 +130,12 @@ export function sanitizeParam(value: string | null | undefined, maxLength: numbe
 /** Normalize a free-form mode string from a share intent or URL param. */
 export function parseClipMode(value: string | null | undefined): ClipMode {
   const v = String(value || '').toLowerCase();
-  if (v === 'selection') return 'selection';
-  if (v === 'fullpage' || v === 'full-page' || v === 'full_page') return 'fullpage';
   if (v === 'image' || v === 'img') return 'image';
   if (v === 'pdf') return 'pdf';
-  if (v === 'article') return 'article';
-  // Default to clean-article capture — genuine article body with images,
-  // captions, headings, and links, but no ads / nav / related-stories chrome.
-  return 'article';
+  // Web Clipper is now full-page only: every URL share becomes a
+  // single-file offline HTML snapshot. Legacy "article" / "selection"
+  // modes are collapsed into fullpage so old share targets keep working.
+  return 'fullpage';
 }
 
 const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|bmp|heic|heif|avif|svg)(\?|#|$)/i;
