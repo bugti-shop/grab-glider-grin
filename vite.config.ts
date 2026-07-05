@@ -79,7 +79,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "sonner-real": path.resolve(__dirname, "node_modules/sonner"),
+      "sonner-real": sonnerRealTarget,
       "sonner": path.resolve(__dirname, "./src/lib/sonnerShim.ts"),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime"],
