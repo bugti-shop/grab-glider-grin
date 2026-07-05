@@ -266,6 +266,8 @@ const WebClipper = () => {
     setPreviewReady(false);
     setPreviewTitle('');
     setPreviewHtml('');
+    setSnapshotHtml('');
+    setSnapshotFilename('');
     setSaved(false);
     setError(null);
     setStage('idle');
