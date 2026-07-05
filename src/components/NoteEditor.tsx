@@ -2046,9 +2046,6 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
             </div>
           ) : (
             <div className="relative flex-1 min-h-0 flex flex-col">
-              {showToc && (
-                <TableOfContents content={content} editorRef={editorRef} maxLevel={tocMaxLevel} />
-              )}
               <RichTextEditor
                 content={content}
                 onChange={setContent}
@@ -2082,6 +2079,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 externalEditorRef={editorRef}
                 isFindReplaceOpen={isFindReplaceOpen}
                 onFloatingImageUpload={(noteType === 'regular' || noteType === 'sticky' || noteType === 'textformat') ? () => floatingImageRef.current?.triggerAdd() : undefined}
+                headerSlot={showToc ? (
+                  <TableOfContents content={content} editorRef={editorRef} maxLevel={tocMaxLevel} />
+                ) : undefined}
               />
               {/* Floating images layer for regular/sticky/lined notes */}
               {(noteType === 'regular' || noteType === 'sticky' || noteType === 'textformat') && (
