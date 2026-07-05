@@ -567,6 +567,18 @@ const WebClipper = () => {
       // any failed article fetch surfaces a clear error + retry, unless
       // the user is in explicit Selection mode (where the highlight is
       // the whole point).
+      // Synthesize screenshot-mode HTML so the downstream note-building path
+      // (which centers on `articleHtml`) can render the captured image as-is.
+      if (clipMode === 'screenshot' && screenshotDataUrl) {
+        articleHtml =
+          `<figure class="flowist-web-clip-screenshot" data-role="fullpage-screenshot" contenteditable="false">` +
+          `<img src="${screenshotDataUrl}" alt="${sanitizeForDisplay(title || url || 'Full page screenshot')}" ` +
+          `style="display:block;width:100%;height:auto;border-radius:8px;" loading="lazy" />` +
+          `<figcaption>${sanitizeForDisplay(t('webClipper.screenshotCaption', 'Full-page screenshot captured offline'))}</figcaption>` +
+          `</figure>`;
+        if (!articleTitle) articleTitle = title;
+      }
+
       const fetchAttemptedButEmpty = shouldFetchFull && !articleHtml;
       // If the server could not fetch a body, still save whatever the share
       // sheet gave us. Never create metadata-only cards; always render inline
