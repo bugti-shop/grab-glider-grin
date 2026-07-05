@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { genId } from '@/utils/genId';
-import { sanitizeHtml, sanitizeClippedArticle } from '@/lib/sanitize';
+import { sanitizeHtml, sanitizeClippedArticle, normalizeWebClipHtmlForFastOffline } from '@/lib/sanitize';
 import { supabase } from '@/integrations/supabase/client';
 import { getCachedClip, putCachedClip, normalizeClipUrl } from '@/lib/webClipCache';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
@@ -487,7 +487,14 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         }
       } catch {}
       
-      setContent(recoveredContent);
+      const fastOfflineContent = WEB_CLIP_RE.test(recoveredContent || '')
+        ? normalizeWebClipHtmlForFastOffline(recoveredContent)
+        : recoveredContent;
+      setContent(fastOfflineContent);
+      if (fastOfflineContent !== recoveredContent) {
+        saveNoteToDBSingle({ ...note, content: fastOfflineContent, updatedAt: new Date() })
+          .catch((e) => console.warn('[NoteEditor] could not upgrade web clip for fast offline open', e));
+      }
       setIsReadingMode(!!(note.fullPageSnapshot || WEB_CLIP_RE.test(note.content || '')));
       setColor(note.color || 'yellow');
       setCustomColor(note.customColor);
@@ -2306,7 +2313,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   className="prose prose-sm max-w-none dark:prose-invert select-text"
                   aria-readonly="true"
                   style={{ fontFamily, fontSize, fontWeight, lineHeight }}
-                  dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(content) }}
+                  dangerouslySetInnerHTML={{ __html: displayContentHtml }}
                   ref={(el) => {
                     if (el) {
                       el.querySelectorAll<HTMLElement>('[contenteditable], input, textarea, select, button').forEach((node) => {
@@ -2341,7 +2348,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 <div 
                   className="prose prose-sm max-w-none dark:prose-invert"
                   style={{ fontFamily, fontSize, fontWeight, lineHeight }}
-                  dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(content) }}
+                  dangerouslySetInnerHTML={{ __html: displayContentHtml }}
                   ref={(el) => { if (el) { renderMathIn(el); hydrateSyncedIn(el, { editable: false }); hydrateWebClipsIn(el); } }}
                 />
               </div>
