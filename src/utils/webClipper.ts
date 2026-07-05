@@ -90,7 +90,7 @@ export function validateAttachment(
   return { ok: true, bytes: bytes ?? undefined, mime: m || undefined };
 }
 
-export type ClipMode = 'article' | 'selection' | 'fullpage' | 'image' | 'pdf';
+export type ClipMode = 'article' | 'selection' | 'fullpage' | 'image' | 'pdf' | 'screenshot';
 
 /** Window (ms) within which native duplicate events for the same payload are ignored. */
 export const SHARE_DEDUP_WINDOW_MS = 2500;
