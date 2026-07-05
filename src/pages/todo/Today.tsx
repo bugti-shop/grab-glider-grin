@@ -641,17 +641,53 @@ const Today = () => {
 
   // Render subtasks inline — reuse the exact same task card UI as the main task,
   // so subtasks share sizing, priority stripe, layout, separators and vibe.
+  // Applies the same priority/status/date/tag filters and sort rules as main tasks.
   const renderSubtasksInline = (item: TodoItem) => {
     const isExpanded = expandedTasks.has(item.id);
     if (!isExpanded || !item.subtasks || item.subtasks.length === 0) return null;
+
+    const filtered = item.subtasks.filter((sub) => {
+      const priorityMatch = priorityFilter === 'all' || (sub.priority || 'none') === priorityFilter;
+      const statusMatch = statusFilter === 'all' || (sub.status || 'not_started') === statusFilter;
+      let dateMatch = true;
+      if (dateFilter && dateFilter !== 'all') {
+        const itemDate = sub.dueDate ? new Date(sub.dueDate) : null;
+        switch (dateFilter) {
+          case 'has-date': dateMatch = !!itemDate; break;
+          case 'no-date': dateMatch = !itemDate; break;
+        }
+      }
+      const tagMatch = tagFilter.length === 0 || (sub.tagIds || []).some((t) => tagFilter.includes(t));
+      return priorityMatch && statusMatch && dateMatch && tagMatch;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      switch (sortBy) {
+        case 'date':
+          return (a.dueDate ? new Date(a.dueDate).getTime() : Infinity) - (b.dueDate ? new Date(b.dueDate).getTime() : Infinity);
+        case 'priority': {
+          const po: Record<string, number> = { high: 0, medium: 1, low: 2, none: 3, undefined: 3 };
+          return (po[a.priority || 'undefined'] ?? 3) - (po[b.priority || 'undefined'] ?? 3);
+        }
+        case 'name': return a.text.localeCompare(b.text);
+        case 'created': return parseInt(b.id) - parseInt(a.id);
+        default: return 0;
+      }
+    });
+
+    if (sorted.length === 0) return null;
+
     return (
-      <div className="pl-6 border-l-2 border-border/40 ml-2">
-        {item.subtasks.map((sub) => (
+      <div className="ml-3 sm:ml-4 md:ml-5 pl-3 sm:pl-4 border-l-2 border-border/50">
+        {sorted.map((sub) => (
           <div key={sub.id}>{renderTaskItem(sub)}</div>
         ))}
       </div>
     );
   };
+
 
   // Render section header — delegates to extracted component
   const renderSectionHeader = (section: TaskSection, isDragging: boolean = false, taskCountOverride?: number) => (
