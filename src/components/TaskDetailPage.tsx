@@ -73,6 +73,7 @@ import PdfViewer from './PdfViewer';
 import { getPomodoroStats, formatPomodoroDuration } from '@/utils/pomodoroStorage';
 import { Timer as TimerIcon } from 'lucide-react';
 import { PremiumCrown } from './PremiumCrown';
+import { ReminderCountdown } from './reminders/ReminderCountdown';
 
 interface TaskDetailPageProps {
   isOpen: boolean;
