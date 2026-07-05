@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { LucideIcon, Type, Heading1, Heading2, Heading3, Quote, Lightbulb, ChevronRightSquare,
   Minus, List, ListOrdered, ListChecks, Table, Code, Columns2, Columns3, Sigma, Crown,
   Bold, Italic, Underline, Strikethrough, Highlighter, FileText, Palette, QrCode,
@@ -134,6 +134,39 @@ export const SlashCommandMenu = ({
     return () => document.removeEventListener('mousedown', handler);
   }, [open, onClose]);
 
+  // Clamp menu into the visual viewport so it never gets clipped off-screen
+  // when triggered near the right edge or bottom of the editor. Falls back to
+  // opening above the caret when there's not enough room below.
+  const [adjusted, setAdjusted] = useState<{ top: number; left: number }>({
+    top: position.top,
+    left: position.left,
+  });
+
+  useLayoutEffect(() => {
+    if (!open || !ref.current) return;
+    const el = ref.current;
+    const rect = el.getBoundingClientRect();
+    const vw = window.visualViewport?.width ?? window.innerWidth;
+    const vh = window.visualViewport?.height ?? window.innerHeight;
+    const margin = 8;
+
+    let left = position.left;
+    let top = position.top;
+
+    // Horizontal clamp — keep the full menu width visible
+    if (left + rect.width + margin > vw) left = Math.max(margin, vw - rect.width - margin);
+    if (left < margin) left = margin;
+
+    // Vertical clamp — if it overflows below, flip above the caret line
+    if (top + rect.height + margin > vh) {
+      // caret line is ~4px above `position.top`; flip so bottom sits above it
+      const flipped = position.top - 4 - rect.height;
+      top = flipped >= margin ? flipped : Math.max(margin, vh - rect.height - margin);
+    }
+
+    setAdjusted({ top, left });
+  }, [open, position.top, position.left, filtered.length]);
+
   if (!open || !filtered.length) return null;
 
   const activeIdx = Math.min(activeIndex, filtered.length - 1);
@@ -142,8 +175,8 @@ export const SlashCommandMenu = ({
   return (
     <div
       ref={ref}
-      className="fixed z-[60] w-72 max-h-80 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl"
-      style={{ top: position.top, left: position.left }}
+      className="fixed z-[60] w-72 max-h-[min(20rem,70vh)] overflow-y-auto rounded-lg border border-border bg-popover shadow-xl"
+      style={{ top: adjusted.top, left: adjusted.left }}
       onMouseDown={(e) => e.preventDefault()}
     >
       {filtered.map((item, i) => {

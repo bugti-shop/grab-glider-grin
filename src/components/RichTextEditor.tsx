@@ -129,6 +129,8 @@ interface RichTextEditorProps {
   onVoiceRecordingDelete?: (id: string) => void;
   onInsertVoiceRecording?: (recording: VoiceRecording) => void;
   onFloatingImageUpload?: () => void;
+  /** Optional slot rendered between the title input and the editor body (e.g. Table of Contents). */
+  headerSlot?: React.ReactNode;
 }
 
 const RICH_TEXT_BLOCK_TAG_PATTERN = /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/;
@@ -184,6 +186,7 @@ export const RichTextEditor = ({
   voiceRecordings = [],
   onVoiceRecordingDelete,
   onFloatingImageUpload,
+  headerSlot,
 }: RichTextEditorProps) => {
   const { t } = useTranslation();
   const { isPro, requireProFeature, requireCapacity } = useSubscription();
@@ -2691,6 +2694,10 @@ export const RichTextEditor = ({
           style={{ fontFamily, color: isStickyNote ? '#000000' : undefined }}
         />
       )}
+
+      {headerSlot}
+
+
 
       {/* Hidden file inputs */}
       <input
