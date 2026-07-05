@@ -24,6 +24,8 @@ export interface PdfExportSettings {
   headerText: string;
   footerText: string;
   fontSize: number;
+  /** H1–H6 size multiplier (0.7 = compact, 1 = default, 1.5 = large). */
+  headingScale: number;
   preserveNoteStyle: boolean;
 }
 
@@ -51,8 +53,10 @@ const DEFAULT_SETTINGS: PdfExportSettings = {
   headerText: '',
   footerText: '',
   fontSize: 12,
+  headingScale: 1,
   preserveNoteStyle: true,
 };
+
 
 export const PdfExportOptionsSheet = ({
   isOpen,
