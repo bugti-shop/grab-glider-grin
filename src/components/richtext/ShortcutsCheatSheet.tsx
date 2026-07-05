@@ -401,18 +401,24 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return sections;
+    const matchRow = (r: Row) =>
+      r.trigger.toLowerCase().includes(q) ||
+      r.result.toLowerCase().includes(q) ||
+      (r.hint?.toLowerCase().includes(q) ?? false);
     return sections
-      .map((s) => ({
-        ...s,
-        rows: s.rows.filter(
-          (r) =>
-            r.trigger.toLowerCase().includes(q) ||
-            r.result.toLowerCase().includes(q) ||
-            (r.hint?.toLowerCase().includes(q) ?? false) ||
-            s.title.toLowerCase().includes(q),
-        ),
-      }))
-      .filter((s) => s.rows.length > 0);
+      .map((s) => {
+        const titleHit = s.title.toLowerCase().includes(q);
+        const rows = titleHit ? s.rows : s.rows.filter(matchRow);
+        const groups = (s.groups ?? [])
+          .map((g) => {
+            const gTitleHit = titleHit || g.title.toLowerCase().includes(q);
+            const gRows = gTitleHit ? g.rows : g.rows.filter(matchRow);
+            return { ...g, rows: gRows };
+          })
+          .filter((g) => g.rows.length > 0);
+        return { ...s, rows, groups };
+      })
+      .filter((s) => s.rows.length > 0 || (s.groups && s.groups.length > 0));
   }, [query, sections]);
 
   // Live-updating touch slop for tap-vs-scroll detection on mobile.
