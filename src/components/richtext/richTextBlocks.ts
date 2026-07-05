@@ -373,6 +373,44 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
     clip.dataset.hydrated = '1';
   });
 
+  // Web Clipper full-page embeds: raw HTML is stored as base64 in
+  // `data-clip-html` on the wrapper so it survives sanitize + contenteditable
+  // serialization round-trips. Decode it and set the iframe's `srcdoc`
+  // property from JS every time the note is rendered (fresh clip, reload,
+  // re-open, offline). This is the fix for the "blank frame after reload" bug.
+  const embeds = root.querySelectorAll<HTMLElement>('.webclipper-embed[data-clip-html]');
+  embeds.forEach((embed) => {
+    if ((embed as any).__wcHydrated) return;
+    const encoded = embed.getAttribute('data-clip-html') || '';
+    if (!encoded) return;
+    let html = '';
+    try {
+      const bin = atob(encoded);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      html = new TextDecoder().decode(bytes);
+    } catch {
+      return;
+    }
+    if (!html) return;
+    let frame = embed.querySelector<HTMLIFrameElement>('iframe[data-role="webclip-frame"]')
+      || embed.querySelector<HTMLIFrameElement>('iframe');
+    if (!frame) {
+      frame = document.createElement('iframe');
+      frame.setAttribute('data-role', 'webclip-frame');
+      frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+      frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+      frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('style', 'width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
+      embed.appendChild(frame);
+    }
+    // Always (re)apply srcdoc — the attribute is intentionally not persisted.
+    try { frame.srcdoc = html; } catch { /* noop */ }
+    embed.setAttribute('contenteditable', 'false');
+    (embed as any).__wcHydrated = true;
+  });
+
+
   // User preference: no snapshot placeholder, no "View / Hide snapshot"
   // toggle, and no "Download captured HTML" button. Any legacy fullpage
   // snapshot figures still stored in old notes are removed on hydration so

@@ -1207,12 +1207,31 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       // NOTE: do NOT use data-role="fullpage-snapshot" here — hydrateWebClipsIn
       // strips any element with that role (legacy cleanup for old clips). We use
       // a distinct marker so this embed survives every re-hydration pass.
+      // Encode the raw HTML as base64 so it survives every sanitize / innerHTML
+      // round-trip that happens when the note is saved and re-opened. On every
+      // render, `hydrateWebClipsIn` decodes this attribute and sets the iframe's
+      // `srcdoc` property from JS — the srcdoc attribute itself is never stored
+      // in the note HTML (DOMPurify + contentEditable serializers mangle large
+      // HTML-in-attribute values, which caused the blank frame after reload).
+      const encoded = (() => {
+        try {
+          // Handle unicode safely
+          const bytes = new TextEncoder().encode(rawHtml);
+          let bin = '';
+          for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+          return btoa(bin);
+        } catch {
+          return '';
+        }
+      })();
+
       const wrapper = document.createElement('div');
       wrapper.className = 'webclipper-embed';
       wrapper.setAttribute('data-role', 'webclipper-embed');
       wrapper.setAttribute('data-url', url);
       wrapper.setAttribute('data-captured-at', capturedAt);
       wrapper.setAttribute('data-bytes', String(rawHtml.length));
+      wrapper.setAttribute('data-clip-html', encoded);
       wrapper.setAttribute('contenteditable', 'false');
 
       const header = document.createElement('div');
@@ -1234,11 +1253,12 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
       frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
       frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('data-role', 'webclip-frame');
       frame.setAttribute('style', 'width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
-      // Set srcdoc via property AND attribute so it survives innerHTML round-trips
-      // (contentEditable serializes attributes back into the note's stored HTML).
+      // Set srcdoc via property for the immediate first render. Do NOT set the
+      // srcdoc attribute — the hydrator re-applies it from `data-clip-html` on
+      // every subsequent render (reload, re-open, offline).
       frame.srcdoc = rawHtml;
-      frame.setAttribute('srcdoc', rawHtml);
 
       wrapper.append(header, frame);
 
