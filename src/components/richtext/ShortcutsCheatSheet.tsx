@@ -447,20 +447,23 @@ function buildSections(): Section[] {
  */
 function consolidateSlashCommands(sections: Section[]): Section[] {
   const slashRows: Row[] = [];
+  const isSlash = (r: Row) => /^\/[a-zA-Z]/.test(r.trigger.trim());
   const cleaned: Section[] = sections.map((s) => {
     const kept: Row[] = [];
     for (const r of s.rows) {
-      const t = r.trigger.trim();
-      // Only pull rows that start with `/word` — leave the bare "/" (opens menu)
-      // and tokens like "/text" inside descriptive prose alone.
-      if (/^\/[a-zA-Z]/.test(t)) {
-        slashRows.push(r);
-      } else {
-        kept.push(r);
-      }
+      if (isSlash(r)) slashRows.push(r);
+      else kept.push(r);
     }
-    return { ...s, rows: kept };
-  }).filter((s) => s.rows.length > 0);
+    const cleanedGroups = (s.groups ?? []).map((g) => {
+      const gk: Row[] = [];
+      for (const r of g.rows) {
+        if (isSlash(r)) slashRows.push(r);
+        else gk.push(r);
+      }
+      return { ...g, rows: gk };
+    }).filter((g) => g.rows.length > 0);
+    return { ...s, rows: kept, groups: cleanedGroups.length > 0 ? cleanedGroups : undefined };
+  }).filter((s) => s.rows.length > 0 || (s.groups && s.groups.length > 0));
 
   if (slashRows.length === 0) return cleaned;
 
