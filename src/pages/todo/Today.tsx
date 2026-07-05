@@ -639,16 +639,19 @@ const Today = () => {
     );
   };
 
-  // Render subtasks inline — delegates to extracted component
-  const renderSubtasksInline = (item: TodoItem) => (
-    <TaskSubtasksInline
-      item={item}
-      expandedTasks={expandedTasks}
-      getPriorityColor={getPriorityColor}
-      updateItem={updateItem}
-      onSubtaskClick={(subtask, parentId) => setSelectedSubtask({ subtask, parentId })}
-    />
-  );
+  // Render subtasks inline — reuse the exact same task card UI as the main task,
+  // so subtasks share sizing, priority stripe, layout, separators and vibe.
+  const renderSubtasksInline = (item: TodoItem) => {
+    const isExpanded = expandedTasks.has(item.id);
+    if (!isExpanded || !item.subtasks || item.subtasks.length === 0) return null;
+    return (
+      <div className="pl-6 border-l-2 border-border/40 ml-2">
+        {item.subtasks.map((sub) => (
+          <div key={sub.id}>{renderTaskItem(sub)}</div>
+        ))}
+      </div>
+    );
+  };
 
   // Render section header — delegates to extracted component
   const renderSectionHeader = (section: TaskSection, isDragging: boolean = false, taskCountOverride?: number) => (
