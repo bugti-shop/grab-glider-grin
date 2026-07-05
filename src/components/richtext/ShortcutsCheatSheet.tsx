@@ -637,7 +637,7 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                   <span className="inline-block transition-transform group-open:rotate-90 text-muted-foreground">
                     ▶
                   </span>
-                  <h3 className="text-sm font-semibold">{section.title}</h3>
+                  <h3 className="text-sm font-semibold">{highlight(section.title, query)}</h3>
                   <span className="ml-auto text-xs text-muted-foreground">{rowCount}</span>
                 </summary>
                 <div className="border-t p-3">
