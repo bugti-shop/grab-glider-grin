@@ -29,8 +29,8 @@ import {
 import { useWebClipperQuota } from '@/hooks/useWebClipperQuota';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
-  { id: 'article',   icon: FileText, titleKey: 'webClipper.modeArticle',   descKey: 'webClipper.modeArticleDesc',   fallbackTitle: 'Article',     fallbackDesc: 'Save the readable article body' },
-  { id: 'selection', icon: Quote,    titleKey: 'webClipper.modeSelection', descKey: 'webClipper.modeSelectionDesc', fallbackTitle: 'Selection',   fallbackDesc: 'Save only the highlighted text' },
+  { id: 'screenshot', icon: Camera, titleKey: 'webClipper.modeScreenshot', descKey: 'webClipper.modeScreenshotDesc', fallbackTitle: 'Full page screenshot', fallbackDesc: 'Save the whole page as an offline image' },
+  { id: 'selection',  icon: Quote,  titleKey: 'webClipper.modeSelection',  descKey: 'webClipper.modeSelectionDesc',  fallbackTitle: 'Selection',            fallbackDesc: 'Save only the highlighted text' },
 ];
 
 type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
