@@ -1161,34 +1161,48 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         );
       }
 
-      // Escape the raw HTML for use inside srcdoc="…" (double-quoted attribute).
-      const escaped = rawHtml
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;');
-
       let host = 'snapshot';
       try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
       const capturedAt = new Date().toISOString();
 
-      // Same iframe attributes as /dev/fetch-article — read-only sandbox,
-      // no scripts, no top-level navigation escape.
-      const embed =
-        `<div class="evernote-clip" data-role="fullpage-snapshot" data-url="${url.replace(/"/g, '&quot;')}" data-captured-at="${capturedAt}" data-bytes="${rawHtml.length}">` +
-          `<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:hsl(var(--muted-foreground));margin:8px 0;">` +
-            `<span>📎</span>` +
-            `<a href="${url.replace(/"/g, '&quot;')}" target="_blank" rel="noopener noreferrer">${host}</a>` +
-            `<span>·</span><span>${Math.round(rawHtml.length / 1024)} KB · offline-ready</span>` +
-          `</div>` +
-          `<iframe ` +
-            `srcdoc="${escaped}" ` +
-            `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
-            `referrerpolicy="no-referrer-when-downgrade" ` +
-            `loading="lazy" ` +
-            `style="width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;">` +
-          `</iframe>` +
-        `</div><p><br></p>`;
+      // Build the embed via the DOM (not string sanitize) so the iframe's
+      // `srcdoc` property receives the raw HTML unmodified. DOMPurify
+      // aggressively strips iframe attribute values that look document-like,
+      // which is why the previous string-based path rendered an empty frame.
+      const wrapper = document.createElement('div');
+      wrapper.className = 'evernote-clip';
+      wrapper.setAttribute('data-role', 'fullpage-snapshot');
+      wrapper.setAttribute('data-url', url);
+      wrapper.setAttribute('data-captured-at', capturedAt);
+      wrapper.setAttribute('data-bytes', String(rawHtml.length));
+      wrapper.setAttribute('contenteditable', 'false');
 
-      const safe = sanitizeClippedArticle(embed);
+      const header = document.createElement('div');
+      header.setAttribute('style', 'display:flex;align-items:center;gap:8px;font-size:12px;color:hsl(var(--muted-foreground));margin:8px 0;');
+      const clipEmoji = document.createElement('span');
+      clipEmoji.textContent = '📎';
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = host;
+      const dot = document.createElement('span');
+      dot.textContent = '·';
+      const size = document.createElement('span');
+      size.textContent = `${Math.round(rawHtml.length / 1024)} KB · offline-ready`;
+      header.append(clipEmoji, link, dot, size);
+
+      const frame = document.createElement('iframe');
+      frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+      frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+      frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('style', 'width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
+      // Set srcdoc via property AND attribute so it survives innerHTML round-trips
+      // (contentEditable serializes attributes back into the note's stored HTML).
+      frame.srcdoc = rawHtml;
+      frame.setAttribute('srcdoc', rawHtml);
+
+      wrapper.append(header, frame);
 
       const editor = editorRef.current;
       if (['sticky', 'lined', 'regular', 'textformat'].includes(noteType) && editor) {
@@ -1206,15 +1220,33 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
             sel.removeAllRanges();
             sel.addRange(range);
           }
-        } catch { /* ignore */ }
-        let inserted = false;
-        try { inserted = document.execCommand('insertHTML', false, safe); } catch { inserted = false; }
-        if (!inserted) editor.insertAdjacentHTML('beforeend', safe);
+          const sel2 = window.getSelection();
+          if (sel2 && sel2.rangeCount > 0) {
+            const range = sel2.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(wrapper);
+            // Trailing paragraph so caret can land after the embed.
+            const trailing = document.createElement('p');
+            trailing.innerHTML = '<br>';
+            wrapper.after(trailing);
+            // Move caret after the embed.
+            const after = document.createRange();
+            after.setStartAfter(trailing);
+            after.collapse(true);
+            sel2.removeAllRanges();
+            sel2.addRange(after);
+          } else {
+            editor.appendChild(wrapper);
+          }
+        } catch {
+          editor.appendChild(wrapper);
+        }
         setContent(editor.innerHTML);
       } else {
         // Non-rich note types: append raw HTML to content so it still saves.
-        setContent(prev => (prev || '') + safe);
+        setContent(prev => (prev || '') + wrapper.outerHTML);
       }
+
 
       toast.success(t('webClipper.clipped', 'Web page clipped into note'));
       setIsWebClipperOpen(false);
