@@ -2695,6 +2695,10 @@ export const RichTextEditor = ({
         />
       )}
 
+      {headerSlot}
+
+
+
       {/* Hidden file inputs */}
       <input
         type="file"
