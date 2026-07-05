@@ -382,22 +382,29 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
       '.flowist-web-clip-fullpage, .flowist-web-clip-fullpage-hint, .flowist-web-clip-fullpage-btn, [data-role="fullpage-snapshot"], [data-role="fullpage-open"], [data-role="fullpage-download"], iframe.flowist-web-clip-fullpage-frame',
     )
     .forEach((el) => el.remove());
-  // Older clips saved these controls with different classes; strip anything
-  // whose text still matches the old snapshot chrome and bubble up to the
-  // wrapping card so the surrounding rounded box disappears too.
-  const SNAPSHOT_TEXT_RE = /(hide snapshot|view snapshot|view full captured|download captured html|snapshot stored offline)/i;
+  // Older clips saved these controls with different classes. Only strip
+  // interactive/chrome elements whose *entire* label exactly matches the old
+  // snapshot buttons (anchored regex + length cap) so we never remove real
+  // article prose that happens to mention "snapshot" or "download".
+  const SNAPSHOT_LABEL_RE = /^(hide snapshot|view snapshot|view full captured(?: html| page)?|download captured html|snapshot stored offline|snapshot saved offline)$/i;
+  const isSnapshotWrapper = (el: HTMLElement): boolean => {
+    const cls = typeof el.className === 'string' ? el.className : '';
+    if (/flowist-web-clip-fullpage/.test(cls)) return true;
+    const role = el.getAttribute('data-role') || '';
+    return role.startsWith('fullpage-');
+  };
   const candidates = Array.from(
-    root.querySelectorAll<HTMLElement>('button, a, p, div, span, figure, section'),
+    root.querySelectorAll<HTMLElement>('button, a, [role="button"]'),
   );
   for (const el of candidates) {
     if (!el.isConnected) continue;
-    const txt = (el.textContent || '').trim();
-    if (!txt || !SNAPSHOT_TEXT_RE.test(txt)) continue;
+    const txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!txt || txt.length > 60 || !SNAPSHOT_LABEL_RE.test(txt)) continue;
     let target: HTMLElement = el;
     for (let i = 0; i < 4; i++) {
       const p = target.parentElement;
       if (!p || p === root) break;
-      if (p.classList.contains('flowist-web-clip-body') || p.classList.contains('flowist-web-clip')) break;
+      if (!isSnapshotWrapper(p)) break;
       target = p;
     }
     target.remove();

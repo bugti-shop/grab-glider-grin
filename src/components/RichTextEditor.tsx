@@ -76,7 +76,8 @@ import {
   reattachAudioListenersOnElement,
   reattachFileListenersOnElement,
 } from './richtext/richTextMediaHandlers';
-import { SlashCommandMenu, SlashCommandId, SLASH_ITEMS_COUNT_FOR_QUERY, SLASH_PRO_KEYS } from './richtext/SlashCommandMenu';
+import { SlashCommandMenu, SlashCommandId, SLASH_ITEMS_COUNT_FOR_QUERY, SLASH_PRO_KEYS, SLASH_ITEM_META } from './richtext/SlashCommandMenu';
+
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { MentionMenu, MentionItem } from './richtext/MentionMenu';
 import { BubbleMenu } from './richtext/BubbleMenu';
@@ -1673,6 +1674,25 @@ export const RichTextEditor = ({
         if (latex && latex.trim()) {
           document.execCommand('insertHTML', false, mathHTML(latex.trim(), true));
           setTimeout(() => renderMathIn(editorRef.current), 0);
+        }
+        break;
+      }
+      default: {
+        // All other IDs are backed by a `/<slashCmd>` line shortcut. Replace
+        // the trigger text with `/<slashCmd>` (+ trailing space when the
+        // command needs an argument) and either execute immediately (arg-less)
+        // or park the caret so the user can type the argument.
+        const meta = SLASH_ITEM_META[id];
+        if (meta?.slashCmd) {
+          replaceTriggerAndInsert(triggerLen, '');
+          const text = meta.needsArg ? `/${meta.slashCmd} ` : `/${meta.slashCmd}`;
+          document.execCommand('insertText', false, text);
+          if (!meta.needsArg) {
+            // Fire arg-less slash line shortcut now (today, now, chess, toc…).
+            void trySlashLineShortcut(editorRef.current).then((ok) => {
+              if (ok) handleInput();
+            });
+          }
         }
         break;
       }
