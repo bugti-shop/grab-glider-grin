@@ -364,9 +364,10 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                         : undefined;
                       const handlePointerMove = clickable
                         ? (e: React.PointerEvent<HTMLTableRowElement>) => {
+                            const slop = touchSlopRef.current;
                             if (
-                              Math.abs(e.clientX - touchStartRef.x) > 8 ||
-                              Math.abs(e.clientY - touchStartRef.y) > 8
+                              Math.abs(e.clientX - touchStartRef.x) > slop ||
+                              Math.abs(e.clientY - touchStartRef.y) > slop
                             ) {
                               touchStartRef.moved = true;
                             }
