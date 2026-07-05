@@ -151,11 +151,16 @@ export const exportNoteToPdf = async (
     headerText = '',
     footerText = '',
     fontSize = 12,
+    headingScale = 1,
     noteType,
     stickyColor,
     customColor,
     preserveNoteStyle = true,
   } = options;
+
+  // Clamp heading scale to a sane range so the export never breaks pagination.
+  const safeHeadingScale = Math.min(2, Math.max(0.6, headingScale || 1));
+
 
   // Dynamically import jsPDF and html2canvas
   const { jsPDF } = await import('jspdf');
