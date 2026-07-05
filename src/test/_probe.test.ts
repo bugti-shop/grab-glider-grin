@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
-import { normalizeImplicitMult } from '../src/components/richtext/unitConvert';
+import { normalizeImplicitMult } from '@/components/richtext/unitConvert';
 describe('probe', () => {
   it('logs', () => {
     for (const s of [
