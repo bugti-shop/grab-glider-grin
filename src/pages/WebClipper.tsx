@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Check, Loader2, ExternalLink, FileText, Quote, Image as ImageIcon, FileType2, AlertTriangle, Download, X, Save, Pencil } from 'lucide-react';
+import { Check, Loader2, ExternalLink, FileText, Quote, Image as ImageIcon, FileType2, AlertTriangle, Download, X, Save, Pencil, Camera } from 'lucide-react';
 import { saveNoteToDBSingle } from '@/utils/noteStorage';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,8 +29,8 @@ import {
 import { useWebClipperQuota } from '@/hooks/useWebClipperQuota';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
-  { id: 'article',   icon: FileText, titleKey: 'webClipper.modeArticle',   descKey: 'webClipper.modeArticleDesc',   fallbackTitle: 'Article',     fallbackDesc: 'Save the readable article body' },
-  { id: 'selection', icon: Quote,    titleKey: 'webClipper.modeSelection', descKey: 'webClipper.modeSelectionDesc', fallbackTitle: 'Selection',   fallbackDesc: 'Save only the highlighted text' },
+  { id: 'screenshot', icon: Camera, titleKey: 'webClipper.modeScreenshot', descKey: 'webClipper.modeScreenshotDesc', fallbackTitle: 'Full page screenshot', fallbackDesc: 'Save the whole page as an offline image' },
+  { id: 'selection',  icon: Quote,  titleKey: 'webClipper.modeSelection',  descKey: 'webClipper.modeSelectionDesc',  fallbackTitle: 'Selection',            fallbackDesc: 'Save only the highlighted text' },
 ];
 
 type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
@@ -412,11 +412,65 @@ const WebClipper = () => {
         !!url &&
         clipMode !== 'selection';
 
-      if (shouldFetchFull) {
-        // Hard cap the full-page fetch so users never sit on a spinner
-        // indefinitely. If the edge function is slow or upstream stalls, we
-        // surface a clear timeout rather than falling back to partial/snapshot
-        // content silently.
+      // Screenshot mode collects a base64 PNG data URL instead of parsed HTML.
+      let screenshotDataUrl = '';
+      let screenshotMime = 'image/png';
+      let screenshotByteLength = 0;
+
+      if (shouldFetchFull && clipMode === 'screenshot') {
+        const FETCH_TIMEOUT_MS = 60_000;
+        try {
+          setStage('fetching');
+          setProgress(null);
+          setProgressLabel(t('webClipper.stageScreenshot', 'Capturing full-page screenshot…'));
+          const fetchStartedAt = performance.now();
+          console.info('[webClipper] invoking screenshot-page', { url, timeoutMs: FETCH_TIMEOUT_MS });
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            const id = window.setTimeout(() => {
+              reject(new DOMException('Timed out capturing screenshot', 'TimeoutError'));
+            }, FETCH_TIMEOUT_MS);
+            controller.signal.addEventListener('abort', () => window.clearTimeout(id), { once: true });
+          });
+          const { data, error } = await Promise.race([
+            supabase.functions.invoke('screenshot-page', { body: { url } }),
+            timeoutPromise,
+          ]);
+          const fetchMs = Math.round(performance.now() - fetchStartedAt);
+          if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+          if (error) {
+            console.warn('[webClipper] screenshot-page transport error', { url, ms: fetchMs, message: error.message });
+            fetchFailure = { code: 'network', message: error.message };
+          } else if (data?.error) {
+            console.warn('[webClipper] screenshot-page returned error', {
+              url, ms: fetchMs, code: data.code, error: data.error,
+            });
+            fetchFailure = { code: String(data.code || 'internal'), message: String(data.error) };
+          } else if (data?.dataUrl) {
+            screenshotDataUrl = String(data.dataUrl);
+            screenshotMime = String(data.mime || 'image/png');
+            screenshotByteLength = Number(data.byteLength) || 0;
+            articleTitle = title || '';
+            console.info('[webClipper] screenshot-page ok', {
+              url, ms: fetchMs, bytes: screenshotByteLength, mime: screenshotMime,
+            });
+          } else {
+            fetchFailure = { code: 'internal', message: 'Empty screenshot response' };
+          }
+        } catch (err) {
+          if (canceledRef.current || (err as Error)?.name === 'AbortError') throw err;
+          const isTimeout = (err as Error)?.name === 'TimeoutError';
+          console.warn('[webClipper] screenshot fetch threw', {
+            url, timeout: isTimeout, error: (err as Error)?.message,
+          });
+          fetchFailure = {
+            code: isTimeout ? 'timeout' : 'network',
+            message: isTimeout
+              ? t('webClipper.screenshotTimeout', 'Capturing the screenshot took too long. Please try again.')
+              : (err as Error)?.message,
+          };
+        }
+      } else if (shouldFetchFull) {
+        // Legacy article HTML path (kept for backward compatibility).
         const FETCH_TIMEOUT_MS = 45_000;
         try {
           setStage('fetching');
@@ -513,6 +567,18 @@ const WebClipper = () => {
       // any failed article fetch surfaces a clear error + retry, unless
       // the user is in explicit Selection mode (where the highlight is
       // the whole point).
+      // Synthesize screenshot-mode HTML so the downstream note-building path
+      // (which centers on `articleHtml`) can render the captured image as-is.
+      if (clipMode === 'screenshot' && screenshotDataUrl) {
+        articleHtml =
+          `<figure class="flowist-web-clip-screenshot" data-role="page-screenshot" contenteditable="false">` +
+          `<img src="${screenshotDataUrl}" alt="${sanitizeForDisplay(title || url || 'Full page screenshot')}" ` +
+          `style="display:block;width:100%;height:auto;border-radius:8px;" loading="lazy" />` +
+          `<figcaption>${sanitizeForDisplay(t('webClipper.screenshotCaption', 'Full-page screenshot captured offline'))}</figcaption>` +
+          `</figure>`;
+        if (!articleTitle) articleTitle = title;
+      }
+
       const fetchAttemptedButEmpty = shouldFetchFull && !articleHtml;
       // If the server could not fetch a body, still save whatever the share
       // sheet gave us. Never create metadata-only cards; always render inline

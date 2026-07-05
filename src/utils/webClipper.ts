@@ -90,7 +90,7 @@ export function validateAttachment(
   return { ok: true, bytes: bytes ?? undefined, mime: m || undefined };
 }
 
-export type ClipMode = 'article' | 'selection' | 'fullpage' | 'image' | 'pdf';
+export type ClipMode = 'article' | 'selection' | 'fullpage' | 'image' | 'pdf' | 'screenshot';
 
 /** Window (ms) within which native duplicate events for the same payload are ignored. */
 export const SHARE_DEDUP_WINDOW_MS = 2500;
@@ -134,10 +134,12 @@ export function parseClipMode(value: string | null | undefined): ClipMode {
   if (v === 'fullpage' || v === 'full-page' || v === 'full_page') return 'fullpage';
   if (v === 'image' || v === 'img') return 'image';
   if (v === 'pdf') return 'pdf';
-  if (v === 'article') return 'article';
-  // Default to clean-article capture — genuine article body with images,
-  // captions, headings, and links, but no ads / nav / related-stories chrome.
-  return 'article';
+  if (v === 'screenshot' || v === 'shot' || v === 'snap') return 'screenshot';
+  // Legacy: 'article' shares now map to full-page screenshot (Article mode
+  // was replaced by the offline-friendly screenshot capture).
+  if (v === 'article') return 'screenshot';
+  // Default for bare shares is the new screenshot mode.
+  return 'screenshot';
 }
 
 const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|bmp|heic|heif|avif|svg)(\?|#|$)/i;
