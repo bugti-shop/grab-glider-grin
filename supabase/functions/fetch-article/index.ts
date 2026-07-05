@@ -277,10 +277,7 @@ Deno.serve(async (req) => {
   }
 
   // Sanitize + add <base> so relative URLs resolve to the origin.
-  const withBase = ensureBaseHref(rawHtml, finalUrl);
-  const withReferrer = injectReferrerMeta(withBase);
-  const withLazyPromoted = promoteLazyImages(withReferrer);
-  const safeHtml = sanitizeHtml(withLazyPromoted);
+  const safeHtml = transformHtml(rawHtml, finalUrl);
 
   // Meta extraction for the note card.
   const title = pickTitle(rawHtml);
