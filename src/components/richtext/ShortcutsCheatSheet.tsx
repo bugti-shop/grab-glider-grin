@@ -75,18 +75,8 @@ function buildSections(): Section[] {
         { trigger: '==text==', result: 'Highlight' },
       ],
     },
-    {
-      title: 'Tables',
-      description: 'Fast ways to insert and grow tables.',
-      rows: [
-        { trigger: '/table', result: 'Open the table picker (rows × columns)' },
-        { trigger: '2x3 + Space', result: 'Instant 2-row × 3-col table', hint: 'any NxM up to 10x10' },
-        { trigger: '| a | b | + Enter', result: 'Markdown pipe table — Enter converts the line into a real table' },
-        { trigger: 'Tab / Shift+Tab (in cell)', result: 'Next / previous cell' },
-        { trigger: 'Enter (last row)', result: 'Adds a new row below' },
-        { trigger: 'Right-click / long-press cell', result: 'Table menu: insert/delete row/column, styles' },
-      ],
-    },
+
+
     {
       title: 'Slash commands',
       description: 'Complete short commands run automatically; commands with text still run with Space or Enter.',
@@ -187,23 +177,6 @@ function buildSections(): Section[] {
       ],
     },
     {
-      title: 'Greek letters & math symbols (type \\name, then Space)',
-      description: '100+ tokens. A few of the most useful:',
-      rows: [
-        { trigger: '\\alpha  \\beta  \\gamma  \\delta  \\pi  \\theta  \\lambda  \\sigma  \\omega', result: 'α β γ δ π θ λ σ ω  (all lowercase Greek)' },
-        { trigger: '\\Alpha  \\Delta  \\Sigma  \\Omega  \\Pi  \\Theta  \\Lambda', result: 'Α Δ Σ Ω Π Θ Λ  (all uppercase Greek)' },
-        { trigger: '\\sum  \\prod  \\int  \\iint  \\oint  \\sqrt  \\partial  \\nabla', result: '∑ ∏ ∫ ∬ ∮ √ ∂ ∇' },
-        { trigger: '\\infty  \\forall  \\exists  \\emptyset  \\in  \\notin  \\subset  \\cup  \\cap', result: '∞ ∀ ∃ ∅ ∈ ∉ ⊂ ∪ ∩' },
-        { trigger: '\\neq  \\leq  \\geq  \\approx  \\equiv  \\cong  \\sim  \\propto', result: '≠ ≤ ≥ ≈ ≡ ≅ ∼ ∝' },
-        { trigger: '\\to  \\rightarrow  \\leftarrow  \\leftrightarrow  \\Rightarrow  \\Leftrightarrow  \\mapsto', result: '→ → ← ↔ ⇒ ⇔ ↦' },
-        { trigger: '\\land  \\lor  \\lnot  \\implies  \\iff', result: '∧ ∨ ¬ ⟹ ⟺' },
-        { trigger: '\\pm  \\mp  \\times  \\div  \\cdot  \\degree', result: '± ∓ × ÷ · °' },
-        { trigger: '\\hbar  \\ell  \\aleph  \\Re  \\Im  \\wp', result: 'ℏ ℓ ℵ ℜ ℑ ℘' },
-        { trigger: '\\ldots  \\cdots  \\vdots  \\ddots', result: '… ⋯ ⋮ ⋱' },
-        { trigger: '\\copyright  \\trademark  \\registered  \\dagger  \\section  \\para', result: '© ™ ® † § ¶' },
-      ],
-    },
-    {
       title: 'Smart text replacements',
       description: 'Fires automatically as you type — no shortcut needed.',
       rows: [
@@ -218,27 +191,7 @@ function buildSections(): Section[] {
         { trigger: 'the the', result: 'Repeated word gets flagged (dashed underline)' },
       ],
     },
-    {
-      title: 'Editing & navigation',
-      rows: [
-        { trigger: 'Tab / Shift+Tab (in list)', result: 'Indent / outdent list item' },
-        { trigger: 'Enter on empty list item', result: 'Exit the list' },
-        { trigger: 'Backspace at line start', result: 'Convert heading / quote / list back to a paragraph' },
-        { trigger: '/', result: 'Open slash-command menu' },
-        { trigger: '@', result: 'Mention / link another note' },
-      ],
-    },
-    {
-      title: 'Mobile tips',
-      description: 'Use the selection bubble or simple typed commands — no keyboard shortcuts needed.',
-      rows: [
-        { trigger: 'Select text → tap bubble buttons', result: 'Bold, italic, underline, strike, code, link, comment, or Markdown convert.' },
-        { trigger: '/bold text + Space', result: 'Turns “text” bold', hint: 'also /italic text, /underline text, /strike text, /code text, /highlight text' },
-        { trigger: '/h1', result: 'Heading 1', hint: 'also /h2, /h3, /bullet, /numbered, /check, /quote, /divider' },
-        { trigger: 'Type token + Space', result: 'Markdown shortcuts still work — headings, lists, todos, tables, dates, units, symbols.' },
-        { trigger: 'Long-press a table cell', result: 'Opens the table menu (insert / delete row-col, styles).' },
-      ],
-    },
+
   ];
 
 }
