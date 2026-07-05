@@ -615,7 +615,12 @@ const WebClipper = () => {
             // with title/hero/excerpt only — we do NOT paste the raw
             // document markup into the editor.
             if (clipMode === 'fullpage' && articleHtml) {
-              const readOnlySnapshot = makeReadOnlySnapshotHtml(articleHtml);
+              // Use the raw sanitized HTML EXACTLY as the edge function returns it —
+              // same bytes that get downloaded to disk. Do NOT re-wrap through
+              // makeReadOnlySnapshotHtml: it injects a CSP with `base-uri 'none'`
+              // which cancels the server-injected <base href> and breaks images
+              // that use relative URLs.
+              const readOnlySnapshot = articleHtml;
               const snapshotBytes = new Blob([readOnlySnapshot]).size;
               let host = '';
               try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
@@ -632,17 +637,16 @@ const WebClipper = () => {
                   `<span>${sanitizeForDisplay(fname)} · ${sizeLabel}</span>` +
                   `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'The full page below is captured start-to-finish and stays readable inside this note. Tap "Open" in the header to view the original.'))}</em>` +
                 `</aside>`;
-              // Embed the ENTIRE captured document (start-to-finish, with
-              // its own styles, images, fonts inlined) as a read-only iframe
-              // via srcdoc. The sandbox intentionally omits `allow-scripts`
-              // so nothing inside the captured page can execute JS.
+              // Embed the ENTIRE captured document (start-to-finish) as a
+              // read-only iframe via srcdoc. The sandbox intentionally omits
+              // `allow-scripts` so nothing inside the captured page can execute JS.
               const escapedDoc = readOnlySnapshot
                 .replace(/&/g, '&amp;')
                 .replace(/"/g, '&quot;');
               const iframe =
                 `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
                 `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
-                `referrerpolicy="no-referrer" loading="lazy" ` +
+                `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
                 `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
                 `srcdoc="${escapedDoc}"></iframe>`;
               articleHtml = `${banner}${iframe}`;
