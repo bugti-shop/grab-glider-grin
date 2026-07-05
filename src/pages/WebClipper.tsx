@@ -1223,20 +1223,10 @@ const WebClipper = () => {
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  {t('webClipper.previewHintReadOnly', 'The whole page (start to finish) is captured above as a read-only snapshot. Save it to your notes or download the full HTML.')}
+                  {t('webClipper.previewHintReadOnly', 'The whole page (start to finish) is captured above as a read-only snapshot and saved with your note automatically.')}
                 </p>
               </div>
-              {snapshotHtml && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => triggerHtmlDownload(snapshotFilename || 'web-clip.html', snapshotHtml)}
-                  className="w-full"
-                >
-                  <Download className="h-4 w-4 mr-1.5" />
-                  {t('webClipper.downloadFullHtml', 'Download full HTML page')}
-                </Button>
-              )}
+
               <div className="flex gap-2 pt-1">
                 <Button onClick={commitClip} disabled={saving} className="flex-1">
                   <Save className="h-4 w-4 mr-1.5" />
