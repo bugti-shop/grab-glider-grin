@@ -672,15 +672,25 @@ function evalOperand(expr: string): { value: number; unit: string } | null {
  */
 export function normalizeImplicitMult(input: string): string {
   let s = normalizeUnitPhrases(input);
+  // Unwrap "(<unit>)^N" → "<unit>^N" so exponents survive paren reduction
+  // (e.g. "2(kg)^2 to lb^2" becomes "2 kg^2 to lb^2" instead of dropping "^2").
+  const expRe = new RegExp(`\\(\\s*(${UNIT_TOK})\\s*\\)\\s*\\^\\s*(\\d+)`, 'g');
+  s = s.replace(expRe, ' $1^$2 ');
   // Fold "<num>(<single-unit>)" into "<num> <unit>" so it becomes an operand
   // that evalOperand can read directly.
   const foldRe = new RegExp(`(${NUM_TOK})\\s*\\(\\s*(${UNIT_TOK})\\s*\\)`, 'g');
   s = s.replace(foldRe, '$1 $2');
-  // Insert explicit "*" at paren-adjacency boundaries.
+  // Prepare an unwrap regex for standalone "(<unit>)" — applied after paren-
+  // adjacency insertion so ")(" is preserved for the "*" rule below.
+  const unwrapRe = new RegExp(`\\(\\s*(${UNIT_TOK})\\s*\\)`, 'g');
+  // Insert explicit "*" at paren-adjacency boundaries (BEFORE final unwrap of
+  // any lingering unit-only parens so ")(" is still visible here).
   s = s.replace(/\)\s*\(/g, ')*(');
   s = s.replace(/(\d)\s*\(/g, '$1*(');
   s = s.replace(/\)\s*(\d)/g, ')*$1');
-  return s;
+  // Final unwrap for any remaining "(<unit>)" that's now safely separated by *.
+  s = s.replace(unwrapRe, ' $1 ');
+  return s.replace(/[ \t]+/g, ' ').trim();
 }
 
 /**

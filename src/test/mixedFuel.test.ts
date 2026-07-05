@@ -101,3 +101,35 @@ describe('unary plus/minus', () => {
     expect(r!.result).toBeCloseTo(-20, 2);
   });
 });
+
+describe('implicit multiplication — complex forms', () => {
+  it('inserts * between (unit)(unit) paren-paren adjacency', () => {
+    // "(m/s)(kg)" → unwrap unit-only parens, then bridge with *
+    const s = normalizeImplicitMult('(m/s)(kg)');
+    expect(s).toContain('m/s');
+    expect(s).toContain('kg');
+    // The ")(" boundary must yield an explicit "*" somewhere between the two units.
+    expect(/m\/s\s*\)?\s*\*\s*\(?\s*kg|m\/s\s*\*\s*kg/.test(s)).toBe(true);
+  });
+
+  it('(30 mpg)(15 gal)/2 folds parens and preserves /2', () => {
+    const s = normalizeImplicitMult('(30 mpg)(15 gal)/2');
+    // Both operands survive and a "*" is inserted at the ")(" boundary.
+    expect(s).toMatch(/\)\s*\*\s*\(/);
+    expect(s).toContain('/2');
+  });
+
+  it('normalizes 2(kg)^2 to lb^2 without dropping the exponent', () => {
+    const s = normalizeImplicitMult('2(kg)^2 to lb^2');
+    expect(s).toContain('kg^2');
+    expect(s).toContain('lb^2');
+    // No stray parentheses left around the unit.
+    expect(s).not.toContain('(kg)');
+  });
+
+  it('unwraps (unit)^N inside larger expressions', () => {
+    const s = normalizeImplicitMult('(m)^3 to ft^3');
+    expect(s).toContain('m^3');
+    expect(s).not.toContain('(m)');
+  });
+});
