@@ -336,11 +336,12 @@ export async function trySlashLineShortcut(root: HTMLElement | null): Promise<bo
   }
 
   // ── /today  /now  /tomorrow  /yesterday   → inline date/time text
-  if (cmd === 'today' || cmd === 'now' || cmd === 'tomorrow' || cmd === 'yesterday') {
+  const dateCmd = normalizeDateCommand(cmd);
+  if (dateCmd) {
     const d = new Date();
-    if (cmd === 'tomorrow') d.setDate(d.getDate() + 1);
-    if (cmd === 'yesterday') d.setDate(d.getDate() - 1);
-    const text = cmd === 'now' ? formatDateTime(d) : formatDate(d);
+    if (dateCmd === 'tomorrow') d.setDate(d.getDate() + 1);
+    if (dateCmd === 'yesterday') d.setDate(d.getDate() - 1);
+    const text = dateCmd === 'now' ? formatDateTime(d) : formatDate(d);
     replaceBlockHtml(block, `<p>${escapeHtml(text)}</p>`, root);
     return true;
   }
@@ -468,7 +469,7 @@ export async function trySlashLineShortcut(root: HTMLElement | null): Promise<bo
 }
 
 export function isSlashLineShortcutText(text: string): boolean {
-  return /^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|bold|strong|italic|italics|em|underline|u|strike|strikethrough|s|code|highlight|mark|lorem|color|qr|mermaid|chess|today|now|tomorrow|yesterday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc|unit|convert)\b/i.test(text.trim());
+  return /^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|bold|strong|italic|italics|em|underline|u|strike|strikethrough|s|code|highlight|mark|lorem|color|qr|mermaid|chess|today|tod|td|now|tomorrow|tmrw|tmr|tommorow|tommorrow|tommorrw|yesterday|yday|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|toc|unit|convert)\b/i.test(text.trim());
 }
 
 /**
@@ -480,7 +481,7 @@ export function isSlashLineShortcutText(text: string): boolean {
 export function isSlashLineShortcutReady(text: string): boolean {
   const t = text.trim();
   // Arg-less commands (fire on bare command).
-  if (/^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|today|now|tomorrow|yesterday|toc)\s*$/i.test(t)) return true;
+  if (/^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|today|tod|td|now|tomorrow|tmrw|tmr|tommorow|tommorrow|tommorrw|yesterday|yday|toc)\s*$/i.test(t)) return true;
   // Arg-taking commands (require at least one non-space char after the command).
   if (/^\/(bold|strong|italic|italics|em|underline|u|strike|strikethrough|s|code|highlight|mark|h1|heading1|title|h2|heading2|h3|heading3|lorem|color|qr|mermaid|chess|youtube|yt|spotify|tweet|twitter|x|tz|time|timezone|unit|convert)\s+\S/i.test(t)) return true;
   return false;
@@ -493,7 +494,7 @@ export function isSlashLineShortcutReady(text: string): boolean {
  */
 export function isSlashLineShortcutAutoReady(text: string): boolean {
   const t = text.trim();
-  return /^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|today|now|tomorrow|yesterday|toc|chess)\s*$/i.test(t);
+  return /^\/(text|p|paragraph|h1|heading1|title|h2|heading2|h3|heading3|bullet|bullets|list|ul|numbered|number|ordered|ol|todo|check|checklist|quote|blockquote|divider|hr|rule|table|today|tod|td|now|tomorrow|tmrw|tmr|tommorow|tommorrow|tommorrw|yesterday|yday|toc|chess)\s*$/i.test(t);
 }
 
 const UNIT_HELP_HTML =
@@ -517,6 +518,15 @@ const UNIT_HELP_HTML =
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'section';
+}
+
+function normalizeDateCommand(cmd: string): 'today' | 'tomorrow' | 'yesterday' | 'now' | null {
+  const key = cmd.toLowerCase();
+  if (key === 'today' || key === 'tod' || key === 'td') return 'today';
+  if (key === 'now') return 'now';
+  if (key === 'tomorrow' || key === 'tmrw' || key === 'tmr' || key === 'tommorow' || key === 'tommorrow' || key === 'tommorrw') return 'tomorrow';
+  if (key === 'yesterday' || key === 'yday') return 'yesterday';
+  return null;
 }
 
 /* ── Timezone city map (fallback: raw IANA name) ─────────── */
