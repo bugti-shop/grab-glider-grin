@@ -88,6 +88,20 @@ const CATEGORIES: Category[] = [
       { symbol: 'bbl', aliases: ['bbl', 'barrel', 'barrels', 'oilbarrel'], toBase: 158.987294928 },
       { symbol: 'ft³', aliases: ['ft3', 'cubicfoot', 'cubicfeet', 'ft³'], toBase: 28.316846592 },
       { symbol: 'in³', aliases: ['in3', 'cubicinch', 'cubicinches', 'in³'], toBase: 0.016387064 },
+      { symbol: 'yd³', aliases: ['yd3', 'cubicyard', 'cubicyards', 'yd³'], toBase: 764.554857984 },
+      { symbol: 'dm³', aliases: ['dm3', 'cubicdecimeter', 'cubicdecimeters', 'dm³'], toBase: 1 },
+      { symbol: 'cl', aliases: ['cl', 'centiliter', 'centiliters', 'centilitre', 'centilitres'], toBase: 0.01 },
+      { symbol: 'dl', aliases: ['dl', 'deciliter', 'deciliters', 'decilitre', 'decilitres'], toBase: 0.1 },
+      { symbol: 'hl', aliases: ['hl', 'hectoliter', 'hectoliters', 'hectolitre', 'hectolitres'], toBase: 100 },
+      { symbol: 'ukgal', aliases: ['gallonuk', 'gallonsuk'], toBase: 4.54609 },
+      { symbol: 'ukqt', aliases: ['ukqt', 'ukquart', 'quartuk'], toBase: 1.1365225 },
+      { symbol: 'ukpt', aliases: ['ukpt', 'ukpint', 'pintuk'], toBase: 0.5682612 },
+      { symbol: 'ukfloz', aliases: ['ukfloz', 'ukfluidounce', 'fluidounceuk'], toBase: 0.0284130625 },
+      { symbol: 'cup(200)', aliases: ['cup200', 'cup200ml'], toBase: 0.2 },
+      { symbol: 'cup(240)', aliases: ['cup240', 'cup240ml'], toBase: 0.24 },
+      { symbol: 'cup(250)', aliases: ['cup250', 'cup250ml', 'metriccup'], toBase: 0.25 },
+      { symbol: 'tbsp(15)', aliases: ['tbsp15', 'tbsp15ml', 'metrictbsp'], toBase: 0.015 },
+      { symbol: 'tsp(5)', aliases: ['tsp5', 'tsp5ml', 'metrictsp'], toBase: 0.005 },
     ],
   },
   {
@@ -127,9 +141,15 @@ const CATEGORIES: Category[] = [
     name: 'speed',
     units: [
       { symbol: 'm/s', aliases: ['mps', 'meterspersecond', 'm/s'], toBase: 1 },
+      { symbol: 'm/h', aliases: ['mh', 'metersperhour', 'm/h'], toBase: 1 / 3600 },
+      { symbol: 'km/s', aliases: ['kms', 'kilometerspersecond', 'km/s'], toBase: 1000 },
       { symbol: 'km/h', aliases: ['kmh', 'kph', 'km/h', 'kilometersperhour', 'kmph'], toBase: 1 / 3.6 },
       { symbol: 'mph', aliases: ['mph', 'milesperhour', 'mi/h'], toBase: 0.44704 },
+      { symbol: 'mi/s', aliases: ['mis', 'milespersecond', 'mi/s'], toBase: 1609.344 },
       { symbol: 'ft/s', aliases: ['fps', 'feetpersecond', 'ft/s'], toBase: 0.3048 },
+      { symbol: 'ft/h', aliases: ['fth', 'feetperhour', 'ft/h'], toBase: 0.3048 / 3600 },
+      { symbol: 'in/s', aliases: ['ins', 'inchespersecond', 'in/s'], toBase: 0.0254 },
+      { symbol: 'in/h', aliases: ['inh', 'inchesperhour', 'in/h'], toBase: 0.0254 / 3600 },
       { symbol: 'knot', aliases: ['knot', 'knots', 'kn', 'kt', 'kts', 'kts.', 'knotsperhour', 'nauticalmileperhour', 'nauticalmilesperhour'], toBase: 0.514444444 },
       { symbol: 'mach', aliases: ['mach'], toBase: 343 },
       { symbol: 'c', aliases: ['lightspeed', 'speedoflight'], toBase: 299792458 },
@@ -148,7 +168,12 @@ const CATEGORIES: Category[] = [
       { symbol: 'psi', aliases: ['psi', 'poundpersquareinch'], toBase: 6894.757293168 },
       { symbol: 'torr', aliases: ['torr'], toBase: 133.322387415 },
       { symbol: 'mmHg', aliases: ['mmhg', 'millimetermercury'], toBase: 133.322387415 },
-      { symbol: 'inHg', aliases: ['inhg', 'inchmercury'], toBase: 3386.389 },
+      { symbol: 'inHg', aliases: ['inhg', 'inchmercury', 'inchhg'], toBase: 3386.389 },
+      { symbol: 'mmH2O', aliases: ['mmh2o', 'mmwater', 'millimeterwater'], toBase: 9.80665 },
+      { symbol: 'inH2O', aliases: ['inh2o', 'inchh2o', 'inchwater'], toBase: 249.08891 },
+      { symbol: 'dyn/cm²', aliases: ['dyncm2', 'dyne/cm2', 'dynepercm2'], toBase: 0.1 },
+      { symbol: 'kN/m²', aliases: ['knm2', 'kn/m2', 'kilonewtonpersquaremeter'], toBase: 1000 },
+      { symbol: 'kgf/cm²', aliases: ['kgfcm2', 'kgf/cm2', 'kgfpercm2'], toBase: 98066.5 },
     ],
   },
   {
@@ -166,6 +191,9 @@ const CATEGORIES: Category[] = [
       { symbol: 'BTU', aliases: ['btu'], toBase: 1055.05585262 },
       { symbol: 'therm', aliases: ['therm', 'therms'], toBase: 1.05505585262e8 },
       { symbol: 'ftlb', aliases: ['ftlb', 'ftlbf', 'footpound', 'footpounds'], toBase: 1.3558179483 },
+      { symbol: 'GJ', aliases: ['gj', 'gigajoule', 'gigajoules'], toBase: 1e9 },
+      { symbol: 'Ws', aliases: ['ws', 'wattsecond', 'wattseconds'], toBase: 1 },
+      { symbol: 'GWh', aliases: ['gwh', 'gigawatthour', 'gigawatthours'], toBase: 3.6e12 },
     ],
   },
   {
@@ -180,6 +208,11 @@ const CATEGORIES: Category[] = [
       { symbol: 'PS', aliases: ['ps', 'metrichorsepower'], toBase: 735.49875 },
       { symbol: 'BTU/h', aliases: ['btuh', 'btu/h'], toBase: 0.29307107 },
       { symbol: 'ftlb/s', aliases: ['ftlbs', 'ftlb/s'], toBase: 1.3558179483 },
+      { symbol: 'dBm', aliases: ['dbm', 'decibelmilliwatt'], toBase: 0.001 },
+      { symbol: 'dBW', aliases: ['dbw', 'decibelwatt'], toBase: 1 },
+      { symbol: 'kcal/h', aliases: ['kcalh', 'kcal/h', 'kilocalorieperhour'], toBase: 1.163 },
+      { symbol: 'Mcal/h', aliases: ['mcalh', 'mcal/h', 'megacalorieperhour'], toBase: 1163 },
+      { symbol: 'Gcal/h', aliases: ['gcalh', 'gcal/h', 'gigacalorieperhour'], toBase: 1.163e6 },
     ],
   },
   {
@@ -236,6 +269,8 @@ const CATEGORIES: Category[] = [
       { symbol: 'lbf', aliases: ['lbf', 'poundforce'], toBase: 4.4482216152605 },
       { symbol: 'kgf', aliases: ['kgf', 'kilogramforce'], toBase: 9.80665 },
       { symbol: 'ozf', aliases: ['ozf', 'ounceforce'], toBase: 0.27801385095378125 },
+      { symbol: 'gf', aliases: ['gf', 'gramforce'], toBase: 0.00980665 },
+      { symbol: 'pdl', aliases: ['pdl', 'poundal', 'poundals'], toBase: 0.138254954376 },
     ],
   },
   {
@@ -292,11 +327,18 @@ function convertTemp(v: number, from: string, to: string): number | null {
   return k;
 }
 
-const FUEL_ALIASES: Record<string, 'mpg' | 'mpguk' | 'kpl' | 'l100km'> = {
-  mpg: 'mpg', mpgus: 'mpg',
-  mpguk: 'mpguk', mpgimp: 'mpguk',
-  kpl: 'kpl', kmpl: 'kpl', 'km/l': 'kpl',
+type FuelKind = 'mpg' | 'mpguk' | 'kpl' | 'l100km' | 'mipl' | 'kmgalus' | 'kmgaluk' | 'gal100mius' | 'gal100miuk';
+
+const FUEL_ALIASES: Record<string, FuelKind> = {
+  mpg: 'mpg', mpgus: 'mpg', 'mi/gal': 'mpg', 'migalus': 'mpg', 'milespergallonus': 'mpg',
+  mpguk: 'mpguk', mpgimp: 'mpguk', 'migaluk': 'mpguk', 'milespergallonuk': 'mpguk',
+  kpl: 'kpl', kmpl: 'kpl', 'km/l': 'kpl', kml: 'kpl',
   l100km: 'l100km', 'l/100km': 'l100km',
+  mipl: 'mipl', 'mi/l': 'mipl', milesperliter: 'mipl',
+  kmgalus: 'kmgalus', 'km/gal': 'kmgalus', 'km/galus': 'kmgalus', kilometerpergallonus: 'kmgalus',
+  kmgaluk: 'kmgaluk', 'km/galuk': 'kmgaluk', kilometerpergallonuk: 'kmgaluk',
+  gal100mius: 'gal100mius', 'gal/100mi': 'gal100mius', 'gal/100mius': 'gal100mius',
+  gal100miuk: 'gal100miuk', 'gal/100miuk': 'gal100miuk',
 };
 
 function convertFuel(v: number, from: string, to: string): number | null {
@@ -308,11 +350,21 @@ function convertFuel(v: number, from: string, to: string): number | null {
   if (a === 'kpl') kpl = v;
   else if (a === 'mpg') kpl = v * 0.425143707;
   else if (a === 'mpguk') kpl = v * 0.354006189;
-  else kpl = 100 / v; // l100km
+  else if (a === 'l100km') kpl = 100 / v;
+  else if (a === 'mipl') kpl = v * 1.609344;
+  else if (a === 'kmgalus') kpl = v / 3.785411784;
+  else if (a === 'kmgaluk') kpl = v / 4.54609;
+  else if (a === 'gal100mius') kpl = (100 * 1.609344) / (v * 3.785411784);
+  else kpl = (100 * 1.609344) / (v * 4.54609); // gal100miuk
   if (b === 'kpl') return kpl;
   if (b === 'mpg') return kpl / 0.425143707;
   if (b === 'mpguk') return kpl / 0.354006189;
-  return 100 / kpl;
+  if (b === 'l100km') return 100 / kpl;
+  if (b === 'mipl') return kpl / 1.609344;
+  if (b === 'kmgalus') return kpl * 3.785411784;
+  if (b === 'kmgaluk') return kpl * 4.54609;
+  if (b === 'gal100mius') return (100 * 1.609344) / (kpl * 3.785411784);
+  return (100 * 1.609344) / (kpl * 4.54609);
 }
 
 /* ── Alias index ───────────────────────────────────────────── */
