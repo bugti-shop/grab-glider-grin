@@ -551,19 +551,23 @@ const WebClipper = () => {
               const snapshotBytes = new Blob([articleHtml]).size;
               let host = '';
               try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
-              const snapshotFilename = `${filenameFromTitle(articleTitle || title, host)}.html`;
-              triggerHtmlDownload(snapshotFilename, articleHtml);
+              const fname = `${filenameFromTitle(articleTitle || title, host)}.html`;
+              triggerHtmlDownload(fname, articleHtml);
+              // Keep the raw snapshot in state so the user can re-download it
+              // from the read-only preview at any time.
+              setSnapshotHtml(articleHtml);
+              setSnapshotFilename(fname);
               const sizeLabel = formatBytes(snapshotBytes);
               const banner =
-                `<aside class="flowist-offline-snapshot-info" contenteditable="false" data-snapshot-filename="${snapshotFilename.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
+                `<aside class="flowist-offline-snapshot-info" contenteditable="false" data-snapshot-filename="${fname.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
                   `<strong>📥 ${sanitizeForDisplay(t('webClipper.offlineSnapshotSaved', 'Offline snapshot saved to your device'))}</strong>` +
-                  `<span>${sanitizeForDisplay(snapshotFilename)} · ${sizeLabel}</span>` +
+                  `<span>${sanitizeForDisplay(fname)} · ${sizeLabel}</span>` +
                   `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'The full page below is captured start-to-finish and stays readable inside this note. Tap "Open" in the header to view the original.'))}</em>` +
                 `</aside>`;
               // Embed the ENTIRE captured document (start-to-finish, with
               // its own styles, images, fonts inlined) as a read-only iframe
-              // via srcdoc. This preserves the full page fidelity the user
-              // asked for — no excerpt-only card, no editable half article.
+              // via srcdoc. The sandbox intentionally omits `allow-scripts`
+              // so nothing inside the captured page can execute JS.
               const escapedDoc = articleHtml
                 .replace(/&/g, '&amp;')
                 .replace(/"/g, '&quot;');
