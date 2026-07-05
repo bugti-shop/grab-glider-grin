@@ -1369,48 +1369,44 @@ export const TaskDetailPage = ({
         </div>
 
 
-        <div className="space-y-1 border-t border-border pt-4">
-          {/* Date - Opens TaskDateTimePage */}
-          <button 
-            onClick={() => setShowDateTimePage(true)}
-            className="w-full flex items-center gap-3 py-3 hover:bg-muted/50 rounded-lg px-2 transition-colors"
-          >
-            <CalendarIcon className="h-5 w-5 text-cyan-500" />
-            <span className="flex-1 text-left">{t('taskDetail.dateTimeReminder')}</span>
-            <span className="text-sm text-muted-foreground">
-              {task.dueDate 
-                ? `${format(new Date(task.dueDate), 'MMM d')}${task.reminderTime ? ` • ${format(new Date(task.reminderTime), 'h:mm a')}` : ''}`
-                : t('taskDetail.notSet')}
-            </span>
-          </button>
+        <div className="space-y-2 border-t border-border pt-4">
+          {/* Reminders — single entry that supports multiple reminders per task */}
+          <div className="px-2">
+            <h3 className="text-base font-semibold mb-2">{t('taskDetail.reminders', 'Reminders')}</h3>
+            {(() => {
+              const list = (task as any).extraReminders as Array<{ time: Date; recurring: string }> | undefined;
+              const items = list && list.length > 0
+                ? list
+                : task.extraReminderTime
+                  ? [{ time: task.extraReminderTime as Date, recurring: (task.extraReminderRecurring as string) || 'none' }]
+                  : [];
+              return items.length > 0 ? (
+                <div className="space-y-1 mb-2">
+                  {items.map((r, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setShowExtraReminderSheet(true)}
+                      className="w-full flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                    >
+                      <Bell className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                      <span className="flex-1 text-sm">
+                        {format(new Date(r.time), 'MMM d, h:mm a')}
+                        {r.recurring && r.recurring !== 'none' ? ` • ${r.recurring}` : ''}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null;
+            })()}
+            <button
+              onClick={() => setShowExtraReminderSheet(true)}
+              className="w-full flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors text-primary"
+            >
+              <Plus className="h-5 w-5" />
+              <span className="text-sm font-medium">{t('taskDetail.addReminder', 'Add reminder')}</span>
+            </button>
+          </div>
 
-          {/* Extra Reminder — independent of due date */}
-          <button
-            onClick={() => setShowExtraReminderSheet(true)}
-            className="w-full flex items-center gap-3 py-3 hover:bg-muted/50 rounded-lg px-2 transition-colors"
-          >
-            <Bell className="h-5 w-5 text-amber-500" />
-            <span className="flex-1 text-left">{t('taskDetail.extraReminder', 'Extra reminder')}</span>
-            <span className="text-sm text-muted-foreground truncate max-w-[55%] text-right">
-              {(() => {
-                const list = (task as any).extraReminders as Array<{ time: Date; recurring: string }> | undefined;
-                if (list && list.length > 0) {
-                  const first = list[0];
-                  const summary = `${format(new Date(first.time), 'MMM d, h:mm a')}${
-                    first.recurring && first.recurring !== 'none' ? ` • ${first.recurring}` : ''
-                  }`;
-                  return list.length > 1 ? `${summary} +${list.length - 1} more` : summary;
-                }
-                return task.extraReminderTime
-                  ? `${format(new Date(task.extraReminderTime), 'MMM d, h:mm a')}${
-                      task.extraReminderRecurring && task.extraReminderRecurring !== 'none'
-                        ? ` • ${task.extraReminderRecurring}`
-                        : ''
-                    }`
-                  : t('taskDetail.notSet');
-              })()}
-            </span>
-          </button>
 
 
 
