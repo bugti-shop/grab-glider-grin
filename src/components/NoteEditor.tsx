@@ -2322,6 +2322,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
               headerText: settings.headerText,
               footerText: settings.footerText,
               fontSize: settings.fontSize,
+              headingScale: settings.headingScale,
               preserveStyles: true,
               // Note-specific styling
               noteType: settings.preserveNoteStyle ? noteType : undefined,
