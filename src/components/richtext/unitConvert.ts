@@ -672,6 +672,12 @@ function evalOperand(expr: string): { value: number; unit: string } | null {
  */
 export function normalizeImplicitMult(input: string): string {
   let s = normalizeUnitPhrases(input);
+  // Insert an explicit "*" between an exponent-terminated paren and the next
+  // "(" so adjacent power groups like "(kg)^2(m/s)^2" keep their boundary
+  // *before* the unwrap step erases the ")(" adjacency.
+  s = s.replace(/\)\s*\^\s*(\d+)\s*\(/g, ')^$1*(');
+  // Same idea for the number-follows-exponent case: "(kg)^2 3" → "(kg)^2*3".
+  s = s.replace(/\)\s*\^\s*(\d+)\s*(\d)/g, ')^$1*$2');
   // Unwrap "(<unit>)^N" → "<unit>^N" so exponents survive paren reduction
   // (e.g. "2(kg)^2 to lb^2" becomes "2 kg^2 to lb^2" instead of dropping "^2").
   const expRe = new RegExp(`\\(\\s*(${UNIT_TOK})\\s*\\)\\s*\\^\\s*(\\d+)`, 'g');
