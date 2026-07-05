@@ -660,14 +660,61 @@ const Today = () => {
       priorityFilter, statusFilter: 'all', dateFilter, tagFilter, sortBy,
     });
     if (sorted.length === 0) return null;
+    // Nested DragDropContext so subtasks reorder independently of the parent
+    // task list (@hello-pangea/dnd supports nested contexts). Dragging a
+    // subtask row will NOT drag the parent because the parent Draggable in the
+    // outer view lives in a different context.
+    const handleSubtaskDragEnd = (result: DropResult) => {
+      if (!result.destination || !item.subtasks) return;
+      if (result.destination.index === result.source.index) return;
+      // Reorder against the currently displayed (sorted) list so the drop
+      // lands where the user visually released it, then map back to a full
+      // subtask array preserving any items filtered out from view.
+      const visibleIds = sorted.map(s => s.id);
+      const reorderedVisibleIds = Array.from(visibleIds);
+      const [movedId] = reorderedVisibleIds.splice(result.source.index, 1);
+      reorderedVisibleIds.splice(result.destination.index, 0, movedId);
+      const byId = new Map(item.subtasks.map(st => [st.id, st]));
+      const hidden = item.subtasks.filter(st => !visibleIds.includes(st.id));
+      const reorderedFull = [
+        ...reorderedVisibleIds.map(id => byId.get(id)!).filter(Boolean),
+        ...hidden,
+      ];
+      updateItem(item.id, { subtasks: reorderedFull });
+      try { Haptics.impact({ style: ImpactStyle.Light }); } catch {}
+    };
     return (
-      <div className="ml-3 sm:ml-4 md:ml-5 pl-3 sm:pl-4 border-l-2 border-border/50">
-        {sorted.map((sub) => (
-          <div key={sub.id}>{renderTaskItem(sub)}</div>
-        ))}
+      <div
+        className="ml-3 sm:ml-4 md:ml-5 pl-3 sm:pl-4 border-l-2 border-border/50"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DragDropContext onDragEnd={handleSubtaskDragEnd}>
+          <Droppable droppableId={`inline-subs-${item.id}`}>
+            {(dropProvided) => (
+              <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}>
+                {sorted.map((sub, idx) => (
+                  <Draggable key={sub.id} draggableId={`sub-${sub.id}`} index={idx}>
+                    {(dragProvided, snapshot) => (
+                      <div
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        {...dragProvided.dragHandleProps}
+                        className={cn(snapshot.isDragging && "bg-muted/60 shadow-md rounded-md")}
+                      >
+                        {renderTaskItem(sub)}
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {dropProvided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
       </div>
     );
   };
+
 
 
   // Render section header — delegates to extracted component
