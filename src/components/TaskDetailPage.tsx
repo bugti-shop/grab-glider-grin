@@ -73,6 +73,7 @@ import PdfViewer from './PdfViewer';
 import { getPomodoroStats, formatPomodoroDuration } from '@/utils/pomodoroStorage';
 import { Timer as TimerIcon } from 'lucide-react';
 import { PremiumCrown } from './PremiumCrown';
+import { ReminderCountdown } from './reminders/ReminderCountdown';
 
 interface TaskDetailPageProps {
   isOpen: boolean;
@@ -1208,17 +1209,24 @@ export const TaskDetailPage = ({
                   {items.map((r, idx) => (
                     <div
                       key={(r as any).id ?? idx}
-                      className="w-full flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors"
+                      className="w-full flex items-start gap-2 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors"
                     >
                       <button
                         onClick={() => setShowExtraReminderSheet(true)}
-                        className="flex-1 flex items-center gap-3 text-left"
+                        className="flex-1 flex items-start gap-3 text-left min-w-0"
                         aria-label={t('taskDetail.editReminder', 'Edit reminder')}
                       >
-                        <Bell className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                        <span className="flex-1 text-sm">
-                          {format(new Date(r.time), 'MMM d, h:mm a')}
-                          {r.recurring && r.recurring !== 'none' ? ` • ${r.recurring}` : ''}
+                        <Bell className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <span className="flex-1 min-w-0 flex flex-col">
+                          <span className="text-sm">
+                            {format(new Date(r.time), 'MMM d, h:mm a')}
+                            {r.recurring && r.recurring !== 'none' ? ` • ${r.recurring}` : ''}
+                          </span>
+                          <ReminderCountdown
+                            time={r.time}
+                            recurring={(r.recurring as any) || 'none'}
+                            daysOfWeek={(r as any).daysOfWeek}
+                          />
                         </span>
                       </button>
                       <button
