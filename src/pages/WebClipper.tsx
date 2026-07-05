@@ -472,7 +472,11 @@ const WebClipper = () => {
           });
           const { data, error } = await Promise.race([
             supabase.functions.invoke('fetch-article', {
-              body: { url, mode: 'article', webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined },
+              body: {
+                url,
+                mode: clipMode === 'fullpage' ? 'fullpage' : 'article',
+                webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
+              },
             }),
             timeoutPromise,
           ]);
