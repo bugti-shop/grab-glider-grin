@@ -1137,64 +1137,6 @@ export const TaskDetailPage = ({
           />
         </div>
 
-        {/* Effort Estimation */}
-        <div className="bg-muted/30 rounded-xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Hourglass className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium">{t('taskDetail.effortEstimation')}</h3>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1.5 flex-wrap">
-              {[0.5, 1, 2, 4, 8].map(h => (
-                <button
-                  key={h}
-                  onClick={() => onUpdate({ ...task, estimatedHours: task.estimatedHours === h ? undefined : h })}
-                  className={cn(
-                    "px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all",
-                    task.estimatedHours === h
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "border-border text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  {h}h
-                </button>
-              ))}
-            </div>
-            <input
-              type="number"
-              min="0.25"
-              step="0.25"
-              max="999"
-              value={task.estimatedHours || ''}
-              onChange={(e) => onUpdate({ ...task, estimatedHours: e.target.value ? Number(e.target.value) : undefined })}
-              placeholder={t('taskDetail.custom')}
-              className="w-20 px-2 py-1.5 text-xs rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          {task.estimatedHours && task.timeTracking && task.timeTracking.totalSeconds > 0 && (
-            <div className="mt-3 pt-3 border-t border-border">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">{t('taskDetail.estimated', { hours: task.estimatedHours })}</span>
-                <span className="text-muted-foreground">
-                  {t('taskDetail.actual', { hours: (task.timeTracking.totalSeconds / 3600).toFixed(1) })}
-                </span>
-              </div>
-              <div className="mt-1.5 h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all",
-                    (task.timeTracking.totalSeconds / 3600) > task.estimatedHours
-                      ? "bg-destructive"
-                      : "bg-primary"
-                  )}
-                  style={{
-                    width: `${Math.min(100, ((task.timeTracking.totalSeconds / 3600) / task.estimatedHours) * 100)}%`
-                  }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Deadline & Scheduled date (distinct from dueDate) */}
         {(task.deadline || task.scheduledDate) && (
