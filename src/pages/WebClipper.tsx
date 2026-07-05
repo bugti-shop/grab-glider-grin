@@ -412,11 +412,65 @@ const WebClipper = () => {
         !!url &&
         clipMode !== 'selection';
 
-      if (shouldFetchFull) {
-        // Hard cap the full-page fetch so users never sit on a spinner
-        // indefinitely. If the edge function is slow or upstream stalls, we
-        // surface a clear timeout rather than falling back to partial/snapshot
-        // content silently.
+      // Screenshot mode collects a base64 PNG data URL instead of parsed HTML.
+      let screenshotDataUrl = '';
+      let screenshotMime = 'image/png';
+      let screenshotByteLength = 0;
+
+      if (shouldFetchFull && clipMode === 'screenshot') {
+        const FETCH_TIMEOUT_MS = 60_000;
+        try {
+          setStage('fetching');
+          setProgress(null);
+          setProgressLabel(t('webClipper.stageScreenshot', 'Capturing full-page screenshot…'));
+          const fetchStartedAt = performance.now();
+          console.info('[webClipper] invoking screenshot-page', { url, timeoutMs: FETCH_TIMEOUT_MS });
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            const id = window.setTimeout(() => {
+              reject(new DOMException('Timed out capturing screenshot', 'TimeoutError'));
+            }, FETCH_TIMEOUT_MS);
+            controller.signal.addEventListener('abort', () => window.clearTimeout(id), { once: true });
+          });
+          const { data, error } = await Promise.race([
+            supabase.functions.invoke('screenshot-page', { body: { url } }),
+            timeoutPromise,
+          ]);
+          const fetchMs = Math.round(performance.now() - fetchStartedAt);
+          if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+          if (error) {
+            console.warn('[webClipper] screenshot-page transport error', { url, ms: fetchMs, message: error.message });
+            fetchFailure = { code: 'network', message: error.message };
+          } else if (data?.error) {
+            console.warn('[webClipper] screenshot-page returned error', {
+              url, ms: fetchMs, code: data.code, error: data.error,
+            });
+            fetchFailure = { code: String(data.code || 'internal'), message: String(data.error) };
+          } else if (data?.dataUrl) {
+            screenshotDataUrl = String(data.dataUrl);
+            screenshotMime = String(data.mime || 'image/png');
+            screenshotByteLength = Number(data.byteLength) || 0;
+            articleTitle = title || '';
+            console.info('[webClipper] screenshot-page ok', {
+              url, ms: fetchMs, bytes: screenshotByteLength, mime: screenshotMime,
+            });
+          } else {
+            fetchFailure = { code: 'internal', message: 'Empty screenshot response' };
+          }
+        } catch (err) {
+          if (canceledRef.current || (err as Error)?.name === 'AbortError') throw err;
+          const isTimeout = (err as Error)?.name === 'TimeoutError';
+          console.warn('[webClipper] screenshot fetch threw', {
+            url, timeout: isTimeout, error: (err as Error)?.message,
+          });
+          fetchFailure = {
+            code: isTimeout ? 'timeout' : 'network',
+            message: isTimeout
+              ? t('webClipper.screenshotTimeout', 'Capturing the screenshot took too long. Please try again.')
+              : (err as Error)?.message,
+          };
+        }
+      } else if (shouldFetchFull) {
+        // Legacy article HTML path (kept for backward compatibility).
         const FETCH_TIMEOUT_MS = 45_000;
         try {
           setStage('fetching');
