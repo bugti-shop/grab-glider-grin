@@ -60,32 +60,58 @@ function buildSections(): Section[] {
   return [
     {
       title: 'Markdown block shortcuts',
-
-      description: 'Type these tokens at the start of a line, then press Space.',
-      rows: [
-        { trigger: '# ', result: 'Heading 1' },
-        { trigger: '## ', result: 'Heading 2' },
-        { trigger: '### ', result: 'Heading 3' },
-        { trigger: '#### ', result: 'Heading 4' },
-        { trigger: '- ', result: 'Bullet list', hint: 'also * or +' },
-        { trigger: '1. ', result: 'Numbered list', hint: 'any digits + .' },
-        { trigger: '[] ', result: 'To-do (unchecked)', hint: 'also [ ]' },
-        { trigger: '[x] ', result: 'To-do (checked)' },
-        { trigger: '> ', result: 'Blockquote' },
-        { trigger: '``` + Enter', result: 'Fenced code block' },
-        { trigger: '--- + Enter', result: 'Horizontal divider' },
-        { trigger: 'Inside a list, type -/*/1. + Space', result: 'Creates a nested sub-list (no Tab needed)' },
+      description: 'Type these tokens at the start of a line, then press Space. Categories are collapsed — tap to expand.',
+      rows: [],
+      groups: [
+        {
+          title: 'Headings',
+          rows: [
+            { trigger: '# ', result: 'Heading 1' },
+            { trigger: '## ', result: 'Heading 2' },
+            { trigger: '### ', result: 'Heading 3' },
+            { trigger: '#### ', result: 'Heading 4' },
+          ],
+        },
+        {
+          title: 'Lists',
+          rows: [
+            { trigger: '- ', result: 'Bullet list', hint: 'also * or +' },
+            { trigger: '1. ', result: 'Numbered list', hint: 'any digits + .' },
+            { trigger: '[] ', result: 'To-do (unchecked)', hint: 'also [ ]' },
+            { trigger: '[x] ', result: 'To-do (checked)' },
+            { trigger: 'Inside a list, type -/*/1. + Space', result: 'Creates a nested sub-list (no Tab needed)' },
+          ],
+        },
+        {
+          title: 'Blocks & separators',
+          rows: [
+            { trigger: '> ', result: 'Blockquote' },
+            { trigger: '``` + Enter', result: 'Fenced code block' },
+            { trigger: '--- + Enter', result: 'Horizontal divider' },
+          ],
+        },
       ],
     },
     {
       title: 'Markdown inline shortcuts',
       description: 'Type the closing marker to convert the wrapped text.',
-      rows: [
-        { trigger: '**text**', result: 'Bold' },
-        { trigger: '*text*', result: 'Italic', hint: 'also _text_' },
-        { trigger: '`text`', result: 'Inline code' },
-        { trigger: '~~text~~', result: 'Strikethrough' },
-        { trigger: '==text==', result: 'Highlight' },
+      rows: [],
+      groups: [
+        {
+          title: 'Emphasis',
+          rows: [
+            { trigger: '**text**', result: 'Bold' },
+            { trigger: '*text*', result: 'Italic', hint: 'also _text_' },
+            { trigger: '~~text~~', result: 'Strikethrough' },
+          ],
+        },
+        {
+          title: 'Code & highlight',
+          rows: [
+            { trigger: '`text`', result: 'Inline code' },
+            { trigger: '==text==', result: 'Highlight' },
+          ],
+        },
       ],
     },
 
@@ -111,55 +137,114 @@ function buildSections(): Section[] {
     },
     {
       title: 'Dates & time',
-      description: 'Insert relative dates, weekdays, and world clocks.',
-      rows: [
-        { trigger: '/today', result: "Today's date" },
-        { trigger: '/tomorrow', result: "Tomorrow's date" },
-        { trigger: '/yesterday', result: "Yesterday's date" },
-        { trigger: '/now', result: 'Current date & time' },
-        { trigger: '+3d + Space', result: '3 days from today', hint: 'also +2w (weeks), +1mo (months), +1y (years)' },
-        { trigger: '+3h / +45m / -30s', result: 'Relative date + time (hours / minutes / seconds)' },
-        { trigger: '@friday', result: 'Next Friday’s date', hint: 'any weekday name works (@mon, @thu, …)' },
-        { trigger: '/tz tokyo', result: 'Current time in that city / IANA zone', hint: 'also /time, /timezone' },
+      description: 'Insert relative dates, weekdays, and world clocks. Categories collapsed — tap to expand.',
+      rows: [],
+      groups: [
+        {
+          title: 'Fixed dates',
+          rows: [
+            { trigger: '/today', result: "Today's date" },
+            { trigger: '/tomorrow', result: "Tomorrow's date" },
+            { trigger: '/yesterday', result: "Yesterday's date" },
+            { trigger: '/now', result: 'Current date & time' },
+          ],
+        },
+        {
+          title: 'Relative math (basic)',
+          rows: [
+            { trigger: '+3d + Space', result: '3 days from today', hint: 'also +2w (weeks)' },
+            { trigger: '+3h / +45m / -30s', result: 'Relative date + time (hours / minutes / seconds)' },
+          ],
+        },
+        {
+          title: 'Relative math (advanced)',
+          rows: [
+            { trigger: '+1mo / +1y + Space', result: 'Months and years from today' },
+            { trigger: '@friday', result: 'Next Friday’s date', hint: 'any weekday name works (@mon, @thu, …)' },
+          ],
+        },
+        {
+          title: 'Time zones',
+          rows: [
+            { trigger: '/tz tokyo', result: 'Current time in that city / IANA zone', hint: 'also /time, /timezone' },
+          ],
+        },
       ],
     },
     {
       title: 'Math (type expression, press =)',
-      description: 'Inline calculator powered by mathjs.',
-      rows: [
-        { trigger: '2 + 3 =', result: '5' },
-        { trigger: '(2+3)*4 =', result: '20' },
-        { trigger: '2^10 =', result: '1024' },
-        { trigger: '17 % 5 =', result: '2  (modulo)' },
-        { trigger: 'sqrt(16) =', result: '4' },
-        { trigger: '5! =', result: '120  (factorial)' },
-        { trigger: 'sin(pi/2) =', result: '1' },
-        { trigger: 'tan(45 deg) =', result: '1' },
-        { trigger: 'log(100, 10) =', result: '2' },
-        { trigger: 'ln(e) =', result: '1' },
-        { trigger: 'round(3.7) / floor(3.9) / ceil(3.1) =', result: 'rounding helpers' },
-        { trigger: 'abs(-5) =', result: '5' },
-        { trigger: 'gcd(12,18) / lcm(4,6) =', result: 'number-theory helpers' },
-        { trigger: 'mean(1,2,3) / median / std / variance =', result: 'Statistics' },
-        { trigger: 'combinations(5,2) / permutations(5,2) =', result: 'Combinatorics' },
-        { trigger: '5 & 3, 5 | 3, 5 xor 3, 5 << 1, ~5 =', result: 'Bitwise operators' },
-        { trigger: '0b1010, 0o17, 0xff =', result: 'Binary / octal / hex literals' },
-        { trigger: 'hex(255) / bin(10) / oct(9) =', result: 'Base conversion' },
-        { trigger: '(2 + 3i) * (1 - i) =', result: 'Complex numbers' },
-        { trigger: '1/3 + 1/6 =', result: 'Fraction arithmetic' },
-        { trigger: '50% of 200 =', result: '100  (percent-of)' },
-        { trigger: '200 - 10% =', result: '180  (calculator-style %)' },
+      description: 'Inline calculator powered by mathjs. Categories collapsed — tap to expand.',
+      rows: [],
+      groups: [
+        {
+          title: 'Basic arithmetic',
+          rows: [
+            { trigger: '2 + 3 =', result: '5' },
+            { trigger: '(2+3)*4 =', result: '20' },
+            { trigger: '2^10 =', result: '1024' },
+            { trigger: '17 % 5 =', result: '2  (modulo)' },
+            { trigger: 'sqrt(16) =', result: '4' },
+            { trigger: 'abs(-5) =', result: '5' },
+            { trigger: 'round(3.7) / floor(3.9) / ceil(3.1) =', result: 'rounding helpers' },
+          ],
+        },
+        {
+          title: 'Scientific & trigonometry',
+          rows: [
+            { trigger: 'sin(pi/2) =', result: '1' },
+            { trigger: 'tan(45 deg) =', result: '1' },
+            { trigger: 'log(100, 10) =', result: '2' },
+            { trigger: 'ln(e) =', result: '1' },
+            { trigger: '5! =', result: '120  (factorial)' },
+            { trigger: 'gcd(12,18) / lcm(4,6) =', result: 'number-theory helpers' },
+          ],
+        },
+        {
+          title: 'Statistics & combinatorics (advanced)',
+          rows: [
+            { trigger: 'mean(1,2,3) / median / std / variance =', result: 'Statistics' },
+            { trigger: 'combinations(5,2) / permutations(5,2) =', result: 'Combinatorics' },
+          ],
+        },
+        {
+          title: 'Bases & bitwise (advanced)',
+          rows: [
+            { trigger: '5 & 3, 5 | 3, 5 xor 3, 5 << 1, ~5 =', result: 'Bitwise operators' },
+            { trigger: '0b1010, 0o17, 0xff =', result: 'Binary / octal / hex literals' },
+            { trigger: 'hex(255) / bin(10) / oct(9) =', result: 'Base conversion' },
+            { trigger: '(2 + 3i) * (1 - i) =', result: 'Complex numbers' },
+          ],
+        },
+        {
+          title: 'Fractions & percent',
+          rows: [
+            { trigger: '1/3 + 1/6 =', result: 'Fraction arithmetic' },
+            { trigger: '50% of 200 =', result: '100  (percent-of)' },
+            { trigger: '200 - 10% =', result: '180  (calculator-style %)' },
+          ],
+        },
       ],
     },
     {
       title: 'Currency (type “N FROM to TO”, press =)',
-      description: 'Uses live FX rates (cached 12h); shows ≈ when using fallback.',
-      rows: [
-        { trigger: '100 usd to pkr =', result: '≈ live conversion' },
-        { trigger: '50 eur to usd =', result: '≈ live conversion' },
-        { trigger: '2500 jpy in gbp =', result: '≈ live conversion', hint: '“in” or “to” both work' },
-        { trigger: 'Nicknames', result: 'dollar, euro, pound, yen, yuan, rupee, taka, dirham, riyal, dinar, peso, real, rand, ruble, franc, krona, loonie, aussie, kiwi …' },
-        { trigger: 'ISO codes', result: 'Any of ~160 ISO 4217 codes returned by the FX API (USD, EUR, GBP, JPY, AED, SAR, PKR, INR, CAD, AUD, CHF, CNY, KRW, TRY, BRL, ZAR, …)' },
+      description: 'Uses live FX rates (cached 12h); shows ≈ when using fallback. Categories collapsed — tap to expand.',
+      rows: [],
+      groups: [
+        {
+          title: 'Common conversions',
+          rows: [
+            { trigger: '100 usd to pkr =', result: '≈ live conversion' },
+            { trigger: '50 eur to usd =', result: '≈ live conversion' },
+            { trigger: '2500 jpy in gbp =', result: '≈ live conversion', hint: '“in” or “to” both work' },
+          ],
+        },
+        {
+          title: 'Nicknames & ISO codes (advanced)',
+          rows: [
+            { trigger: 'Nicknames', result: 'dollar, euro, pound, yen, yuan, rupee, taka, dirham, riyal, dinar, peso, real, rand, ruble, franc, krona, loonie, aussie, kiwi …' },
+            { trigger: 'ISO codes', result: 'Any of ~160 ISO 4217 codes returned by the FX API (USD, EUR, GBP, JPY, AED, SAR, PKR, INR, CAD, AUD, CHF, CNY, KRW, TRY, BRL, ZAR, …)' },
+          ],
+        },
       ],
     },
     {
@@ -362,20 +447,23 @@ function buildSections(): Section[] {
  */
 function consolidateSlashCommands(sections: Section[]): Section[] {
   const slashRows: Row[] = [];
+  const isSlash = (r: Row) => /^\/[a-zA-Z]/.test(r.trigger.trim());
   const cleaned: Section[] = sections.map((s) => {
     const kept: Row[] = [];
     for (const r of s.rows) {
-      const t = r.trigger.trim();
-      // Only pull rows that start with `/word` — leave the bare "/" (opens menu)
-      // and tokens like "/text" inside descriptive prose alone.
-      if (/^\/[a-zA-Z]/.test(t)) {
-        slashRows.push(r);
-      } else {
-        kept.push(r);
-      }
+      if (isSlash(r)) slashRows.push(r);
+      else kept.push(r);
     }
-    return { ...s, rows: kept };
-  }).filter((s) => s.rows.length > 0);
+    const cleanedGroups = (s.groups ?? []).map((g) => {
+      const gk: Row[] = [];
+      for (const r of g.rows) {
+        if (isSlash(r)) slashRows.push(r);
+        else gk.push(r);
+      }
+      return { ...g, rows: gk };
+    }).filter((g) => g.rows.length > 0);
+    return { ...s, rows: kept, groups: cleanedGroups.length > 0 ? cleanedGroups : undefined };
+  }).filter((s) => s.rows.length > 0 || (s.groups && s.groups.length > 0));
 
   if (slashRows.length === 0) return cleaned;
 
