@@ -112,6 +112,22 @@
   <meta name="twitter:description" content="Flowist is a free all-in-one productivity app with smart notes, to-do lists, habit tracking, sketching &amp; daily planner. Organize your life effortlessly.">
 </head>
   <body>
+    <script>
+      // Quick-Add overlay boots at /quick-add inside a translucent Android
+      // activity. Force html/body/root fully transparent BEFORE React mounts
+      // so the launcher shows through — no white flash during JS hydration.
+      (function () {
+        try {
+          if (location.pathname.replace(/\/+$/, '') === '/quick-add') {
+            var s = document.createElement('style');
+            s.textContent = 'html,body,#root{background:transparent!important;background-color:transparent!important;}';
+            document.head.appendChild(s);
+            document.documentElement.style.background = 'transparent';
+            document.body.style.background = 'transparent';
+          }
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
