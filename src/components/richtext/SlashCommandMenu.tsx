@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { LucideIcon, Type, Heading1, Heading2, Heading3, Quote, Lightbulb, ChevronRightSquare,
   Minus, List, ListOrdered, ListChecks, Table, Code, Columns2, Columns3, Sigma, Crown,
   Bold, Italic, Underline, Strikethrough, Highlighter, FileText, Palette, QrCode,
