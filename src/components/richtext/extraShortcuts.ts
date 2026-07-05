@@ -787,13 +787,26 @@ function replaceBlockHtml(block: HTMLElement, html: string, root: HTMLElement) {
   parent.removeChild(block);
   nodes.forEach((n) => parent.insertBefore(n, anchor));
   }
-  // Place caret after inserted content.
+  // Place caret at the END of the last inserted node — inside its deepest
+  // text node when possible. Element-offset carets (e.g. after selectNodeContents
+  // + collapse on a <p>) confuse contenteditable on some browsers/IMEs: the
+  // next Space keypress can end up splitting/replacing the text node, which
+  // manifested as "/today" → "Jul 5, 2026" collapsing to "J│2026" on Space.
   const last = nodes[nodes.length - 1];
   if (last) {
     const sel = window.getSelection();
     const range = document.createRange();
-    range.selectNodeContents(last);
-    range.collapse(false);
+    // Find deepest last text node inside `last` (if any).
+    let deepest: Node = last;
+    while (deepest.lastChild) deepest = deepest.lastChild;
+    if (deepest.nodeType === 3) {
+      const t = deepest as Text;
+      range.setStart(t, t.data.length);
+    } else {
+      range.selectNodeContents(last);
+      range.collapse(false);
+    }
+    range.collapse(true);
     sel?.removeAllRanges();
     sel?.addRange(range);
   }
