@@ -379,10 +379,31 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
   // the note renders the inline article content only.
   root
     .querySelectorAll<HTMLElement>(
-      '.flowist-web-clip-fullpage, [data-role="fullpage-snapshot"], [data-role="fullpage-open"], [data-role="fullpage-download"], iframe.flowist-web-clip-fullpage-frame',
+      '.flowist-web-clip-fullpage, .flowist-web-clip-fullpage-hint, .flowist-web-clip-fullpage-btn, [data-role="fullpage-snapshot"], [data-role="fullpage-open"], [data-role="fullpage-download"], iframe.flowist-web-clip-fullpage-frame',
     )
     .forEach((el) => el.remove());
+  // Older clips saved these controls with different classes; strip anything
+  // whose text still matches the old snapshot chrome and bubble up to the
+  // wrapping card so the surrounding rounded box disappears too.
+  const SNAPSHOT_TEXT_RE = /(hide snapshot|view snapshot|view full captured|download captured html|snapshot stored offline)/i;
+  const candidates = Array.from(
+    root.querySelectorAll<HTMLElement>('button, a, p, div, span, figure, section'),
+  );
+  for (const el of candidates) {
+    if (!el.isConnected) continue;
+    const txt = (el.textContent || '').trim();
+    if (!txt || !SNAPSHOT_TEXT_RE.test(txt)) continue;
+    let target: HTMLElement = el;
+    for (let i = 0; i < 4; i++) {
+      const p = target.parentElement;
+      if (!p || p === root) break;
+      if (p.classList.contains('flowist-web-clip-body') || p.classList.contains('flowist-web-clip')) break;
+      target = p;
+    }
+    target.remove();
+  }
 };
+
 
 /* ────────────────────────────────────────────────────────────── */
 /* Code block hydration: language selector + copy + line numbers  */

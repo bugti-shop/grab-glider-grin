@@ -42,22 +42,46 @@ const inFlightClipKeys = new Set<string>();
 const clipKey = (mode: string, url: string, attachment: string, shareId: string) =>
   `${mode}::${(url || '').trim().toLowerCase()}::${(attachment || '').trim().toLowerCase()}::${shareId || 'manual'}`;
 
+const SNAPSHOT_TEXT_RE = /(hide snapshot|view snapshot|view full captured|download captured html|snapshot stored offline)/i;
+
 const stripSnapshotArtifacts = (html: string): string => {
   if (!html || typeof window === 'undefined') return html;
   try {
     const doc = new DOMParser().parseFromString(`<div id="__clip-root">${html}</div>`, 'text/html');
     const root = doc.getElementById('__clip-root');
     if (!root) return html;
+    // 1. Known selectors (legacy).
     root
       .querySelectorAll(
-        '.flowist-web-clip-fullpage, [data-role="fullpage-snapshot"], [data-role="fullpage-open"], [data-role="fullpage-download"], iframe.flowist-web-clip-fullpage-frame',
+        '.flowist-web-clip-fullpage, .flowist-web-clip-fullpage-hint, .flowist-web-clip-fullpage-btn, [data-role="fullpage-snapshot"], [data-role="fullpage-open"], [data-role="fullpage-download"], iframe.flowist-web-clip-fullpage-frame',
       )
       .forEach((node) => node.remove());
+    // 2. Any element whose visible text matches the old snapshot chrome text.
+    //    Walk buttons/links/paragraphs first, then bubble up to a reasonable
+    //    container so the surrounding rounded box disappears too.
+    const candidates = Array.from(
+      root.querySelectorAll<HTMLElement>('button, a, p, div, span, figure, section'),
+    );
+    for (const el of candidates) {
+      if (!el.isConnected) continue;
+      const txt = (el.textContent || '').trim();
+      if (!txt || !SNAPSHOT_TEXT_RE.test(txt)) continue;
+      // Climb to the nearest wrapping card (stop at the clip section/body).
+      let target: HTMLElement = el;
+      for (let i = 0; i < 4; i++) {
+        const p = target.parentElement;
+        if (!p || p === root) break;
+        if (p.classList.contains('flowist-web-clip-body') || p.classList.contains('flowist-web-clip')) break;
+        target = p;
+      }
+      target.remove();
+    }
     return root.innerHTML;
   } catch {
     return html;
   }
 };
+
 
 const WebClipper = () => {
   const [searchParams] = useSearchParams();
@@ -108,6 +132,34 @@ const WebClipper = () => {
   useEffect(() => {
     if (previewReady && contentEditorRef.current) hydrateWebClipsIn(contentEditorRef.current);
   }, [previewReady, previewHtml]);
+
+  // Synthetic progress ticker: when the current stage doesn't report a real
+  // ratio (fetch/extract/embed/save all resolve as one-shot backend calls),
+  // creep the bar from 5% → 92% so users see continuous movement instead of
+  // a flat empty bar for the entire wait.
+  const [fauxProgress, setFauxProgress] = useState<number | null>(null);
+  useEffect(() => {
+    if (!saving || stage === 'idle' || error) {
+      setFauxProgress(null);
+      return;
+    }
+    if (typeof progress === 'number') {
+      setFauxProgress(null);
+      return;
+    }
+    setFauxProgress(5);
+    const id = window.setInterval(() => {
+      setFauxProgress((v) => {
+        const cur = v ?? 5;
+        if (cur >= 92) return 92;
+        // Ease-out: slower as we approach the cap.
+        const step = Math.max(1, Math.round((92 - cur) * 0.08));
+        return Math.min(92, cur + step);
+      });
+    }, 350);
+    return () => window.clearInterval(id);
+  }, [saving, stage, progress, error]);
+
 
   // Re-poll the monthly counter after each fetch settles (so the bar reflects
   // the server-side increment) and whenever Pro state flips.
@@ -844,7 +896,17 @@ const WebClipper = () => {
                   <span className="ml-auto text-xs text-muted-foreground tabular-nums">{progress}%</span>
                 )}
               </div>
-              <Progress value={typeof progress === 'number' ? progress : undefined} className="h-1.5" />
+              <Progress
+                value={
+                  typeof progress === 'number'
+                    ? progress
+                    : typeof fauxProgress === 'number'
+                    ? fauxProgress
+                    : 5
+                }
+                className="h-1.5"
+              />
+
               {stage === 'fetching' && (
                 <p className="text-[11px] text-muted-foreground">
                   {t('webClipper.fetchingHint', 'Downloading the page, extracting images, embeds, and article text…')}
