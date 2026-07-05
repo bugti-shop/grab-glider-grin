@@ -147,6 +147,17 @@ body.flowist-task-dragging [data-flowist-virtual-list="tasks"] {
     height: 100% !important;
   }
 
+  /* Quick-Add overlay: kill all backgrounds so the Android launcher shows
+     through behind the floating sheet. Overrides the base `bg-background`
+     applied to html/body in the @layer base block below. */
+  html:has(body.quick-add-overlay),
+  body.quick-add-overlay,
+  body.quick-add-overlay #root {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+
   html,
   body,
   #root {
