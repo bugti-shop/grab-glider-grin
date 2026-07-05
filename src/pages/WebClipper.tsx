@@ -257,8 +257,8 @@ const WebClipper = () => {
     }
     abortRef.current = null;
     canceledRef.current = false;
-    setMode(initialMode);
-    setPicking(!explicitMode);
+    setMode(isAttachmentMode ? initialMode : 'fullpage');
+    setPicking(false);
     setPreviewReady(false);
     setPreviewTitle('');
     setPreviewHtml('');
