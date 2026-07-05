@@ -233,3 +233,81 @@ describe('implicit multiplication — adjacent exponent groups', () => {
     }
   });
 });
+
+describe('implicit multiplication — negative & fractional exponents', () => {
+  it('bridges 2(kg)^-2(m/s)^(1/2) with negative + fractional powers', () => {
+    const s = normalizeImplicitMult('2(kg)^-2(m/s)^(1/2) to N^?');
+    expect(s).toMatch(/^2\s+kg\^-2\s*\*\s*m\/s\^\(1\/2\)/);
+    expect(s).toContain('to N^?');
+    expect(s).not.toContain('(kg)');
+    expect(s).not.toContain('(m/s)');
+  });
+
+  it('bridges (kg)^-2(m/s)^-1 (two negative exponents, no leading number)', () => {
+    const s = normalizeImplicitMult('(kg)^-2(m/s)^-1');
+    expect(s).toMatch(/^kg\^-2\s*\*\s*m\/s\^-1$/);
+  });
+
+  it('bridges (kg)^(1/2)(m/s)^(3/2) (two fractional exponents)', () => {
+    const s = normalizeImplicitMult('(kg)^(1/2)(m/s)^(3/2)');
+    expect(s).toMatch(/^kg\^\(1\/2\)\s*\*\s*m\/s\^\(3\/2\)$/);
+  });
+
+  it('supports explicit +N exponent like (kg)^+2(m/s)^+1', () => {
+    const s = normalizeImplicitMult('(kg)^+2(m/s)^+1');
+    expect(s).toMatch(/kg\^\+2\s*\*\s*m\/s\^\+1/);
+  });
+
+  it('mixed exponent shapes keep parentheses balanced', () => {
+    for (const input of [
+      '2(kg)^-2(m/s)^(1/2) to N^?',
+      '(kg)^-2(m/s)^-1',
+      '(kg)^(1/2)(m/s)^(3/2)',
+      '(kg)^+2(m/s)^+1',
+    ]) {
+      const s = normalizeImplicitMult(input);
+      const opens = (s.match(/\(/g) ?? []).length;
+      const closes = (s.match(/\)/g) ?? []).length;
+      expect(opens).toBe(closes);
+    }
+  });
+});
+
+describe('implicit multiplication — chained exponent adjacencies', () => {
+  it('2(kg)^2(m/s)^2(A)^3 chains three power groups with "*"', () => {
+    const s = normalizeImplicitMult('2(kg)^2(m/s)^2(A)^3 to N^2 * A^3');
+    // Leading number folds, then every adjacent power group is bridged.
+    expect(s).toMatch(/^2\s+kg\^2\s*\*\s*m\/s\^2\s*\*\s*A\^3/);
+    // Target phrase preserved untouched.
+    expect(s).toContain('to N^2 * A^3');
+  });
+
+  it('chains work without a leading number: (kg)^2(m)^3(s)^-1', () => {
+    const s = normalizeImplicitMult('(kg)^2(m)^3(s)^-1');
+    expect(s).toMatch(/^kg\^2\s*\*\s*m\^3\s*\*\s*s\^-1$/);
+  });
+
+  it('mixes integer, negative and fractional exponents in one chain', () => {
+    const s = normalizeImplicitMult('(kg)^2(m)^-1(s)^(1/2)');
+    expect(s).toMatch(/^kg\^2\s*\*\s*m\^-1\s*\*\s*s\^\(1\/2\)$/);
+  });
+
+  it('four-group chain stays associated left-to-right', () => {
+    const s = normalizeImplicitMult('3(kg)^2(m)^3(s)^-1(A)^2');
+    expect(s).toMatch(/^3\s+kg\^2\s*\*\s*m\^3\s*\*\s*s\^-1\s*\*\s*A\^2$/);
+  });
+
+  it('chained normalization keeps parentheses balanced', () => {
+    for (const input of [
+      '2(kg)^2(m/s)^2(A)^3 to N^2 * A^3',
+      '(kg)^2(m)^3(s)^-1',
+      '(kg)^2(m)^-1(s)^(1/2)',
+      '3(kg)^2(m)^3(s)^-1(A)^2',
+    ]) {
+      const s = normalizeImplicitMult(input);
+      const opens = (s.match(/\(/g) ?? []).length;
+      const closes = (s.match(/\)/g) ?? []).length;
+      expect(opens).toBe(closes);
+    }
+  });
+});
