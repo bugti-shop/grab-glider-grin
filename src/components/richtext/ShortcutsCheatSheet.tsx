@@ -334,6 +334,17 @@ function buildSections(): Section[] {
             { trigger: '1 rad to Gy =', result: 'Absorbed-dose conversion' },
           ],
         },
+        {
+          title: 'Implicit multiplication & exponents (advanced)',
+          rows: [
+            // Basic — no explicit "*" needed between a number and a paren-wrapped unit.
+            { trigger: '2(kg) to lb =', result: 'Number × paren unit', hint: 'same as "2 kg to lb"' },
+            { trigger: '(30 mpg)(15 gal) to mi =', result: 'Paren × paren fuel × volume → distance' },
+            // Advanced — adjacent exponent groups auto-bridge with "*".
+            { trigger: '2(kg)^2( m/s )^2 to N^2 =', result: 'Adjacent power groups: "(kg)^2( m/s )^2" → "kg^2 * m/s^2"' },
+            { trigger: '((kg)(m/s))^2 to (kg*m/s)^2 =', result: 'Nested unwrap: inner units fold, outer exponent preserved' },
+          ],
+        },
       ],
     },
 
