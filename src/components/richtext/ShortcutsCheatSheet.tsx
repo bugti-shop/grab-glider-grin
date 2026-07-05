@@ -446,18 +446,23 @@ function buildSections(): Section[] {
  * click any command and have it applied to the editor immediately.
  */
 function consolidateSlashCommands(sections: Section[]): Section[] {
-  const slashRows: Row[] = [];
+  const slashByGroup = new Map<string, Row[]>();
+  const pushSlash = (groupName: string, row: Row) => {
+    const arr = slashByGroup.get(groupName) ?? [];
+    arr.push(row);
+    slashByGroup.set(groupName, arr);
+  };
   const isSlash = (r: Row) => /^\/[a-zA-Z]/.test(r.trigger.trim());
   const cleaned: Section[] = sections.map((s) => {
     const kept: Row[] = [];
     for (const r of s.rows) {
-      if (isSlash(r)) slashRows.push(r);
+      if (isSlash(r)) pushSlash(s.title, r);
       else kept.push(r);
     }
     const cleanedGroups = (s.groups ?? []).map((g) => {
       const gk: Row[] = [];
       for (const r of g.rows) {
-        if (isSlash(r)) slashRows.push(r);
+        if (isSlash(r)) pushSlash(`${s.title} · ${g.title}`, r);
         else gk.push(r);
       }
       return { ...g, rows: gk };
@@ -465,12 +470,18 @@ function consolidateSlashCommands(sections: Section[]): Section[] {
     return { ...s, rows: kept, groups: cleanedGroups.length > 0 ? cleanedGroups : undefined };
   }).filter((s) => s.rows.length > 0 || (s.groups && s.groups.length > 0));
 
-  if (slashRows.length === 0) return cleaned;
+  if (slashByGroup.size === 0) return cleaned;
 
+  const groups: SubSection[] = Array.from(slashByGroup.entries()).map(([title, rows]) => ({
+    title,
+    rows,
+  }));
+  const totalRows = groups.reduce((n, g) => n + g.rows.length, 0);
   const slashBlock: Section = {
-    title: 'Slash commands (click to apply)',
-    description: 'Tap any command below — the cheat sheet closes and it runs in the editor instantly.',
-    rows: slashRows,
+    title: `Slash commands (click to apply) · ${totalRows}`,
+    description: 'Tap any command below — the cheat sheet closes and it runs in the editor instantly. Sub-categories collapsed — tap to expand.',
+    rows: [],
+    groups,
     applySlash: true,
   };
   return [slashBlock, ...cleaned];
@@ -601,42 +612,57 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
               No shortcuts match “{query}”.
             </div>
           )}
-          {filtered.map((section) => (
-            <section key={section.title}>
-              <h3 className="text-sm font-semibold mb-1">{section.title}</h3>
-              {section.description && (
-                <p className="text-xs text-muted-foreground mb-2">{section.description}</p>
-              )}
-              {section.rows.length > 0 && renderRowsTable(section.rows, !!section.applySlash)}
-              {section.groups && section.groups.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {section.groups.map((group) => (
-                    <details
-                      key={group.title}
-                      // Only auto-open while the user is actively searching so
-                      // matched sub-groups reveal their rows; otherwise stays
-                      // collapsed as the user requested.
-                      open={query.trim().length > 0}
-                      className="group rounded-md border bg-background overflow-hidden"
-                    >
-                      <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium flex items-center gap-2 hover:bg-muted/50 marker:hidden [&::-webkit-details-marker]:hidden">
-                        <span className="inline-block transition-transform group-open:rotate-90 text-muted-foreground">
-                          ▶
-                        </span>
-                        <span>{group.title}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {group.rows.length}
-                        </span>
-                      </summary>
-                      <div className="border-t">
-                        {renderRowsTable(group.rows, false)}
-                      </div>
-                    </details>
-                  ))}
+          {filtered.map((section) => {
+            const rowCount =
+              section.rows.length +
+              (section.groups?.reduce((n, g) => n + g.rows.length, 0) ?? 0);
+            return (
+              <details
+                key={section.title}
+                open={query.trim().length > 0}
+                className="group rounded-lg border bg-background overflow-hidden"
+              >
+                <summary className="cursor-pointer select-none px-3 py-2 flex items-center gap-2 hover:bg-muted/50 marker:hidden [&::-webkit-details-marker]:hidden">
+                  <span className="inline-block transition-transform group-open:rotate-90 text-muted-foreground">
+                    ▶
+                  </span>
+                  <h3 className="text-sm font-semibold">{section.title}</h3>
+                  <span className="ml-auto text-xs text-muted-foreground">{rowCount}</span>
+                </summary>
+                <div className="border-t p-3">
+                  {section.description && (
+                    <p className="text-xs text-muted-foreground mb-2">{section.description}</p>
+                  )}
+                  {section.rows.length > 0 && renderRowsTable(section.rows, !!section.applySlash)}
+                  {section.groups && section.groups.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {section.groups.map((group) => (
+                        <details
+                          key={group.title}
+                          open={query.trim().length > 0}
+                          className="group/sub rounded-md border bg-background overflow-hidden"
+                        >
+                          <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium flex items-center gap-2 hover:bg-muted/50 marker:hidden [&::-webkit-details-marker]:hidden">
+                            <span className="inline-block transition-transform group-open/sub:rotate-90 text-muted-foreground">
+                              ▶
+                            </span>
+                            <span>{group.title}</span>
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {group.rows.length}
+                            </span>
+                          </summary>
+                          <div className="border-t">
+                            {renderRowsTable(group.rows, !!section.applySlash)}
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </section>
-          ))}
+              </details>
+            );
+          })}
+
 
           <p className="text-xs text-muted-foreground text-center pt-2">
             Tip: shortcuts are silently skipped inside code blocks so you can type raw Markdown / LaTeX freely.
