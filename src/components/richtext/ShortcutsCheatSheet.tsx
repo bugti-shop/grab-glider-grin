@@ -76,16 +76,7 @@ function buildSections(): Section[] {
       ],
     },
 
-      description: 'Fast ways to insert and grow tables.',
-      rows: [
-        { trigger: '/table', result: 'Open the table picker (rows × columns)' },
-        { trigger: '2x3 + Space', result: 'Instant 2-row × 3-col table', hint: 'any NxM up to 10x10' },
-        { trigger: '| a | b | + Enter', result: 'Markdown pipe table — Enter converts the line into a real table' },
-        { trigger: 'Tab / Shift+Tab (in cell)', result: 'Next / previous cell' },
-        { trigger: 'Enter (last row)', result: 'Adds a new row below' },
-        { trigger: 'Right-click / long-press cell', result: 'Table menu: insert/delete row/column, styles' },
-      ],
-    },
+
     {
       title: 'Slash commands',
       description: 'Complete short commands run automatically; commands with text still run with Space or Enter.',
