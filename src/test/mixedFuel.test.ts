@@ -185,3 +185,51 @@ describe('implicit multiplication — nested parentheses', () => {
     }
   });
 });
+
+describe('implicit multiplication — adjacent exponent groups', () => {
+  it('2(kg)^2( m/s )^2 to N^2 keeps both powers and inserts * between them', () => {
+    const s = normalizeImplicitMult('2(kg)^2( m/s )^2 to N^2');
+    // Both exponents survive.
+    expect(s).toContain('kg^2');
+    expect(s).toContain('m/s^2');
+    // Explicit * bridges the two power groups.
+    expect(s).toMatch(/kg\^2\s*\*\s*m\/s\^2/);
+    // Leading coefficient and "to <target>" phrase preserved.
+    expect(s).toMatch(/^2\s+kg\^2/);
+    expect(s).toContain('to N^2');
+    // No stray single-unit parens left.
+    expect(s).not.toContain('(kg)');
+    expect(s).not.toContain('(m/s)');
+  });
+
+  it('(kg)^2(m/s)^2 with no leading number still bridges the boundary', () => {
+    const s = normalizeImplicitMult('(kg)^2(m/s)^2');
+    expect(s).toMatch(/kg\^2\s*\*\s*m\/s\^2/);
+    expect(s).not.toContain('(kg)');
+    expect(s).not.toContain('(m/s)');
+  });
+
+  it('(kg)^2 (m/s)^2 with whitespace between groups bridges the same way', () => {
+    const s = normalizeImplicitMult('(kg)^2 (m/s)^2');
+    expect(s).toMatch(/kg\^2\s*\*\s*m\/s\^2/);
+  });
+
+  it('2(kg)^2(m/s)^2 folds the leading number and preserves both exponents', () => {
+    const s = normalizeImplicitMult('2(kg)^2(m/s)^2');
+    expect(s).toMatch(/^2\s+kg\^2\s*\*\s*m\/s\^2$/);
+  });
+
+  it('adjacent-exponent normalization keeps parentheses balanced', () => {
+    for (const input of [
+      '2(kg)^2( m/s )^2 to N^2',
+      '(kg)^2(m/s)^2',
+      '(kg)^2 (m/s)^2',
+      '2(kg)^2(m/s)^2',
+    ]) {
+      const s = normalizeImplicitMult(input);
+      const opens = (s.match(/\(/g) ?? []).length;
+      const closes = (s.match(/\)/g) ?? []).length;
+      expect(opens).toBe(closes);
+    }
+  });
+});
