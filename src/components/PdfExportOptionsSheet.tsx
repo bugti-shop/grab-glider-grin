@@ -232,7 +232,33 @@ export const PdfExportOptionsSheet = ({
             </div>
           </div>
 
-          {/* Header/Footer */}
+          {/* Heading scale — fine-tunes H1–H6 size relative to body font. */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <Type className="h-4 w-4" />
+              {t('pdf.headingScale', 'Heading Scale')}
+            </Label>
+            <div className="flex items-center gap-2">
+              <Slider
+                value={[Math.round(settings.headingScale * 100)]}
+                onValueChange={([value]) => updateSetting('headingScale', value / 100)}
+                min={70}
+                max={150}
+                step={5}
+                className="flex-1"
+              />
+              <span className="text-sm w-12 text-right tabular-nums">
+                {Math.round(settings.headingScale * 100)}%
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                'pdf.headingScaleHint',
+                'Scales H1–H6 headings so exported PDF matches the editor. Use lower values for more compact spacing.',
+              )}
+            </p>
+          </div>
+
           <div className="space-y-3">
             <Label className="text-sm font-medium flex items-center gap-2">
               <AlignVerticalJustifyStart className="h-4 w-4" />
