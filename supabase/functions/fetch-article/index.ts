@@ -54,6 +54,58 @@ function sanitizeHtml(html: string): string {
   return out;
 }
 
+/** Promote lazy-loaded image URLs (data-src, data-lazy-src, data-original,
+ *  data-hi-res-src, data-echo) into real `src`/`srcset` attributes so the
+ *  snapshot renders images even when the origin site relies on JS lazy-load. */
+function promoteLazyImages(html: string): string {
+  return html.replace(/<img\b[^>]*>/gi, (tag) => {
+    let updated = tag;
+    // Pick the first available lazy attribute for src
+    const srcAttrs = ["data-src", "data-lazy-src", "data-original", "data-hi-res-src", "data-echo", "data-img-src"];
+    const hasRealSrc = /\ssrc\s*=\s*["'][^"']*["']/i.test(updated) &&
+      !/\ssrc\s*=\s*["'](?:data:image\/(?:gif|svg\+xml)[^"']*|[^"']*\.svg[^"']*|[^"']*placeholder[^"']*|[^"']*blank[^"']*|[^"']*1x1[^"']*)["']/i.test(updated);
+    if (!hasRealSrc) {
+      for (const attr of srcAttrs) {
+        const re = new RegExp(`\\s${attr}\\s*=\\s*["']([^"']+)["']`, "i");
+        const m = re.exec(updated);
+        if (m && m[1]) {
+          // Remove existing src (may be placeholder), then add real one
+          updated = updated.replace(/\ssrc\s*=\s*["'][^"']*["']/i, "");
+          updated = updated.replace(/<img\b/i, `<img src="${m[1].replace(/"/g, "&quot;")}"`);
+          break;
+        }
+      }
+    }
+    // Promote lazy srcset
+    if (!/\ssrcset\s*=/i.test(updated)) {
+      const lazySrcsetAttrs = ["data-srcset", "data-lazy-srcset"];
+      for (const attr of lazySrcsetAttrs) {
+        const re = new RegExp(`\\s${attr}\\s*=\\s*["']([^"']+)["']`, "i");
+        const m = re.exec(updated);
+        if (m && m[1]) {
+          updated = updated.replace(/<img\b/i, `<img srcset="${m[1].replace(/"/g, "&quot;")}"`);
+          break;
+        }
+      }
+    }
+    // Kill native lazy loading so the browser fetches immediately in the sandbox
+    updated = updated.replace(/\sloading\s*=\s*["'][^"']*["']/i, "");
+    return updated;
+  });
+}
+
+/** Inject a permissive referrer policy so hotlink-protected CDNs (which see
+ *  the sandboxed iframe's opaque origin as `null`) still serve images. */
+function injectReferrerMeta(html: string): string {
+  // Remove any existing referrer meta first
+  let out = html.replace(/<meta\b[^>]*name\s*=\s*["']?referrer["']?[^>]*>/gi, "");
+  const meta = `<meta name="referrer" content="no-referrer-when-downgrade">`;
+  if (/<head\b[^>]*>/i.test(out)) {
+    out = out.replace(/<head\b[^>]*>/i, (m) => `${m}\n${meta}`);
+  }
+  return out;
+}
+
 /** Inject/replace a <base href="…"> so relative URLs resolve to the origin. */
 function ensureBaseHref(html: string, baseHref: string): string {
   // Remove any existing <base …>
