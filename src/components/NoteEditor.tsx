@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { genId } from '@/utils/genId';
 import { sanitizeHtml, sanitizeClippedArticle } from '@/lib/sanitize';
 import { supabase } from '@/integrations/supabase/client';
+import { getCachedClip, putCachedClip, normalizeClipUrl } from '@/lib/webClipCache';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { compressImage, isCompressibleImage } from '@/utils/imageCompression';
 import { decompressHtml, formatBytesShort } from '@/utils/htmlCompression';
@@ -1138,28 +1139,62 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     setWebClipLoading(true);
     setWebClipError(null);
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-article', {
-        body: { url, mode: 'fullpage' },
-      });
-      if (error) {
-        setWebClipError(error.message || 'Fetch failed');
-        return;
+      const normalized = normalizeClipUrl(url);
+      const online = typeof navigator === 'undefined' ? true : navigator.onLine !== false;
+
+      let rawHtml = '';
+      let status = 0;
+      let fromCache = false;
+
+      // Offline-first: if the device is offline, try the cache immediately.
+      if (!online) {
+        const cached = await getCachedClip(normalized);
+        if (cached) {
+          rawHtml = cached.rawHtml;
+          status = cached.status;
+          fromCache = true;
+        } else {
+          setWebClipError(t('webClipper.offlineNoCache', 'You are offline and this URL has not been clipped before.'));
+          return;
+        }
+      } else {
+        // Online: fetch fresh, but fall back to cache if the edge call fails.
+        try {
+          const { data, error } = await supabase.functions.invoke('fetch-article', {
+            body: { url, mode: 'fullpage' },
+          });
+          if (error) throw new Error(error.message || 'Fetch failed');
+          if (!data || (data as any).error) throw new Error((data as any)?.error || 'Empty response');
+          rawHtml = String((data as any).rawHtml || '');
+          if (!rawHtml) throw new Error('No HTML returned');
+          status = Number((data as any).status || 0);
+        } catch (fetchErr) {
+          const cached = await getCachedClip(normalized);
+          if (cached) {
+            rawHtml = cached.rawHtml;
+            status = cached.status;
+            fromCache = true;
+            toast.info(t('webClipper.usingCached', 'Fetch failed — using cached snapshot from {{date}}', {
+              date: new Date(cached.capturedAt).toLocaleString(),
+            }));
+          } else {
+            setWebClipError((fetchErr as Error).message);
+            return;
+          }
+        }
       }
-      if (!data || (data as any).error) {
-        setWebClipError((data as any)?.error || 'Empty response');
-        return;
-      }
-      const rawHtml = String((data as any).rawHtml || '');
-      if (!rawHtml) {
-        setWebClipError('No HTML returned');
-        return;
-      }
-      const status = Number((data as any).status || 0);
-      if (status >= 400) {
+
+      if (status >= 400 && !fromCache) {
         toast.warning(
           t('webClipper.originError', 'Origin returned {{status}} — snapshot may be a not-found page', { status }),
         );
       }
+
+      // Persist fresh fetches to the offline cache (best-effort).
+      if (!fromCache) {
+        void putCachedClip({ url: normalized, rawHtml, status, bytes: rawHtml.length });
+      }
+
 
       let host = 'snapshot';
       try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
