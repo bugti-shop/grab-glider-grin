@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Check, Loader2, ExternalLink, FileText, Quote, Image as ImageIcon, FileType2, AlertTriangle, Download, X, Save, Pencil } from 'lucide-react';
 import { saveNoteToDBSingle } from '@/utils/noteStorage';
+import { compressHtml } from '@/utils/htmlCompression';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -642,7 +643,7 @@ const WebClipper = () => {
                 `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
                 `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
                 `referrerpolicy="no-referrer" loading="lazy" ` +
-                `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:#fff;display:block;" ` +
+                `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
                 `srcdoc="${escapedDoc}"></iframe>`;
               articleHtml = `${banner}${iframe}`;
               articleEmbeds = [];
@@ -886,11 +887,19 @@ const WebClipper = () => {
       setProgressLabel(t('webClipper.stageSaving', 'Saving to notes…'));
       const cleanHtml = stripSnapshotArtifacts(sanitizeClippedArticle(previewHtml));
       const cleanTitle = (previewTitle || 'Untitled Clip').substring(0, MAX_LENGTHS.title);
+      const fullPageSnapshot = snapshotHtml
+        ? {
+            ...(await compressHtml(snapshotHtml)),
+            url: url || undefined,
+            capturedAt: new Date().toISOString(),
+          }
+        : undefined;
       const newNote: Note = {
         id: crypto.randomUUID(),
         type: 'regular',
         title: cleanTitle,
         content: cleanHtml,
+        fullPageSnapshot,
         voiceRecordings: [],
         createdAt: new Date(),
         updatedAt: new Date(),
