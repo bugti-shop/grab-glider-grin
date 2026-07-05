@@ -653,8 +653,11 @@ const Today = () => {
   const renderSubtasksInline = (item: TodoItem) => {
     const isExpanded = expandedTasks.has(item.id);
     if (!isExpanded || !item.subtasks || item.subtasks.length === 0) return null;
+    // Keep completed subtasks visible under an uncompleted parent (with strikethrough).
+    // They only leave when the parent itself is completed (parent moves to Completed
+    // section and carries its subtasks along). So we ignore statusFilter here.
     const sorted = filterAndSortTasks(item.subtasks, {
-      priorityFilter, statusFilter, dateFilter, tagFilter, sortBy,
+      priorityFilter, statusFilter: 'all', dateFilter, tagFilter, sortBy,
     });
     if (sorted.length === 0) return null;
     return (
