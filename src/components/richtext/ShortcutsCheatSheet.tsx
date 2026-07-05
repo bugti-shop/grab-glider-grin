@@ -575,11 +575,22 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               autoFocus
-              placeholder="Search shortcuts…"
+              placeholder="Search commands, units or categories (e.g. km, /unit, currency)…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 pr-16"
+              aria-label="Filter cheat sheet"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground px-2 py-0.5 rounded border border-border bg-background"
+                aria-label="Clear search"
+              >
+                Clear
+              </button>
+            )}
           </div>
           <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
             <Hand className="h-3.5 w-3.5 shrink-0" aria-hidden />
