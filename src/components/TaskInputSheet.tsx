@@ -93,8 +93,21 @@ interface TaskInputSheetProps {
   autoOpenScanner?: boolean;
 }
 
-export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFolderId, onCreateFolder, sections = [], selectedSectionId, defaultDate, preventBackdropClose = false, autoOpenScanner = false }: TaskInputSheetProps) => {
+export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders, selectedFolderId, onCreateFolder, sections = [], selectedSectionId, defaultDate, preventBackdropClose = false, autoOpenScanner = false }: TaskInputSheetProps) => {
   const { t } = useTranslation();
+
+  // Keep the sheet open across consecutive task adds. After handleSend fires
+  // we ignore any onClose() call for a short window — this suppresses
+  // spurious closes from focus/blur, keyboard resize, tour milestones or
+  // any external re-render side-effect. Genuine user closes (backdrop tap,
+  // swipe-down, hardware back, X button) still work outside this window.
+  const justAddedAtRef = useRef(0);
+  const onClose = useCallback(() => {
+    if (Date.now() - justAddedAtRef.current < 600) return;
+    rawOnClose();
+  }, [rawOnClose]);
+
+
 
 
 
@@ -493,8 +506,12 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       assigneeId,
     };
 
-    // Add task first
+    // Add task first — mark the "just added" window so any incidental
+    // onClose() triggered by focus/keyboard/re-render is ignored and the
+    // sheet stays open for the user's next task.
+    justAddedAtRef.current = Date.now();
     onAddTask(mainTask);
+
     
     // Reset fields using setTimeout for native batching (prevents jerk/flicker)
     setTimeout(() => {
