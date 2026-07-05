@@ -182,12 +182,7 @@ export const sanitizeClippedArticle = (html: string): string => {
         tokens.add('allow-popups-to-escape-sandbox');
       }
       frame.setAttribute('sandbox', Array.from(tokens).join(' ').trim() || 'allow-same-origin');
-      // Use no-referrer-when-downgrade (not strict no-referrer) so
-      // hotlink-protected CDNs still serve images inside the sandboxed
-      // srcdoc iframe. Matches the referrer policy set on the source
-      // <iframe> emitted by WebClipper and preserves parity with the
-      // downloaded .html snapshot.
-      frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+      frame.setAttribute('referrerpolicy', 'no-referrer');
       frame.setAttribute('loading', 'lazy');
       frame.removeAttribute('contenteditable');
     });
