@@ -670,6 +670,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     createdTime,
     getCurrentNoteId,
     note?.createdAt,
+    note?.fullPageSnapshot,
     noteType,
     title,
     content,
