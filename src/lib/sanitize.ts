@@ -89,7 +89,9 @@ export const sanitizeForDisplay = (html: string): string => {
 /**
  * Sanitize HTML captured by the Web Clipper. Extends the display config to
  * allow safe embeds (iframe/video) so users can keep YouTube/Vimeo-style
- * players and lazy-loaded imagery in the saved note.
+ * players and lazy-loaded imagery in the saved note, and — critically — to
+ * preserve the full-page read-only snapshot iframe (`srcdoc` document with
+ * the entire captured page inlined).
  */
 export const sanitizeClippedArticle = (html: string): string => {
   const clean = DOMPurify.sanitize(html, {
@@ -103,12 +105,12 @@ export const sanitizeClippedArticle = (html: string): string => {
       'data-bytes', 'data-url', 'data-captured-at',
       'sandbox', 'srcdoc',
     ],
+    // `srcdoc` carries an entire HTML document as an attribute value — it is
+    // not a URL, so treat it as URI-safe and let it through unmodified.
+    ADD_URI_SAFE_ATTR: ['srcdoc'],
+    FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover', 'onfocus', 'onblur', 'onsubmit'],
+    FORBID_TAGS: ['script', 'style'],
   }) as string;
-  // ── Post-sanitize normalization: strip layout traps (floats, absolute
-  // positioning, tiny fixed widths) that break the reader view — this is
-  // what causes the broken column-of-single-letters wrapping around orphan
-  // floated images. Also flatten empty placeholder blocks left behind by
-  // lazy-loaders and give every clip a stable `.evernote-clip` shell.
   try {
     if (typeof window === 'undefined' || !clean) return clean;
     const doc = new DOMParser().parseFromString(`<div id="__root">${clean}</div>`, 'text/html');
@@ -144,6 +146,25 @@ export const sanitizeClippedArticle = (html: string): string => {
         'style',
         `${prev};display:block;max-width:100%;height:auto;margin:16px auto;border-radius:8px;`.replace(/^;/, ''),
       );
+    });
+
+    // Full-page read-only web-clip embeds: always force a script-free sandbox
+    // and strip anything that could turn the iframe interactive-editable.
+    root.querySelectorAll<HTMLIFrameElement>('iframe').forEach((frame) => {
+      // Never allow scripts inside a captured-page iframe.
+      const sandbox = frame.getAttribute('sandbox') || '';
+      const tokens = new Set(
+        sandbox.split(/\s+/).filter(Boolean).filter((t) => t !== 'allow-scripts'),
+      );
+      if (frame.hasAttribute('srcdoc')) {
+        tokens.add('allow-same-origin');
+        tokens.add('allow-popups');
+        tokens.add('allow-popups-to-escape-sandbox');
+      }
+      frame.setAttribute('sandbox', Array.from(tokens).join(' ').trim() || 'allow-same-origin');
+      frame.setAttribute('referrerpolicy', 'no-referrer');
+      frame.setAttribute('loading', 'lazy');
+      frame.removeAttribute('contenteditable');
     });
 
     root.querySelectorAll<HTMLElement>('div,span,section,aside').forEach((el) => {
