@@ -1124,6 +1124,109 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     }
   };
 
+  /**
+   * Web Clipper: fetch a URL through the fetch-article edge function, then
+   * embed the returned full-page HTML snapshot as an inline sandboxed iframe
+   * (srcdoc = the entire HTML string). This is the exact same rendering the
+   * `/dev/fetch-article` sandbox uses. Because the HTML is stored inline in
+   * the note's content, it works offline on web and Android after the first
+   * fetch — no network round-trip needed to re-read the clip.
+   */
+  const runWebClipperFetch = async () => {
+    const url = webClipUrl.trim();
+    if (!url) return;
+    setWebClipLoading(true);
+    setWebClipError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-article', {
+        body: { url, mode: 'fullpage' },
+      });
+      if (error) {
+        setWebClipError(error.message || 'Fetch failed');
+        return;
+      }
+      if (!data || (data as any).error) {
+        setWebClipError((data as any)?.error || 'Empty response');
+        return;
+      }
+      const rawHtml = String((data as any).rawHtml || '');
+      if (!rawHtml) {
+        setWebClipError('No HTML returned');
+        return;
+      }
+      const status = Number((data as any).status || 0);
+      if (status >= 400) {
+        toast.warning(
+          t('webClipper.originError', 'Origin returned {{status}} — snapshot may be a not-found page', { status }),
+        );
+      }
+
+      // Escape the raw HTML for use inside srcdoc="…" (double-quoted attribute).
+      const escaped = rawHtml
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;');
+
+      let host = 'snapshot';
+      try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+      const capturedAt = new Date().toISOString();
+
+      // Same iframe attributes as /dev/fetch-article — read-only sandbox,
+      // no scripts, no top-level navigation escape.
+      const embed =
+        `<div class="evernote-clip" data-role="fullpage-snapshot" data-url="${url.replace(/"/g, '&quot;')}" data-captured-at="${capturedAt}" data-bytes="${rawHtml.length}">` +
+          `<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:hsl(var(--muted-foreground));margin:8px 0;">` +
+            `<span>📎</span>` +
+            `<a href="${url.replace(/"/g, '&quot;')}" target="_blank" rel="noopener noreferrer">${host}</a>` +
+            `<span>·</span><span>${Math.round(rawHtml.length / 1024)} KB · offline-ready</span>` +
+          `</div>` +
+          `<iframe ` +
+            `srcdoc="${escaped}" ` +
+            `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+            `referrerpolicy="no-referrer-when-downgrade" ` +
+            `loading="lazy" ` +
+            `style="width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;">` +
+          `</iframe>` +
+        `</div><p><br></p>`;
+
+      const safe = sanitizeClippedArticle(embed);
+
+      const editor = editorRef.current;
+      if (['sticky', 'lined', 'regular', 'textformat'].includes(noteType) && editor) {
+        editor.focus();
+        try {
+          const sel = window.getSelection();
+          const needsRestore =
+            !sel ||
+            sel.rangeCount === 0 ||
+            !editor.contains(sel.getRangeAt(0).commonAncestorContainer);
+          if (needsRestore && sel) {
+            const range = document.createRange();
+            range.selectNodeContents(editor);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } catch { /* ignore */ }
+        let inserted = false;
+        try { inserted = document.execCommand('insertHTML', false, safe); } catch { inserted = false; }
+        if (!inserted) editor.insertAdjacentHTML('beforeend', safe);
+        setContent(editor.innerHTML);
+      } else {
+        // Non-rich note types: append raw HTML to content so it still saves.
+        setContent(prev => (prev || '') + safe);
+      }
+
+      toast.success(t('webClipper.clipped', 'Web page clipped into note'));
+      setIsWebClipperOpen(false);
+      setWebClipUrl('');
+    } catch (e) {
+      setWebClipError((e as Error).message);
+    } finally {
+      setWebClipLoading(false);
+    }
+  };
+
+
   const getEditorBackgroundColor = () => {
     if (noteType === 'sticky') {
       return STICKY_COLOR_VALUES[color];
