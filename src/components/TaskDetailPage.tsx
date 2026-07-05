@@ -985,7 +985,7 @@ export const TaskDetailPage = ({
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="space-y-2"
+                    className="rounded-lg overflow-hidden bg-background"
                   >
                     {task.subtasks.map((subtask, index) => (
                       <Draggable key={subtask.id} draggableId={subtask.id} index={index}>
@@ -993,45 +993,36 @@ export const TaskDetailPage = ({
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
+                            {...provided.dragHandleProps}
                             className={cn(
-                              "flex items-start gap-2 py-3 px-3 bg-card rounded-lg border border-border group cursor-pointer hover:bg-muted/50 transition-colors",
+                              "flex items-start gap-3 py-2.5 px-2 border-b border-border/50 bg-background group cursor-pointer",
                               snapshot.isDragging && "shadow-lg ring-2 ring-primary/20"
                             )}
                             onClick={() => handleOpenSubtaskDetail(subtask)}
                           >
-                            <div
-                              {...provided.dragHandleProps}
-                              onClick={(e) => e.stopPropagation()}
-                              className="cursor-grab active:cursor-grabbing touch-none mt-1"
-                            >
-                              <GripVertical className="h-4 w-4 text-muted-foreground/50" />
-                            </div>
-                            {/* Bullet Point Style */}
-                            <span className="text-muted-foreground mt-0.5 text-lg leading-none">•</span>
                             <Checkbox
                               checked={subtask.completed}
                               onCheckedChange={() => handleToggleSubtask(subtask.id)}
                               onClick={(e) => e.stopPropagation()}
                               className={cn(
-                                "h-5 w-5 transition-all flex-shrink-0 mt-0.5",
-                                subtask.completed 
-                                  ? "rounded-sm bg-muted-foreground/30 border-0" 
-                                  : cn("rounded-full border-2", 
-                                      subtask.priority === 'high' ? 'border-red-500' :
-                                      subtask.priority === 'medium' ? 'border-orange-500' :
-                                      subtask.priority === 'low' ? 'border-green-500' :
-                                      'border-muted-foreground/40'
-                                    )
+                                "h-5 w-5 transition-all flex-shrink-0 mt-0.5 rounded-full border-2",
+                                subtask.completed
+                                  ? "bg-muted-foreground/30 border-0 rounded-sm"
+                                  : subtask.priority === 'high' ? 'border-red-500' :
+                                    subtask.priority === 'medium' ? 'border-orange-500' :
+                                    subtask.priority === 'low' ? 'border-green-500' :
+                                    'border-primary'
                               )}
                             />
                             <div className="flex-1 min-w-0">
-                              <p className={cn(
-                                "text-sm font-medium",
-                                subtask.completed && "line-through text-muted-foreground"
-                              )}>
-                                {subtask.text}
-                              </p>
-                              {/* Subtask metadata */}
+                              <div className="flex items-center gap-2">
+                                <span className={cn(
+                                  "text-sm transition-all duration-300",
+                                  subtask.completed && "line-through text-muted-foreground"
+                                )}>
+                                  {subtask.text}
+                                </span>
+                              </div>
                               <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 {subtask.status && subtask.status !== 'not_started' && (
                                   <TaskStatusBadge status={subtask.status} size="sm" />
@@ -1044,7 +1035,7 @@ export const TaskDetailPage = ({
                                 {subtask.coloredTags && subtask.coloredTags.length > 0 && (
                                   <div className="flex items-center gap-1">
                                     {subtask.coloredTags.slice(0, 2).map((tag) => (
-                                      <span 
+                                      <span
                                         key={tag.name}
                                         className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded-full"
                                         style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
@@ -1055,10 +1046,9 @@ export const TaskDetailPage = ({
                                     ))}
                                   </div>
                                 )}
-                                {/* Nested subtasks count */}
                                 {subtask.subtasks && subtask.subtasks.length > 0 && (
-                                  <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 bg-muted rounded-full">
-                                    {t('taskDetail.nested', { completed: subtask.subtasks.filter(st => st.completed).length, total: subtask.subtasks.length })}
+                                  <span className="text-xs text-muted-foreground">
+                                    {subtask.subtasks.filter(st => st.completed).length}/{subtask.subtasks.length} subtasks
                                   </span>
                                 )}
                               </div>
@@ -1082,7 +1072,7 @@ export const TaskDetailPage = ({
                       </Draggable>
                     ))}
                     {provided.placeholder}
-                    <p className="text-xs text-muted-foreground px-3 py-1">
+                    <p className="text-xs text-muted-foreground px-2 py-2">
                       {t('taskDetail.subtasksCompleted', { completed: task.subtasks.filter(st => st.completed).length, total: task.subtasks.length })}
                     </p>
                   </div>
