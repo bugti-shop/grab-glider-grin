@@ -164,10 +164,14 @@ const WebClipper = () => {
   const canceledRef = useRef(false);
   const prepareRunIdRef = useRef(0);
 
-  // Editable preview state — populated by prepareClip(), committed by commitClip().
+  // Read-only preview state — populated by prepareClip(), committed by commitClip().
   const [previewReady, setPreviewReady] = useState(false);
   const [previewTitle, setPreviewTitle] = useState('');
   const [previewHtml, setPreviewHtml] = useState('');
+  // Raw single-file HTML snapshot kept so the user can re-download the
+  // full captured page at any time from the preview.
+  const [snapshotHtml, setSnapshotHtml] = useState<string>('');
+  const [snapshotFilename, setSnapshotFilename] = useState<string>('');
   const contentEditorRef = useRef<HTMLDivElement>(null);
 
   // Hydrate web-clip cards (adds expand/collapse toggle for long clips)
@@ -262,6 +266,8 @@ const WebClipper = () => {
     setPreviewReady(false);
     setPreviewTitle('');
     setPreviewHtml('');
+    setSnapshotHtml('');
+    setSnapshotFilename('');
     setSaved(false);
     setError(null);
     setStage('idle');
@@ -545,19 +551,23 @@ const WebClipper = () => {
               const snapshotBytes = new Blob([articleHtml]).size;
               let host = '';
               try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
-              const snapshotFilename = `${filenameFromTitle(articleTitle || title, host)}.html`;
-              triggerHtmlDownload(snapshotFilename, articleHtml);
+              const fname = `${filenameFromTitle(articleTitle || title, host)}.html`;
+              triggerHtmlDownload(fname, articleHtml);
+              // Keep the raw snapshot in state so the user can re-download it
+              // from the read-only preview at any time.
+              setSnapshotHtml(articleHtml);
+              setSnapshotFilename(fname);
               const sizeLabel = formatBytes(snapshotBytes);
               const banner =
-                `<aside class="flowist-offline-snapshot-info" contenteditable="false" data-snapshot-filename="${snapshotFilename.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
+                `<aside class="flowist-offline-snapshot-info" contenteditable="false" data-snapshot-filename="${fname.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
                   `<strong>📥 ${sanitizeForDisplay(t('webClipper.offlineSnapshotSaved', 'Offline snapshot saved to your device'))}</strong>` +
-                  `<span>${sanitizeForDisplay(snapshotFilename)} · ${sizeLabel}</span>` +
+                  `<span>${sanitizeForDisplay(fname)} · ${sizeLabel}</span>` +
                   `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'The full page below is captured start-to-finish and stays readable inside this note. Tap "Open" in the header to view the original.'))}</em>` +
                 `</aside>`;
               // Embed the ENTIRE captured document (start-to-finish, with
               // its own styles, images, fonts inlined) as a read-only iframe
-              // via srcdoc. This preserves the full page fidelity the user
-              // asked for — no excerpt-only card, no editable half article.
+              // via srcdoc. The sandbox intentionally omits `allow-scripts`
+              // so nothing inside the captured page can execute JS.
               const escapedDoc = articleHtml
                 .replace(/&/g, '&amp;')
                 .replace(/"/g, '&quot;');
@@ -799,17 +809,15 @@ const WebClipper = () => {
   };
 
   /**
-   * Persist the (possibly-edited) preview to the notes DB.
-   * Reads the live HTML from the contentEditable div so any user edits
-   * — including deletes, re-orders, and inline tweaks — are captured.
+   * Persist the read-only preview to the notes DB verbatim. The preview is
+   * strictly non-editable, so we save exactly what the user saw.
    */
   const commitClip = async () => {
     try {
       setSaving(true);
       setStage('saving');
       setProgressLabel(t('webClipper.stageSaving', 'Saving to notes…'));
-      const liveHtml = contentEditorRef.current?.innerHTML ?? previewHtml;
-      const cleanHtml = stripSnapshotArtifacts(sanitizeClippedArticle(liveHtml));
+      const cleanHtml = stripSnapshotArtifacts(sanitizeClippedArticle(previewHtml));
       const cleanTitle = (previewTitle || 'Untitled Clip').substring(0, MAX_LENGTHS.title);
       const newNote: Note = {
         id: crypto.randomUUID(),
@@ -1113,8 +1121,8 @@ const WebClipper = () => {
             </div>
           )}
 
-          {/* Read-only preview — the full captured page renders start-to-finish
-              inside the iframe. Save to keep it in your notes. */}
+          {/* Strictly read-only preview — the full captured page renders
+              start-to-finish inside a sandboxed iframe (no scripts, no edits). */}
           {previewReady && !saved && (
             <div className="space-y-3 pt-2 border-t border-border">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -1125,23 +1133,33 @@ const WebClipper = () => {
                 <label className="text-xs font-medium text-muted-foreground">
                   {t('webClipper.previewTitleLabel', 'Title')}
                 </label>
-                <Input
-                  value={previewTitle}
-                  onChange={(e) => setPreviewTitle(e.target.value)}
-                  maxLength={MAX_LENGTHS.title}
-                  className="text-base font-semibold"
-                />
+                <p className="rounded-md border border-input bg-muted/30 px-3 py-2 text-base font-semibold break-words">
+                  {previewTitle || t('webClipper.untitledClip', 'Untitled Clip')}
+                </p>
               </div>
               <div className="space-y-1.5">
                 <div
                   ref={contentEditorRef}
-                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[70vh] overflow-y-auto rounded-lg border border-input bg-background p-2"
+                  aria-readonly="true"
+                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[70vh] overflow-y-auto rounded-lg border border-input bg-background p-2 select-text [&_*]:pointer-events-auto"
+                  style={{ userSelect: 'text' }}
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  {t('webClipper.previewHintReadOnly', 'The whole page (start to finish) is captured above. Save it to your notes to keep an offline, read-only copy.')}
+                  {t('webClipper.previewHintReadOnly', 'The whole page (start to finish) is captured above as a read-only snapshot. Save it to your notes or download the full HTML.')}
                 </p>
               </div>
+              {snapshotHtml && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => triggerHtmlDownload(snapshotFilename || 'web-clip.html', snapshotHtml)}
+                  className="w-full"
+                >
+                  <Download className="h-4 w-4 mr-1.5" />
+                  {t('webClipper.downloadFullHtml', 'Download full HTML page')}
+                </Button>
+              )}
               <div className="flex gap-2 pt-1">
                 <Button onClick={commitClip} disabled={saving} className="flex-1">
                   <Save className="h-4 w-4 mr-1.5" />
