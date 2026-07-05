@@ -1169,9 +1169,12 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       // `srcdoc` property receives the raw HTML unmodified. DOMPurify
       // aggressively strips iframe attribute values that look document-like,
       // which is why the previous string-based path rendered an empty frame.
+      // NOTE: do NOT use data-role="fullpage-snapshot" here — hydrateWebClipsIn
+      // strips any element with that role (legacy cleanup for old clips). We use
+      // a distinct marker so this embed survives every re-hydration pass.
       const wrapper = document.createElement('div');
-      wrapper.className = 'evernote-clip';
-      wrapper.setAttribute('data-role', 'fullpage-snapshot');
+      wrapper.className = 'webclipper-embed';
+      wrapper.setAttribute('data-role', 'webclipper-embed');
       wrapper.setAttribute('data-url', url);
       wrapper.setAttribute('data-captured-at', capturedAt);
       wrapper.setAttribute('data-bytes', String(rawHtml.length));
