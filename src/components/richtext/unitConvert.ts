@@ -684,10 +684,13 @@ export function normalizeImplicitMult(input: string): string {
   // like "(m/s)(kg)" reduce cleanly after the ")(" → ")*(" insertion below.
   const unwrapRe = new RegExp(`\\(\\s*(${UNIT_TOK})\\s*\\)`, 'g');
   s = s.replace(unwrapRe, ' $1 ');
-  // Insert explicit "*" at paren-adjacency boundaries.
+  // Insert explicit "*" at paren-adjacency boundaries (BEFORE final unwrap of
+  // any lingering unit-only parens so ")(" is still visible here).
   s = s.replace(/\)\s*\(/g, ')*(');
   s = s.replace(/(\d)\s*\(/g, '$1*(');
   s = s.replace(/\)\s*(\d)/g, ')*$1');
+  // Final unwrap for any remaining "(<unit>)" that's now safely separated by *.
+  s = s.replace(unwrapRe, ' $1 ');
   return s.replace(/[ \t]+/g, ' ').trim();
 }
 
