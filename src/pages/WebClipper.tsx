@@ -43,14 +43,51 @@ const filenameFromTitle = (title: string, host: string): string => {
   return base;
 };
 
-/** Trigger a browser download of a single-file HTML snapshot. */
-const triggerHtmlDownload = (filename: string, html: string): void => {
+/** Trigger a "download" of a single-file HTML snapshot.
+ *  - Web: classic <a download> blob click.
+ *  - Native (Capacitor / iOS+Android WebView): write to Filesystem Documents
+ *    and pop the OS share sheet so the user can Save-to-Files / share it.
+ *    The core snapshot pipeline is pure web code and runs identically inside
+ *    the Capacitor WebView — only the disk-write leg needs native APIs. */
+const triggerHtmlDownload = async (filename: string, html: string): Promise<void> => {
+  const finalName = filename.endsWith('.html') ? filename : `${filename}.html`;
+  try {
+    // Lazy-load so web build stays lean; Capacitor detects platform at runtime.
+    const { Capacitor } = await import('@capacitor/core');
+    if (Capacitor.isNativePlatform?.()) {
+      const [{ Filesystem, Directory, Encoding }, { Share }] = await Promise.all([
+        import('@capacitor/filesystem'),
+        import('@capacitor/share'),
+      ]);
+      const writeRes = await Filesystem.writeFile({
+        path: finalName,
+        data: html,
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8,
+        recursive: true,
+      });
+      try {
+        await Share.share({
+          title: finalName,
+          text: 'Flowist web clip snapshot',
+          url: writeRes.uri,
+          dialogTitle: 'Save snapshot',
+        });
+      } catch {
+        // User dismissed share sheet — file is still saved in Documents.
+      }
+      return;
+    }
+  } catch (err) {
+    // Capacitor not present or native write failed — fall back to web path.
+    console.warn('[webClipper] native download unavailable, falling back to web', err);
+  }
   try {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = objectUrl;
-    a.download = filename.endsWith('.html') ? filename : `${filename}.html`;
+    a.download = finalName;
     a.rel = 'noopener';
     document.body.appendChild(a);
     a.click();
