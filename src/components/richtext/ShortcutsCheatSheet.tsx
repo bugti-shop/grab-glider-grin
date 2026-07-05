@@ -168,29 +168,8 @@ function buildSections(): Section[] {
         { trigger: '/unit help', result: 'Inline help card with all examples' },
       ],
     },
-    {
-      title: 'LaTeX / KaTeX',
-      description: 'Beautifully rendered math inline.',
-      rows: [
-        { trigger: '$E = mc^2$', result: 'Rendered inline KaTeX (typing the closing $ triggers it)' },
-        { trigger: '$\\frac{a}{b}$', result: 'Fractions, superscripts, subscripts, roots — full LaTeX math syntax' },
-      ],
-    },
-    {
-      title: 'Smart text replacements',
-      description: 'Fires automatically as you type — no shortcut needed.',
-      rows: [
-        { trigger: '"word"', result: 'Curly quotes: “word”' },
-        { trigger: "'word'", result: 'Curly apostrophes: ‘word’' },
-        { trigger: '-- + Space', result: 'Em-dash: —' },
-        { trigger: '--- + Space', result: 'Em-dash (Word behavior): —' },
-        { trigger: '... + Space', result: 'Ellipsis: …' },
-        { trigger: '(c)', result: '©' },
-        { trigger: '(tm)', result: '™' },
-        { trigger: '(r)', result: '®' },
-        { trigger: 'the the', result: 'Repeated word gets flagged (dashed underline)' },
-      ],
-    },
+
+
 
   ];
 
