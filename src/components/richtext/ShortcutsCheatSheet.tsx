@@ -164,21 +164,176 @@ function buildSections(): Section[] {
     },
     {
       title: 'Unit conversion',
-      description: 'Two ways: inline math via = or a /unit command block.',
+      description:
+        'Two ways: inline math via = or a /unit command block. Categories below are collapsed — tap to expand. Each shows two basic + two advanced examples.',
       rows: [
         { trigger: '5 km to miles =', result: 'Inline unit conversion' },
-        { trigger: '100 f to c =', result: 'Temperature (Fahrenheit → Celsius)' },
-        { trigger: '2.5 kg to lb =', result: 'Mass' },
-        { trigger: '1 gallon to liters =', result: 'Volume' },
         { trigger: '/unit 10 km in miles', result: 'Same as inline, on its own line' },
-        { trigger: '/unit 5 gb as mb', result: 'Data sizes' },
-        { trigger: '/unit 2 h in min', result: 'Time' },
-        { trigger: '/unit 1 bar in psi', result: 'Pressure' },
-        { trigger: '/unit 50 mph in kmh', result: 'Speed' },
-        { trigger: '/unit 1 acre in m2', result: 'Area' },
-        { trigger: '/unit 100 kcal in kj', result: 'Energy' },
-        { trigger: '/unit 25 mpg in l100km', result: 'Fuel economy' },
         { trigger: '/unit help', result: 'Inline help card with all examples' },
+      ],
+      groups: [
+        {
+          title: 'Length',
+          rows: [
+            { trigger: '5 km to miles =', result: '3.10686 mi' },
+            { trigger: '10 ft to m =', result: '3.048 m' },
+            { trigger: '1 ly to au =', result: 'Light-year → astronomical unit' },
+            { trigger: '3 parsec to km =', result: 'Astronomical distances' },
+          ],
+        },
+        {
+          title: 'Mass',
+          rows: [
+            { trigger: '2.5 kg to lb =', result: '5.51156 lb' },
+            { trigger: '500 g to oz =', result: '17.637 oz' },
+            { trigger: '1 slug to kg =', result: 'Imperial engineering mass' },
+            { trigger: '12 amu to kg =', result: 'Atomic mass unit → kilograms' },
+          ],
+        },
+        {
+          title: 'Volume',
+          rows: [
+            { trigger: '1 gallon to liters =', result: '3.78541 L' },
+            { trigger: '250 ml to cups =', result: 'Cooking measure' },
+            { trigger: '1 bbl to L =', result: 'Oil barrel → litres' },
+            { trigger: '2 m3 to ukgal =', result: 'Cubic metres → UK gallons' },
+          ],
+        },
+        {
+          title: 'Area',
+          rows: [
+            { trigger: '1 acre to m2 =', result: '4046.86 m²' },
+            { trigger: '50 sqft to sqm =', result: 'Property area' },
+            { trigger: '2 hectare to acre =', result: 'Land area' },
+            { trigger: '1 sqmi to km2 =', result: 'Square miles → km²' },
+          ],
+        },
+        {
+          title: 'Temperature',
+          rows: [
+            { trigger: '100 f to c =', result: '37.7778 °C' },
+            { trigger: '0 c to f =', result: '32 °F' },
+            { trigger: '300 k to c =', result: 'Kelvin → Celsius' },
+            { trigger: '500 r to k =', result: 'Rankine → Kelvin' },
+          ],
+        },
+        {
+          title: 'Time',
+          rows: [
+            { trigger: '2 h to min =', result: '120 min' },
+            { trigger: '90 s to ms =', result: '90000 ms' },
+            { trigger: '1 century to days =', result: 'Long-scale time' },
+            { trigger: '1 year to μs =', result: 'Julian year → microseconds' },
+          ],
+        },
+        {
+          title: 'Speed',
+          rows: [
+            { trigger: '50 mph to kmh =', result: '80.4672 km/h' },
+            { trigger: '10 m/s to kmh =', result: '36 km/h' },
+            { trigger: '1 mach to mph =', result: 'Sound-speed reference' },
+            { trigger: '0.001 c to km/s =', result: 'Fraction of light-speed' },
+          ],
+        },
+        {
+          title: 'Pressure',
+          rows: [
+            { trigger: '1 bar to psi =', result: '14.5038 psi' },
+            { trigger: '760 torr to atm =', result: '1 atm' },
+            { trigger: '1 kgf/cm2 to kPa =', result: 'Engineering pressure' },
+            { trigger: '30 inHg to hPa =', result: 'Barometric conversion' },
+          ],
+        },
+        {
+          title: 'Energy',
+          rows: [
+            { trigger: '100 kcal to kj =', result: '418.4 kJ' },
+            { trigger: '1 kWh to J =', result: '3.6 MJ' },
+            { trigger: '1 therm to kWh =', result: 'Gas billing unit' },
+            { trigger: '1 eV to J =', result: 'Particle-physics energy' },
+          ],
+        },
+        {
+          title: 'Power',
+          rows: [
+            { trigger: '100 hp to kW =', result: '74.5699 kW' },
+            { trigger: '1500 W to hp =', result: '2.01 hp' },
+            { trigger: '1 PS to W =', result: 'Metric horsepower' },
+            { trigger: '5000 BTU/h to W =', result: 'HVAC capacity' },
+          ],
+        },
+        {
+          title: 'Data',
+          rows: [
+            { trigger: '5 gb as mb =', result: '5000 MB' },
+            { trigger: '1024 kb to mb =', result: 'Decimal byte units' },
+            { trigger: '1 TiB to GB =', result: 'Binary vs decimal (tebibyte → gigabyte)' },
+            { trigger: '1 Gbit to MB =', result: 'Bits vs bytes' },
+          ],
+        },
+        {
+          title: 'Angle',
+          rows: [
+            { trigger: '180 deg to rad =', result: 'π rad' },
+            { trigger: '1 turn to deg =', result: '360°' },
+            { trigger: '1 arcmin to deg =', result: 'Astronomy / optics' },
+            { trigger: '100 grad to arcsec =', result: 'Gradians → arcseconds' },
+          ],
+        },
+        {
+          title: 'Frequency',
+          rows: [
+            { trigger: '1 khz to hz =', result: '1000 Hz' },
+            { trigger: '2.4 GHz to MHz =', result: '2400 MHz' },
+            { trigger: '60 bpm to Hz =', result: '1 Hz' },
+            { trigger: '3000 rpm to Hz =', result: 'Rotational → cyclic' },
+          ],
+        },
+        {
+          title: 'Force',
+          rows: [
+            { trigger: '10 N to lbf =', result: '2.24809 lbf' },
+            { trigger: '1 kgf to N =', result: '9.80665 N' },
+            { trigger: '1 dyn to N =', result: 'CGS force' },
+            { trigger: '100 pdl to N =', result: 'Poundals → newtons' },
+          ],
+        },
+        {
+          title: 'Torque',
+          rows: [
+            { trigger: '100 Nm to lbft =', result: '73.7562 lbft' },
+            { trigger: '50 lbft to Nm =', result: '67.7909 Nm' },
+            { trigger: '1 kgm to Nm =', result: 'Metric engineering torque' },
+            { trigger: '20 lbin to Nm =', result: 'Small-tool torque' },
+          ],
+        },
+        {
+          title: 'Fuel economy',
+          rows: [
+            { trigger: '25 mpg to l100km =', result: '9.41 L/100km' },
+            { trigger: '8 l100km to mpg =', result: '29.4 mpg' },
+            { trigger: '500 mi / 25 mpg to gal =', result: 'Mixed: distance ÷ economy → fuel' },
+            { trigger: '(30 mpg * 15 gal) to mi =', result: 'Mixed: economy × fuel → distance' },
+          ],
+        },
+        {
+          title: 'Illuminance',
+          rows: [
+            { trigger: '500 lx to fc =', result: '46.45 fc' },
+            { trigger: '10 fc to lx =', result: '107.64 lx' },
+            { trigger: '1 phot to lux =', result: 'CGS illuminance' },
+            { trigger: '1000 lx to phot =', result: 'Lux → phot' },
+          ],
+        },
+        {
+          title: 'Radioactivity',
+          rows: [
+            { trigger: '1 Ci to Bq =', result: '3.7 × 10¹⁰ Bq' },
+            { trigger: '1 MBq to Ci =', result: 'Nuclear-medicine dose' },
+            { trigger: '1 rem to Sv =', result: '0.01 Sv' },
+            { trigger: '1 rad to Gy =', result: 'Absorbed-dose conversion' },
+          ],
+        },
       ],
     },
 
