@@ -93,8 +93,21 @@ interface TaskInputSheetProps {
   autoOpenScanner?: boolean;
 }
 
-export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFolderId, onCreateFolder, sections = [], selectedSectionId, defaultDate, preventBackdropClose = false, autoOpenScanner = false }: TaskInputSheetProps) => {
+export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders, selectedFolderId, onCreateFolder, sections = [], selectedSectionId, defaultDate, preventBackdropClose = false, autoOpenScanner = false }: TaskInputSheetProps) => {
   const { t } = useTranslation();
+
+  // Keep the sheet open across consecutive task adds. After handleSend fires
+  // we ignore any onClose() call for a short window — this suppresses
+  // spurious closes from focus/blur, keyboard resize, tour milestones or
+  // any external re-render side-effect. Genuine user closes (backdrop tap,
+  // swipe-down, hardware back, X button) still work outside this window.
+  const justAddedAtRef = useRef(0);
+  const onClose = useCallback(() => {
+    if (Date.now() - justAddedAtRef.current < 600) return;
+    rawOnClose();
+  }, [rawOnClose]);
+
+
 
 
 
