@@ -81,6 +81,7 @@ export const sanitizeHtml = (html: string): string => {
       frame.setAttribute('sandbox', Array.from(tokens).join(' ').trim() || 'allow-same-origin');
       frame.setAttribute('referrerpolicy', 'no-referrer');
       frame.setAttribute('loading', 'lazy');
+      if (frame.closest('.webclipper-embed')) frame.removeAttribute('srcdoc');
     });
     return root.innerHTML;
   } catch {
@@ -123,6 +124,7 @@ export const sanitizeForDisplay = (html: string): string => {
       frame.setAttribute('referrerpolicy', 'no-referrer');
       frame.setAttribute('loading', 'lazy');
       frame.removeAttribute('contenteditable');
+      if (frame.closest('.webclipper-embed')) frame.removeAttribute('srcdoc');
     });
     return root.innerHTML;
   } catch {
