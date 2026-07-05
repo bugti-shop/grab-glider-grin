@@ -595,36 +595,11 @@ const WebClipper = () => {
       // the user is in explicit Selection mode (where the highlight is
       // the whole point).
       const fetchAttemptedButEmpty = shouldFetchFull && !articleHtml;
-      // If the server could not fetch a body, still save whatever the share
-      // sheet gave us. Never create metadata-only cards; always render inline
-      // visible text/content when present.
-      const hasShareFallback =
-        !!(selection && selection.trim()) ||
-        !!(content && content.trim()) ||
-        !!(title && title !== 'Untitled Clip');
-      if (fetchAttemptedButEmpty && hasShareFallback) {
-        console.info('[webClipper] full-fetch empty — falling back to shared payload', {
-          url,
-          hasSelection: !!selection,
-          hasContent: !!content,
-          hasTitle: !!title,
-        });
-        const bodyText = (selection && selection.trim()) || (content && content.trim()) || '';
-        // Wrap into a tiny HTML snippet so the downstream rich-note pipeline
-        // still runs and users see paragraphs, not a wall of text.
-        const escaped = bodyText
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-        const paragraphs = escaped
-          .split(/\n{2,}/)
-          .map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
-          .join('');
-        articleHtml = paragraphs || `<p>${escaped}</p>`;
-        articleTitle = title || articleTitle;
-        articleIsFallback = true;
-        // Note: articleExcerpt intentionally left empty — the body IS the excerpt.
-      } else if (fetchAttemptedButEmpty) {
+      // Full-page-only clipper: on empty fetch we NEVER silently save a
+      // half-article / metadata-only fallback. Surface the real error so the
+      // user can retry — the whole point of this mode is a complete offline
+      // snapshot.
+      if (fetchAttemptedButEmpty) {
         const failure = fetchFailure || { code: 'internal' };
         const map: Record<string, { titleKey: string; titleFallback: string; descKey: string; descFallback: string }> = {
           paywall:        { titleKey: 'webClipper.errPaywallTitle',   titleFallback: 'Site blocked access',           descKey: 'webClipper.errPaywallDesc',   descFallback: 'This page needs a login or blocks clippers. Try copying the text and using Selection mode.' },
