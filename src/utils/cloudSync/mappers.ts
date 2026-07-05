@@ -106,6 +106,13 @@ export const mappers = {
     toCloud(t: TodoItem & { folderId?: string; listId?: string; orderIndex?: number; priorityNum?: number }) {
       if (!isUuid(t.id)) return null;
       const prio = ({ high: 3, medium: 2, low: 1, none: 0 } as Record<string, number>)[String((t as any).priority)] ?? 0;
+      // Removed fields: never persist Effort Estimation, Deadline Escalation, or Attachments.
+      const {
+        estimatedHours: _e,
+        escalationRule: _s,
+        attachments: _a,
+        ...sanitizedPayload
+      } = t as any;
       return {
         id: t.id,
         title: (t as any).text ?? (t as any).title ?? '',
@@ -122,7 +129,7 @@ export const mappers = {
         section_id: isUuid((t as any).sectionId) ? (t as any).sectionId : null,
         project_id: isUuid((t as any).projectId) ? (t as any).projectId : null,
         assignee_id: isUuid((t as any).assigneeId) ? (t as any).assigneeId : null,
-        payload: t,
+        payload: sanitizedPayload,
         is_deleted: !!(t as any).isDeleted,
         created_at: iso((t as any).createdAt),
         updated_at: iso((t as any).modifiedAt) ?? iso((t as any).updatedAt) ?? iso((t as any).createdAt) ?? new Date().toISOString(),
@@ -130,10 +137,15 @@ export const mappers = {
     },
     mergeCloud(local: TodoItem | undefined, r: any): Partial<TodoItem> & { id: string } {
       const prioMap = ['none', 'low', 'medium', 'high'] as const;
-      const payload = reviveDates(payloadObject(r), ['createdAt', 'modifiedAt', 'updatedAt', 'completedAt', 'dueDate', 'scheduledDate', 'deadline', 'reminderTime', 'extraReminderTime']);
+      const rawPayload = reviveDates(payloadObject(r), ['createdAt', 'modifiedAt', 'updatedAt', 'completedAt', 'dueDate', 'scheduledDate', 'deadline', 'reminderTime', 'extraReminderTime']);
+      // Removed fields: strip on read so legacy rows don't resurrect them.
+      const { estimatedHours: _e, escalationRule: _s, attachments: _a, ...payload } =
+        (rawPayload ?? {}) as any;
+      const { estimatedHours: _le, escalationRule: _ls, attachments: _la, ...localClean } =
+        (local ?? {}) as any;
       return {
-        ...(local ?? {}),
-        ...(payload ?? {}),
+        ...(localClean ?? {}),
+        ...payload,
         id: r.id,
         text: r.title ?? (local as any)?.text ?? '',
         completed: !!r.is_completed,

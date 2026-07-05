@@ -488,8 +488,7 @@ export const TaskInputSheet = ({ isOpen, onClose, onAddTask, folders, selectedFo
       description: finalDescription || undefined,
       location: finalLocation,
       subtasks: subtasks,
-      attachments: attachments.length > 0 ? attachments : undefined,
-      estimatedHours: finalEstimatedHours,
+      // Removed: attachments, estimatedHours (Effort Estimation) — no longer saved on tasks.
       isUrgent: isUrgent || undefined,
       assigneeId,
     };
