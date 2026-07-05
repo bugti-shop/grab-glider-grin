@@ -6,7 +6,7 @@
  * Purely presentational: no editor mutation, just a searchable dialog.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,8 +15,14 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Search, Keyboard, Play } from 'lucide-react';
+import { Search, Keyboard, Play, Hand } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  getSlashRowTouchSlop,
+  setSlashRowTouchSlop,
+  SLASH_ROW_TOUCH_SLOP_MAX,
+  SLASH_ROW_TOUCH_SLOP_MIN,
+} from '@/utils/slashRowTouchSlop';
 
 interface Props {
   isOpen: boolean;
