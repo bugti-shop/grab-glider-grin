@@ -408,7 +408,9 @@ export type ConvertResult = {
  * "5 gb as mb". Returns null if the parser can't resolve both sides.
  */
 export function convertExpression(input: string): ConvertResult | null {
-  const trimmed = input.trim();
+  const reduced = input.includes('(') ? reduceParens(input) : input;
+  if (reduced === null) return null;
+  const trimmed = reduced.trim();
   const m = /^(-?\d+(?:\.\d+)?)\s*([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)\s+(?:in|to|as|->|=)\s+([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)$/i.exec(trimmed);
   if (!m) return null;
 
@@ -523,7 +525,9 @@ function fuelToKpl(v: number, kind: FuelKind): number {
  *   "100 km * 8 l/100km to l"      → volume     (distance × L/100km)
  */
 export function convertMixedExpression(input: string): ConvertResult | null {
-  const trimmed = input.trim();
+  const reduced = input.includes('(') ? reduceParens(input) : input;
+  if (reduced === null) return null;
+  const trimmed = reduced.trim();
   const mulRe = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})\\s*[*×x]\\s*(${NUM_TOK})\\s*(${UNIT_TOK})\\s+${CONNECT}\\s+(${UNIT_TOK})$`, 'i');
   const divRe = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})\\s*\\/\\s*(${NUM_TOK})\\s*(${UNIT_TOK})\\s+${CONNECT}\\s+(${UNIT_TOK})$`, 'i');
 
@@ -587,6 +591,65 @@ export function convertMixedExpression(input: string): ConvertResult | null {
   return null;
 }
 
+/* ── Parentheses & operator precedence ─────────────────────── */
+
+/**
+ * Evaluates a bare (no "to X") sub-expression like:
+ *   "30 mpg * 15 gal"      → { value: 724.2, unit: 'km' }   (canonical)
+ *   "500 mi / 25 mpg"      → { value: 75.71, unit: 'L' }
+ *   "42 km"                → { value: 42,    unit: 'km' }
+ * Returns null if it doesn't dimensionally reduce to a single unit.
+ */
+function evalOperand(expr: string): { value: number; unit: string } | null {
+  const trimmed = expr.trim();
+  const simple = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})$`).exec(trimmed);
+  if (simple) return { value: parseFloat(simple[1]), unit: simple[2] };
+
+  const pair = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})\\s*([*×x\\/])\\s*(${NUM_TOK})\\s*(${UNIT_TOK})$`, 'i').exec(trimmed);
+  if (!pair) return null;
+  const v1 = parseFloat(pair[1]), u1 = pair[2], op = pair[3], v2 = parseFloat(pair[4]), u2 = pair[5];
+  const r1 = resolveUnit(u1), r2 = resolveUnit(u2);
+  if (!r1 || !r2) return null;
+  const isMul = op !== '/';
+  let target: string | null = null;
+  if (isMul) {
+    if ((r1 === 'fuel' && typeof r2 === 'object' && r2.category === 'volume') ||
+        (r2 === 'fuel' && typeof r1 === 'object' && r1.category === 'volume')) target = 'km';
+    else if ((typeof r1 === 'object' && r1.category === 'length' && r2 === 'fuel') ||
+             (typeof r2 === 'object' && r2.category === 'length' && r1 === 'fuel')) target = 'L';
+  } else {
+    if (typeof r1 === 'object' && r1.category === 'length' && r2 === 'fuel') target = 'L';
+  }
+  if (!target) return null;
+  const conv = convertMixedExpression(`${v1} ${u1} ${op} ${v2} ${u2} to ${target}`);
+  if (!conv) return null;
+  return { value: conv.result, unit: conv.toSymbol };
+}
+
+/**
+ * Repeatedly reduces the innermost balanced (...) group by evaluating it via
+ * evalOperand and substituting "value unit" back in. Returns the input with all
+ * parens resolved, or null if any paren fails to evaluate.
+ */
+export function reduceParens(input: string): string | null {
+  let out = input;
+  // Guard against pathological input.
+  for (let i = 0; i < 16; i++) {
+    const open = out.lastIndexOf('(');
+    if (open === -1) return out;
+    const close = out.indexOf(')', open + 1);
+    if (close === -1) return null;
+    const inner = out.slice(open + 1, close);
+    const evald = evalOperand(inner);
+    if (!evald) return null;
+    const literal = `${formatNum(evald.value)} ${evald.unit}`;
+    out = out.slice(0, open) + literal + out.slice(close + 1);
+  }
+  return out.includes('(') ? null : out;
+}
+
+/* ── Main dispatcher ───────────────────────────────────────── */
+
 /**
  * Detects a convertible expression at end of the current text node and appends
  * " = <converted> <symbol>". Fired on Space keydown. Supports:
@@ -607,7 +670,18 @@ export function tryUnitShortcut(root: HTMLElement | null): boolean {
 
   if (isInsideCodeLikeBlock(textNode, root)) return false;
 
-  // Try mixed (fuel/volume/distance) first — most specific.
+  // Parenthesized form: "(...) to <unit>" — try before other patterns.
+  const parenRe = new RegExp(`(?:^|\\s)(\\([^()]+\\)\\s+${CONNECT}\\s+${UNIT_TOK})$`, 'i');
+  const parenMatch = parenRe.exec(before);
+  if (parenMatch) {
+    // Try mixed first (paren usually wraps a mul/div), fall back to simple.
+    const mixed = convertMixedExpression(parenMatch[1]);
+    if (mixed) return insertInline(textNode, caret, sel, ` = ${formatNum(mixed.result)} ${mixed.toSymbol}`);
+    const simple = convertExpression(parenMatch[1]);
+    if (simple) return insertInline(textNode, caret, sel, ` = ${formatNum(simple.result)} ${simple.toSymbol}`);
+  }
+
+  // Try mixed (fuel/volume/distance) — most specific unparenthesized form.
   const mixedRe = new RegExp(
     `(?:^|[\\s(])((?:${NUM_TOK})\\s*${UNIT_TOK}\\s*[*×x\\/]\\s*(?:${NUM_TOK})\\s*${UNIT_TOK}\\s+${CONNECT}\\s+${UNIT_TOK})$`, 'i',
   );
@@ -625,8 +699,6 @@ export function tryUnitShortcut(root: HTMLElement | null): boolean {
   if (chainMatch) {
     const chain = convertChainExpression(chainMatch[1]);
     if (chain) {
-      // Only append the additional hops (skip the original "N unit" already typed).
-      const originalPrefix = chainMatch[1].match(new RegExp(`^${NUM_TOK}\\s*${UNIT_TOK}`))?.[0] ?? '';
       const rest = chain.text.slice(chain.text.indexOf(' = '));
       return insertInline(textNode, caret, sel, rest);
     }
