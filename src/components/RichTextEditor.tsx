@@ -318,6 +318,15 @@ export const RichTextEditor = ({
   // in ShortcutsCheatSheet, insert the trigger text at the end of the editor
   // and run the same slash-line pipeline the user would trigger by typing.
   useEffect(() => {
+    // Commands that always take a free-text argument. When one of these is
+    // picked from the cheat sheet we drop the example placeholder and put the
+    // caret right after "/cmd " so the user can just start typing.
+    const ARG_TAKING = new Set([
+      'bold','strong','italic','italics','em','underline','u','strike','strikethrough','s',
+      'code','highlight','mark','lorem','color','qr','mermaid','chess','youtube','yt',
+      'spotify','tweet','twitter','x','tz','time','timezone','unit','convert',
+    ]);
+
     const handler = (ev: Event) => {
       const editor = editorRef.current;
       if (!editor) return;
@@ -327,14 +336,19 @@ export const RichTextEditor = ({
 
       editor.focus();
 
-      // Append a fresh paragraph containing the command text (no trailing
-      // space) — trySlashLineShortcut parses the block by its trimmed text
-      // and fires the command regardless of Space/Enter.
+      const cmdMatch = /^\/(\w+)/i.exec(raw);
+      const cmd = cmdMatch ? cmdMatch[1].toLowerCase() : '';
+      const needsArg = ARG_TAKING.has(cmd);
+
+      // For arg-taking commands, strip the example placeholder and leave the
+      // user in typing mode after "/cmd ". For no-arg commands, fire the
+      // full raw trigger immediately.
+      const inserted = needsArg ? `/${cmd} ` : raw;
+
       const p = document.createElement('p');
-      p.textContent = raw;
+      p.textContent = inserted;
       editor.appendChild(p);
 
-      // Place the caret at the end of that paragraph.
       const range = document.createRange();
       const textNode = p.firstChild as Text | null;
       if (textNode) {
@@ -347,30 +361,22 @@ export const RichTextEditor = ({
       sel?.removeAllRanges();
       sel?.addRange(range);
 
-      // Fire the shortcut directly, bypassing the reentrancy guard used for
-      // typed Space/Enter paths — the cheat-sheet click is a one-shot apply.
+      if (needsArg) {
+        // Typing mode — nothing more to do, caret is ready for the argument.
+        handleInput();
+        return;
+      }
+
+      // No-arg command: fire the slash-line pipeline right away.
       void trySlashLineShortcut(editor).then((ok) => {
-        if (ok) {
-          handleInput();
-        } else {
-          // Command needs more input (e.g. bare "/bold" with no arg): leave
-          // the trigger in place with a trailing space so the user can keep
-          // typing and the normal Space/Enter path will finish it.
-          if (p.firstChild) {
-            (p.firstChild as Text).data = raw + ' ';
-            const r = document.createRange();
-            r.setStart(p.firstChild, (p.firstChild as Text).data.length);
-            r.collapse(true);
-            sel?.removeAllRanges();
-            sel?.addRange(r);
-          }
-          handleInput();
-        }
+        if (ok) handleInput();
+        else handleInput();
       });
     };
     window.addEventListener('flowist:apply-slash-command', handler as EventListener);
     return () => window.removeEventListener('flowist:apply-slash-command', handler as EventListener);
   }, []);
+
 
 
 

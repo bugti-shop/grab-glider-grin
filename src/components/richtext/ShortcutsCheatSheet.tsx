@@ -303,12 +303,50 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                     {section.rows.map((row, i) => {
                       const clickable = !!section.applySlash;
                       const rowClasses = cn(
-                        'border-b last:border-b-0 transition-colors',
+                        'border-b last:border-b-0 transition-colors select-none',
                         i % 2 === 0 ? 'bg-muted/30' : 'bg-background',
-                        clickable && 'cursor-pointer hover:bg-accent/60',
+                        clickable && 'cursor-pointer hover:bg-accent/60 active:bg-accent',
                       );
+                      // Touch-safe apply: remember pointer-down position and
+                      // only fire on pointer-up if the finger didn't move (i.e.
+                      // it was a tap, not a scroll). This prevents mis-triggers
+                      // when scrolling the sheet on mobile.
+                      const touchStartRef = { x: 0, y: 0, moved: false };
+                      const handlePointerDown = clickable
+                        ? (e: React.PointerEvent<HTMLTableRowElement>) => {
+                            touchStartRef.x = e.clientX;
+                            touchStartRef.y = e.clientY;
+                            touchStartRef.moved = false;
+                          }
+                        : undefined;
+                      const handlePointerMove = clickable
+                        ? (e: React.PointerEvent<HTMLTableRowElement>) => {
+                            if (
+                              Math.abs(e.clientX - touchStartRef.x) > 8 ||
+                              Math.abs(e.clientY - touchStartRef.y) > 8
+                            ) {
+                              touchStartRef.moved = true;
+                            }
+                          }
+                        : undefined;
+                      const handlePointerUp = clickable
+                        ? (e: React.PointerEvent<HTMLTableRowElement>) => {
+                            if (touchStartRef.moved) return;
+                            // Only handle touch/pen here — mouse uses onClick to
+                            // preserve keyboard-focus behavior.
+                            if (e.pointerType === 'mouse') return;
+                            e.preventDefault();
+                            applySlashRow(row.trigger);
+                          }
+                        : undefined;
                       const handleClick = clickable
-                        ? () => applySlashRow(row.trigger)
+                        ? (e: React.MouseEvent<HTMLTableRowElement>) => {
+                            // Skip synthetic clicks from touch — pointerup
+                            // already applied. detail === 0 means keyboard/other.
+                            const anyEvt = e.nativeEvent as PointerEvent;
+                            if (anyEvt.pointerType && anyEvt.pointerType !== 'mouse') return;
+                            applySlashRow(row.trigger);
+                          }
                         : undefined;
                       const handleKey = clickable
                         ? (e: React.KeyboardEvent<HTMLTableRowElement>) => {
@@ -322,11 +360,15 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                         <tr
                           key={i}
                           className={rowClasses}
+                          onPointerDown={handlePointerDown}
+                          onPointerMove={handlePointerMove}
+                          onPointerUp={handlePointerUp}
                           onClick={handleClick}
                           onKeyDown={handleKey}
                           role={clickable ? 'button' : undefined}
                           tabIndex={clickable ? 0 : undefined}
                           aria-label={clickable ? `Apply ${row.trigger}` : undefined}
+                          style={clickable ? { touchAction: 'pan-y' } : undefined}
                         >
                           <td className="px-3 py-2 align-top w-[45%]">
                             <div className="flex items-center gap-2">
