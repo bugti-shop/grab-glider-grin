@@ -680,10 +680,9 @@ export function normalizeImplicitMult(input: string): string {
   // that evalOperand can read directly.
   const foldRe = new RegExp(`(${NUM_TOK})\\s*\\(\\s*(${UNIT_TOK})\\s*\\)`, 'g');
   s = s.replace(foldRe, '$1 $2');
-  // Unwrap standalone "(<unit>)" (no number inside) so unit-only paren groups
-  // like "(m/s)(kg)" reduce cleanly after the ")(" → ")*(" insertion below.
+  // Prepare an unwrap regex for standalone "(<unit>)" — applied after paren-
+  // adjacency insertion so ")(" is preserved for the "*" rule below.
   const unwrapRe = new RegExp(`\\(\\s*(${UNIT_TOK})\\s*\\)`, 'g');
-  s = s.replace(unwrapRe, ' $1 ');
   // Insert explicit "*" at paren-adjacency boundaries (BEFORE final unwrap of
   // any lingering unit-only parens so ")(" is still visible here).
   s = s.replace(/\)\s*\(/g, ')*(');
