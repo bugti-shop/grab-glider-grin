@@ -2494,6 +2494,64 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         multiline
       />
 
+      {/* Web Clipper dialog — paste URL, fetch, embed full-page snapshot. */}
+      <Dialog open={isWebClipperOpen} onOpenChange={(open) => {
+        if (!webClipLoading) {
+          setIsWebClipperOpen(open);
+          if (!open) { setWebClipError(null); }
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-primary" />
+              {t('editor.webClipper', 'Web Clipper')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              {t('webClipper.hint', 'Paste any URL. The full page is fetched, sanitized, and pasted into this note as an offline-ready snapshot.')}
+            </p>
+            <Input
+              type="url"
+              value={webClipUrl}
+              onChange={(e) => setWebClipUrl(e.target.value)}
+              placeholder="https://example.com/article"
+              autoFocus
+              disabled={webClipLoading}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && webClipUrl.trim() && !webClipLoading) {
+                  e.preventDefault();
+                  void runWebClipperFetch();
+                }
+              }}
+            />
+            {webClipError && (
+              <div className="p-2 rounded-md border border-destructive/40 bg-destructive/10 text-destructive text-xs whitespace-pre-wrap">
+                {webClipError}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="ghost"
+                onClick={() => setIsWebClipperOpen(false)}
+                disabled={webClipLoading}
+              >
+                {t('common.cancel', 'Cancel')}
+              </Button>
+              <Button
+                onClick={() => void runWebClipperFetch()}
+                disabled={webClipLoading || !webClipUrl.trim()}
+              >
+                {webClipLoading ? t('webClipper.fetching', 'Fetching…') : t('webClipper.fetch', 'Fetch')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
+
       {/* Global Voice Recording Sheet (for non-voice note types) */}
       {noteType !== 'voice' && (
         <VoiceRecordingSheet
