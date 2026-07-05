@@ -42,7 +42,19 @@ const inFlightClipKeys = new Set<string>();
 const clipKey = (mode: string, url: string, attachment: string, shareId: string) =>
   `${mode}::${(url || '').trim().toLowerCase()}::${(attachment || '').trim().toLowerCase()}::${shareId || 'manual'}`;
 
-const SNAPSHOT_TEXT_RE = /(hide snapshot|view snapshot|view full captured|download captured html|snapshot stored offline)/i;
+/**
+ * Match the *exact* label of legacy snapshot chrome buttons (case-insensitive,
+ * whitespace-collapsed). We deliberately anchor with ^…$ and cap length so
+ * real prose containing the word "snapshot" or "download" is never removed.
+ */
+const SNAPSHOT_LABEL_RE = /^(hide snapshot|view snapshot|view full captured(?: html| page)?|download captured html|snapshot stored offline|snapshot saved offline)$/i;
+
+const isSnapshotWrapper = (el: HTMLElement): boolean => {
+  const cls = el.className && typeof el.className === 'string' ? el.className : '';
+  if (/flowist-web-clip-fullpage/.test(cls)) return true;
+  const role = el.getAttribute('data-role') || '';
+  return role.startsWith('fullpage-');
+};
 
 const stripSnapshotArtifacts = (html: string): string => {
   if (!html || typeof window === 'undefined') return html;
@@ -50,28 +62,30 @@ const stripSnapshotArtifacts = (html: string): string => {
     const doc = new DOMParser().parseFromString(`<div id="__clip-root">${html}</div>`, 'text/html');
     const root = doc.getElementById('__clip-root');
     if (!root) return html;
-    // 1. Known selectors (legacy).
+    // 1. Known selectors (legacy snapshot chrome).
     root
       .querySelectorAll(
         '.flowist-web-clip-fullpage, .flowist-web-clip-fullpage-hint, .flowist-web-clip-fullpage-btn, [data-role="fullpage-snapshot"], [data-role="fullpage-open"], [data-role="fullpage-download"], iframe.flowist-web-clip-fullpage-frame',
       )
       .forEach((node) => node.remove());
-    // 2. Any element whose visible text matches the old snapshot chrome text.
-    //    Walk buttons/links/paragraphs first, then bubble up to a reasonable
-    //    container so the surrounding rounded box disappears too.
+    // 2. Interactive/chrome elements whose *entire* label matches the legacy
+    //    snapshot buttons. Restricted to button-like tags with a short label
+    //    (≤ 60 chars) so real article prose that happens to contain the words
+    //    "snapshot" or "download" is never touched.
     const candidates = Array.from(
-      root.querySelectorAll<HTMLElement>('button, a, p, div, span, figure, section'),
+      root.querySelectorAll<HTMLElement>('button, a, [role="button"]'),
     );
     for (const el of candidates) {
       if (!el.isConnected) continue;
-      const txt = (el.textContent || '').trim();
-      if (!txt || !SNAPSHOT_TEXT_RE.test(txt)) continue;
-      // Climb to the nearest wrapping card (stop at the clip section/body).
+      const txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!txt || txt.length > 60 || !SNAPSHOT_LABEL_RE.test(txt)) continue;
+      // Bubble up only through elements that also look like snapshot chrome
+      // (known class / data-role). Never cross into a normal article container.
       let target: HTMLElement = el;
       for (let i = 0; i < 4; i++) {
         const p = target.parentElement;
         if (!p || p === root) break;
-        if (p.classList.contains('flowist-web-clip-body') || p.classList.contains('flowist-web-clip')) break;
+        if (!isSnapshotWrapper(p)) break;
         target = p;
       }
       target.remove();
@@ -81,6 +95,8 @@ const stripSnapshotArtifacts = (html: string): string => {
     return html;
   }
 };
+
+
 
 
 const WebClipper = () => {
