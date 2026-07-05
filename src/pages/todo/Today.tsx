@@ -36,6 +36,7 @@ import { useTaskSwipe } from '@/hooks/useTaskSwipe';
 import { TodoOptionsDropdown } from '@/components/todo/TodoOptionsDropdown';
 import { TaskSectionHeader } from '@/components/todo/TaskSectionHeader';
 import { TaskSubtasksInline } from '@/components/todo/TaskSubtasksInline';
+import { filterAndSortTasks } from '@/utils/tasks/filterAndSortTasks';
 
 // Retry wrapper for lazy imports (handles stale chunk errors after deploys)
 const lazyRetry = <T extends React.ComponentType<any>>(
