@@ -357,7 +357,18 @@ const hydratedWebClipFrames = new WeakMap<HTMLIFrameElement, string>();
 const webClipFrameRetryTimers = new WeakMap<HTMLIFrameElement, number>();
 
 const writeWebClipHtmlIntoFrame = (frame: HTMLIFrameElement, html: string, key: string) => {
-  if (hydratedWebClipFrames.get(frame) === key) return;
+  if (hydratedWebClipFrames.get(frame) === key) {
+    try {
+      const doc = frame.contentDocument || frame.contentWindow?.document;
+      const hasRenderedContent = !!(
+        doc &&
+        (doc.body?.children.length || doc.body?.textContent?.trim() || doc.head?.children.length)
+      );
+      if (hasRenderedContent) return;
+    } catch {
+      // If the WebView cleared the iframe document, fall through and rewrite it.
+    }
+  }
 
   // Keep parent editor HTML stable. `iframe.srcdoc = ...` reflects into a
   // huge `srcdoc` attribute, so React/contenteditable sees a different DOM and
@@ -432,7 +443,6 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
   // re-open, offline). This is the fix for the "blank frame after reload" bug.
   const embeds = root.querySelectorAll<HTMLElement>('.webclipper-embed[data-clip-html]');
   embeds.forEach((embed) => {
-    if ((embed as any).__wcHydrated) return;
     const encoded = embed.getAttribute('data-clip-html') || '';
     if (!encoded) return;
     let html = '';
@@ -459,7 +469,6 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
     const key = `${encoded.length}:${encoded.slice(0, 24)}:${encoded.slice(-24)}`;
     writeWebClipHtmlIntoFrame(frame, html, key);
     embed.setAttribute('contenteditable', 'false');
-    (embed as any).__wcHydrated = true;
   });
 
 
