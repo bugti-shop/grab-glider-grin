@@ -77,13 +77,33 @@ export const sanitizeCodeHtml = (html: string): string => {
  * Slightly more permissive for viewing content
  */
 export const sanitizeForDisplay = (html: string): string => {
-  return DOMPurify.sanitize(html, {
+  const clean = DOMPurify.sanitize(html, {
     ...RICH_TEXT_CONFIG,
     // Allow lazy loading for images, plus read-only web-clip page iframes
     // (used by the Web Clipper to embed a full captured page start-to-finish).
     ADD_TAGS: ['iframe'],
     ADD_ATTR: ['loading', 'srcdoc', 'sandbox', 'referrerpolicy', 'frameborder', 'allow', 'allowfullscreen'],
+    ADD_URI_SAFE_ATTR: ['srcdoc'],
+    FORBID_ATTR: ['onerror', 'onclick', 'onload', 'onmouseover', 'onfocus', 'onblur', 'onsubmit'],
   }) as string;
+  try {
+    if (typeof window === 'undefined' || !clean) return clean;
+    const doc = new DOMParser().parseFromString(`<div id="__root">${clean}</div>`, 'text/html');
+    const root = doc.getElementById('__root');
+    if (!root) return clean;
+    root.querySelectorAll<HTMLIFrameElement>('iframe').forEach((frame) => {
+      const sandbox = frame.getAttribute('sandbox') || '';
+      const tokens = new Set(sandbox.split(/\s+/).filter(Boolean).filter((t) => t !== 'allow-scripts'));
+      if (frame.hasAttribute('srcdoc')) tokens.add('allow-same-origin');
+      frame.setAttribute('sandbox', Array.from(tokens).join(' ').trim() || 'allow-same-origin');
+      frame.setAttribute('referrerpolicy', 'no-referrer');
+      frame.setAttribute('loading', 'lazy');
+      frame.removeAttribute('contenteditable');
+    });
+    return root.innerHTML;
+  } catch {
+    return clean;
+  }
 };
 
 /**

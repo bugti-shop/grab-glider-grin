@@ -3,6 +3,7 @@ import { genId } from '@/utils/genId';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { compressImage, isCompressibleImage } from '@/utils/imageCompression';
+import { decompressHtml, formatBytesShort } from '@/utils/htmlCompression';
 import { useNavigate } from 'react-router-dom';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTranslation } from 'react-i18next';
@@ -114,6 +115,22 @@ const STICKY_COLOR_VALUES = {
   orange: 'hsl(var(--sticky-orange))',
 };
 
+const WEB_CLIP_RE = /class=["'][^"']*flowist-web-clip|data-block-type=["']webClip|class=["'][^"']*flowist-web-clip-page/i;
+
+const triggerReadOnlyHtmlDownload = (filename: string, html: string) => {
+  if (!html) return;
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename.endsWith('.html') ? filename : `${filename}.html`;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
+};
+
 export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regular', defaultFolderId, allNotes = [], returnTo, skipHistory = false }: NoteEditorProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -213,7 +230,19 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
   const [showToc, setShowToc] = useState(false);
   const [tocMaxLevel, setTocMaxLevel] = useState<number>(6);
+  const isReadOnlyWebClip = !!note?.fullPageSnapshot || WEB_CLIP_RE.test(note?.content || '');
+  const [readOnlySnapshotHtml, setReadOnlySnapshotHtml] = useState('');
   const currentNoteId = getCurrentNoteId();
+  useEffect(() => {
+    let cancelled = false;
+    setReadOnlySnapshotHtml('');
+    if (!isOpen || !note?.fullPageSnapshot?.gz) return () => { cancelled = true; };
+    decompressHtml(note.fullPageSnapshot.gz)
+      .then((html) => { if (!cancelled) setReadOnlySnapshotHtml(html); })
+      .catch((err) => console.warn('[NoteEditor] could not expand full-page snapshot', err));
+    return () => { cancelled = true; };
+  }, [isOpen, note?.id, note?.fullPageSnapshot?.gz]);
+
   useEffect(() => {
     // Per-note visibility, falling back to the global default when the note has no saved value.
     let cancelled = false;
@@ -448,6 +477,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       } catch {}
       
       setContent(recoveredContent);
+      setIsReadingMode(!!(note.fullPageSnapshot || WEB_CLIP_RE.test(note.content || '')));
       setColor(note.color || 'yellow');
       setCustomColor(note.customColor);
       setImages(note.images || []);
@@ -603,6 +633,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       type: noteType,
       title,
       content: noteType === 'code' ? '' : contentRef.current,
+      fullPageSnapshot: note?.fullPageSnapshot,
       color: noteType === 'sticky' ? color : undefined,
       customColor: noteType !== 'sticky' && noteType !== 'voice' ? customColor : undefined,
       images: noteType === 'sticky' ? undefined : images,
@@ -639,6 +670,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     createdTime,
     getCurrentNoteId,
     note?.createdAt,
+    note?.fullPageSnapshot,
     noteType,
     title,
     content,
@@ -716,8 +748,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
   const handleSave = useCallback(async () => {
     triggerTripleHeavyHaptic();
-    await commitNote({ full: true });
-  }, [commitNote]);
+    if (!isReadOnlyWebClip) {
+      await commitNote({ full: true });
+    }
+  }, [commitNote, isReadOnlyWebClip]);
 
   // Use ref to always have access to the latest save function
   const handleSaveRef = useRef(handleSave);
@@ -735,7 +769,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     // Mark as closing to prevent re-entry
     if (!isOpenRef.current) return;
     
-    await commitNote({ full: true });
+    if (!isReadOnlyWebClip) {
+      await commitNote({ full: true });
+    }
     // Clear crash recovery since we saved successfully
     try { localStorage.removeItem('note_crash_recovery'); } catch {}
     
@@ -755,7 +791,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         navigate(returnToRef.current!, { replace: true });
       }, 10);
     }
-  }, [commitNote, navigate, onClose]);
+  }, [commitNote, navigate, onClose, isReadOnlyWebClip]);
 
   const handleClose = useCallback(async () => {
     if (!isOpenRef.current) return;
@@ -836,7 +872,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
   // Auto-save as user types (debounced) - shorter debounce for sketch
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || isReadOnlyWebClip) return;
 
     const hasText = (title?.trim() || '') !== '' || (content?.trim() || '') !== '' || (codeContent?.trim() || '') !== '';
     if (!hasText) return;
@@ -862,7 +898,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     }, delay);
 
     return () => window.clearTimeout(t);
-  }, [isOpen, title, content, codeContent, commitNote, noteType, note?.content]);
+  }, [isOpen, title, content, codeContent, commitNote, noteType, note?.content, isReadOnlyWebClip]);
 
   // Save immediately if tab/app is backgrounded or page is refreshed/closed
   const buildCurrentNoteRef = useRef(buildCurrentNote);
@@ -876,6 +912,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
+        if (isReadOnlyWebClip) return;
         void commitNote({ full: false });
         // Also write to localStorage as synchronous fallback
         try {
@@ -918,7 +955,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('beforeunload', onBeforeUnload);
     };
-  }, [isOpen, commitNote]);
+  }, [isOpen, commitNote, isReadOnlyWebClip]);
 
   // Handle hardware back button on Android - save and close editor (parent keeps correct screen)
   useHardwareBackButton({
@@ -1193,7 +1230,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           <div className="flex items-center gap-1">
             {/* Table Picker moved to toolbar/options menu */}
 
-            <DropdownMenu open={isOptionsMenuOpen} onOpenChange={setIsOptionsMenuOpen}>
+            {!isReadOnlyWebClip && <DropdownMenu open={isOptionsMenuOpen} onOpenChange={setIsOptionsMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button data-tour="note-options-menu" variant="ghost" size="icon" className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
                   <MoreVertical className="h-5 w-5" />
@@ -1852,14 +1889,26 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   </>
                 )}
               </DropdownMenuContent>
-            </DropdownMenu>
+            </DropdownMenu>}
+            {isReadOnlyWebClip && readOnlySnapshotHtml && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}
+                onClick={() => triggerReadOnlyHtmlDownload(`${(title || 'web-clip').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'web-clip'}.html`, readOnlySnapshotHtml)}
+                aria-label={t('webClipper.downloadFullHtml', 'Download full HTML page')}
+                title={t('webClipper.downloadFullHtml', 'Download full HTML page')}
+              >
+                <FileDown className="h-5 w-5" />
+              </Button>
+            )}
           </div>
         </div>
       )}
 
       {/* Inline Find & Replace - appears below header when active */}
       <InlineFindReplace
-        isOpen={isFindReplaceOpen}
+        isOpen={!isReadOnlyWebClip && isFindReplaceOpen}
         onClose={() => setIsFindReplaceOpen(false)}
         editorRef={editorRef}
         onContentChange={setContent}
@@ -1873,7 +1922,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       />
 
       {/* Word Count Stats Bar with Page Indicator - only shows when enabled */}
-      {showStats && (
+      {!isReadOnlyWebClip && showStats && (
         <div className="px-4 py-2 border-b bg-muted/50 flex items-center justify-between text-xs text-muted-foreground" style={{ borderColor: 'rgba(0,0,0,0.1)' }}>
           <div className="flex items-center gap-2">
             {getPageBreakCount(content) > 1 && (
@@ -1891,7 +1940,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       )}
 
       {/* Sticky note color picker */}
-      {noteType === 'sticky' && !isReadingMode && (
+      {noteType === 'sticky' && !isReadingMode && !isReadOnlyWebClip && (
         <div className="px-4 py-2 border-b bg-background">
           <div className="flex items-center gap-2">
             {STICKY_COLORS.map((c) => (
@@ -2016,6 +2065,50 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   onContentChange={setContent}
                   placeholder={t('notes.writeHerePlaceholder', 'Write here…   Type @ to mention notes & tasks · Type / for blocks')}
                   className="h-full"
+                />
+              </div>
+            </div>
+          ) : isReadOnlyWebClip ? (
+            <div
+              className="h-full overflow-y-auto overscroll-contain bg-background"
+              style={{ WebkitOverflowScrolling: 'touch', minHeight: 0 }}
+            >
+              <div className="p-4 pb-20">
+                {title && (
+                  <h1 className="text-2xl font-bold mb-4" style={{ fontFamily }}>
+                    {title}
+                  </h1>
+                )}
+                {note?.fullPageSnapshot && (
+                  <div className="mb-3 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground flex items-center justify-between gap-3">
+                    <span>{t('webClipper.readOnlySnapshot', 'Read-only full HTML snapshot')} · {formatBytesShort(note.fullPageSnapshot.bytes)}</span>
+                    {readOnlySnapshotHtml && (
+                      <button
+                        type="button"
+                        className="font-medium text-primary underline underline-offset-2"
+                        onClick={() => triggerReadOnlyHtmlDownload(`${(title || 'web-clip').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'web-clip'}.html`, readOnlySnapshotHtml)}
+                      >
+                        {t('webClipper.downloadFullHtml', 'Download full HTML page')}
+                      </button>
+                    )}
+                  </div>
+                )}
+                <div
+                  className="prose prose-sm max-w-none dark:prose-invert select-text"
+                  aria-readonly="true"
+                  style={{ fontFamily, fontSize, fontWeight, lineHeight }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeForDisplay(content) }}
+                  ref={(el) => {
+                    if (el) {
+                      el.querySelectorAll<HTMLElement>('[contenteditable], input, textarea, select, button').forEach((node) => {
+                        node.setAttribute('contenteditable', 'false');
+                        if ('disabled' in node) (node as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement).disabled = true;
+                      });
+                      renderMathIn(el);
+                      hydrateSyncedIn(el, { editable: false });
+                      hydrateWebClipsIn(el);
+                    }
+                  }}
                 />
               </div>
             </div>
