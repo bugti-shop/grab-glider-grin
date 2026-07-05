@@ -304,10 +304,13 @@ export function tryMarkdownCompletedBlockShortcut(root: HTMLElement | null): boo
 
   const text = textBeforeCaretInBlock(block).replace(/\u00A0/g, ' ');
   // Primary: token + space + content (e.g. "# Heading", "- item")
-  // Fallback: heading/quote without space (e.g. "#Heading", "##Sub", ">quote")
+  // Fallback: heading/quote without space (e.g. "#Heading", "##Sub", ">quote").
+  // The negative lookahead after `#{1,6}` prevents mid-typing sequences like
+  // "##" or "###" (all `#`s, no real content yet) from being greedily split
+  // into "#" + "#" and prematurely converted to an H1 with a stray "#" inside.
   let match = text.match(/^(#{1,6}|-|\*|\+|\d+\.|\[\]|\[ \]|\[x\]|>)\s+(.+)$/i);
   if (!match) {
-    match = text.match(/^(#{1,6}|>)(\S.*)$/);
+    match = text.match(/^(#{1,6})(?!#)(\S.*)$/) ?? text.match(/^(>)(\S.*)$/);
   }
   if (!match) return false;
 
