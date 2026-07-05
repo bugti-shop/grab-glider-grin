@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { genId } from '@/utils/genId';
-import { sanitizeHtml } from '@/lib/sanitize';
+import { sanitizeHtml, sanitizeClippedArticle } from '@/lib/sanitize';
+import { supabase } from '@/integrations/supabase/client';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { compressImage, isCompressibleImage } from '@/utils/imageCompression';
 import { decompressHtml, formatBytesShort } from '@/utils/htmlCompression';
