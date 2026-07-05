@@ -432,9 +432,14 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       : { wordCount: 0, characterCount: 0, characterCountNoSpaces: 0, readingTimeMinutes: 0 },
     [showStats, content, title],
   );
+  const instantSavedWebClipContent = useMemo(
+    () => (note?.content && WEB_CLIP_RE.test(note.content) ? normalizeWebClipHtmlForFastOffline(note.content) : ''),
+    [note?.content],
+  );
+  const visibleReadOnlyContent = (isReadOnlyWebClip && instantSavedWebClipContent) ? instantSavedWebClipContent : content;
   const displayContentHtml = useMemo(
-    () => (isReadOnlyWebClip || isReadingMode ? sanitizeForDisplay(content) : ''),
-    [content, isReadOnlyWebClip, isReadingMode],
+    () => (isReadOnlyWebClip || isReadingMode ? sanitizeForDisplay(visibleReadOnlyContent) : ''),
+    [visibleReadOnlyContent, isReadOnlyWebClip, isReadingMode],
   );
   
   // Calculate backlinks
