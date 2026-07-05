@@ -85,7 +85,7 @@ import {
   calloutHTML, toggleHTML, quoteHTML, dividerHTML, codeBlockHTML, checklistHTML,
   mentionHTML, getCaretRect, getCaretLI, indentListItem, outdentListItem,
   replaceTriggerAndInsert, columnsHTML, mathHTML, renderMathIn, wrapSelectionAsComment,
-  syncedHTML, hydrateSyncedIn, persistSyncedFrom, removeAdjacentMention, hydrateWebClipsIn,
+  syncedHTML, hydrateSyncedIn, persistSyncedFrom, removeAdjacentMention, hydrateWebClipsIn, prepareWebClipEmbedsHtml,
   hydrateCodeBlocksIn, hydrateImageMediaIn,
 } from './richtext/richTextBlocks';
 import { SyncedBlockPicker } from './richtext/SyncedBlockPicker';
@@ -2482,7 +2482,7 @@ export const RichTextEditor = ({
     let t1: ReturnType<typeof setTimeout> | undefined;
     let t2: ReturnType<typeof setTimeout> | undefined;
 
-    const sanitizedContent = sanitizeHtml(content);
+    const sanitizedContent = prepareWebClipEmbedsHtml(sanitizeHtml(content));
     if (editorRef.current && editorRef.current.innerHTML !== sanitizedContent) {
       // Only update if editor is not focused to avoid cursor issues
       const isFocused = document.activeElement === editorRef.current;

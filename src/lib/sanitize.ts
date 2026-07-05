@@ -80,7 +80,7 @@ export const sanitizeHtml = (html: string): string => {
       if (frame.hasAttribute('srcdoc')) tokens.add('allow-same-origin');
       frame.setAttribute('sandbox', Array.from(tokens).join(' ').trim() || 'allow-same-origin');
       frame.setAttribute('referrerpolicy', 'no-referrer');
-      frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('loading', frame.closest('.webclipper-embed') ? 'eager' : 'lazy');
       if (frame.closest('.webclipper-embed')) frame.removeAttribute('srcdoc');
     });
     return root.innerHTML;
@@ -122,7 +122,7 @@ export const sanitizeForDisplay = (html: string): string => {
       if (frame.hasAttribute('srcdoc')) tokens.add('allow-same-origin');
       frame.setAttribute('sandbox', Array.from(tokens).join(' ').trim() || 'allow-same-origin');
       frame.setAttribute('referrerpolicy', 'no-referrer');
-      frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('loading', frame.closest('.webclipper-embed') ? 'eager' : 'lazy');
       frame.removeAttribute('contenteditable');
       if (frame.closest('.webclipper-embed')) frame.removeAttribute('srcdoc');
     });

@@ -1231,7 +1231,6 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       wrapper.setAttribute('data-url', url);
       wrapper.setAttribute('data-captured-at', capturedAt);
       wrapper.setAttribute('data-bytes', String(rawHtml.length));
-      wrapper.setAttribute('data-clip-html', encoded);
       wrapper.setAttribute('contenteditable', 'false');
 
       const header = document.createElement('div');
@@ -1252,12 +1251,12 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       const frame = document.createElement('iframe');
       frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
       frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
-      frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('loading', 'eager');
       frame.setAttribute('data-role', 'webclip-frame');
       frame.setAttribute('style', 'width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
-      // Do not set `srcdoc` here: it reflects into a huge attribute and makes
-      // the saved editor DOM differ from the rendered DOM. The hydrator writes
-      // the HTML directly into the iframe document without mutating parent HTML.
+      if (encoded) {
+        frame.setAttribute('src', `data:text/html;charset=utf-8;base64,${encoded}`);
+      }
 
       wrapper.append(header, frame);
 
@@ -1298,7 +1297,6 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         } catch {
           editor.appendChild(wrapper);
         }
-        hydrateWebClipsIn(editor);
         setContent(editor.innerHTML);
       } else {
         // Non-rich note types: append raw HTML to content so it still saves.

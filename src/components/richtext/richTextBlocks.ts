@@ -353,66 +353,47 @@ export const persistSyncedFrom = (root: HTMLElement | null) => {
   });
 };
 
-const hydratedWebClipFrames = new WeakMap<HTMLIFrameElement, string>();
-const webClipFrameRetryTimers = new WeakMap<HTMLIFrameElement, number>();
+const WEBCLIP_DATA_SRC_PREFIX = 'data:text/html;charset=utf-8;base64,';
 
-const writeWebClipHtmlIntoFrame = (frame: HTMLIFrameElement, html: string, key: string) => {
-  if (hydratedWebClipFrames.get(frame) === key) {
-    try {
-      const doc = frame.contentDocument || frame.contentWindow?.document;
-      const hasRenderedContent = !!(
-        doc &&
-        (doc.body?.children.length || doc.body?.textContent?.trim() || doc.head?.children.length)
-      );
-      if (hasRenderedContent) return;
-    } catch {
-      // If the WebView cleared the iframe document, fall through and rewrite it.
-    }
-  }
+export const prepareWebClipEmbedsHtml = (html: string): string => {
+  if (!html || !html.includes('webclipper-embed')) return html;
+  try {
+    const doc = new DOMParser().parseFromString(`<div id="__root">${html}</div>`, 'text/html');
+    const root = doc.getElementById('__root');
+    if (!root) return html;
 
-  // Keep parent editor HTML stable. `iframe.srcdoc = ...` reflects into a
-  // huge `srcdoc` attribute, so React/contenteditable sees a different DOM and
-  // re-applies the saved content, causing the blank/html/blank reopen flicker.
-  frame.removeAttribute('srcdoc');
-
-  const write = () => {
-    try {
-      const doc = frame.contentDocument || frame.contentWindow?.document;
-      if (!doc) return false;
-      doc.open();
-      doc.write(html);
-      doc.close();
-      hydratedWebClipFrames.set(frame, key);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  if (write()) return;
-
-  const scheduleRetry = (delay: number) => {
-    const existing = webClipFrameRetryTimers.get(frame);
-    if (existing) window.clearTimeout(existing);
-    const timer = window.setTimeout(() => {
-      webClipFrameRetryTimers.delete(frame);
-      if (hydratedWebClipFrames.get(frame) !== key && !write()) {
-        const finalTimer = window.setTimeout(() => {
-          webClipFrameRetryTimers.delete(frame);
-          if (hydratedWebClipFrames.get(frame) !== key) write();
-        }, 120);
-        webClipFrameRetryTimers.set(frame, finalTimer);
+    root.querySelectorAll<HTMLElement>('.webclipper-embed').forEach((embed) => {
+      const encoded = embed.getAttribute('data-clip-html') || '';
+      let frame = embed.querySelector<HTMLIFrameElement>('iframe[data-role="webclip-frame"]')
+        || embed.querySelector<HTMLIFrameElement>('iframe');
+      if (!frame) {
+        frame = doc.createElement('iframe');
+        embed.appendChild(frame);
       }
-    }, delay);
-    webClipFrameRetryTimers.set(frame, timer);
-  };
 
-  if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
-    window.requestAnimationFrame(() => {
-      if (hydratedWebClipFrames.get(frame) !== key && !write()) scheduleRetry(50);
+      frame.setAttribute('data-role', 'webclip-frame');
+      frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+      frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+      frame.setAttribute('loading', 'eager');
+      frame.setAttribute('style', 'width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
+      frame.removeAttribute('srcdoc');
+
+      if (encoded && !frame.getAttribute('src')?.startsWith(WEBCLIP_DATA_SRC_PREFIX)) {
+        frame.setAttribute('src', `${WEBCLIP_DATA_SRC_PREFIX}${encoded}`);
+      }
+
+      // Once a stable data: src exists, this duplicate base64 payload is no
+      // longer needed in the live editor DOM. Removing it prevents giant DOM
+      // diffs and repeated iframe rebuilds on Android/WebView reopen.
+      if (frame.getAttribute('src')?.startsWith(WEBCLIP_DATA_SRC_PREFIX)) {
+        embed.removeAttribute('data-clip-html');
+      }
+      embed.setAttribute('contenteditable', 'false');
     });
-  } else {
-    scheduleRetry(0);
+
+    return root.innerHTML;
+  } catch {
+    return html;
   }
 };
 
@@ -436,25 +417,12 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
     clip.dataset.hydrated = '1';
   });
 
-  // Web Clipper full-page embeds: raw HTML is stored as base64 in
-  // `data-clip-html` on the wrapper so it survives sanitize + contenteditable
-  // serialization round-trips. Decode it and set the iframe's `srcdoc`
-  // property from JS every time the note is rendered (fresh clip, reload,
-  // re-open, offline). This is the fix for the "blank frame after reload" bug.
-  const embeds = root.querySelectorAll<HTMLElement>('.webclipper-embed[data-clip-html]');
+  // Web Clipper full-page embeds: render from a stable data: URL, not srcdoc.
+  // srcdoc/doc.write caused Android/WebView to repeatedly show blank/html/blank
+  // after reopening because the iframe document was rebuilt during hydration.
+  const embeds = root.querySelectorAll<HTMLElement>('.webclipper-embed');
   embeds.forEach((embed) => {
     const encoded = embed.getAttribute('data-clip-html') || '';
-    if (!encoded) return;
-    let html = '';
-    try {
-      const bin = atob(encoded);
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      html = new TextDecoder().decode(bytes);
-    } catch {
-      return;
-    }
-    if (!html) return;
     let frame = embed.querySelector<HTMLIFrameElement>('iframe[data-role="webclip-frame"]')
       || embed.querySelector<HTMLIFrameElement>('iframe');
     if (!frame) {
@@ -462,12 +430,18 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
       frame.setAttribute('data-role', 'webclip-frame');
       frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
       frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
-      frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('loading', 'eager');
       frame.setAttribute('style', 'width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
       embed.appendChild(frame);
     }
-    const key = `${encoded.length}:${encoded.slice(0, 24)}:${encoded.slice(-24)}`;
-    writeWebClipHtmlIntoFrame(frame, html, key);
+    frame.removeAttribute('srcdoc');
+    frame.setAttribute('loading', 'eager');
+    if (encoded && !frame.getAttribute('src')?.startsWith(WEBCLIP_DATA_SRC_PREFIX)) {
+      frame.setAttribute('src', `${WEBCLIP_DATA_SRC_PREFIX}${encoded}`);
+    }
+    if (frame.getAttribute('src')?.startsWith(WEBCLIP_DATA_SRC_PREFIX)) {
+      embed.removeAttribute('data-clip-html');
+    }
     embed.setAttribute('contenteditable', 'false');
   });
 
