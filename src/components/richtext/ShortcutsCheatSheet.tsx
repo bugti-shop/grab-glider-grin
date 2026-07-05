@@ -6,7 +6,7 @@
  * Purely presentational: no editor mutation, just a searchable dialog.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -488,6 +488,22 @@ function consolidateSlashCommands(sections: Section[]): Section[] {
 }
 
 /**
+ * Split `text` on the first case-insensitive occurrence of `query` and wrap
+ * matched substrings in <mark>. Safe against regex metacharacters.
+ */
+function highlight(text: string, query: string): React.ReactNode {
+  const q = query.trim();
+  if (!q) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'ig'));
+  return parts.map((p, i) =>
+    p.toLowerCase() === q.toLowerCase()
+      ? <mark key={i} className="bg-yellow-200 dark:bg-yellow-500/40 text-inherit rounded px-0.5">{p}</mark>
+      : <span key={i}>{p}</span>
+  );
+}
+
+/**
  * Sanitize a cheat-sheet trigger before dispatching it to the editor:
  *   - strip `<url>` / `<...>` placeholders
  *   - strip ellipsis characters
@@ -637,7 +653,7 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                   <span className="inline-block transition-transform group-open:rotate-90 text-muted-foreground">
                     ▶
                   </span>
-                  <h3 className="text-sm font-semibold">{section.title}</h3>
+                  <h3 className="text-sm font-semibold">{highlight(section.title, query)}</h3>
                   <span className="ml-auto text-xs text-muted-foreground">{rowCount}</span>
                 </summary>
                 <div className="border-t p-3">
@@ -657,7 +673,7 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                             <span className="inline-block transition-transform group-open/sub:rotate-90 text-muted-foreground">
                               ▶
                             </span>
-                            <span>{group.title}</span>
+                            <span>{highlight(group.title, query)}</span>
                             <span className="ml-auto text-xs text-muted-foreground">
                               {group.rows.length}
                             </span>
@@ -753,7 +769,7 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                   <td className="px-3 py-2 align-top w-[45%]">
                     <div className="flex items-center gap-2">
                       <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono whitespace-pre-wrap break-words">
-                        {row.trigger}
+                        {highlight(row.trigger, query)}
                       </code>
                       {clickable && (
                         <Play className="h-3 w-3 text-primary shrink-0" aria-hidden />
@@ -761,9 +777,9 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                     </div>
                   </td>
                   <td className="px-3 py-2 align-top">
-                    <div>{row.result}</div>
+                    <div>{highlight(row.result, query)}</div>
                     {row.hint && (
-                      <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{highlight(row.hint, query)}</div>
                     )}
                   </td>
                 </tr>
