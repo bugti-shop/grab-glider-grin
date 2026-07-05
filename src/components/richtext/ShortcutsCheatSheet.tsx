@@ -75,8 +75,7 @@ function buildSections(): Section[] {
         { trigger: '==text==', result: 'Highlight' },
       ],
     },
-    {
-      title: 'Tables',
+
       description: 'Fast ways to insert and grow tables.',
       rows: [
         { trigger: '/table', result: 'Open the table picker (rows × columns)' },
