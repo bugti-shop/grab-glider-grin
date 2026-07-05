@@ -510,6 +510,7 @@ const WebClipper = () => {
             console.info('[webClipper] fetch-article ok', {
               url,
               ms: fetchMs,
+              mode: clipMode,
               titleChars: articleTitle.length,
               excerptChars: articleExcerpt.length,
               htmlChars: articleHtml.length,
@@ -519,6 +520,39 @@ const WebClipper = () => {
               leadImage: !!articleLeadImage,
               fallback: articleIsFallback,
             });
+            // ── Full-page offline snapshot ─────────────────────────────
+            // The edge function returns the ENTIRE inlined document
+            // (DOCTYPE + <html> + <head> + <body>, with CSS/images/fonts
+            // as data: URIs). Save it to the device as a single-file
+            // .html so users can open it offline in any browser, then
+            // reduce the in-note body to a compact "snapshot saved" card
+            // with title/hero/excerpt only — we do NOT paste the raw
+            // document markup into the editor.
+            if (clipMode === 'fullpage' && articleHtml) {
+              const snapshotBytes = new Blob([articleHtml]).size;
+              let host = '';
+              try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+              const snapshotFilename = `${filenameFromTitle(articleTitle || title, host)}.html`;
+              triggerHtmlDownload(snapshotFilename, articleHtml);
+              const sizeLabel = formatBytes(snapshotBytes);
+              const heroBlock = articleLeadImage
+                ? `<figure class="flowist-web-clip-hero"><img src="${articleLeadImage}" alt="" referrerpolicy="no-referrer" /></figure>`
+                : '';
+              const excerptBlock = articleExcerpt
+                ? `<p class="flowist-web-clip-excerpt-inline">${sanitizeForDisplay(articleExcerpt)}</p>`
+                : '';
+              const banner =
+                `<aside class="flowist-offline-snapshot-info" data-snapshot-filename="${snapshotFilename.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
+                  `<strong>📥 ${sanitizeForDisplay(t('webClipper.offlineSnapshotSaved', 'Offline snapshot saved to your device'))}</strong>` +
+                  `<span>${sanitizeForDisplay(snapshotFilename)} · ${sizeLabel}</span>` +
+                  `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'Open the downloaded .html file anytime — it contains the whole page (styles, images, fonts) bundled inline. No internet needed.'))}</em>` +
+                `</aside>`;
+              // Replace the huge document body with the compact card so the
+              // note stays lightweight; the offline file lives on the device.
+              articleHtml = `${banner}${heroBlock}${excerptBlock}`;
+              articleEmbeds = [];
+              articleLinks = [];
+            }
           }
         } catch (err) {
           if (canceledRef.current || (err as Error)?.name === 'AbortError') throw err;
