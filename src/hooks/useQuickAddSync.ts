@@ -78,6 +78,25 @@ export const useQuickAddSync = () => {
       }
     };
 
+    // Fallback: even without a pending marker, if the overlay recently wrote
+    // its lastAddedAt timestamp we still force a reload so tasks written by
+    // the isolated overlay WebView surface in Today.
+    const drainRecentAdd = () => {
+      try {
+        const raw = localStorage.getItem(LAST_ADDED_AT_KEY);
+        if (!raw) return;
+        const at = Number(raw);
+        if (!Number.isFinite(at)) return;
+        if (Date.now() - at > NAV_MAX_AGE_MS) return;
+        const consumedKey = "quickAdd:lastAddedAt:consumed";
+        if (localStorage.getItem(consumedKey) === raw) return;
+        localStorage.setItem(consumedKey, raw);
+        reloadTasks();
+        const taskId = localStorage.getItem("quickAdd:lastAddedId") ?? undefined;
+        goToToday(taskId);
+      } catch {}
+    };
+
     const handleSignal = (taskId?: string) => {
       if (disposed) return;
       reloadTasks();
@@ -111,15 +130,29 @@ export const useQuickAddSync = () => {
         if (!Capacitor.isNativePlatform()) return;
         const { App } = await import("@capacitor/app");
         const sub = await App.addListener("appStateChange", ({ isActive }) => {
-          if (isActive) drainPendingNavigation();
+          if (isActive) {
+            drainPendingNavigation();
+            drainRecentAdd();
+          }
         });
         if (disposed) sub.remove();
         else capResumeSub = sub;
       } catch {}
     })();
 
-    // 4) Cold-start drain
+    // 4) Browser focus / visibility — every time the user comes back to the
+    //    main-app WebView, re-check for a task the overlay may have written.
+    const onFocus = () => { drainPendingNavigation(); drainRecentAdd(); };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") onFocus();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // 5) Cold-start drain (both markers)
     drainPendingNavigation();
+    drainRecentAdd();
+
 
     return () => {
       disposed = true;
