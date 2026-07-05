@@ -146,16 +146,32 @@ export const TaskReminderSheet = ({
 
   const handleSave = () => {
     const items: ExtraReminderItem[] = [];
+    const seen = new Set<string>();
+    const now = Date.now();
     for (const d of drafts) {
       const dt = draftToDate(d);
       if (!dt) {
         toast.error('Please fill every reminder date and time.');
         return;
       }
+      if (d.recurring === 'none' && dt.getTime() <= now) {
+        toast.error('One-shot reminders must be set in the future.');
+        return;
+      }
       const dow =
         d.daysOfWeek.length === 0 || d.daysOfWeek.length === 7 ? undefined : [...d.daysOfWeek];
+      // Dedupe overlapping reminders: same minute + same recurrence pattern.
+      const key = `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}-${dt.getHours()}-${dt.getMinutes()}|${d.recurring}|${(dow || []).join(',')}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
       items.push({ id: d.id, time: dt, recurring: d.recurring, daysOfWeek: dow });
     }
+    if (items.length === 0) {
+      toast.error('Add at least one reminder.');
+      return;
+    }
+    // Sort chronologically so the list reads top-down.
+    items.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
     // Free tier hard cap — extra safety on top of the "+ Add reminder" gate.
     const capped = isPro ? items : items.slice(0, 1);
 

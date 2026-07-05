@@ -1370,33 +1370,61 @@ export const TaskDetailPage = ({
 
 
         <div className="space-y-2 border-t border-border pt-4">
-          {/* Reminders — single entry that supports multiple reminders per task */}
+          {/* Reminders — one section, per-item edit/delete, multiple times per task */}
           <div className="px-2">
             <h3 className="text-base font-semibold mb-2">{t('taskDetail.reminders', 'Reminders')}</h3>
             {(() => {
-              const list = (task as any).extraReminders as Array<{ time: Date; recurring: string }> | undefined;
+              const list = (task as any).extraReminders as Array<{ id?: string; time: Date; recurring: string; daysOfWeek?: number[] }> | undefined;
               const items = list && list.length > 0
                 ? list
                 : task.extraReminderTime
                   ? [{ time: task.extraReminderTime as Date, recurring: (task.extraReminderRecurring as string) || 'none' }]
                   : [];
-              return items.length > 0 ? (
+              if (items.length === 0) return null;
+
+              const deleteOne = async (idx: number) => {
+                const next = items.filter((_, i) => i !== idx).map((r, i) => ({
+                  id: (r as any).id ?? `rem-${i}-${new Date(r.time).getTime()}`,
+                  time: new Date(r.time),
+                  recurring: (r.recurring as any) || 'none',
+                  daysOfWeek: (r as any).daysOfWeek,
+                }));
+                if (next.length === 0) {
+                  await handleRemoveExtraReminder();
+                } else {
+                  await handleSaveExtraRemindersList(next);
+                }
+              };
+
+              return (
                 <div className="space-y-1 mb-2">
                   {items.map((r, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setShowExtraReminderSheet(true)}
-                      className="w-full flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                    <div
+                      key={(r as any).id ?? idx}
+                      className="w-full flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors"
                     >
-                      <Bell className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                      <span className="flex-1 text-sm">
-                        {format(new Date(r.time), 'MMM d, h:mm a')}
-                        {r.recurring && r.recurring !== 'none' ? ` • ${r.recurring}` : ''}
-                      </span>
-                    </button>
+                      <button
+                        onClick={() => setShowExtraReminderSheet(true)}
+                        className="flex-1 flex items-center gap-3 text-left"
+                        aria-label={t('taskDetail.editReminder', 'Edit reminder')}
+                      >
+                        <Bell className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                        <span className="flex-1 text-sm">
+                          {format(new Date(r.time), 'MMM d, h:mm a')}
+                          {r.recurring && r.recurring !== 'none' ? ` • ${r.recurring}` : ''}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => deleteOne(idx)}
+                        className="p-1.5 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        aria-label={t('taskDetail.deleteReminder', 'Delete reminder')}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   ))}
                 </div>
-              ) : null;
+              );
             })()}
             <button
               onClick={() => setShowExtraReminderSheet(true)}
@@ -1406,6 +1434,7 @@ export const TaskDetailPage = ({
               <span className="text-sm font-medium">{t('taskDetail.addReminder', 'Add reminder')}</span>
             </button>
           </div>
+
 
 
 
