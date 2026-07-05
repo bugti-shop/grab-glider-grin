@@ -117,10 +117,20 @@ function capHtml(html: string, maxBytes: number): { html: string; truncated: boo
 /* any network access.                                                */
 /* ------------------------------------------------------------------ */
 
-const INLINE_ASSET_TIMEOUT_MS = 6_000;
-const INLINE_PER_ASSET_MAX = 2 * 1024 * 1024; // 2 MB per asset
-const INLINE_TOTAL_BUDGET = 15 * 1024 * 1024; // 15 MB total inlined
-const INLINE_CONCURRENCY = 8;
+const INLINE_ASSET_TIMEOUT_MS = 2_500;
+const INLINE_PER_ASSET_MAX = 768 * 1024; // keep large media remote instead of exhausting edge memory
+const INLINE_TOTAL_BUDGET = 5 * 1024 * 1024; // best-effort bundle; raw HTML must win over asset completeness
+const INLINE_CONCURRENCY = 3;
+const INLINE_GLOBAL_DEADLINE_MS = 14_000;
+const INLINE_MAX_STYLESHEETS = 10;
+const INLINE_MAX_CSS_URLS = 30;
+const INLINE_MAX_MEDIA_ASSETS = 36;
+
+type InlineBudget = { remaining: number; deadlineAt: number };
+
+function inlineBudgetActive(budget: InlineBudget): boolean {
+  return budget.remaining > 0 && Date.now() < budget.deadlineAt;
+}
 
 function u8ToBase64(bytes: Uint8Array): string {
   let bin = "";
@@ -258,6 +268,19 @@ async function fetchAsset(u: string): Promise<FetchedAsset | null> {
   } catch { return null; }
 }
 
+function stripRuntimeScripts(doc: Document): void {
+  try {
+    doc.querySelectorAll("script, object, embed").forEach((el: any) => el.remove());
+    doc.querySelectorAll("*").forEach((el: any) => {
+      try {
+        for (const attr of Array.from(el.attributes || []) as any[]) {
+          if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+        }
+      } catch { /* ignore */ }
+    });
+  } catch { /* ignore */ }
+}
+
 
 async function fetchTextAsset(u: string): Promise<FetchedAsset | null> {
   const a = await fetchAsset(u);
@@ -274,7 +297,7 @@ function toDataUri(a: FetchedAsset): string {
 async function inlineCssUrls(
   css: string,
   cssBase: string,
-  budget: { remaining: number },
+  budget: InlineBudget,
   cache: Map<string, string>,
 ): Promise<string> {
   // @import "…"; / @import url(…);
@@ -283,7 +306,7 @@ async function inlineCssUrls(
   let m: RegExpExecArray | null;
   while ((m = importRe.exec(css)) !== null) imports.push({ match: m[0], url: m[1] });
   for (const imp of imports) {
-    if (budget.remaining <= 0) break;
+    if (!inlineBudgetActive(budget)) break;
     const abs = absolutize(imp.url, cssBase);
     let inlined = cache.get(abs);
     if (inlined === undefined) {
@@ -310,10 +333,11 @@ async function inlineCssUrls(
     if (seen.has(raw)) continue;
     seen.add(raw);
     urls.push(raw);
+    if (urls.length >= INLINE_MAX_CSS_URLS) break;
   }
   const replacements = new Map<string, string>();
   for (const raw of urls) {
-    if (budget.remaining <= 0) break;
+    if (!inlineBudgetActive(budget)) break;
     const abs = absolutize(raw, cssBase);
     let uri = cache.get(abs);
     if (uri === undefined) {
@@ -477,7 +501,10 @@ function cleanArticleDom(doc: Document): void {
  *  best-effort: any asset that fails to fetch is left with its absolute URL
  *  so the captured page degrades gracefully rather than breaking. */
 async function inlineAllAssets(doc: Document, base: string): Promise<void> {
-  const budget = { remaining: INLINE_TOTAL_BUDGET };
+  const budget: InlineBudget = {
+    remaining: INLINE_TOTAL_BUDGET,
+    deadlineAt: Date.now() + INLINE_GLOBAL_DEADLINE_MS,
+  };
   const cache = new Map<string, string>();
 
   const runLimited = async <T>(tasks: Array<() => Promise<T>>, limit: number) => {
@@ -495,9 +522,10 @@ async function inlineAllAssets(doc: Document, base: string): Promise<void> {
   };
 
   // 1) Stylesheets — <link rel~="stylesheet" href="...">
-  const linkNodes = Array.from(doc.querySelectorAll('link[rel~="stylesheet"][href]')) as any[];
+  const linkNodes = (Array.from(doc.querySelectorAll('link[rel~="stylesheet"][href]')) as any[])
+    .slice(0, INLINE_MAX_STYLESHEETS);
   await runLimited(linkNodes.map((link) => async () => {
-    if (budget.remaining <= 0) return;
+    if (!inlineBudgetActive(budget)) return;
     const href = link.getAttribute("href");
     if (!href) return;
     const abs = absolutize(href, base);
@@ -516,32 +544,20 @@ async function inlineAllAssets(doc: Document, base: string): Promise<void> {
   // 1b) Existing inline <style> blocks — still need url() inlining.
   const inlineStyles = Array.from(doc.querySelectorAll("style")) as any[];
   await runLimited(inlineStyles.map((style) => async () => {
-    if (budget.remaining <= 0) return;
+    if (!inlineBudgetActive(budget)) return;
     const src = style.textContent || "";
     if (!src || !/url\(|@import/i.test(src)) return;
     const rewritten = await inlineCssUrls(src, base, budget, cache);
     style.textContent = rewritten;
   }), INLINE_CONCURRENCY);
 
-  // 2) Scripts — <script src="...">. Keep type/attributes; drop src.
-  const scriptNodes = Array.from(doc.querySelectorAll("script[src]")) as any[];
-  await runLimited(scriptNodes.map((script) => async () => {
-    if (budget.remaining <= 0) return;
-    const src = script.getAttribute("src");
-    if (!src) return;
-    const abs = absolutize(src, base);
-    const asset = await fetchTextAsset(abs);
-    if (!asset || !asset.text) return;
-    budget.remaining -= asset.text.length;
-    script.removeAttribute("src");
-    script.setAttribute("data-flowist-inlined-from", abs);
-    // Neutralise any </script> inside the code that would prematurely close the tag.
-    script.textContent = asset.text.replace(/<\/script/gi, "<\\/script");
-  }), INLINE_CONCURRENCY);
+  // 2) Scripts are intentionally not inlined. Saved clips are locked/read-only
+  // and script-free, so downloading JavaScript only wastes memory and time.
+  stripRuntimeScripts(doc);
 
   // 3) Images + favicons + preloads → data: URIs.
   const inlineImg = async (el: any, attr: string) => {
-    if (budget.remaining <= 0) return;
+    if (!inlineBudgetActive(budget)) return;
     const raw = el.getAttribute(attr);
     if (!raw || raw.startsWith("data:")) return;
     const abs = absolutize(raw, base);
@@ -556,15 +572,19 @@ async function inlineAllAssets(doc: Document, base: string): Promise<void> {
   };
 
   const imgTasks: Array<() => Promise<void>> = [];
-  doc.querySelectorAll("img[src]").forEach((el: any) => imgTasks.push(() => inlineImg(el, "src")));
+  doc.querySelectorAll("img[src]").forEach((el: any) => {
+    if (imgTasks.length < INLINE_MAX_MEDIA_ASSETS) imgTasks.push(() => inlineImg(el, "src"));
+  });
   doc.querySelectorAll('link[rel~="icon"][href], link[rel="apple-touch-icon"][href], link[rel="mask-icon"][href]')
-    .forEach((el: any) => imgTasks.push(() => inlineImg(el, "href")));
-  doc.querySelectorAll("source[src]").forEach((el: any) => imgTasks.push(() => inlineImg(el, "src")));
+    .forEach((el: any) => { if (imgTasks.length < INLINE_MAX_MEDIA_ASSETS) imgTasks.push(() => inlineImg(el, "href")); });
+  doc.querySelectorAll("source[src]").forEach((el: any) => {
+    if (imgTasks.length < INLINE_MAX_MEDIA_ASSETS) imgTasks.push(() => inlineImg(el, "src"));
+  });
   await runLimited(imgTasks, INLINE_CONCURRENCY);
 
   // 3b) <img srcset> and <source srcset> — inline each candidate.
   const rewriteSrcset = async (el: any) => {
-    if (budget.remaining <= 0) return;
+    if (!inlineBudgetActive(budget)) return;
     const ss = el.getAttribute("srcset");
     if (!ss) return;
     const parts = ss.split(",").map((p: string) => p.trim()).filter(Boolean);
@@ -585,7 +605,9 @@ async function inlineAllAssets(doc: Document, base: string): Promise<void> {
     el.setAttribute("srcset", out.join(", "));
   };
   const ssTasks: Array<() => Promise<void>> = [];
-  doc.querySelectorAll("img[srcset], source[srcset]").forEach((el: any) => ssTasks.push(() => rewriteSrcset(el)));
+  doc.querySelectorAll("img[srcset], source[srcset]").forEach((el: any) => {
+    if (ssTasks.length < INLINE_MAX_MEDIA_ASSETS) ssTasks.push(() => rewriteSrcset(el));
+  });
   await runLimited(ssTasks, INLINE_CONCURRENCY);
 
   // 4) Neutralize <base> tags — after inlining, all URLs are absolute or data:
