@@ -672,15 +672,33 @@ function evalOperand(expr: string): { value: number; unit: string } | null {
  */
 export function normalizeImplicitMult(input: string): string {
   let s = normalizeUnitPhrases(input);
+  // Unwrap "(<unit>)^N" → "<unit>^N" so exponents survive paren reduction
+  // (e.g. "2(kg)^2 to lb^2" becomes "2 kg^2 to lb^2" instead of dropping "^2").
+  const expRe = new RegExp(`\\(\\s*(${UNIT_TOK})\\s*\\)\\s*\\^\\s*(\\d+)`, 'g');
+  s = s.replace(expRe, ' $1^$2 ');
   // Fold "<num>(<single-unit>)" into "<num> <unit>" so it becomes an operand
   // that evalOperand can read directly.
   const foldRe = new RegExp(`(${NUM_TOK})\\s*\\(\\s*(${UNIT_TOK})\\s*\\)`, 'g');
   s = s.replace(foldRe, '$1 $2');
+  // Unwrap standalone "(<unit>)" (no number inside) so unit-only paren groups
+  // like "(m/s)(kg)" reduce cleanly after the ")(" → ")*(" insertion below.
+  const unwrapRe = new RegExp(`\\(\\s*(${UNIT_TOK})\\s*\\)`, 'g');
+  s = s.replace(unwrapRe, ' $1 ');
   // Insert explicit "*" at paren-adjacency boundaries.
   s = s.replace(/\)\s*\(/g, ')*(');
   s = s.replace(/(\d)\s*\(/g, '$1*(');
   s = s.replace(/\)\s*(\d)/g, ')*$1');
-  return s;
+  // Bridge implicit multiplication that surfaces after unwrapping, e.g.
+  // "m/s kg" → "m/s*kg", so downstream matchers see explicit operators.
+  const unitAdj = new RegExp(`(${UNIT_TOK})\\s+(${UNIT_TOK})`, 'g');
+  // Only bridge when neither side looks like a keyword (in/to/as) — evalOperand
+  // still needs "num unit" adjacency for its simple form, so we intentionally
+  // do NOT rewrite "<num> <unit>" here.
+  s = s.replace(unitAdj, (m, a, b) => {
+    if (/^(in|to|as)$/i.test(a) || /^(in|to|as)$/i.test(b)) return m;
+    return `${a}*${b}`;
+  });
+  return s.replace(/\s+/g, ' ').trim();
 }
 
 /**
