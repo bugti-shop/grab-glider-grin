@@ -445,6 +445,27 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
     embed.setAttribute('contenteditable', 'false');
   });
 
+  root.querySelectorAll<HTMLIFrameElement>('iframe.flowist-web-clip-page[data-role="page-embed"]').forEach((frame) => {
+    const srcdoc = frame.getAttribute('srcdoc') || '';
+    const src = frame.getAttribute('src') || '';
+    frame.setAttribute('loading', 'eager');
+    frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+    frame.setAttribute('referrerpolicy', 'no-referrer');
+    if (srcdoc && !src.startsWith(WEBCLIP_DATA_SRC_PREFIX)) {
+      try {
+        const bytes = new TextEncoder().encode(srcdoc);
+        let bin = '';
+        for (let i = 0; i < bytes.length; i += 0x8000) {
+          bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        }
+        frame.setAttribute('src', `${WEBCLIP_DATA_SRC_PREFIX}${btoa(bin)}`);
+      } catch {
+        // keep the existing frame if conversion fails
+      }
+    }
+    frame.removeAttribute('srcdoc');
+  });
+
 
   // User preference: no snapshot placeholder, no "View / Hide snapshot"
   // toggle, and no "Download captured HTML" button. Any legacy fullpage

@@ -265,6 +265,21 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const focusTaskInput = useCallback(() => {
+    const focusNow = () => inputRef.current?.focus({ preventScroll: true });
+    focusNow();
+    if (typeof window === 'undefined') return;
+    window.requestAnimationFrame(focusNow);
+    window.setTimeout(focusNow, 60);
+    window.setTimeout(focusNow, 180);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return;
+    const id = window.setTimeout(focusTaskInput, 80);
+    return () => window.clearTimeout(id);
+  }, [isOpen, focusTaskInput]);
+
 
 
 
@@ -538,7 +553,7 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
       setEstimatedHours(undefined);
       setVoiceRecording(undefined);
       setIsUrgent(false);
-      inputRef.current?.focus();
+      focusTaskInput();
     }, 0);
   };
 
