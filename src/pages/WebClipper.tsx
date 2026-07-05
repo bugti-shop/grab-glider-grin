@@ -571,7 +571,7 @@ const WebClipper = () => {
       // (which centers on `articleHtml`) can render the captured image as-is.
       if (clipMode === 'screenshot' && screenshotDataUrl) {
         articleHtml =
-          `<figure class="flowist-web-clip-screenshot" data-role="fullpage-screenshot" contenteditable="false">` +
+          `<figure class="flowist-web-clip-screenshot" data-role="page-screenshot" contenteditable="false">` +
           `<img src="${screenshotDataUrl}" alt="${sanitizeForDisplay(title || url || 'Full page screenshot')}" ` +
           `style="display:block;width:100%;height:auto;border-radius:8px;" loading="lazy" />` +
           `<figcaption>${sanitizeForDisplay(t('webClipper.screenshotCaption', 'Full-page screenshot captured offline'))}</figcaption>` +
