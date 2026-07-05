@@ -577,6 +577,11 @@ const WebClipper = () => {
               ? t('webClipper.fetchTimeout', 'Fetching the full page took too long. Please try again.')
               : (err as Error)?.message,
           };
+        } finally {
+          if (stageTickerId !== null) {
+            window.clearInterval(stageTickerId);
+            stageTickerId = null;
+          }
         }
       }
 
