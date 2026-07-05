@@ -164,10 +164,14 @@ const WebClipper = () => {
   const canceledRef = useRef(false);
   const prepareRunIdRef = useRef(0);
 
-  // Editable preview state — populated by prepareClip(), committed by commitClip().
+  // Read-only preview state — populated by prepareClip(), committed by commitClip().
   const [previewReady, setPreviewReady] = useState(false);
   const [previewTitle, setPreviewTitle] = useState('');
   const [previewHtml, setPreviewHtml] = useState('');
+  // Raw single-file HTML snapshot kept so the user can re-download the
+  // full captured page at any time from the preview.
+  const [snapshotHtml, setSnapshotHtml] = useState<string>('');
+  const [snapshotFilename, setSnapshotFilename] = useState<string>('');
   const contentEditorRef = useRef<HTMLDivElement>(null);
 
   // Hydrate web-clip cards (adds expand/collapse toggle for long clips)
