@@ -362,10 +362,22 @@ export const RichTextEditor = ({
       sel?.addRange(range);
 
       if (needsArg) {
-        // Typing mode — nothing more to do, caret is ready for the argument.
+        // Typing mode — visually highlight the paragraph so the user sees the
+        // caret is armed and ready for the argument. Class self-removes on
+        // first keystroke or after 1.6s, whichever comes first.
+        p.classList.add('rt-typing-mode');
+        const clear = () => {
+          p.classList.remove('rt-typing-mode');
+          p.removeEventListener('input', clear);
+          p.removeEventListener('beforeinput', clear);
+        };
+        p.addEventListener('input', clear, { once: true });
+        p.addEventListener('beforeinput', clear, { once: true });
+        window.setTimeout(clear, 1600);
         handleInput();
         return;
       }
+
 
       // No-arg command: fire the slash-line pipeline right away.
       void trySlashLineShortcut(editor).then((ok) => {

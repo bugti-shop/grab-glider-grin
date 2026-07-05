@@ -999,7 +999,40 @@ export const RICH_TEXT_EDITOR_STYLES = `
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px;
   }
+
+  /* === Typing-mode indicator for argument slash commands ===
+     After a user taps an arg-taking slash row (e.g. /bold, /lorem) we insert
+     "/cmd " and highlight the paragraph so it's obvious the caret is armed
+     and typing will fill the argument. Auto-removes after ~1.6s. */
+  .rich-text-editor .rt-typing-mode {
+    position: relative;
+    background: hsl(var(--primary) / 0.10);
+    box-shadow: inset 3px 0 0 0 hsl(var(--primary));
+    border-radius: 4px;
+    padding-left: 8px;
+    caret-color: hsl(var(--primary));
+    animation: rt-typing-pulse 1.2s ease-in-out infinite;
+  }
+  .rich-text-editor .rt-typing-mode::after {
+    content: '';
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    margin-left: 2px;
+    background: hsl(var(--primary));
+    vertical-align: -0.15em;
+    animation: rt-typing-blink 0.9s steps(2, start) infinite;
+    pointer-events: none;
+  }
+  @keyframes rt-typing-pulse {
+    0%, 100% { background: hsl(var(--primary) / 0.10); }
+    50%      { background: hsl(var(--primary) / 0.18); }
+  }
+  @keyframes rt-typing-blink {
+    to { opacity: 0; }
+  }
 `;
+
 
 
 

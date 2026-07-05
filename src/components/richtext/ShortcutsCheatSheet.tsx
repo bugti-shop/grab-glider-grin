@@ -6,7 +6,7 @@
  * Purely presentational: no editor mutation, just a searchable dialog.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,8 +15,14 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Search, Keyboard, Play } from 'lucide-react';
+import { Search, Keyboard, Play, Hand } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  getSlashRowTouchSlop,
+  setSlashRowTouchSlop,
+  SLASH_ROW_TOUCH_SLOP_MAX,
+  SLASH_ROW_TOUCH_SLOP_MIN,
+} from '@/utils/slashRowTouchSlop';
 
 interface Props {
   isOpen: boolean;
@@ -247,6 +253,20 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
       .filter((s) => s.rows.length > 0);
   }, [query, sections]);
 
+  // Live-updating touch slop for tap-vs-scroll detection on mobile.
+  const [touchSlop, setTouchSlop] = useState<number>(() => getSlashRowTouchSlop());
+  const touchSlopRef = useRef<number>(touchSlop);
+  useEffect(() => { touchSlopRef.current = touchSlop; }, [touchSlop]);
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const v = (e as CustomEvent<number>).detail;
+      if (typeof v === 'number') setTouchSlop(v);
+    };
+    window.addEventListener('flowist:slash-touch-slop-changed', onChange as EventListener);
+    return () => window.removeEventListener('flowist:slash-touch-slop-changed', onChange as EventListener);
+  }, []);
+
+
   const applySlashRow = (trigger: string) => {
     const text = sanitizeSlashTrigger(trigger);
     if (!text.startsWith('/')) return;
@@ -283,7 +303,30 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
               className="pl-9"
             />
           </div>
+          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <Hand className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <label htmlFor="slash-touch-slop" className="shrink-0">
+              Tap sensitivity
+            </label>
+            <input
+              id="slash-touch-slop"
+              type="range"
+              min={SLASH_ROW_TOUCH_SLOP_MIN}
+              max={SLASH_ROW_TOUCH_SLOP_MAX}
+              step={1}
+              value={touchSlop}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                setTouchSlop(v);
+                setSlashRowTouchSlop(v);
+              }}
+              className="flex-1 accent-primary"
+              aria-label="Touch move threshold in pixels before a row tap is treated as a scroll"
+            />
+            <span className="tabular-nums w-10 text-right">{touchSlop}px</span>
+          </div>
         </DialogHeader>
+
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           {filtered.length === 0 && (
@@ -321,9 +364,10 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                         : undefined;
                       const handlePointerMove = clickable
                         ? (e: React.PointerEvent<HTMLTableRowElement>) => {
+                            const slop = touchSlopRef.current;
                             if (
-                              Math.abs(e.clientX - touchStartRef.x) > 8 ||
-                              Math.abs(e.clientY - touchStartRef.y) > 8
+                              Math.abs(e.clientX - touchStartRef.x) > slop ||
+                              Math.abs(e.clientY - touchStartRef.y) > slop
                             ) {
                               touchStartRef.moved = true;
                             }
