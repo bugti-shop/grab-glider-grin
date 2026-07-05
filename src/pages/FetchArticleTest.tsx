@@ -96,7 +96,27 @@ export default function FetchArticleTest() {
 
       {html && (
         <div className="space-y-2">
-          <div className="text-sm font-medium">Rendered snapshot (sandboxed):</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm font-medium">Rendered snapshot (sandboxed):</div>
+            <button
+              onClick={() => {
+                const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+                const a = document.createElement("a");
+                const objUrl = URL.createObjectURL(blob);
+                let host = "snapshot";
+                try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* ignore */ }
+                a.href = objUrl;
+                a.download = `${host}-${Date.now()}.html`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+              }}
+              className="px-3 py-1.5 rounded-md border border-border bg-card text-sm"
+            >
+              Download .html
+            </button>
+          </div>
           <iframe
             title="snapshot"
             sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
