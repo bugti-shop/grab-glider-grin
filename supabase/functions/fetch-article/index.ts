@@ -117,10 +117,20 @@ function capHtml(html: string, maxBytes: number): { html: string; truncated: boo
 /* any network access.                                                */
 /* ------------------------------------------------------------------ */
 
-const INLINE_ASSET_TIMEOUT_MS = 6_000;
-const INLINE_PER_ASSET_MAX = 2 * 1024 * 1024; // 2 MB per asset
-const INLINE_TOTAL_BUDGET = 15 * 1024 * 1024; // 15 MB total inlined
-const INLINE_CONCURRENCY = 8;
+const INLINE_ASSET_TIMEOUT_MS = 2_500;
+const INLINE_PER_ASSET_MAX = 768 * 1024; // keep large media remote instead of exhausting edge memory
+const INLINE_TOTAL_BUDGET = 5 * 1024 * 1024; // best-effort bundle; raw HTML must win over asset completeness
+const INLINE_CONCURRENCY = 3;
+const INLINE_GLOBAL_DEADLINE_MS = 14_000;
+const INLINE_MAX_STYLESHEETS = 10;
+const INLINE_MAX_CSS_URLS = 30;
+const INLINE_MAX_MEDIA_ASSETS = 36;
+
+type InlineBudget = { remaining: number; deadlineAt: number };
+
+function inlineBudgetActive(budget: InlineBudget): boolean {
+  return budget.remaining > 0 && Date.now() < budget.deadlineAt;
+}
 
 function u8ToBase64(bytes: Uint8Array): string {
   let bin = "";
@@ -274,7 +284,7 @@ function toDataUri(a: FetchedAsset): string {
 async function inlineCssUrls(
   css: string,
   cssBase: string,
-  budget: { remaining: number },
+  budget: InlineBudget,
   cache: Map<string, string>,
 ): Promise<string> {
   // @import "…"; / @import url(…);
@@ -283,7 +293,7 @@ async function inlineCssUrls(
   let m: RegExpExecArray | null;
   while ((m = importRe.exec(css)) !== null) imports.push({ match: m[0], url: m[1] });
   for (const imp of imports) {
-    if (budget.remaining <= 0) break;
+    if (!inlineBudgetActive(budget)) break;
     const abs = absolutize(imp.url, cssBase);
     let inlined = cache.get(abs);
     if (inlined === undefined) {
@@ -310,10 +320,11 @@ async function inlineCssUrls(
     if (seen.has(raw)) continue;
     seen.add(raw);
     urls.push(raw);
+    if (urls.length >= INLINE_MAX_CSS_URLS) break;
   }
   const replacements = new Map<string, string>();
   for (const raw of urls) {
-    if (budget.remaining <= 0) break;
+    if (!inlineBudgetActive(budget)) break;
     const abs = absolutize(raw, cssBase);
     let uri = cache.get(abs);
     if (uri === undefined) {
