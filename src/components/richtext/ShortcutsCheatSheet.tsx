@@ -6,7 +6,7 @@
  * Purely presentational: no editor mutation, just a searchable dialog.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
