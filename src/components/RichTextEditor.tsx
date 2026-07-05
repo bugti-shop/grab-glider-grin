@@ -1953,8 +1953,10 @@ export const RichTextEditor = ({
         void tryLatexShortcut(root).then((ok) => { if (ok) handleInput(); });
         return;
       }
-      // Inline math on `=`
+      // Inline math on `=` — but try unit conversion first so expressions
+      // like "500 mi / 25 mpg to gal=" resolve as units, not math errors.
       if (data === '=') {
+        if (tryUnitShortcut(root)) { e.preventDefault(); handleInput(); return; }
         if (tryMathShortcut(root)) { e.preventDefault(); handleInput(); return; }
       }
       // Markdown inline markers *, _, `, ~
@@ -2116,7 +2118,13 @@ export const RichTextEditor = ({
         });
         return;
       } else if ((e.key === '*' || e.key === '_' || e.key === '`' || e.key === '~' || e.key === '=') && !e.ctrlKey && !e.metaKey) {
-        // Math auto-evaluation runs first on `=` (e.g. "2+3=" → "2+3= 5").
+        // Unit conversion first: "500 mi / 25 mpg to gal=" → units, not math.
+        if (e.key === '=' && tryUnitShortcut(editorRef.current)) {
+          e.preventDefault();
+          handleInput();
+          return;
+        }
+        // Math auto-evaluation runs next on `=` (e.g. "2+3=" → "2+3= 5").
         if (e.key === '=' && tryMathShortcut(editorRef.current)) {
           e.preventDefault();
           handleInput();
