@@ -29,94 +29,88 @@ function absolutize(href: string, base: string): string {
   try { return new URL(href, base).toString(); } catch { return href; }
 }
 
-/** Remove executable / dangerous content. Keep everything visual. */
-function sanitizeHtml(html: string): string {
-  let out = html;
-  // Strip <script>...</script> (any attrs, greedy-safe)
-  out = out.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "");
-  // Self-closing / unclosed scripts
-  out = out.replace(/<script\b[^>]*\/?>/gi, "");
-  // <noscript> — hidden by default, but often has trackers
-  out = out.replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript\s*>/gi, "");
-  // Plugins
-  out = out.replace(/<object\b[^>]*>[\s\S]*?<\/object\s*>/gi, "");
-  out = out.replace(/<embed\b[^>]*\/?>/gi, "");
-  out = out.replace(/<applet\b[^>]*>[\s\S]*?<\/applet\s*>/gi, "");
-  // Inline event handlers (onclick, onload, onerror, …)
-  out = out.replace(/\s+on[a-z]+\s*=\s*"[^"]*"/gi, "");
-  out = out.replace(/\s+on[a-z]+\s*=\s*'[^']*'/gi, "");
-  out = out.replace(/\s+on[a-z]+\s*=\s*[^\s>]+/gi, "");
-  // javascript: URLs
-  out = out.replace(/(href|src|action)\s*=\s*"\s*javascript:[^"]*"/gi, '$1="#"');
-  out = out.replace(/(href|src|action)\s*=\s*'\s*javascript:[^']*'/gi, "$1='#'");
-  // <meta http-equiv="refresh"> — would redirect the iframe
-  out = out.replace(/<meta\b[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi, "");
-  return out;
-}
+/** ONE-PASS sanitizer + lazy-image promoter + head-injection.
+ *  Consolidated to avoid catastrophic CPU on 200KB+ pages
+ *  (Deno edge runtime kills long-running workers). */
 
-/** Promote lazy-loaded image URLs (data-src, data-lazy-src, data-original,
- *  data-hi-res-src, data-echo) into real `src`/`srcset` attributes so the
- *  snapshot renders images even when the origin site relies on JS lazy-load. */
-function promoteLazyImages(html: string): string {
-  return html.replace(/<img\b[^>]*>/gi, (tag) => {
-    let updated = tag;
-    // Pick the first available lazy attribute for src
-    const srcAttrs = ["data-src", "data-lazy-src", "data-original", "data-hi-res-src", "data-echo", "data-img-src"];
-    const hasRealSrc = /\ssrc\s*=\s*["'][^"']*["']/i.test(updated) &&
-      !/\ssrc\s*=\s*["'](?:data:image\/(?:gif|svg\+xml)[^"']*|[^"']*\.svg[^"']*|[^"']*placeholder[^"']*|[^"']*blank[^"']*|[^"']*1x1[^"']*)["']/i.test(updated);
-    if (!hasRealSrc) {
-      for (const attr of srcAttrs) {
-        const re = new RegExp(`\\s${attr}\\s*=\\s*["']([^"']+)["']`, "i");
-        const m = re.exec(updated);
-        if (m && m[1]) {
-          // Remove existing src (may be placeholder), then add real one
-          updated = updated.replace(/\ssrc\s*=\s*["'][^"']*["']/i, "");
-          updated = updated.replace(/<img\b/i, `<img src="${m[1].replace(/"/g, "&quot;")}"`);
-          break;
-        }
+const LAZY_SRC_ATTRS = ["data-src", "data-lazy-src", "data-original", "data-hi-res-src", "data-echo", "data-img-src"];
+const LAZY_SRCSET_ATTRS = ["data-srcset", "data-lazy-srcset"];
+const PLACEHOLDER_SRC_RE = /^(?:data:image\/(?:gif|svg\+xml)|about:blank|.*(?:placeholder|blank|1x1|spacer)\.[a-z]{2,4})/i;
+
+/** Rewrite <img …> tags: promote lazy-src → src, kill loading=lazy. */
+function rewriteImgTag(tag: string): string {
+  // Extract current src (if any)
+  const srcMatch = /\ssrc\s*=\s*["']([^"']*)["']/i.exec(tag);
+  const currentSrc = srcMatch ? srcMatch[1] : "";
+  const needsSrc = !currentSrc || PLACEHOLDER_SRC_RE.test(currentSrc);
+  let out = tag;
+
+  if (needsSrc) {
+    for (const attr of LAZY_SRC_ATTRS) {
+      const re = new RegExp(`\\s${attr}\\s*=\\s*["']([^"']+)["']`, "i");
+      const m = re.exec(out);
+      if (m && m[1]) {
+        if (srcMatch) out = out.replace(srcMatch[0], "");
+        out = out.replace(/<img\b/i, `<img src="${m[1].replace(/"/g, "&quot;")}"`);
+        break;
       }
     }
-    // Promote lazy srcset
-    if (!/\ssrcset\s*=/i.test(updated)) {
-      const lazySrcsetAttrs = ["data-srcset", "data-lazy-srcset"];
-      for (const attr of lazySrcsetAttrs) {
-        const re = new RegExp(`\\s${attr}\\s*=\\s*["']([^"']+)["']`, "i");
-        const m = re.exec(updated);
-        if (m && m[1]) {
-          updated = updated.replace(/<img\b/i, `<img srcset="${m[1].replace(/"/g, "&quot;")}"`);
-          break;
-        }
-      }
-    }
-    // Kill native lazy loading so the browser fetches immediately in the sandbox
-    updated = updated.replace(/\sloading\s*=\s*["'][^"']*["']/i, "");
-    return updated;
-  });
-}
-
-/** Inject a permissive referrer policy so hotlink-protected CDNs (which see
- *  the sandboxed iframe's opaque origin as `null`) still serve images. */
-function injectReferrerMeta(html: string): string {
-  // Remove any existing referrer meta first
-  let out = html.replace(/<meta\b[^>]*name\s*=\s*["']?referrer["']?[^>]*>/gi, "");
-  const meta = `<meta name="referrer" content="no-referrer-when-downgrade">`;
-  if (/<head\b[^>]*>/i.test(out)) {
-    out = out.replace(/<head\b[^>]*>/i, (m) => `${m}\n${meta}`);
   }
+
+  if (!/\ssrcset\s*=/i.test(out)) {
+    for (const attr of LAZY_SRCSET_ATTRS) {
+      const re = new RegExp(`\\s${attr}\\s*=\\s*["']([^"']+)["']`, "i");
+      const m = re.exec(out);
+      if (m && m[1]) {
+        out = out.replace(/<img\b/i, `<img srcset="${m[1].replace(/"/g, "&quot;")}"`);
+        break;
+      }
+    }
+  }
+
+  // Kill native lazy loading so the sandboxed iframe fetches immediately.
+  out = out.replace(/\sloading\s*=\s*["'][^"']*["']/i, "");
   return out;
 }
 
-/** Inject/replace a <base href="…"> so relative URLs resolve to the origin. */
-function ensureBaseHref(html: string, baseHref: string): string {
-  // Remove any existing <base …>
-  let out = html.replace(/<base\b[^>]*>/gi, "");
-  const baseTag = `<base href="${baseHref.replace(/"/g, "&quot;")}">`;
+/** Single-pass block-element remover (scripts, noscript, object, applet). */
+const REMOVE_BLOCKS_RE = /<(script|noscript|object|applet)\b[^>]*>[\s\S]*?<\/\1\s*>/gi;
+/** Void/self-closing plugin tags. */
+const REMOVE_VOID_RE = /<(?:script|embed)\b[^>]*\/?>/gi;
+/** Meta refresh (would redirect iframe). */
+const REMOVE_META_REFRESH_RE = /<meta\b[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi;
+/** Inline event handlers (quoted forms only — unquoted is rare and the greedy
+ *  regex we used before was the CPU hog). */
+const REMOVE_EVENT_HANDLERS_RE = /\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*')/gi;
+/** javascript: URLs in href/src/action. */
+const NEUTRALIZE_JS_URL_RE = /(href|src|action)\s*=\s*(["'])\s*javascript:[^"']*\2/gi;
+/** Existing <base> / referrer meta — drop so we can re-inject cleanly. */
+const REMOVE_BASE_RE = /<base\b[^>]*>/gi;
+const REMOVE_REFERRER_META_RE = /<meta\b[^>]*name\s*=\s*["']?referrer["']?[^>]*>/gi;
+/** <img …> tag matcher. */
+const IMG_TAG_RE = /<img\b[^>]*>/gi;
+
+/** Do all HTML transformations in as few passes as possible. */
+function transformHtml(html: string, baseHref: string): string {
+  let out = html;
+  out = out.replace(REMOVE_BLOCKS_RE, "");
+  out = out.replace(REMOVE_VOID_RE, "");
+  out = out.replace(REMOVE_META_REFRESH_RE, "");
+  out = out.replace(REMOVE_EVENT_HANDLERS_RE, "");
+  out = out.replace(NEUTRALIZE_JS_URL_RE, '$1=$2#$2');
+  out = out.replace(REMOVE_BASE_RE, "");
+  out = out.replace(REMOVE_REFERRER_META_RE, "");
+  out = out.replace(IMG_TAG_RE, rewriteImgTag);
+
+  const headInject =
+    `<base href="${baseHref.replace(/"/g, "&quot;")}">` +
+    `<meta name="referrer" content="no-referrer-when-downgrade">`;
   if (/<head\b[^>]*>/i.test(out)) {
-    out = out.replace(/<head\b[^>]*>/i, (m) => `${m}\n${baseTag}`);
+    out = out.replace(/<head\b[^>]*>/i, (m) => `${m}${headInject}`);
   } else if (/<html\b[^>]*>/i.test(out)) {
-    out = out.replace(/<html\b[^>]*>/i, (m) => `${m}<head>${baseTag}</head>`);
+    out = out.replace(/<html\b[^>]*>/i, (m) => `${m}<head>${headInject}</head>`);
   } else {
-    out = `<!DOCTYPE html><html><head>${baseTag}</head><body>${out}</body></html>`;
+    out = `<!DOCTYPE html><html><head>${headInject}</head><body>${out}</body></html>`;
   }
   return out;
 }
