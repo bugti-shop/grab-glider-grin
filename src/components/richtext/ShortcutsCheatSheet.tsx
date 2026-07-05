@@ -769,7 +769,7 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                   <td className="px-3 py-2 align-top w-[45%]">
                     <div className="flex items-center gap-2">
                       <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono whitespace-pre-wrap break-words">
-                        {row.trigger}
+                        {highlight(row.trigger, query)}
                       </code>
                       {clickable && (
                         <Play className="h-3 w-3 text-primary shrink-0" aria-hidden />
@@ -777,9 +777,9 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                     </div>
                   </td>
                   <td className="px-3 py-2 align-top">
-                    <div>{row.result}</div>
+                    <div>{highlight(row.result, query)}</div>
                     {row.hint && (
-                      <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{highlight(row.hint, query)}</div>
                     )}
                   </td>
                 </tr>
