@@ -649,6 +649,45 @@ const WebClipper = () => {
                 `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
                 `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
                 `srcdoc="${escapedDoc}"></iframe>`;
+
+              // ── Parity check ────────────────────────────────────────────
+              // Verify the embedded snapshot HTML is byte-identical to what
+              // was downloaded. Any divergence means a code path is silently
+              // mutating the payload again — flag loudly.
+              try {
+                const unescaped = escapedDoc
+                  .replace(/&quot;/g, '"')
+                  .replace(/&amp;/g, '&');
+                const embeddedBytes = new Blob([unescaped]).size;
+                const identical = unescaped === readOnlySnapshot && embeddedBytes === snapshotBytes;
+                if (identical) {
+                  console.info('[webClipper][parity] snapshot ≡ downloaded', {
+                    bytes: snapshotBytes,
+                    filename: fname,
+                  });
+                } else {
+                  const diffAt = (() => {
+                    const n = Math.min(unescaped.length, readOnlySnapshot.length);
+                    for (let i = 0; i < n; i++) if (unescaped[i] !== readOnlySnapshot[i]) return i;
+                    return n;
+                  })();
+                  console.warn('[webClipper][parity] MISMATCH between embedded snapshot and downloaded file', {
+                    downloadedChars: readOnlySnapshot.length,
+                    embeddedChars: unescaped.length,
+                    downloadedBytes: snapshotBytes,
+                    embeddedBytes,
+                    firstDiffAt: diffAt,
+                    around: {
+                      downloaded: readOnlySnapshot.slice(Math.max(0, diffAt - 40), diffAt + 40),
+                      embedded: unescaped.slice(Math.max(0, diffAt - 40), diffAt + 40),
+                    },
+                    filename: fname,
+                  });
+                }
+              } catch (parityErr) {
+                console.warn('[webClipper][parity] check threw', parityErr);
+              }
+
               articleHtml = `${banner}${iframe}`;
               articleEmbeds = [];
               articleLinks = [];
