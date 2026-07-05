@@ -675,13 +675,25 @@ export function normalizeImplicitMult(input: string): string {
   // Insert an explicit "*" between an exponent-terminated paren and the next
   // "(" so adjacent power groups like "(kg)^2(m/s)^2" keep their boundary
   // *before* the unwrap step erases the ")(" adjacency.
-  s = s.replace(/\)\s*\^\s*(\d+)\s*\(/g, ')^$1*(');
-  // Same idea for the number-follows-exponent case: "(kg)^2 3" → "(kg)^2*3".
-  s = s.replace(/\)\s*\^\s*(\d+)\s*(\d)/g, ')^$1*$2');
-  // Unwrap "(<unit>)^N" → "<unit>^N" so exponents survive paren reduction
-  // (e.g. "2(kg)^2 to lb^2" becomes "2 kg^2 to lb^2" instead of dropping "^2").
-  const expRe = new RegExp(`\\(\\s*(${UNIT_TOK})\\s*\\)\\s*\\^\\s*(\\d+)`, 'g');
-  s = s.replace(expRe, ' $1^$2 ');
+  //
+  // Exponent shapes we support after the "^":
+  //   • integer         → ^2, ^-2, ^+3
+  //   • parenthesised   → ^(1/2), ^(-3), ^(a+b)
+  //
+  // Fractional/paren exponent bridge runs first so integers inside its parens
+  // don't get eaten by the plain-integer bridge below.
+  s = s.replace(/\)\s*\^\s*(\([^()]+\))\s*\(/g, ')^$1*(');
+  s = s.replace(/\)\s*\^\s*([+-]?\d+)\s*\(/g, ')^$1*(');
+  // Number-follows-exponent case: "(kg)^2 3" → "(kg)^2*3".
+  s = s.replace(/\)\s*\^\s*(\([^()]+\))\s*(\d)/g, ')^$1*$2');
+  s = s.replace(/\)\s*\^\s*([+-]?\d+)\s*(\d)/g, ')^$1*$2');
+  // Unwrap "(<unit>)^<exp>" → "<unit>^<exp>" so exponents survive paren
+  // reduction (e.g. "2(kg)^2 to lb^2" becomes "2 kg^2 to lb^2" instead of
+  // dropping "^2"). Same exponent shapes as the bridge rules above.
+  const expParenRe = new RegExp(`\\(\\s*(${UNIT_TOK})\\s*\\)\\s*\\^\\s*(\\([^()]+\\))`, 'g');
+  s = s.replace(expParenRe, ' $1^$2 ');
+  const expIntRe = new RegExp(`\\(\\s*(${UNIT_TOK})\\s*\\)\\s*\\^\\s*([+-]?\\d+)`, 'g');
+  s = s.replace(expIntRe, ' $1^$2 ');
   // Fold "<num>(<single-unit>)" into "<num> <unit>" so it becomes an operand
   // that evalOperand can read directly.
   const foldRe = new RegExp(`(${NUM_TOK})\\s*\\(\\s*(${UNIT_TOK})\\s*\\)`, 'g');
