@@ -8,8 +8,6 @@
     <string name="server_client_id">425291387152-u06impgmsgg286jg7odo4f40fu6pjmb5.apps.googleusercontent.com</string>
 
     <!-- Widget names shown in the launcher's widget picker -->
-    <string name="widget_add_task_label">Flowist · Quick Add Task</string>
-    <string name="widget_add_task_desc">Open Flowist\'s task input sheet from your home screen.</string>
     <string name="widget_tasks_list_label">Flowist · Today Tasks</string>
     <string name="widget_tasks_list_desc">See today\'s tasks and tap to check them off.</string>
     <string name="widget_habits_list_label">Flowist · Habits Today</string>
