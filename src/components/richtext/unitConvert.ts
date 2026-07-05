@@ -411,7 +411,7 @@ export function convertExpression(input: string): ConvertResult | null {
   const reduced = input.includes('(') ? reduceParens(input) : input;
   if (reduced === null) return null;
   const trimmed = reduced.trim();
-  const m = /^(-?\d+(?:\.\d+)?)\s*([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)\s+(?:in|to|as|->|=)\s+([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)$/i.exec(trimmed);
+  const m = /^([+-]?\d+(?:\.\d+)?)\s*([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)\s+(?:in|to|as|->|=)\s+([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)$/i.exec(trimmed);
   if (!m) {
     // Fall through to mixed (mul/div) form so callers get a single entry point.
     return convertMixedExpression(trimmed);
@@ -475,7 +475,7 @@ export function convertExpression(input: string): ConvertResult | null {
 /* ── Chained conversions & mixed fuel/volume/distance ─────── */
 
 const UNIT_TOK = String.raw`[A-Za-z°²³\/][A-Za-z0-9°²³\/]*`;
-const NUM_TOK = String.raw`-?\d+(?:\.\d+)?`;
+const NUM_TOK = String.raw`[+-]?\d+(?:\.\d+)?`;
 const CONNECT = String.raw`(?:in|to|as|->|=)`;
 
 /**
