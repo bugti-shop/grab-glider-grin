@@ -670,7 +670,18 @@ export function tryUnitShortcut(root: HTMLElement | null): boolean {
 
   if (isInsideCodeLikeBlock(textNode, root)) return false;
 
-  // Try mixed (fuel/volume/distance) first — most specific.
+  // Parenthesized form: "(...) to <unit>" — try before other patterns.
+  const parenRe = new RegExp(`(?:^|\\s)(\\([^()]+\\)\\s+${CONNECT}\\s+${UNIT_TOK})$`, 'i');
+  const parenMatch = parenRe.exec(before);
+  if (parenMatch) {
+    // Try mixed first (paren usually wraps a mul/div), fall back to simple.
+    const mixed = convertMixedExpression(parenMatch[1]);
+    if (mixed) return insertInline(textNode, caret, sel, ` = ${formatNum(mixed.result)} ${mixed.toSymbol}`);
+    const simple = convertExpression(parenMatch[1]);
+    if (simple) return insertInline(textNode, caret, sel, ` = ${formatNum(simple.result)} ${simple.toSymbol}`);
+  }
+
+  // Try mixed (fuel/volume/distance) — most specific unparenthesized form.
   const mixedRe = new RegExp(
     `(?:^|[\\s(])((?:${NUM_TOK})\\s*${UNIT_TOK}\\s*[*×x\\/]\\s*(?:${NUM_TOK})\\s*${UNIT_TOK}\\s+${CONNECT}\\s+${UNIT_TOK})$`, 'i',
   );
@@ -688,8 +699,6 @@ export function tryUnitShortcut(root: HTMLElement | null): boolean {
   if (chainMatch) {
     const chain = convertChainExpression(chainMatch[1]);
     if (chain) {
-      // Only append the additional hops (skip the original "N unit" already typed).
-      const originalPrefix = chainMatch[1].match(new RegExp(`^${NUM_TOK}\\s*${UNIT_TOK}`))?.[0] ?? '';
       const rest = chain.text.slice(chain.text.indexOf(' = '));
       return insertInline(textNode, caret, sel, rest);
     }
