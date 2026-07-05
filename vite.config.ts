@@ -1,8 +1,22 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
+
+// Resolve `sonner-real` to the installed package when present, otherwise to a
+// local no-op fallback. Prevents `ENOENT: node_modules/sonner` build failures
+// when a partial install leaves the package missing.
+const sonnerPkgPath = path.resolve(__dirname, "node_modules/sonner");
+const sonnerRealTarget = fs.existsSync(sonnerPkgPath)
+  ? sonnerPkgPath
+  : path.resolve(__dirname, "./src/lib/sonnerFallback.ts");
+if (!fs.existsSync(sonnerPkgPath)) {
+  console.warn(
+    "[vite] `sonner` not found in node_modules — using no-op fallback. Run `npm install` to restore toasts.",
+  );
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -65,7 +79,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "sonner-real": path.resolve(__dirname, "node_modules/sonner"),
+      "sonner-real": sonnerRealTarget,
       "sonner": path.resolve(__dirname, "./src/lib/sonnerShim.ts"),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime"],
