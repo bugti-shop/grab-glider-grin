@@ -657,7 +657,7 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
                             <span className="inline-block transition-transform group-open/sub:rotate-90 text-muted-foreground">
                               ▶
                             </span>
-                            <span>{group.title}</span>
+                            <span>{highlight(group.title, query)}</span>
                             <span className="ml-auto text-xs text-muted-foreground">
                               {group.rows.length}
                             </span>
