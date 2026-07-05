@@ -39,27 +39,34 @@ import { TaskSubtasksInline } from '@/components/todo/TaskSubtasksInline';
 import { filterAndSortTasks } from '@/utils/tasks/filterAndSortTasks';
 
 // Retry wrapper for lazy imports (handles stale chunk errors after deploys)
-const lazyRetry = <T extends React.ComponentType<any>>(
-  factory: () => Promise<{ default: T }>,
+const loadWithRetry = <T,>(
+  factory: () => Promise<T>,
   retries = 2
-): React.LazyExoticComponent<T> =>
-  lazy(() =>
-    factory().catch((err) => {
-      if (retries > 0 && String(err?.message || '').includes('dynamically imported module')) {
-        return new Promise<{ default: T }>((resolve) =>
-          setTimeout(() => resolve(lazyRetry(factory, retries - 1) as any), 500)
-        );
-      }
-      // Final retry: force reload to get fresh assets
+): Promise<T> =>
+  factory().catch((err) => {
+    const isChunkErr = String(err?.message || '').includes('dynamically imported module');
+    if (retries > 0 && isChunkErr) {
+      return new Promise<T>((resolve, reject) => {
+        setTimeout(() => {
+          loadWithRetry(factory, retries - 1).then(resolve, reject);
+        }, 500);
+      });
+    }
+    if (isChunkErr) {
+      // Final failure: force reload once to fetch fresh assets after a deploy
       const key = 'chunk_reload_ts';
       const last = Number(sessionStorage.getItem(key) || 0);
       if (Date.now() - last > 30_000) {
         sessionStorage.setItem(key, String(Date.now()));
         window.location.reload();
       }
-      throw err;
-    })
-  );
+    }
+    throw err;
+  });
+
+const lazyRetry = <T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+): React.LazyExoticComponent<T> => lazy(() => loadWithRetry(factory));
 
 // Lazy load alternate views and heavy sheets
 const TodaySheets = lazyRetry(() => import('@/components/todo/TodaySheets').then(m => ({ default: m.TodaySheets })));
