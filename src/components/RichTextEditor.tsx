@@ -2484,6 +2484,36 @@ export const RichTextEditor = ({
 
     const sanitizedContent = prepareWebClipEmbedsHtml(sanitizeHtml(content));
     if (editorRef.current && editorRef.current.innerHTML !== sanitizedContent) {
+      // Web Clipper embeds: if the live editor DOM already has hydrated
+      // .webclipper-embed iframes referencing the same set of URLs as the
+      // incoming content, DO NOT overwrite innerHTML — that write destroys
+      // the iframe node and forces the data: URL to reload, causing the
+      // visible blink/flicker on Android/WebView. Just sync lastContentRef.
+      const liveUrls = Array.from(
+        editorRef.current.querySelectorAll<HTMLElement>('.webclipper-embed[data-url]')
+      ).map((el) => el.getAttribute('data-url') || '');
+      if (liveUrls.length > 0) {
+        try {
+          const doc = new DOMParser().parseFromString(
+            `<div id="__root">${sanitizedContent}</div>`,
+            'text/html',
+          );
+          const incomingUrls = Array.from(
+            doc.querySelectorAll<HTMLElement>('.webclipper-embed[data-url]')
+          ).map((el) => el.getAttribute('data-url') || '');
+          const sameSet =
+            incomingUrls.length === liveUrls.length &&
+            liveUrls.every((u) => incomingUrls.includes(u));
+          if (sameSet) {
+            lastContentRef.current = sanitizedContent;
+            hydrateWebClipsIn(editorRef.current);
+            return;
+          }
+        } catch {
+          // fall through to normal path
+        }
+      }
+
       // Only update if editor is not focused to avoid cursor issues
       const isFocused = document.activeElement === editorRef.current;
       if (!isFocused) {
