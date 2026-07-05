@@ -467,9 +467,132 @@ export function convertExpression(input: string): ConvertResult | null {
   };
 }
 
+/* ── Chained conversions & mixed fuel/volume/distance ─────── */
+
+const UNIT_TOK = String.raw`[A-Za-z°²³\/][A-Za-z0-9°²³\/]*`;
+const NUM_TOK = String.raw`-?\d+(?:\.\d+)?`;
+const CONNECT = String.raw`(?:in|to|as|->|=)`;
+
 /**
- * Detects "<num> <unit> (in|to|as) <unit>" at end of the current text node
- * and appends " = <converted> <symbol>". Fired on Space keydown.
+ * Chained: "10 km to mi to ft" → each hop appended.
+ * Renders as "10 km = 6.21371 mi = 32808.4 ft".
+ */
+export function convertChainExpression(input: string): { text: string; finalValue: number; finalSymbol: string } | null {
+  const trimmed = input.trim();
+  const re = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})((?:\\s+${CONNECT}\\s+${UNIT_TOK}){2,})$`, 'i');
+  const m = re.exec(trimmed);
+  if (!m) return null;
+  const hops = [...m[3].matchAll(new RegExp(`${CONNECT}\\s+(${UNIT_TOK})`, 'gi'))].map(x => x[1]);
+  let curValue = parseFloat(m[1]);
+  let curUnit = m[2];
+  const parts: string[] = [];
+  const first = convertExpression(`${curValue} ${curUnit} to ${hops[0]}`);
+  if (!first) return null;
+  parts.push(`${formatNum(curValue)} ${first.fromSymbol}`);
+  parts.push(`${formatNum(first.result)} ${first.toSymbol}`);
+  curValue = first.result;
+  curUnit = hops[0];
+  for (let i = 1; i < hops.length; i++) {
+    const step = convertExpression(`${curValue} ${curUnit} to ${hops[i]}`);
+    if (!step) return null;
+    parts.push(`${formatNum(step.result)} ${step.toSymbol}`);
+    curValue = step.result;
+    curUnit = hops[i];
+  }
+  return { text: parts.join(' = '), finalValue: curValue, finalSymbol: parts[parts.length - 1].replace(/^[^ ]+ /, '') };
+}
+
+function fuelToKpl(v: number, kind: FuelKind): number {
+  switch (kind) {
+    case 'kpl': return v;
+    case 'mpg': return v * 0.425143707;
+    case 'mpguk': return v * 0.354006189;
+    case 'l100km': return 100 / v;
+    case 'mipl': return v * 1.609344;
+    case 'kmgalus': return v / 3.785411784;
+    case 'kmgaluk': return v / 4.54609;
+    case 'gal100mius': return (100 * 1.609344) / (v * 3.785411784);
+    case 'gal100miuk': return (100 * 1.609344) / (v * 4.54609);
+  }
+}
+
+/**
+ * Mixed forms:
+ *   "30 mpg * 15 gal to mi"        → distance   (efficiency × volume)
+ *   "500 mi / 25 mpg to gal"       → volume     (distance ÷ efficiency)
+ *   "100 km * 8 l/100km to l"      → volume     (distance × L/100km)
+ */
+export function convertMixedExpression(input: string): ConvertResult | null {
+  const trimmed = input.trim();
+  const mulRe = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})\\s*[*×x]\\s*(${NUM_TOK})\\s*(${UNIT_TOK})\\s+${CONNECT}\\s+(${UNIT_TOK})$`, 'i');
+  const divRe = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})\\s*\\/\\s*(${NUM_TOK})\\s*(${UNIT_TOK})\\s+${CONNECT}\\s+(${UNIT_TOK})$`, 'i');
+
+  const tryPair = (
+    v1: number, u1: string, v2: number, u2: string, target: string, op: '*' | '/',
+  ): ConvertResult | null => {
+    const r1 = resolveUnit(u1);
+    const r2 = resolveUnit(u2);
+    const rt = resolveUnit(target);
+    if (!r1 || !r2 || !rt) return null;
+    const norm1 = u1.toLowerCase().replace(/\s+/g, '');
+    const norm2 = u2.toLowerCase().replace(/\s+/g, '');
+
+    // fuel × volume → distance
+    if (op === '*' && r1 === 'fuel' && typeof r2 === 'object' && r2.category === 'volume' && typeof rt === 'object' && rt.category === 'length') {
+      const kpl = fuelToKpl(v1, FUEL_ALIASES[norm1]);
+      const km = kpl * (v2 * r2.toBase); // volume in L
+      const result = (km * 1000) / rt.toBase;
+      return {
+        value: v1, result, fromSymbol: `${formatNum(v1)} × ${formatNum(v2)} ${r2.symbol}`,
+        toSymbol: rt.symbol,
+        text: `${formatNum(v1)} × ${formatNum(v2)} ${r2.symbol} = ${formatNum(result)} ${rt.symbol}`,
+      };
+    }
+    // volume × fuel → distance (commutative)
+    if (op === '*' && typeof r1 === 'object' && r1.category === 'volume' && r2 === 'fuel' && typeof rt === 'object' && rt.category === 'length') {
+      return tryPair(v2, u2, v1, u1, target, '*');
+    }
+    // distance × (L/100km) → volume
+    if (op === '*' && typeof r1 === 'object' && r1.category === 'length' && r2 === 'fuel' && typeof rt === 'object' && rt.category === 'volume') {
+      const km = (v1 * r1.toBase) / 1000;
+      const kpl = fuelToKpl(v2, FUEL_ALIASES[norm2]);
+      const litres = km / kpl;
+      const result = (litres * 1) / rt.toBase;
+      return {
+        value: v1, result, fromSymbol: `${formatNum(v1)} ${r1.symbol} × ${formatNum(v2)}`,
+        toSymbol: rt.symbol,
+        text: `${formatNum(v1)} ${r1.symbol} × ${formatNum(v2)} = ${formatNum(result)} ${rt.symbol}`,
+      };
+    }
+    // distance ÷ efficiency → volume
+    if (op === '/' && typeof r1 === 'object' && r1.category === 'length' && r2 === 'fuel' && typeof rt === 'object' && rt.category === 'volume') {
+      const km = (v1 * r1.toBase) / 1000;
+      const kpl = fuelToKpl(v2, FUEL_ALIASES[norm2]);
+      const litres = km / kpl;
+      const result = litres / rt.toBase;
+      return {
+        value: v1, result, fromSymbol: `${formatNum(v1)} ${r1.symbol} ÷ ${formatNum(v2)}`,
+        toSymbol: rt.symbol,
+        text: `${formatNum(v1)} ${r1.symbol} ÷ ${formatNum(v2)} = ${formatNum(result)} ${rt.symbol}`,
+      };
+    }
+    // volume ÷ time → volumetric flow? skip. Otherwise:
+    return null;
+  };
+
+  let mm = mulRe.exec(trimmed);
+  if (mm) return tryPair(parseFloat(mm[1]), mm[2], parseFloat(mm[3]), mm[4], mm[5], '*');
+  mm = divRe.exec(trimmed);
+  if (mm) return tryPair(parseFloat(mm[1]), mm[2], parseFloat(mm[3]), mm[4], mm[5], '/');
+  return null;
+}
+
+/**
+ * Detects a convertible expression at end of the current text node and appends
+ * " = <converted> <symbol>". Fired on Space keydown. Supports:
+ *   • simple: "10 km to mi"
+ *   • chained: "10 km to mi to ft"
+ *   • mixed:   "30 mpg * 15 gal to mi", "500 mi / 25 mpg to gal"
  */
 export function tryUnitShortcut(root: HTMLElement | null): boolean {
   if (!root) return false;
@@ -484,13 +607,43 @@ export function tryUnitShortcut(root: HTMLElement | null): boolean {
 
   if (isInsideCodeLikeBlock(textNode, root)) return false;
 
-  const m = /(?:^|[\s(])(-?\d+(?:\.\d+)?\s*[A-Za-z°²³\/][A-Za-z0-9°²³\/]*\s+(?:in|to|as|->|=)\s+[A-Za-z°²³\/][A-Za-z0-9°²³\/]*)$/i.exec(before);
-  if (!m) return false;
+  // Try mixed (fuel/volume/distance) first — most specific.
+  const mixedRe = new RegExp(
+    `(?:^|[\\s(])((?:${NUM_TOK})\\s*${UNIT_TOK}\\s*[*×x\\/]\\s*(?:${NUM_TOK})\\s*${UNIT_TOK}\\s+${CONNECT}\\s+${UNIT_TOK})$`, 'i',
+  );
+  const mixMatch = mixedRe.exec(before);
+  if (mixMatch) {
+    const conv = convertMixedExpression(mixMatch[1]);
+    if (conv) return insertInline(textNode, caret, sel, ` = ${formatNum(conv.result)} ${conv.toSymbol}`);
+  }
 
+  // Try chained (2+ hops).
+  const chainRe = new RegExp(
+    `(?:^|[\\s(])((?:${NUM_TOK})\\s*${UNIT_TOK}(?:\\s+${CONNECT}\\s+${UNIT_TOK}){2,})$`, 'i',
+  );
+  const chainMatch = chainRe.exec(before);
+  if (chainMatch) {
+    const chain = convertChainExpression(chainMatch[1]);
+    if (chain) {
+      // Only append the additional hops (skip the original "N unit" already typed).
+      const originalPrefix = chainMatch[1].match(new RegExp(`^${NUM_TOK}\\s*${UNIT_TOK}`))?.[0] ?? '';
+      const rest = chain.text.slice(chain.text.indexOf(' = '));
+      return insertInline(textNode, caret, sel, rest);
+    }
+  }
+
+  // Simple single-hop.
+  const simpleRe = new RegExp(
+    `(?:^|[\\s(])((?:${NUM_TOK})\\s*${UNIT_TOK}\\s+${CONNECT}\\s+${UNIT_TOK})$`, 'i',
+  );
+  const m = simpleRe.exec(before);
+  if (!m) return false;
   const conv = convertExpression(m[1]);
   if (!conv) return false;
+  return insertInline(textNode, caret, sel, ` = ${formatNum(conv.result)} ${conv.toSymbol}`);
+}
 
-  const insertion = ` = ${formatNum(conv.result)} ${conv.toSymbol}`;
+function insertInline(textNode: Text, caret: number, sel: Selection, insertion: string): boolean {
   const after = textNode.data.slice(caret);
   textNode.data = textNode.data.slice(0, caret) + insertion + after;
   const nr = document.createRange();
