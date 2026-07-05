@@ -627,12 +627,33 @@ function evalOperand(expr: string): { value: number; unit: string } | null {
 }
 
 /**
+ * Normalize implicit multiplication so users can write "2(kg)", "(30 mpg)(15 gal)",
+ * or "3(l/100km)" without an explicit "*". Runs before reduceParens.
+ *   • "<num>(<unit>)"     → "<num> <unit>"                (fold single-unit paren)
+ *   • ")("                → ")*("                         (paren-paren adjacency)
+ *   • "<digit>("          → "<digit>*("                   (number → group)
+ *   • ")<digit>"          → ")*<digit>"                   (group → number)
+ */
+export function normalizeImplicitMult(input: string): string {
+  let s = input;
+  // Fold "<num>(<single-unit>)" into "<num> <unit>" so it becomes an operand
+  // that evalOperand can read directly.
+  const foldRe = new RegExp(`(${NUM_TOK})\\s*\\(\\s*(${UNIT_TOK})\\s*\\)`, 'g');
+  s = s.replace(foldRe, '$1 $2');
+  // Insert explicit "*" at paren-adjacency boundaries.
+  s = s.replace(/\)\s*\(/g, ')*(');
+  s = s.replace(/(\d)\s*\(/g, '$1*(');
+  s = s.replace(/\)\s*(\d)/g, ')*$1');
+  return s;
+}
+
+/**
  * Repeatedly reduces the innermost balanced (...) group by evaluating it via
  * evalOperand and substituting "value unit" back in. Returns the input with all
  * parens resolved, or null if any paren fails to evaluate.
  */
 export function reduceParens(input: string): string | null {
-  let out = input;
+  let out = normalizeImplicitMult(input);
   // Guard against pathological input.
   for (let i = 0; i < 16; i++) {
     const open = out.lastIndexOf('(');
