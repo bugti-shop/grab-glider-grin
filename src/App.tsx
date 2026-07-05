@@ -481,6 +481,7 @@ const AppRoutes = () => {
             <Route path="/calendar" element={<NotesCalendar />} />
             <Route path="/clip" element={<WebClipper />} />
             <Route path="/webclipper" element={<WebClipper />} />
+            <Route path="/dev/fetch-article" element={<FetchArticleTest />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/sync-diagnostics" element={<SyncDiagnostics />} />
             <Route path="/reminders" element={<Reminders />} />
