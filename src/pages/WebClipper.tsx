@@ -229,11 +229,11 @@ const WebClipper = () => {
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.hash || ''}`);
   };
 
-  // URL shares, explicit modes, and attachments auto-prepare immediately.
-  // The picker is only for rare text-only/manual entry cases.
-  const explicitMode = searchParams.has('mode') || !!attachment || !!url;
-  const [mode, setMode] = useState<ClipMode>(initialMode);
-  const [picking, setPicking] = useState(!explicitMode);
+  // Web Clipper is full-page only now — never show the mode picker for URL
+  // shares. Attachment shares (image/pdf) keep their own dedicated modes.
+  const isAttachmentMode = initialMode === 'image' || initialMode === 'pdf';
+  const [mode, setMode] = useState<ClipMode>(isAttachmentMode ? initialMode : 'fullpage');
+  const [picking, setPicking] = useState(false);
   const payloadSignature = searchParams.toString();
   const payloadRunKeyRef = useRef('');
 
