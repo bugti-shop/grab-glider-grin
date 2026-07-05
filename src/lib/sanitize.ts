@@ -4,6 +4,58 @@
  */
 import DOMPurify from 'dompurify';
 
+const HTML_DATA_SRC_PREFIX = 'data:text/html;charset=utf-8;base64,';
+
+const htmlToDataSrc = (html: string): string => {
+  try {
+    const bytes = new TextEncoder().encode(html || '');
+    const chunkSize = 0x8000;
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return `${HTML_DATA_SRC_PREFIX}${btoa(binary)}`;
+  } catch {
+    return '';
+  }
+};
+
+const isFastOfflineWebClipFrame = (frame: HTMLIFrameElement): boolean =>
+  frame.classList.contains('flowist-web-clip-page') ||
+  frame.getAttribute('data-role') === 'page-embed' ||
+  !!frame.closest('.webclipper-embed');
+
+export const normalizeWebClipHtmlForFastOffline = (html: string): string => {
+  if (!html || (!html.includes('flowist-web-clip-page') && !html.includes('webclipper-embed'))) return html;
+  try {
+    if (typeof window === 'undefined') return html;
+    const doc = new DOMParser().parseFromString(`<div id="__root">${html}</div>`, 'text/html');
+    const root = doc.getElementById('__root');
+    if (!root) return html;
+    root.querySelectorAll<HTMLIFrameElement>('iframe').forEach((frame) => {
+      if (!isFastOfflineWebClipFrame(frame)) return;
+      const sandbox = frame.getAttribute('sandbox') || '';
+      const tokens = new Set(sandbox.split(/\s+/).filter(Boolean).filter((t) => t !== 'allow-scripts'));
+      tokens.add('allow-same-origin');
+      tokens.add('allow-popups');
+      tokens.add('allow-popups-to-escape-sandbox');
+      frame.setAttribute('sandbox', Array.from(tokens).join(' '));
+      frame.setAttribute('referrerpolicy', 'no-referrer');
+      frame.setAttribute('loading', 'eager');
+      const srcdoc = frame.getAttribute('srcdoc') || '';
+      const src = frame.getAttribute('src') || '';
+      if (srcdoc && !src.startsWith(HTML_DATA_SRC_PREFIX)) {
+        const dataSrc = htmlToDataSrc(srcdoc);
+        if (dataSrc) frame.setAttribute('src', dataSrc);
+      }
+      frame.removeAttribute('srcdoc');
+    });
+    return root.innerHTML;
+  } catch {
+    return html;
+  }
+};
+
 // Configure DOMPurify with allowed tags and attributes for rich text editing
 const RICH_TEXT_CONFIG = {
   ALLOWED_TAGS: [
@@ -77,11 +129,20 @@ export const sanitizeHtml = (html: string): string => {
     root.querySelectorAll<HTMLIFrameElement>('iframe').forEach((frame) => {
       const sandbox = frame.getAttribute('sandbox') || '';
       const tokens = new Set(sandbox.split(/\s+/).filter(Boolean).filter((t) => t !== 'allow-scripts'));
-      if (frame.hasAttribute('srcdoc')) tokens.add('allow-same-origin');
+      const isOfflineFrame = isFastOfflineWebClipFrame(frame);
+      if (frame.hasAttribute('srcdoc') || isOfflineFrame) tokens.add('allow-same-origin');
       frame.setAttribute('sandbox', Array.from(tokens).join(' ').trim() || 'allow-same-origin');
       frame.setAttribute('referrerpolicy', 'no-referrer');
-      frame.setAttribute('loading', frame.closest('.webclipper-embed') ? 'eager' : 'lazy');
-      if (frame.closest('.webclipper-embed')) frame.removeAttribute('srcdoc');
+      frame.setAttribute('loading', isOfflineFrame ? 'eager' : 'lazy');
+      if (isOfflineFrame) {
+        const srcdoc = frame.getAttribute('srcdoc') || '';
+        const src = frame.getAttribute('src') || '';
+        if (srcdoc && !src.startsWith(HTML_DATA_SRC_PREFIX)) {
+          const dataSrc = htmlToDataSrc(srcdoc);
+          if (dataSrc) frame.setAttribute('src', dataSrc);
+        }
+        frame.removeAttribute('srcdoc');
+      }
     });
     return root.innerHTML;
   } catch {
@@ -119,12 +180,21 @@ export const sanitizeForDisplay = (html: string): string => {
     root.querySelectorAll<HTMLIFrameElement>('iframe').forEach((frame) => {
       const sandbox = frame.getAttribute('sandbox') || '';
       const tokens = new Set(sandbox.split(/\s+/).filter(Boolean).filter((t) => t !== 'allow-scripts'));
-      if (frame.hasAttribute('srcdoc')) tokens.add('allow-same-origin');
+      const isOfflineFrame = isFastOfflineWebClipFrame(frame);
+      if (frame.hasAttribute('srcdoc') || isOfflineFrame) tokens.add('allow-same-origin');
       frame.setAttribute('sandbox', Array.from(tokens).join(' ').trim() || 'allow-same-origin');
       frame.setAttribute('referrerpolicy', 'no-referrer');
-      frame.setAttribute('loading', frame.closest('.webclipper-embed') ? 'eager' : 'lazy');
+      frame.setAttribute('loading', isOfflineFrame ? 'eager' : 'lazy');
       frame.removeAttribute('contenteditable');
-      if (frame.closest('.webclipper-embed')) frame.removeAttribute('srcdoc');
+      if (isOfflineFrame) {
+        const srcdoc = frame.getAttribute('srcdoc') || '';
+        const src = frame.getAttribute('src') || '';
+        if (srcdoc && !src.startsWith(HTML_DATA_SRC_PREFIX)) {
+          const dataSrc = htmlToDataSrc(srcdoc);
+          if (dataSrc) frame.setAttribute('src', dataSrc);
+        }
+        frame.removeAttribute('srcdoc');
+      }
     });
     return root.innerHTML;
   } catch {
@@ -202,14 +272,24 @@ export const sanitizeClippedArticle = (html: string): string => {
       const tokens = new Set(
         sandbox.split(/\s+/).filter(Boolean).filter((t) => t !== 'allow-scripts'),
       );
-      if (frame.hasAttribute('srcdoc')) {
+      const isOfflineFrame = isFastOfflineWebClipFrame(frame);
+      if (frame.hasAttribute('srcdoc') || isOfflineFrame) {
         tokens.add('allow-same-origin');
         tokens.add('allow-popups');
         tokens.add('allow-popups-to-escape-sandbox');
       }
       frame.setAttribute('sandbox', Array.from(tokens).join(' ').trim() || 'allow-same-origin');
       frame.setAttribute('referrerpolicy', 'no-referrer');
-      frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('loading', isOfflineFrame ? 'eager' : 'lazy');
+      if (isOfflineFrame) {
+        const srcdoc = frame.getAttribute('srcdoc') || '';
+        const src = frame.getAttribute('src') || '';
+        if (srcdoc && !src.startsWith(HTML_DATA_SRC_PREFIX)) {
+          const dataSrc = htmlToDataSrc(srcdoc);
+          if (dataSrc) frame.setAttribute('src', dataSrc);
+        }
+        frame.removeAttribute('srcdoc');
+      }
       frame.removeAttribute('contenteditable');
     });
 
