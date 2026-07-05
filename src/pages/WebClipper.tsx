@@ -482,8 +482,12 @@ const WebClipper = () => {
           const { data, error } = await Promise.race([
             supabase.functions.invoke('fetch-article', {
               body: {
+                // HARD-LOCKED to fullpage. The Web Clipper must ALWAYS request
+                // the entire raw HTML page from the edge function — no article
+                // mode, no readability trimming, no meta-only fallback. This
+                // is the user's non-negotiable requirement.
                 url,
-                mode: clipMode === 'fullpage' ? 'fullpage' : 'article',
+                mode: 'fullpage',
                 webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
               },
             }),

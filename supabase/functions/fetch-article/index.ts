@@ -1218,13 +1218,12 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const { url, mode: rawMode } = body || {};
-    const mode = String(rawMode || "").toLowerCase();
-    // Clean-article mode is the default: strip ads/nav/footer/related-stories,
-    // keep title, headings, images (with captions), links, references. Only
-    // return the raw start-to-end HTML when the caller explicitly asks for
-    // `mode: "fullpage"`. `selection` is highlight text (client-side only).
-    const wantFullPage = mode === "fullpage";
+    const { url, mode: _rawMode } = body || {};
+    // HARD-LOCKED to full-page mode. The Web Clipper never returns a
+    // half-article / metadata-only / Readability-trimmed response — every
+    // clip is the entire raw HTML document with assets inlined. Any legacy
+    // `mode` value from the caller is ignored on purpose.
+    const wantFullPage = true;
     if (!url || typeof url !== "string") {
       return new Response(JSON.stringify({ error: "url required", code: "bad_input" }), {
         status: 400,
