@@ -434,21 +434,32 @@ const WebClipper = () => {
       // for the complete rendered page (raw HTML, images, embeds — everything
       // the human eye saw on the page). Selection mode is the only exception,
       // since it saves the user's own highlighted text.
-      const shouldFetchFull =
-        !attachment &&
-        !!url &&
-        clipMode !== 'selection';
+      const shouldFetchFull = !attachment && !!url;
+
+      // Rolling status messages during the long fullpage fetch so users see
+      // "something is happening" the whole time (edge fn does fetch → inline
+      // CSS → inline images → bundle → return; we approximate that timeline).
+      const FULLPAGE_STAGE_MESSAGES: Array<{ atMs: number; key: string; fallback: string }> = [
+        { atMs: 0,      key: 'webClipper.stageFpFetching',    fallback: 'Fetching page…' },
+        { atMs: 4000,   key: 'webClipper.stageFpLazy',        fallback: 'Loading lazy images & media…' },
+        { atMs: 10000,  key: 'webClipper.stageFpStyles',      fallback: 'Inlining stylesheets & fonts…' },
+        { atMs: 18000,  key: 'webClipper.stageFpImages',      fallback: 'Bundling images inline…' },
+        { atMs: 28000,  key: 'webClipper.stageFpFinalizing',  fallback: 'Building single-file snapshot…' },
+      ];
+      let stageTickerId: number | null = null;
 
       if (shouldFetchFull) {
-        // Hard cap the full-page fetch so users never sit on a spinner
-        // indefinitely. If the edge function is slow or upstream stalls, we
-        // surface a clear timeout rather than falling back to partial/snapshot
-        // content silently.
-        const FETCH_TIMEOUT_MS = 45_000;
+        const FETCH_TIMEOUT_MS = 60_000;
         try {
           setStage('fetching');
           setProgress(null);
-          setProgressLabel(t('webClipper.stageFetching', 'Fetching full page…'));
+          setProgressLabel(t(FULLPAGE_STAGE_MESSAGES[0].key, FULLPAGE_STAGE_MESSAGES[0].fallback));
+          const stageStartedAt = performance.now();
+          stageTickerId = window.setInterval(() => {
+            const elapsed = performance.now() - stageStartedAt;
+            const current = [...FULLPAGE_STAGE_MESSAGES].reverse().find((s) => elapsed >= s.atMs);
+            if (current) setProgressLabel(t(current.key, current.fallback));
+          }, 1000);
           const fetchStartedAt = performance.now();
           console.info('[webClipper] invoking fetch-article', {
             url,
