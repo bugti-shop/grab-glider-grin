@@ -1255,10 +1255,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       frame.setAttribute('loading', 'lazy');
       frame.setAttribute('data-role', 'webclip-frame');
       frame.setAttribute('style', 'width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
-      // Set srcdoc via property for the immediate first render. Do NOT set the
-      // srcdoc attribute — the hydrator re-applies it from `data-clip-html` on
-      // every subsequent render (reload, re-open, offline).
-      frame.srcdoc = rawHtml;
+      // Do not set `srcdoc` here: it reflects into a huge attribute and makes
+      // the saved editor DOM differ from the rendered DOM. The hydrator writes
+      // the HTML directly into the iframe document without mutating parent HTML.
 
       wrapper.append(header, frame);
 
@@ -1299,6 +1298,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
         } catch {
           editor.appendChild(wrapper);
         }
+        hydrateWebClipsIn(editor);
         setContent(editor.innerHTML);
       } else {
         // Non-rich note types: append raw HTML to content so it still saves.

@@ -353,6 +353,69 @@ export const persistSyncedFrom = (root: HTMLElement | null) => {
   });
 };
 
+const hydratedWebClipFrames = new WeakMap<HTMLIFrameElement, string>();
+const webClipFrameRetryTimers = new WeakMap<HTMLIFrameElement, number>();
+
+const writeWebClipHtmlIntoFrame = (frame: HTMLIFrameElement, html: string, key: string) => {
+  if (hydratedWebClipFrames.get(frame) === key) {
+    try {
+      const doc = frame.contentDocument || frame.contentWindow?.document;
+      const hasRenderedContent = !!(
+        doc &&
+        (doc.body?.children.length || doc.body?.textContent?.trim() || doc.head?.children.length)
+      );
+      if (hasRenderedContent) return;
+    } catch {
+      // If the WebView cleared the iframe document, fall through and rewrite it.
+    }
+  }
+
+  // Keep parent editor HTML stable. `iframe.srcdoc = ...` reflects into a
+  // huge `srcdoc` attribute, so React/contenteditable sees a different DOM and
+  // re-applies the saved content, causing the blank/html/blank reopen flicker.
+  frame.removeAttribute('srcdoc');
+
+  const write = () => {
+    try {
+      const doc = frame.contentDocument || frame.contentWindow?.document;
+      if (!doc) return false;
+      doc.open();
+      doc.write(html);
+      doc.close();
+      hydratedWebClipFrames.set(frame, key);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  if (write()) return;
+
+  const scheduleRetry = (delay: number) => {
+    const existing = webClipFrameRetryTimers.get(frame);
+    if (existing) window.clearTimeout(existing);
+    const timer = window.setTimeout(() => {
+      webClipFrameRetryTimers.delete(frame);
+      if (hydratedWebClipFrames.get(frame) !== key && !write()) {
+        const finalTimer = window.setTimeout(() => {
+          webClipFrameRetryTimers.delete(frame);
+          if (hydratedWebClipFrames.get(frame) !== key) write();
+        }, 120);
+        webClipFrameRetryTimers.set(frame, finalTimer);
+      }
+    }, delay);
+    webClipFrameRetryTimers.set(frame, timer);
+  };
+
+  if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+    window.requestAnimationFrame(() => {
+      if (hydratedWebClipFrames.get(frame) !== key && !write()) scheduleRetry(50);
+    });
+  } else {
+    scheduleRetry(0);
+  }
+};
+
 /**
  * Web-clip card hydration.
  * - Adds a collapse/expand toggle when the body word-count exceeds threshold.
@@ -380,7 +443,6 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
   // re-open, offline). This is the fix for the "blank frame after reload" bug.
   const embeds = root.querySelectorAll<HTMLElement>('.webclipper-embed[data-clip-html]');
   embeds.forEach((embed) => {
-    if ((embed as any).__wcHydrated) return;
     const encoded = embed.getAttribute('data-clip-html') || '';
     if (!encoded) return;
     let html = '';
@@ -404,10 +466,9 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
       frame.setAttribute('style', 'width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
       embed.appendChild(frame);
     }
-    // Always (re)apply srcdoc — the attribute is intentionally not persisted.
-    try { frame.srcdoc = html; } catch { /* noop */ }
+    const key = `${encoded.length}:${encoded.slice(0, 24)}:${encoded.slice(-24)}`;
+    writeWebClipHtmlIntoFrame(frame, html, key);
     embed.setAttribute('contenteditable', 'false');
-    (embed as any).__wcHydrated = true;
   });
 
 

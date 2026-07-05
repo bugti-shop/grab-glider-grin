@@ -2482,11 +2482,13 @@ export const RichTextEditor = ({
     let t1: ReturnType<typeof setTimeout> | undefined;
     let t2: ReturnType<typeof setTimeout> | undefined;
 
-    if (editorRef.current && editorRef.current.innerHTML !== content) {
+    const sanitizedContent = sanitizeHtml(content);
+    if (editorRef.current && editorRef.current.innerHTML !== sanitizedContent) {
       // Only update if editor is not focused to avoid cursor issues
       const isFocused = document.activeElement === editorRef.current;
       if (!isFocused) {
-        editorRef.current.innerHTML = sanitizeHtml(content);
+        editorRef.current.innerHTML = sanitizedContent;
+        lastContentRef.current = sanitizedContent;
         // Re-attach image, table, audio and file listeners after content is loaded
         t1 = setTimeout(() => {
           reattachImageListeners();
@@ -2497,12 +2499,15 @@ export const RichTextEditor = ({
           hydrateSynced();
         }, 0);
       } else {
+        lastContentRef.current = sanitizedContent;
         // Editor is focused, still reattach audio and file listeners to ensure they display
         t2 = setTimeout(() => {
           reattachAudioListeners();
           reattachFileListeners();
         }, 0);
       }
+    } else if (sanitizedContent) {
+      lastContentRef.current = sanitizedContent;
     }
 
     return () => {
