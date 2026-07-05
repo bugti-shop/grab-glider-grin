@@ -432,6 +432,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       : { wordCount: 0, characterCount: 0, characterCountNoSpaces: 0, readingTimeMinutes: 0 },
     [showStats, content, title],
   );
+  const displayContentHtml = useMemo(
+    () => (isReadOnlyWebClip || isReadingMode ? sanitizeForDisplay(content) : ''),
+    [content, isReadOnlyWebClip, isReadingMode],
+  );
   
   // Calculate backlinks
   const backlinks = note ? findBacklinks(note, allNotes) : [];
