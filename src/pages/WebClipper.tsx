@@ -1123,8 +1123,8 @@ const WebClipper = () => {
             </div>
           )}
 
-          {/* Read-only preview — the full captured page renders start-to-finish
-              inside the iframe. Save to keep it in your notes. */}
+          {/* Strictly read-only preview — the full captured page renders
+              start-to-finish inside a sandboxed iframe (no scripts, no edits). */}
           {previewReady && !saved && (
             <div className="space-y-3 pt-2 border-t border-border">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -1135,23 +1135,33 @@ const WebClipper = () => {
                 <label className="text-xs font-medium text-muted-foreground">
                   {t('webClipper.previewTitleLabel', 'Title')}
                 </label>
-                <Input
-                  value={previewTitle}
-                  onChange={(e) => setPreviewTitle(e.target.value)}
-                  maxLength={MAX_LENGTHS.title}
-                  className="text-base font-semibold"
-                />
+                <p className="rounded-md border border-input bg-muted/30 px-3 py-2 text-base font-semibold break-words">
+                  {previewTitle || t('webClipper.untitledClip', 'Untitled Clip')}
+                </p>
               </div>
               <div className="space-y-1.5">
                 <div
                   ref={contentEditorRef}
-                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[70vh] overflow-y-auto rounded-lg border border-input bg-background p-2"
+                  aria-readonly="true"
+                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[70vh] overflow-y-auto rounded-lg border border-input bg-background p-2 select-text [&_*]:pointer-events-auto"
+                  style={{ userSelect: 'text' }}
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  {t('webClipper.previewHintReadOnly', 'The whole page (start to finish) is captured above. Save it to your notes to keep an offline, read-only copy.')}
+                  {t('webClipper.previewHintReadOnly', 'The whole page (start to finish) is captured above as a read-only snapshot. Save it to your notes or download the full HTML.')}
                 </p>
               </div>
+              {snapshotHtml && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => triggerHtmlDownload(snapshotFilename || 'web-clip.html', snapshotHtml)}
+                  className="w-full"
+                >
+                  <Download className="h-4 w-4 mr-1.5" />
+                  {t('webClipper.downloadFullHtml', 'Download full HTML page')}
+                </Button>
+              )}
               <div className="flex gap-2 pt-1">
                 <Button onClick={commitClip} disabled={saving} className="flex-1">
                   <Save className="h-4 w-4 mr-1.5" />
