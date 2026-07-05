@@ -49,14 +49,16 @@ describe('webClipper.escapeMarkdown', () => {
 });
 
 describe('webClipper.parseClipMode', () => {
-  it('normalises known modes', () => {
-    expect(parseClipMode('selection')).toBe('selection');
+  it('normalises attachment modes and collapses url-share modes to fullpage', () => {
+    expect(parseClipMode('image')).toBe('image');
+    expect(parseClipMode('pdf')).toBe('pdf');
     expect(parseClipMode('full-page')).toBe('fullpage');
-    expect(parseClipMode('article')).toBe('article');
+    expect(parseClipMode('article')).toBe('fullpage');
+    expect(parseClipMode('selection')).toBe('fullpage');
   });
-  it('defaults to clean article mode for unknown/empty', () => {
-    expect(parseClipMode('garbage')).toBe('article');
-    expect(parseClipMode(null)).toBe('article');
+  it('defaults to fullpage snapshot for unknown/empty', () => {
+    expect(parseClipMode('garbage')).toBe('fullpage');
+    expect(parseClipMode(null)).toBe('fullpage');
   });
 });
 

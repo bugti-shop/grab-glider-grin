@@ -29,8 +29,6 @@ import {
 import { useWebClipperQuota } from '@/hooks/useWebClipperQuota';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
-  { id: 'article',   icon: FileText, titleKey: 'webClipper.modeArticle',   descKey: 'webClipper.modeArticleDesc',   fallbackTitle: 'Article',     fallbackDesc: 'Save the readable article body' },
-  { id: 'selection', icon: Quote,    titleKey: 'webClipper.modeSelection', descKey: 'webClipper.modeSelectionDesc', fallbackTitle: 'Selection',   fallbackDesc: 'Save only the highlighted text' },
   { id: 'fullpage',  icon: Download, titleKey: 'webClipper.modeFullPage',  descKey: 'webClipper.modeFullPageDesc',  fallbackTitle: 'Full page (offline snapshot)', fallbackDesc: 'Download the entire page as a single-file HTML for offline reading' },
 ];
 
@@ -231,11 +229,11 @@ const WebClipper = () => {
     window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.hash || ''}`);
   };
 
-  // URL shares, explicit modes, and attachments auto-prepare immediately.
-  // The picker is only for rare text-only/manual entry cases.
-  const explicitMode = searchParams.has('mode') || !!attachment || !!url;
-  const [mode, setMode] = useState<ClipMode>(initialMode);
-  const [picking, setPicking] = useState(!explicitMode);
+  // Web Clipper is full-page only now — never show the mode picker for URL
+  // shares. Attachment shares (image/pdf) keep their own dedicated modes.
+  const isAttachmentMode = initialMode === 'image' || initialMode === 'pdf';
+  const [mode, setMode] = useState<ClipMode>(isAttachmentMode ? initialMode : 'fullpage');
+  const [picking, setPicking] = useState(false);
   const payloadSignature = searchParams.toString();
   const payloadRunKeyRef = useRef('');
 
@@ -259,8 +257,8 @@ const WebClipper = () => {
     }
     abortRef.current = null;
     canceledRef.current = false;
-    setMode(initialMode);
-    setPicking(!explicitMode);
+    setMode(isAttachmentMode ? initialMode : 'fullpage');
+    setPicking(false);
     setPreviewReady(false);
     setPreviewTitle('');
     setPreviewHtml('');
@@ -436,21 +434,32 @@ const WebClipper = () => {
       // for the complete rendered page (raw HTML, images, embeds — everything
       // the human eye saw on the page). Selection mode is the only exception,
       // since it saves the user's own highlighted text.
-      const shouldFetchFull =
-        !attachment &&
-        !!url &&
-        clipMode !== 'selection';
+      const shouldFetchFull = !attachment && !!url;
+
+      // Rolling status messages during the long fullpage fetch so users see
+      // "something is happening" the whole time (edge fn does fetch → inline
+      // CSS → inline images → bundle → return; we approximate that timeline).
+      const FULLPAGE_STAGE_MESSAGES: Array<{ atMs: number; key: string; fallback: string }> = [
+        { atMs: 0,      key: 'webClipper.stageFpFetching',    fallback: 'Fetching page…' },
+        { atMs: 4000,   key: 'webClipper.stageFpLazy',        fallback: 'Loading lazy images & media…' },
+        { atMs: 10000,  key: 'webClipper.stageFpStyles',      fallback: 'Inlining stylesheets & fonts…' },
+        { atMs: 18000,  key: 'webClipper.stageFpImages',      fallback: 'Bundling images inline…' },
+        { atMs: 28000,  key: 'webClipper.stageFpFinalizing',  fallback: 'Building single-file snapshot…' },
+      ];
+      let stageTickerId: number | null = null;
 
       if (shouldFetchFull) {
-        // Hard cap the full-page fetch so users never sit on a spinner
-        // indefinitely. If the edge function is slow or upstream stalls, we
-        // surface a clear timeout rather than falling back to partial/snapshot
-        // content silently.
-        const FETCH_TIMEOUT_MS = 45_000;
+        const FETCH_TIMEOUT_MS = 60_000;
         try {
           setStage('fetching');
           setProgress(null);
-          setProgressLabel(t('webClipper.stageFetching', 'Fetching full page…'));
+          setProgressLabel(t(FULLPAGE_STAGE_MESSAGES[0].key, FULLPAGE_STAGE_MESSAGES[0].fallback));
+          const stageStartedAt = performance.now();
+          stageTickerId = window.setInterval(() => {
+            const elapsed = performance.now() - stageStartedAt;
+            const current = [...FULLPAGE_STAGE_MESSAGES].reverse().find((s) => elapsed >= s.atMs);
+            if (current) setProgressLabel(t(current.key, current.fallback));
+          }, 1000);
           const fetchStartedAt = performance.now();
           console.info('[webClipper] invoking fetch-article', {
             url,
@@ -568,6 +577,11 @@ const WebClipper = () => {
               ? t('webClipper.fetchTimeout', 'Fetching the full page took too long. Please try again.')
               : (err as Error)?.message,
           };
+        } finally {
+          if (stageTickerId !== null) {
+            window.clearInterval(stageTickerId);
+            stageTickerId = null;
+          }
         }
       }
 
@@ -581,36 +595,11 @@ const WebClipper = () => {
       // the user is in explicit Selection mode (where the highlight is
       // the whole point).
       const fetchAttemptedButEmpty = shouldFetchFull && !articleHtml;
-      // If the server could not fetch a body, still save whatever the share
-      // sheet gave us. Never create metadata-only cards; always render inline
-      // visible text/content when present.
-      const hasShareFallback =
-        !!(selection && selection.trim()) ||
-        !!(content && content.trim()) ||
-        !!(title && title !== 'Untitled Clip');
-      if (fetchAttemptedButEmpty && hasShareFallback) {
-        console.info('[webClipper] full-fetch empty — falling back to shared payload', {
-          url,
-          hasSelection: !!selection,
-          hasContent: !!content,
-          hasTitle: !!title,
-        });
-        const bodyText = (selection && selection.trim()) || (content && content.trim()) || '';
-        // Wrap into a tiny HTML snippet so the downstream rich-note pipeline
-        // still runs and users see paragraphs, not a wall of text.
-        const escaped = bodyText
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-        const paragraphs = escaped
-          .split(/\n{2,}/)
-          .map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
-          .join('');
-        articleHtml = paragraphs || `<p>${escaped}</p>`;
-        articleTitle = title || articleTitle;
-        articleIsFallback = true;
-        // Note: articleExcerpt intentionally left empty — the body IS the excerpt.
-      } else if (fetchAttemptedButEmpty) {
+      // Full-page-only clipper: on empty fetch we NEVER silently save a
+      // half-article / metadata-only fallback. Surface the real error so the
+      // user can retry — the whole point of this mode is a complete offline
+      // snapshot.
+      if (fetchAttemptedButEmpty) {
         const failure = fetchFailure || { code: 'internal' };
         const map: Record<string, { titleKey: string; titleFallback: string; descKey: string; descFallback: string }> = {
           paywall:        { titleKey: 'webClipper.errPaywallTitle',   titleFallback: 'Site blocked access',           descKey: 'webClipper.errPaywallDesc',   descFallback: 'This page needs a login or blocks clippers. Try copying the text and using Selection mode.' },
