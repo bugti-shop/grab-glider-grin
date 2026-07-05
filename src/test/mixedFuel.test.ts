@@ -48,3 +48,30 @@ describe('parentheses & precedence', () => {
     expect(convertExpression('(500 mi / 25 mpg to gal')).toBeNull();
   });
 });
+
+import { normalizeImplicitMult } from '@/components/richtext/unitConvert';
+
+describe('implicit multiplication', () => {
+  it('folds "2(kg)" → "2 kg"', () => {
+    expect(normalizeImplicitMult('2(kg) to lb')).toBe('2 kg to lb');
+  });
+  it('folds "3(l/100km)" → "3 l/100km"', () => {
+    expect(normalizeImplicitMult('3(l/100km)')).toBe('3 l/100km');
+  });
+  it('inserts * between )( adjacency', () => {
+    expect(normalizeImplicitMult('(30 mpg)(15 gal) to mi')).toBe('(30 mpg)*(15 gal) to mi');
+  });
+  it('inserts * between digit and (', () => {
+    expect(normalizeImplicitMult('2(3+4)')).toBe('2*(3+4)');
+  });
+  it('2(kg) to lb resolves via convertExpression', () => {
+    const r = convertExpression('2(kg) to lb');
+    expect(r).not.toBeNull();
+    expect(r!.result).toBeCloseTo(4.409, 2);
+  });
+  it('(30 mpg)(15 gal) to mi resolves via convertExpression', () => {
+    const r = convertExpression('(30 mpg)(15 gal) to mi');
+    expect(r).not.toBeNull();
+    expect(r!.result).toBeCloseTo(450, 1);
+  });
+});
