@@ -31,7 +31,36 @@ import { useWebClipperQuota } from '@/hooks/useWebClipperQuota';
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
   { id: 'article',   icon: FileText, titleKey: 'webClipper.modeArticle',   descKey: 'webClipper.modeArticleDesc',   fallbackTitle: 'Article',     fallbackDesc: 'Save the readable article body' },
   { id: 'selection', icon: Quote,    titleKey: 'webClipper.modeSelection', descKey: 'webClipper.modeSelectionDesc', fallbackTitle: 'Selection',   fallbackDesc: 'Save only the highlighted text' },
+  { id: 'fullpage',  icon: Download, titleKey: 'webClipper.modeFullPage',  descKey: 'webClipper.modeFullPageDesc',  fallbackTitle: 'Full page (offline snapshot)', fallbackDesc: 'Download the entire page as a single-file HTML for offline reading' },
 ];
+
+/** Slugify a title into a safe filename stem. */
+const filenameFromTitle = (title: string, host: string): string => {
+  const base = (title || host || 'web-clip')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'web-clip';
+  return base;
+};
+
+/** Trigger a browser download of a single-file HTML snapshot. */
+const triggerHtmlDownload = (filename: string, html: string): void => {
+  try {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = filename.endsWith('.html') ? filename : `${filename}.html`;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
+  } catch (err) {
+    console.warn('[webClipper] snapshot download failed', err);
+  }
+};
 
 type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
 
