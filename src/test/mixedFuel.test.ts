@@ -133,3 +133,55 @@ describe('implicit multiplication — complex forms', () => {
     expect(s).not.toContain('(m)');
   });
 });
+
+describe('implicit multiplication — nested parentheses', () => {
+  it('normalizes ((kg)(m/s))^2 by unwrapping inner units and preserving the outer exponent', () => {
+    const s = normalizeImplicitMult('((kg)(m/s))^2');
+    // Inner unit-only parens are unwrapped.
+    expect(s).not.toContain('(kg)');
+    expect(s).not.toContain('(m/s)');
+    // Explicit * is inserted at the former ")(" boundary.
+    expect(s).toMatch(/kg\s*\*\s*m\/s/);
+    // Outer paren + ^2 exponent survives on the compound group.
+    expect(s).toMatch(/\)\s*\^\s*2/);
+  });
+
+  it('handles ((kg)(m/s))^2 to (kg*m/s)^2 as a full conversion phrase', () => {
+    const s = normalizeImplicitMult('((kg)(m/s))^2 to (kg*m/s)^2');
+    // Left side is fully normalized...
+    expect(s).toMatch(/kg\s*\*\s*m\/s\s*\)\s*\^\s*2/);
+    // ...and the "to <target>" phrase is preserved intact.
+    expect(s).toContain('to (kg*m/s)^2');
+  });
+
+  it('normalizes ((m)(s))^3 with a leading number: 2((kg)(m))^2 → 2*(kg*m)^2 shape', () => {
+    const s = normalizeImplicitMult('2((kg)(m))^2');
+    // Leading number gets an explicit * before the group.
+    expect(s).toMatch(/^2\s*\*/);
+    // Inner unit-only parens fold into a single compound group with *.
+    expect(s).toMatch(/kg\s*\*\s*m/);
+    // Outer exponent preserved.
+    expect(s).toMatch(/\)\s*\^\s*2/);
+    // No stray single-unit parens left over.
+    expect(s).not.toContain('(kg)');
+    expect(s).not.toContain('(m)');
+  });
+
+  it('already-canonical (kg*m/s)^2 passes through unchanged', () => {
+    expect(normalizeImplicitMult('(kg*m/s)^2')).toBe('(kg*m/s)^2');
+  });
+
+  it('nested unwrap does not introduce unbalanced parentheses', () => {
+    for (const input of [
+      '((kg)(m/s))^2',
+      '((m)(s))^3',
+      '2((kg)(m))^2',
+      '((kg)(m/s))^2 to (kg*m/s)^2',
+    ]) {
+      const s = normalizeImplicitMult(input);
+      const opens = (s.match(/\(/g) ?? []).length;
+      const closes = (s.match(/\)/g) ?? []).length;
+      expect(opens).toBe(closes);
+    }
+  });
+});
