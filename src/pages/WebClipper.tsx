@@ -133,6 +133,34 @@ const WebClipper = () => {
     if (previewReady && contentEditorRef.current) hydrateWebClipsIn(contentEditorRef.current);
   }, [previewReady, previewHtml]);
 
+  // Synthetic progress ticker: when the current stage doesn't report a real
+  // ratio (fetch/extract/embed/save all resolve as one-shot backend calls),
+  // creep the bar from 5% → 92% so users see continuous movement instead of
+  // a flat empty bar for the entire wait.
+  const [fauxProgress, setFauxProgress] = useState<number | null>(null);
+  useEffect(() => {
+    if (!saving || stage === 'idle' || error) {
+      setFauxProgress(null);
+      return;
+    }
+    if (typeof progress === 'number') {
+      setFauxProgress(null);
+      return;
+    }
+    setFauxProgress(5);
+    const id = window.setInterval(() => {
+      setFauxProgress((v) => {
+        const cur = v ?? 5;
+        if (cur >= 92) return 92;
+        // Ease-out: slower as we approach the cap.
+        const step = Math.max(1, Math.round((92 - cur) * 0.08));
+        return Math.min(92, cur + step);
+      });
+    }, 350);
+    return () => window.clearInterval(id);
+  }, [saving, stage, progress, error]);
+
+
   // Re-poll the monthly counter after each fetch settles (so the bar reflects
   // the server-side increment) and whenever Pro state flips.
   useEffect(() => {
