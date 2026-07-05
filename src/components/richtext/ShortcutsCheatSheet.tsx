@@ -488,6 +488,22 @@ function consolidateSlashCommands(sections: Section[]): Section[] {
 }
 
 /**
+ * Split `text` on the first case-insensitive occurrence of `query` and wrap
+ * matched substrings in <mark>. Safe against regex metacharacters.
+ */
+function highlight(text: string, query: string): React.ReactNode {
+  const q = query.trim();
+  if (!q) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'ig'));
+  return parts.map((p, i) =>
+    p.toLowerCase() === q.toLowerCase()
+      ? <mark key={i} className="bg-yellow-200 dark:bg-yellow-500/40 text-inherit rounded px-0.5">{p}</mark>
+      : <span key={i}>{p}</span>
+  );
+}
+
+/**
  * Sanitize a cheat-sheet trigger before dispatching it to the editor:
  *   - strip `<url>` / `<...>` placeholders
  *   - strip ellipsis characters
