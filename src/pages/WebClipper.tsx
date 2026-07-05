@@ -809,17 +809,15 @@ const WebClipper = () => {
   };
 
   /**
-   * Persist the (possibly-edited) preview to the notes DB.
-   * Reads the live HTML from the contentEditable div so any user edits
-   * — including deletes, re-orders, and inline tweaks — are captured.
+   * Persist the read-only preview to the notes DB verbatim. The preview is
+   * strictly non-editable, so we save exactly what the user saw.
    */
   const commitClip = async () => {
     try {
       setSaving(true);
       setStage('saving');
       setProgressLabel(t('webClipper.stageSaving', 'Saving to notes…'));
-      const liveHtml = contentEditorRef.current?.innerHTML ?? previewHtml;
-      const cleanHtml = stripSnapshotArtifacts(sanitizeClippedArticle(liveHtml));
+      const cleanHtml = stripSnapshotArtifacts(sanitizeClippedArticle(previewHtml));
       const cleanTitle = (previewTitle || 'Untitled Clip').substring(0, MAX_LENGTHS.title);
       const newNote: Note = {
         id: crypto.randomUUID(),
