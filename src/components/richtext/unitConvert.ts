@@ -412,7 +412,10 @@ export function convertExpression(input: string): ConvertResult | null {
   if (reduced === null) return null;
   const trimmed = reduced.trim();
   const m = /^(-?\d+(?:\.\d+)?)\s*([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)\s+(?:in|to|as|->|=)\s+([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)$/i.exec(trimmed);
-  if (!m) return null;
+  if (!m) {
+    // Fall through to mixed (mul/div) form so callers get a single entry point.
+    return convertMixedExpression(trimmed);
+  }
 
   const value = parseFloat(m[1]);
   const fromRes = resolveUnit(m[2]);
