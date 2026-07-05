@@ -1677,6 +1677,25 @@ export const RichTextEditor = ({
         }
         break;
       }
+      default: {
+        // All other IDs are backed by a `/<slashCmd>` line shortcut. Replace
+        // the trigger text with `/<slashCmd>` (+ trailing space when the
+        // command needs an argument) and either execute immediately (arg-less)
+        // or park the caret so the user can type the argument.
+        const meta = SLASH_ITEM_META[id];
+        if (meta?.slashCmd) {
+          replaceTriggerAndInsert(triggerLen, '');
+          const text = meta.needsArg ? `/${meta.slashCmd} ` : `/${meta.slashCmd}`;
+          document.execCommand('insertText', false, text);
+          if (!meta.needsArg) {
+            // Fire arg-less slash line shortcut now (today, now, chess, toc…).
+            void trySlashLineShortcut(editorRef.current).then((ok) => {
+              if (ok) handleInput();
+            });
+          }
+        }
+        break;
+      }
     }
     handleInput();
   }, [slashMenu.triggerLen, closeSlash, isPro, requireProFeature, requireCapacity]);
