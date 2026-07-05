@@ -179,13 +179,6 @@
              widget picker; the previewLayout referenced from each widget-info
              XML renders a real preview thumbnail in the same picker. -->
         <receiver
-            android:name=".widgets.AddTaskWidget"
-            android:label="@string/widget_add_task_label"
-            android:exported="true">
-            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_add_task_info" />
-        </receiver>
-        <receiver
             android:name=".widgets.StickyNoteWidget"
             android:label="@string/widget_sticky_note_label"
             android:exported="true">
