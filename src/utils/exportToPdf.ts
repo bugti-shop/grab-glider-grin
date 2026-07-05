@@ -24,12 +24,30 @@ export interface PdfExportOptions {
   headerText?: string;
   footerText?: string;
   fontSize?: number;
+  /** Multiplier applied to the H1–H6 base ratios (default 1.0). */
+  headingScale?: number;
   // Note-specific styling
   noteType?: NoteType;
   stickyColor?: StickyColor;
   customColor?: string;
   preserveNoteStyle?: boolean;
 }
+
+/**
+ * Base H1–H6 size ratios, mirroring the editor's fixed rem scale so exported
+ * headings stay visually distinct at every body font-size.
+ * (Editor: 36 / 28 / 22 / 18 / 16 / 14 px vs. 16px body → 2.25 / 1.75 / 1.375
+ *  / 1.125 / 1.0 / 0.875.)
+ */
+const HEADING_BASE_RATIOS: Record<'H1' | 'H2' | 'H3' | 'H4' | 'H5' | 'H6', number> = {
+  H1: 2.25,
+  H2: 1.75,
+  H3: 1.375,
+  H4: 1.125,
+  H5: 1.0,
+  H6: 0.875,
+};
+
 
 export interface PdfExportResult {
   success: boolean;
@@ -133,11 +151,16 @@ export const exportNoteToPdf = async (
     headerText = '',
     footerText = '',
     fontSize = 12,
+    headingScale = 1,
     noteType,
     stickyColor,
     customColor,
     preserveNoteStyle = true,
   } = options;
+
+  // Clamp heading scale to a sane range so the export never breaks pagination.
+  const safeHeadingScale = Math.min(2, Math.max(0.6, headingScale || 1));
+
 
   // Dynamically import jsPDF and html2canvas
   const { jsPDF } = await import('jspdf');
@@ -341,12 +364,27 @@ export const exportNoteToPdf = async (
       htmlEl.style.margin = '8px 0';
     }
     
-    // Style headings
-    if (htmlEl.tagName.match(/^H[1-6]$/)) {
-      htmlEl.style.fontWeight = 'bold';
-      htmlEl.style.marginTop = '16px';
-      htmlEl.style.marginBottom = '8px';
+    // Style headings — mirror the editor's fixed rem scale (H1 largest → H6
+    // smallest) so exported headings stay visually distinct. Size is computed
+    // as body fontSize × base ratio × user headingScale.
+    const headingTag = htmlEl.tagName as 'H1' | 'H2' | 'H3' | 'H4' | 'H5' | 'H6';
+    if (HEADING_BASE_RATIOS[headingTag]) {
+      const ratio = HEADING_BASE_RATIOS[headingTag];
+      const sizePt = +(fontSize * ratio * safeHeadingScale).toFixed(2);
+      const weight = headingTag === 'H1' ? 800 : headingTag === 'H2' ? 700 : headingTag === 'H3' ? 700 : 600;
+      const lineHeight = headingTag === 'H1' ? 1.2 : headingTag === 'H2' ? 1.25 : headingTag === 'H3' ? 1.3 : 1.35;
+      htmlEl.style.setProperty('font-size', `${sizePt}pt`, 'important');
+      htmlEl.style.setProperty('font-weight', String(weight), 'important');
+      htmlEl.style.setProperty('line-height', String(lineHeight), 'important');
+      htmlEl.style.setProperty('margin-top', headingTag === 'H1' ? '18px' : headingTag === 'H2' ? '14px' : '12px', 'important');
+      htmlEl.style.setProperty('margin-bottom', headingTag === 'H1' ? '10px' : '8px', 'important');
+      if (headingTag === 'H5' || headingTag === 'H6') {
+        htmlEl.style.textTransform = 'uppercase';
+        htmlEl.style.letterSpacing = headingTag === 'H6' ? '0.04em' : '0.02em';
+        if (headingTag === 'H6') htmlEl.style.opacity = '0.75';
+      }
     }
+
   });
 
   container.appendChild(contentDiv);
