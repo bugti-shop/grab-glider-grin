@@ -77,7 +77,7 @@ import {
   reattachFileListenersOnElement,
 } from './richtext/richTextMediaHandlers';
 import { SlashCommandMenu, SlashCommandId, SLASH_ITEMS_COUNT_FOR_QUERY, SLASH_PRO_KEYS, SLASH_ITEM_META } from './richtext/SlashCommandMenu';
-import { trySlashLineShortcut } from './richtext/extraShortcuts';
+
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { MentionMenu, MentionItem } from './richtext/MentionMenu';
 import { BubbleMenu } from './richtext/BubbleMenu';
