@@ -542,6 +542,25 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     // Get the current item from ref (reliable in async contexts)
     const currentItem = itemsByIdRef.current.get(itemId) ?? itemsRef.current.find(i => i.id === itemId);
 
+    // Not a top-level task? Route to the subtask updater so tapping a subtask's
+    // completion circle from Today's flat list toggles its `completed` state
+    // (with strikethrough) while keeping it nested under its parent.
+    if (!currentItem) {
+      const parent = itemsRef.current.find(i => i.subtasks?.some(st => st.id === itemId));
+      if (parent) {
+        const subUpdates: Partial<TodoItem> = { ...updatesWithTimestamp };
+        if (updates.completed === true) subUpdates.completedAt = now;
+        if (updates.completed === false) subUpdates.completedAt = undefined;
+        setItems(prev => prev.map(p => {
+          if (p.id !== parent.id || !p.subtasks) return p;
+          return { ...p, modifiedAt: now, subtasks: p.subtasks.map(st => st.id === itemId ? { ...st, ...subUpdates } : st) };
+        }));
+        if (updates.completed === true) window.setTimeout(() => playCompletionSound(), 0);
+        return;
+      }
+    }
+
+
     const isNewCompletion = updates.completed === true && currentItem && !currentItem.completed;
 
     if (isNewCompletion) {
