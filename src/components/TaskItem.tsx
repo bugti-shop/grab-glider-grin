@@ -242,6 +242,7 @@ export const TaskItem = memo(({
               subtasks={item.subtasks!}
               parentId={item.id}
               onUpdateSubtask={onUpdateSubtask}
+              onReorderSubtasks={(_parentId, reordered) => onUpdate(item.id, { subtasks: reordered })}
               getPriorityColor={getPriorityColor}
             />
           )}
