@@ -330,9 +330,13 @@ function convertTemp(v: number, from: string, to: string): number | null {
 type FuelKind = 'mpg' | 'mpguk' | 'kpl' | 'l100km' | 'mipl' | 'kmgalus' | 'kmgaluk' | 'gal100mius' | 'gal100miuk';
 
 const FUEL_ALIASES: Record<string, FuelKind> = {
-  mpg: 'mpg', mpgus: 'mpg', 'mi/gal': 'mpg', 'migalus': 'mpg', 'milespergallonus': 'mpg',
-  mpguk: 'mpguk', mpgimp: 'mpguk', 'migaluk': 'mpguk', 'milespergallonuk': 'mpguk',
-  kpl: 'kpl', kmpl: 'kpl', 'km/l': 'kpl', kml: 'kpl',
+  mpg: 'mpg', mpgus: 'mpg', usmpg: 'mpg', mpgusa: 'mpg', 'mi/gal': 'mpg', 'mile/gal': 'mpg', 'miles/gal': 'mpg',
+  'mi/usgal': 'mpg', 'mi/usgallon': 'mpg', 'mile/usgal': 'mpg', 'mile/usgallon': 'mpg', 'miles/usgallon': 'mpg',
+  migalus: 'mpg', milepergallon: 'mpg', milespergallon: 'mpg', mileperusgallon: 'mpg', milesperusgallon: 'mpg', milespergallonus: 'mpg',
+  mpguk: 'mpguk', ukmpg: 'mpguk', mpgimp: 'mpguk', impmpg: 'mpguk', imperialmpg: 'mpguk', 'mi/ukgal': 'mpguk', 'mi/ukgallon': 'mpguk',
+  'mile/ukgallon': 'mpguk', 'miles/ukgallon': 'mpguk', 'mi/impgal': 'mpguk', 'mi/imperialgallon': 'mpguk', 'mile/imperialgallon': 'mpguk',
+  'miles/imperialgallon': 'mpguk', migaluk: 'mpguk', mileperukgallon: 'mpguk', milesperukgallon: 'mpguk', mileperimperialgallon: 'mpguk', milesperimperialgallon: 'mpguk', milespergallonuk: 'mpguk',
+  kpl: 'kpl', kmpl: 'kpl', 'km/l': 'kpl', kml: 'kpl', kilometerperliter: 'kpl', kilometersperliter: 'kpl',
   l100km: 'l100km', 'l/100km': 'l100km',
   mipl: 'mipl', 'mi/l': 'mipl', milesperliter: 'mipl',
   kmgalus: 'kmgalus', 'km/gal': 'kmgalus', 'km/galus': 'kmgalus', kilometerpergallonus: 'kmgalus',
@@ -341,9 +345,36 @@ const FUEL_ALIASES: Record<string, FuelKind> = {
   gal100miuk: 'gal100miuk', 'gal/100miuk': 'gal100miuk',
 };
 
+function normalizeUnitKey(token: string): string {
+  return token.toLowerCase().replace(/[\s._-]+/g, '');
+}
+
+function normalizeUnitPhrases(input: string): string {
+  let s = input;
+  const mile = String.raw`(?:mi|mile|miles)`;
+  const usGallon = String.raw`(?:u\.?\s*s\.?|us|usa|american)\s*gal(?:lon)?s?`;
+  const ukGallon = String.raw`(?:u\.?\s*k\.?|uk|imp|imperial)\s*gal(?:lon)?s?`;
+  const gallon = String.raw`gal(?:lon)?s?`;
+
+  // Fuel economy phrases with spaces/punctuation must be compacted before the
+  // main parser sees them, otherwise `mile/US gallon` is split as multiple units.
+  s = s.replace(new RegExp(`\\b${mile}\\s*(?:/|per)\\s*${ukGallon}\\b`, 'gi'), 'mpguk');
+  s = s.replace(new RegExp(`\\b${mile}\\s*(?:/|per)\\s*${usGallon}\\b`, 'gi'), 'mpg');
+  s = s.replace(new RegExp(`\\b${mile}\\s*(?:/|per)\\s*${gallon}\\b`, 'gi'), 'mpg');
+  s = s.replace(/\b(?:u\.?\s*k\.?|uk|imp|imperial)\s*mpg\b/gi, 'mpguk');
+  s = s.replace(/\bmpg\s*(?:u\.?\s*k\.?|uk|imp|imperial)\b/gi, 'mpguk');
+  s = s.replace(/\b(?:u\.?\s*s\.?|us|usa|american)\s*mpg\b/gi, 'mpg');
+  s = s.replace(/\bmpg\s*(?:u\.?\s*s\.?|us|usa|american)\b/gi, 'mpg');
+
+  // Common spaced volume aliases used with fuel expressions.
+  s = s.replace(new RegExp(`\\b${ukGallon}\\b`, 'gi'), 'ukgal');
+  s = s.replace(new RegExp(`\\b${usGallon}\\b`, 'gi'), 'gal');
+  return s;
+}
+
 function convertFuel(v: number, from: string, to: string): number | null {
-  const a = FUEL_ALIASES[from];
-  const b = FUEL_ALIASES[to];
+  const a = FUEL_ALIASES[normalizeUnitKey(from)];
+  const b = FUEL_ALIASES[normalizeUnitKey(to)];
   if (!a || !b) return null;
   // Normalize to km/L.
   let kpl: number;
@@ -378,7 +409,7 @@ for (const cat of CATEGORIES) {
 }
 
 function resolveUnit(token: string): Resolved | 'temp' | 'fuel' | null {
-  const t = token.toLowerCase().replace(/\s+/g, '');
+  const t = normalizeUnitKey(token);
   if (TEMP_ALIASES[t]) return 'temp';
   if (FUEL_ALIASES[t]) return 'fuel';
   return INDEX.get(t) || null;
@@ -408,7 +439,8 @@ export type ConvertResult = {
  * "5 gb as mb". Returns null if the parser can't resolve both sides.
  */
 export function convertExpression(input: string): ConvertResult | null {
-  const reduced = input.includes('(') ? reduceParens(input) : input;
+  const normalized = normalizeUnitPhrases(input);
+  const reduced = normalized.includes('(') ? reduceParens(normalized) : normalized;
   if (reduced === null) return null;
   const trimmed = reduced.trim();
   const m = /^([+-]?\d+(?:\.\d+)?)\s*([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)\s+(?:in|to|as|->|=)\s+([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)$/i.exec(trimmed);
@@ -427,14 +459,14 @@ export function convertExpression(input: string): ConvertResult | null {
   let fromSymbol = m[2];
 
   if (fromRes === 'temp' && toRes === 'temp') {
-    const from = m[2].toLowerCase().replace(/\s+/g, '');
-    const to = m[3].toLowerCase().replace(/\s+/g, '');
+    const from = normalizeUnitKey(m[2]);
+    const to = normalizeUnitKey(m[3]);
     out = convertTemp(value, from, to);
     toSymbol = to === 'c' ? '°C' : to === 'f' ? '°F' : to === 'r' ? '°R' : 'K';
     fromSymbol = from === 'c' ? '°C' : from === 'f' ? '°F' : from === 'r' ? '°R' : 'K';
   } else if (fromRes === 'fuel' && toRes === 'fuel') {
-    const from = m[2].toLowerCase().replace(/\s+/g, '');
-    const to = m[3].toLowerCase().replace(/\s+/g, '');
+    const from = normalizeUnitKey(m[2]);
+    const to = normalizeUnitKey(m[3]);
     out = convertFuel(value, from, to);
     const label = (k: string): string => {
       const t = FUEL_ALIASES[k];
@@ -483,7 +515,7 @@ const CONNECT = String.raw`(?:in|to|as|->|=)`;
  * Renders as "10 km = 6.21371 mi = 32808.4 ft".
  */
 export function convertChainExpression(input: string): { text: string; finalValue: number; finalSymbol: string } | null {
-  const trimmed = input.trim();
+  const trimmed = normalizeUnitPhrases(input).trim();
   const re = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})((?:\\s+${CONNECT}\\s+${UNIT_TOK}){2,})$`, 'i');
   const m = re.exec(trimmed);
   if (!m) return null;
@@ -528,7 +560,8 @@ function fuelToKpl(v: number, kind: FuelKind): number {
  *   "100 km * 8 l/100km to l"      → volume     (distance × L/100km)
  */
 export function convertMixedExpression(input: string): ConvertResult | null {
-  const reduced = input.includes('(') ? reduceParens(input) : input;
+  const normalized = normalizeUnitPhrases(input);
+  const reduced = normalized.includes('(') ? reduceParens(normalized) : normalized;
   if (reduced === null) return null;
   const trimmed = reduced.trim();
   const mulRe = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})\\s*[*×x]\\s*(${NUM_TOK})\\s*(${UNIT_TOK})\\s+${CONNECT}\\s+(${UNIT_TOK})$`, 'i');
@@ -541,8 +574,8 @@ export function convertMixedExpression(input: string): ConvertResult | null {
     const r2 = resolveUnit(u2);
     const rt = resolveUnit(target);
     if (!r1 || !r2 || !rt) return null;
-    const norm1 = u1.toLowerCase().replace(/\s+/g, '');
-    const norm2 = u2.toLowerCase().replace(/\s+/g, '');
+    const norm1 = normalizeUnitKey(u1);
+    const norm2 = normalizeUnitKey(u2);
 
     // fuel × volume → distance
     if (op === '*' && r1 === 'fuel' && typeof r2 === 'object' && r2.category === 'volume' && typeof rt === 'object' && rt.category === 'length') {
@@ -638,7 +671,7 @@ function evalOperand(expr: string): { value: number; unit: string } | null {
  *   • ")<digit>"          → ")*<digit>"                   (group → number)
  */
 export function normalizeImplicitMult(input: string): string {
-  let s = input;
+  let s = normalizeUnitPhrases(input);
   // Fold "<num>(<single-unit>)" into "<num> <unit>" so it becomes an operand
   // that evalOperand can read directly.
   const foldRe = new RegExp(`(${NUM_TOK})\\s*\\(\\s*(${UNIT_TOK})\\s*\\)`, 'g');
