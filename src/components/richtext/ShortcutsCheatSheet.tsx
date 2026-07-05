@@ -253,6 +253,20 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
       .filter((s) => s.rows.length > 0);
   }, [query, sections]);
 
+  // Live-updating touch slop for tap-vs-scroll detection on mobile.
+  const [touchSlop, setTouchSlop] = useState<number>(() => getSlashRowTouchSlop());
+  const touchSlopRef = useRef<number>(touchSlop);
+  useEffect(() => { touchSlopRef.current = touchSlop; }, [touchSlop]);
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const v = (e as CustomEvent<number>).detail;
+      if (typeof v === 'number') setTouchSlop(v);
+    };
+    window.addEventListener('flowist:slash-touch-slop-changed', onChange as EventListener);
+    return () => window.removeEventListener('flowist:slash-touch-slop-changed', onChange as EventListener);
+  }, []);
+
+
   const applySlashRow = (trigger: string) => {
     const text = sanitizeSlashTrigger(trigger);
     if (!text.startsWith('/')) return;
