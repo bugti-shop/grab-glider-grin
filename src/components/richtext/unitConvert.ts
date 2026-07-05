@@ -431,8 +431,23 @@ export function convertExpression(input: string): ConvertResult | null {
     const from = m[2].toLowerCase().replace(/\s+/g, '');
     const to = m[3].toLowerCase().replace(/\s+/g, '');
     out = convertFuel(value, from, to);
-    toSymbol = to === 'kpl' ? 'km/L' : to === 'mpg' ? 'mpg' : to === 'mpguk' ? 'mpg (UK)' : 'L/100km';
-    fromSymbol = from === 'kpl' ? 'km/L' : from === 'mpg' ? 'mpg' : from === 'mpguk' ? 'mpg (UK)' : 'L/100km';
+    const label = (k: string): string => {
+      const t = FUEL_ALIASES[k];
+      switch (t) {
+        case 'kpl': return 'km/L';
+        case 'mpg': return 'mpg (US)';
+        case 'mpguk': return 'mpg (UK)';
+        case 'l100km': return 'L/100km';
+        case 'mipl': return 'mi/L';
+        case 'kmgalus': return 'km/gal (US)';
+        case 'kmgaluk': return 'km/gal (UK)';
+        case 'gal100mius': return 'gal/100mi (US)';
+        case 'gal100miuk': return 'gal/100mi (UK)';
+        default: return k;
+      }
+    };
+    toSymbol = label(to);
+    fromSymbol = label(from);
   } else if (typeof fromRes === 'object' && typeof toRes === 'object' && fromRes.category === toRes.category) {
     out = (value * fromRes.toBase) / toRes.toBase;
     toSymbol = toRes.symbol;
