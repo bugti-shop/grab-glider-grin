@@ -435,7 +435,7 @@ export function convertExpression(input: string): ConvertResult | null {
       const t = FUEL_ALIASES[k];
       switch (t) {
         case 'kpl': return 'km/L';
-        case 'mpg': return 'mpg (US)';
+        case 'mpg': return 'mpg';
         case 'mpguk': return 'mpg (UK)';
         case 'l100km': return 'L/100km';
         case 'mipl': return 'mi/L';
