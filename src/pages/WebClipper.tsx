@@ -548,21 +548,26 @@ const WebClipper = () => {
               const snapshotFilename = `${filenameFromTitle(articleTitle || title, host)}.html`;
               triggerHtmlDownload(snapshotFilename, articleHtml);
               const sizeLabel = formatBytes(snapshotBytes);
-              const heroBlock = articleLeadImage
-                ? `<figure class="flowist-web-clip-hero"><img src="${articleLeadImage}" alt="" referrerpolicy="no-referrer" /></figure>`
-                : '';
-              const excerptBlock = articleExcerpt
-                ? `<p class="flowist-web-clip-excerpt-inline">${sanitizeForDisplay(articleExcerpt)}</p>`
-                : '';
               const banner =
-                `<aside class="flowist-offline-snapshot-info" data-snapshot-filename="${snapshotFilename.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
+                `<aside class="flowist-offline-snapshot-info" contenteditable="false" data-snapshot-filename="${snapshotFilename.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
                   `<strong>📥 ${sanitizeForDisplay(t('webClipper.offlineSnapshotSaved', 'Offline snapshot saved to your device'))}</strong>` +
                   `<span>${sanitizeForDisplay(snapshotFilename)} · ${sizeLabel}</span>` +
-                  `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'Open the downloaded .html file anytime — it contains the whole page (styles, images, fonts) bundled inline. No internet needed.'))}</em>` +
+                  `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'The full page below is captured start-to-finish and stays readable inside this note. Tap "Open" in the header to view the original.'))}</em>` +
                 `</aside>`;
-              // Replace the huge document body with the compact card so the
-              // note stays lightweight; the offline file lives on the device.
-              articleHtml = `${banner}${heroBlock}${excerptBlock}`;
+              // Embed the ENTIRE captured document (start-to-finish, with
+              // its own styles, images, fonts inlined) as a read-only iframe
+              // via srcdoc. This preserves the full page fidelity the user
+              // asked for — no excerpt-only card, no editable half article.
+              const escapedDoc = articleHtml
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;');
+              const iframe =
+                `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
+                `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+                `referrerpolicy="no-referrer" loading="lazy" ` +
+                `style="width:100%;min-height:80vh;border:1px solid hsl(var(--border));border-radius:12px;background:#fff;display:block;" ` +
+                `srcdoc="${escapedDoc}"></iframe>`;
+              articleHtml = `${banner}${iframe}`;
               articleEmbeds = [];
               articleLinks = [];
             }
