@@ -508,102 +508,34 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
               {section.description && (
                 <p className="text-xs text-muted-foreground mb-2">{section.description}</p>
               )}
-              <div className="rounded-md border overflow-hidden">
-                <table className="w-full text-sm">
-                  <tbody>
-                    {section.rows.map((row, i) => {
-                      const clickable = !!section.applySlash;
-                      const rowClasses = cn(
-                        'border-b last:border-b-0 transition-colors select-none',
-                        i % 2 === 0 ? 'bg-muted/30' : 'bg-background',
-                        clickable && 'cursor-pointer hover:bg-accent/60 active:bg-accent',
-                      );
-                      // Touch-safe apply: remember pointer-down position and
-                      // only fire on pointer-up if the finger didn't move (i.e.
-                      // it was a tap, not a scroll). This prevents mis-triggers
-                      // when scrolling the sheet on mobile.
-                      const touchStartRef = { x: 0, y: 0, moved: false };
-                      const handlePointerDown = clickable
-                        ? (e: React.PointerEvent<HTMLTableRowElement>) => {
-                            touchStartRef.x = e.clientX;
-                            touchStartRef.y = e.clientY;
-                            touchStartRef.moved = false;
-                          }
-                        : undefined;
-                      const handlePointerMove = clickable
-                        ? (e: React.PointerEvent<HTMLTableRowElement>) => {
-                            const slop = touchSlopRef.current;
-                            if (
-                              Math.abs(e.clientX - touchStartRef.x) > slop ||
-                              Math.abs(e.clientY - touchStartRef.y) > slop
-                            ) {
-                              touchStartRef.moved = true;
-                            }
-                          }
-                        : undefined;
-                      const handlePointerUp = clickable
-                        ? (e: React.PointerEvent<HTMLTableRowElement>) => {
-                            if (touchStartRef.moved) return;
-                            // Only handle touch/pen here — mouse uses onClick to
-                            // preserve keyboard-focus behavior.
-                            if (e.pointerType === 'mouse') return;
-                            e.preventDefault();
-                            applySlashRow(row.trigger);
-                          }
-                        : undefined;
-                      const handleClick = clickable
-                        ? (e: React.MouseEvent<HTMLTableRowElement>) => {
-                            // Skip synthetic clicks from touch — pointerup
-                            // already applied. detail === 0 means keyboard/other.
-                            const anyEvt = e.nativeEvent as PointerEvent;
-                            if (anyEvt.pointerType && anyEvt.pointerType !== 'mouse') return;
-                            applySlashRow(row.trigger);
-                          }
-                        : undefined;
-                      const handleKey = clickable
-                        ? (e: React.KeyboardEvent<HTMLTableRowElement>) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              applySlashRow(row.trigger);
-                            }
-                          }
-                        : undefined;
-                      return (
-                        <tr
-                          key={i}
-                          className={rowClasses}
-                          onPointerDown={handlePointerDown}
-                          onPointerMove={handlePointerMove}
-                          onPointerUp={handlePointerUp}
-                          onClick={handleClick}
-                          onKeyDown={handleKey}
-                          role={clickable ? 'button' : undefined}
-                          tabIndex={clickable ? 0 : undefined}
-                          aria-label={clickable ? `Apply ${row.trigger}` : undefined}
-                          style={clickable ? { touchAction: 'pan-y' } : undefined}
-                        >
-                          <td className="px-3 py-2 align-top w-[45%]">
-                            <div className="flex items-center gap-2">
-                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono whitespace-pre-wrap break-words">
-                                {row.trigger}
-                              </code>
-                              {clickable && (
-                                <Play className="h-3 w-3 text-primary shrink-0" aria-hidden />
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 align-top">
-                            <div>{row.result}</div>
-                            {row.hint && (
-                              <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              {section.rows.length > 0 && renderRowsTable(section.rows, !!section.applySlash)}
+              {section.groups && section.groups.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {section.groups.map((group) => (
+                    <details
+                      key={group.title}
+                      // Only auto-open while the user is actively searching so
+                      // matched sub-groups reveal their rows; otherwise stays
+                      // collapsed as the user requested.
+                      open={query.trim().length > 0}
+                      className="group rounded-md border bg-background overflow-hidden"
+                    >
+                      <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium flex items-center gap-2 hover:bg-muted/50 marker:hidden [&::-webkit-details-marker]:hidden">
+                        <span className="inline-block transition-transform group-open:rotate-90 text-muted-foreground">
+                          ▶
+                        </span>
+                        <span>{group.title}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {group.rows.length}
+                        </span>
+                      </summary>
+                      <div className="border-t">
+                        {renderRowsTable(group.rows, false)}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              )}
             </section>
           ))}
 
@@ -614,4 +546,96 @@ export default function ShortcutsCheatSheet({ isOpen, onClose }: Props) {
       </DialogContent>
     </Dialog>
   );
+
+  function renderRowsTable(rows: Row[], clickable: boolean) {
+    return (
+      <div className="rounded-md border overflow-hidden">
+        <table className="w-full text-sm">
+          <tbody>
+            {rows.map((row, i) => {
+              const rowClasses = cn(
+                'border-b last:border-b-0 transition-colors select-none',
+                i % 2 === 0 ? 'bg-muted/30' : 'bg-background',
+                clickable && 'cursor-pointer hover:bg-accent/60 active:bg-accent',
+              );
+              const touchStartRef = { x: 0, y: 0, moved: false };
+              const handlePointerDown = clickable
+                ? (e: React.PointerEvent<HTMLTableRowElement>) => {
+                    touchStartRef.x = e.clientX;
+                    touchStartRef.y = e.clientY;
+                    touchStartRef.moved = false;
+                  }
+                : undefined;
+              const handlePointerMove = clickable
+                ? (e: React.PointerEvent<HTMLTableRowElement>) => {
+                    const slop = touchSlopRef.current;
+                    if (
+                      Math.abs(e.clientX - touchStartRef.x) > slop ||
+                      Math.abs(e.clientY - touchStartRef.y) > slop
+                    ) {
+                      touchStartRef.moved = true;
+                    }
+                  }
+                : undefined;
+              const handlePointerUp = clickable
+                ? (e: React.PointerEvent<HTMLTableRowElement>) => {
+                    if (touchStartRef.moved) return;
+                    if (e.pointerType === 'mouse') return;
+                    e.preventDefault();
+                    applySlashRow(row.trigger);
+                  }
+                : undefined;
+              const handleClick = clickable
+                ? (e: React.MouseEvent<HTMLTableRowElement>) => {
+                    const anyEvt = e.nativeEvent as PointerEvent;
+                    if (anyEvt.pointerType && anyEvt.pointerType !== 'mouse') return;
+                    applySlashRow(row.trigger);
+                  }
+                : undefined;
+              const handleKey = clickable
+                ? (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      applySlashRow(row.trigger);
+                    }
+                  }
+                : undefined;
+              return (
+                <tr
+                  key={i}
+                  className={rowClasses}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onClick={handleClick}
+                  onKeyDown={handleKey}
+                  role={clickable ? 'button' : undefined}
+                  tabIndex={clickable ? 0 : undefined}
+                  aria-label={clickable ? `Apply ${row.trigger}` : undefined}
+                  style={clickable ? { touchAction: 'pan-y' } : undefined}
+                >
+                  <td className="px-3 py-2 align-top w-[45%]">
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono whitespace-pre-wrap break-words">
+                        {row.trigger}
+                      </code>
+                      {clickable && (
+                        <Play className="h-3 w-3 text-primary shrink-0" aria-hidden />
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 align-top">
+                    <div>{row.result}</div>
+                    {row.hint && (
+                      <div className="text-xs text-muted-foreground mt-0.5">{row.hint}</div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 }
