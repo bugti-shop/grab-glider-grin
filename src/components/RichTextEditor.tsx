@@ -186,6 +186,7 @@ export const RichTextEditor = ({
   voiceRecordings = [],
   onVoiceRecordingDelete,
   onFloatingImageUpload,
+  headerSlot,
 }: RichTextEditorProps) => {
   const { t } = useTranslation();
   const { isPro, requireProFeature, requireCapacity } = useSubscription();
