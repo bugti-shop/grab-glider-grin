@@ -1,5 +1,13 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+
+const snapshotBytes = (value: string) => new Blob([value]).size;
+
+const firstDiffAt = (left: string, right: string) => {
+  const n = Math.min(left.length, right.length);
+  for (let i = 0; i < n; i += 1) if (left[i] !== right[i]) return i;
+  return left.length === right.length ? -1 : n;
+};
 
 export default function FetchArticleTest() {
   const [url, setUrl] = useState("https://www.xda-developers.com/lesser-known-pixel-features/");
@@ -7,12 +15,57 @@ export default function FetchArticleTest() {
   const [error, setError] = useState<string | null>(null);
   const [meta, setMeta] = useState<Record<string, unknown> | null>(null);
   const [html, setHtml] = useState<string>("");
+  const [downloadedHtml, setDownloadedHtml] = useState<string>("");
+  const [iframeHtml, setIframeHtml] = useState<string>("");
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  const parity = useMemo(() => {
+    if (!downloadedHtml || !iframeHtml) return null;
+    const diffAt = firstDiffAt(downloadedHtml, iframeHtml);
+    return {
+      match: diffAt === -1,
+      diffAt,
+      downloadedChars: downloadedHtml.length,
+      sandboxChars: iframeHtml.length,
+      downloadedBytes: snapshotBytes(downloadedHtml),
+      sandboxBytes: snapshotBytes(iframeHtml),
+      around: diffAt === -1 ? null : {
+        downloaded: downloadedHtml.slice(Math.max(0, diffAt - 40), diffAt + 40),
+        sandbox: iframeHtml.slice(Math.max(0, diffAt - 40), diffAt + 40),
+      },
+    };
+  }, [downloadedHtml, iframeHtml]);
+
+  useEffect(() => {
+    if (!html) {
+      setIframeHtml("");
+      return;
+    }
+
+    const id = window.requestAnimationFrame(() => {
+      const frame = iframeRef.current;
+      setIframeHtml(frame?.srcdoc || frame?.getAttribute("srcdoc") || "");
+    });
+
+    return () => window.cancelAnimationFrame(id);
+  }, [html]);
+
+  useEffect(() => {
+    if (!parity) return;
+    if (parity.match) {
+      console.info("[fetch-article-test][parity] sandbox snapshot ≡ downloaded", parity);
+    } else {
+      console.warn("[fetch-article-test][parity] MISMATCH between sandbox snapshot and downloaded file", parity);
+    }
+  }, [parity]);
 
   const run = async () => {
     setLoading(true);
     setError(null);
     setMeta(null);
     setHtml("");
+    setDownloadedHtml("");
+    setIframeHtml("");
     const started = performance.now();
     try {
       const { data, error } = await supabase.functions.invoke("fetch-article", {
@@ -33,6 +86,7 @@ export default function FetchArticleTest() {
       }
       const raw = String((data as any).rawHtml || "");
       setHtml(raw);
+      setDownloadedHtml(raw);
       setMeta({
         ms,
         title: (data as any).title,
@@ -68,10 +122,6 @@ export default function FetchArticleTest() {
       setLoading(false);
     }
   };
-
-  const srcdoc = html
-    ? html.replace(/&/g, "&amp;").replace(/"/g, "&quot;")
-    : "";
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 md:p-6 space-y-4">
@@ -109,6 +159,12 @@ export default function FetchArticleTest() {
         </pre>
       )}
 
+      {parity && (
+        <pre className={`p-3 rounded-md border text-xs overflow-auto max-h-64 ${parity.match ? "border-primary bg-primary/10" : "border-destructive bg-destructive/10"}`}>
+          {JSON.stringify(parity, null, 2)}
+        </pre>
+      )}
+
       {html && (
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
@@ -133,11 +189,12 @@ export default function FetchArticleTest() {
             </button>
           </div>
           <iframe
+            ref={iframeRef}
             title="snapshot"
             sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-            referrerPolicy="no-referrer"
+            referrerPolicy="no-referrer-when-downgrade"
             loading="lazy"
-            srcDoc={srcdoc}
+            srcDoc={html}
             style={{
               width: "100%",
               height: "80vh",
