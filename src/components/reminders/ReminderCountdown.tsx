@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
 import { getNextReminderFire, formatReminderCountdown, type ReminderRecurring } from '@/utils/reminders/nextFire';
 
 interface Props {
@@ -8,9 +7,23 @@ interface Props {
   daysOfWeek?: number[];
 }
 
+const userTimeZone =
+  typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : undefined;
+
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: userTimeZone,
+  timeZoneName: 'short',
+});
+
 /**
  * Live-updating "next fire + countdown" label for a reminder.
- * Ticks every second when under a minute away, every 30s otherwise.
+ * - Formats the fire time in the user's locale + timezone.
+ * - Announces changes politely to screen readers via aria-live.
  */
 export const ReminderCountdown = ({ time, recurring, daysOfWeek }: Props) => {
   const [now, setNow] = useState(() => new Date());
@@ -24,12 +37,34 @@ export const ReminderCountdown = ({ time, recurring, daysOfWeek }: Props) => {
   }, [time, recurring, daysOfWeek, now]);
 
   const next = getNextReminderFire(time, recurring, daysOfWeek, now);
+
   if (!next) {
-    return <span className="text-[11px] text-muted-foreground">No upcoming fire</span>;
+    return (
+      <span
+        className="text-[11px] text-muted-foreground"
+        role="status"
+        aria-live="polite"
+      >
+        No upcoming fire time
+      </span>
+    );
   }
+
+  const formatted = dateFormatter.format(next);
+  const countdown = formatReminderCountdown(next, now);
+  const iso = next.toISOString();
+  const srLabel = `Next reminder ${formatted}, in ${countdown}`;
+
   return (
-    <span className="text-[11px] text-muted-foreground">
-      Next: {format(next, 'MMM d, h:mm a')} · in {formatReminderCountdown(next, now)}
+    <span
+      className="text-[11px] text-muted-foreground"
+      role="status"
+      aria-live="polite"
+      aria-label={srLabel}
+    >
+      <span aria-hidden="true">
+        <time dateTime={iso}>Next: {formatted}</time> · in {countdown}
+      </span>
     </span>
   );
 };
