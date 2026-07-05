@@ -157,8 +157,11 @@ export const useQuickAddSync = () => {
     return () => {
       disposed = true;
       window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
       try { bc?.close(); } catch {}
       capResumeSub?.remove();
     };
+
   }, [navigate]);
 };
