@@ -525,7 +525,9 @@ function fuelToKpl(v: number, kind: FuelKind): number {
  *   "100 km * 8 l/100km to l"      → volume     (distance × L/100km)
  */
 export function convertMixedExpression(input: string): ConvertResult | null {
-  const trimmed = input.trim();
+  const reduced = input.includes('(') ? reduceParens(input) : input;
+  if (reduced === null) return null;
+  const trimmed = reduced.trim();
   const mulRe = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})\\s*[*×x]\\s*(${NUM_TOK})\\s*(${UNIT_TOK})\\s+${CONNECT}\\s+(${UNIT_TOK})$`, 'i');
   const divRe = new RegExp(`^(${NUM_TOK})\\s*(${UNIT_TOK})\\s*\\/\\s*(${NUM_TOK})\\s*(${UNIT_TOK})\\s+${CONNECT}\\s+(${UNIT_TOK})$`, 'i');
 
