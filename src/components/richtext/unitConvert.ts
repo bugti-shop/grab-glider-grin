@@ -688,17 +688,7 @@ export function normalizeImplicitMult(input: string): string {
   s = s.replace(/\)\s*\(/g, ')*(');
   s = s.replace(/(\d)\s*\(/g, '$1*(');
   s = s.replace(/\)\s*(\d)/g, ')*$1');
-  // Bridge implicit multiplication that surfaces after unwrapping, e.g.
-  // "m/s kg" → "m/s*kg", so downstream matchers see explicit operators.
-  const unitAdj = new RegExp(`(${UNIT_TOK})\\s+(${UNIT_TOK})`, 'g');
-  // Only bridge when neither side looks like a keyword (in/to/as) — evalOperand
-  // still needs "num unit" adjacency for its simple form, so we intentionally
-  // do NOT rewrite "<num> <unit>" here.
-  s = s.replace(unitAdj, (m, a, b) => {
-    if (/^(in|to|as)$/i.test(a) || /^(in|to|as)$/i.test(b)) return m;
-    return `${a}*${b}`;
-  });
-  return s.replace(/\s+/g, ' ').trim();
+  return s.replace(/[ \t]+/g, ' ').trim();
 }
 
 /**
