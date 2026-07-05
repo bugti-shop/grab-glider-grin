@@ -300,6 +300,15 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [isCommentInputOpen, setIsCommentInputOpen] = useState(false);
   const [isMetaDescInputOpen, setIsMetaDescInputOpen] = useState(false);
   const [isTitleEditOpen, setIsTitleEditOpen] = useState(false);
+
+  // Web Clipper dialog state — paste any URL, fetch its full page, embed the
+  // snapshot as a sandboxed iframe (srcdoc = inline HTML) directly into the
+  // note. Because the HTML lives inside the note content, it renders offline
+  // on both web and Android (Capacitor WebView) after the first fetch.
+  const [isWebClipperOpen, setIsWebClipperOpen] = useState(false);
+  const [webClipUrl, setWebClipUrl] = useState('');
+  const [webClipLoading, setWebClipLoading] = useState(false);
+  const [webClipError, setWebClipError] = useState<string | null>(null);
   
   // Sketch meta dialog state - shown when closing a sketch note
   const [showSketchMetaDialog, setShowSketchMetaDialog] = useState(false);
