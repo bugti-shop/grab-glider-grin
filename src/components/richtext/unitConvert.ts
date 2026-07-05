@@ -408,7 +408,9 @@ export type ConvertResult = {
  * "5 gb as mb". Returns null if the parser can't resolve both sides.
  */
 export function convertExpression(input: string): ConvertResult | null {
-  const trimmed = input.trim();
+  const reduced = input.includes('(') ? reduceParens(input) : input;
+  if (reduced === null) return null;
+  const trimmed = reduced.trim();
   const m = /^(-?\d+(?:\.\d+)?)\s*([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)\s+(?:in|to|as|->|=)\s+([A-Za-z°²³\/][A-Za-z0-9°²³\/]*)$/i.exec(trimmed);
   if (!m) return null;
 
