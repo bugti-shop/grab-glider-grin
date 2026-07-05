@@ -38,10 +38,17 @@ interface Row {
   hint?: string;
 }
 
+interface SubSection {
+  title: string;
+  rows: Row[];
+}
+
 interface Section {
   title: string;
   description?: string;
   rows: Row[];
+  /** Optional collapsible sub-groups (rendered as <details>, closed by default). */
+  groups?: SubSection[];
   /** When true, rows in this section are clickable and dispatch an apply event. */
   applySlash?: boolean;
 }
