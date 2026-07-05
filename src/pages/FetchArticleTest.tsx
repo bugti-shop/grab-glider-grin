@@ -47,6 +47,21 @@ export default function FetchArticleTest() {
         status: (data as any).status,
         truncated: (data as any).truncated,
       });
+
+      // Auto-download the snapshot exactly like the real Web Clipper does.
+      if (raw) {
+        let host = "snapshot";
+        try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* ignore */ }
+        const blob = new Blob([raw], { type: "text/html;charset=utf-8" });
+        const objUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objUrl;
+        a.download = `${host}-${Date.now()}.html`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
