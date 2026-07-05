@@ -40,6 +40,16 @@ describe('slash line shortcuts', () => {
     expect(root.textContent?.trim().length).toBeGreaterThan(6);
   });
 
+  it('accepts common date aliases and misspellings', async () => {
+    for (const cmd of ['/Today', '/tommorrw', '/tmrw', '/yday', '/now']) {
+      const root = setupLine(cmd);
+      await expect(trySlashLineShortcut(root), cmd).resolves.toBe(true);
+      expect(root.textContent).not.toContain(cmd);
+      expect(root.textContent?.trim().length).toBeGreaterThan(3);
+      expect(isSlashLineShortcutReady(cmd), `${cmd} ready`).toBe(true);
+    }
+  });
+
   it('supports common slash block commands that were advertised on mobile', async () => {
     const h1Root = setupLine('/h1');
     await expect(trySlashLineShortcut(h1Root)).resolves.toBe(true);

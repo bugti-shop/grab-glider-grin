@@ -6,8 +6,11 @@ describe('mixed fuel parsing', () => {
     ['500 mi / 25 mpg to gal', 20, 'gal'],
     ['500 mi / 25 mi/gal to gal', 20, 'gal'],
     ['500 mi / 25 mpgus to gal', 20, 'gal'],
+    ['500 mi / 25 mile/US gallon to gal', 20, 'gal'],
+    ['500 mi / 25 miles per US gallon to gal', 20, 'gal'],
     ['30 mpg * 15 gal to mi', 450, 'mi'],
     ['30 mi/gal * 15 gal to mi', 450, 'mi'],
+    ['30 mile/US gallon * 15 US gallon to mi', 450, 'mi'],
     ['100 km * 8 l/100km to l', 8, 'L'],
     ['100 km * 8 l100km to l', 8, 'L'],
   ];
