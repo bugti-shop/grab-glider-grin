@@ -79,7 +79,10 @@ export const sanitizeCodeHtml = (html: string): string => {
 export const sanitizeForDisplay = (html: string): string => {
   return DOMPurify.sanitize(html, {
     ...RICH_TEXT_CONFIG,
-    ADD_ATTR: ['loading'], // Allow lazy loading for images
+    // Allow lazy loading for images, plus read-only web-clip page iframes
+    // (used by the Web Clipper to embed a full captured page start-to-finish).
+    ADD_TAGS: ['iframe'],
+    ADD_ATTR: ['loading', 'srcdoc', 'sandbox', 'referrerpolicy', 'frameborder', 'allow', 'allowfullscreen'],
   }) as string;
 };
 
