@@ -565,7 +565,7 @@ const WebClipper = () => {
                 `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
                 `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
                 `referrerpolicy="no-referrer" loading="lazy" ` +
-                `style="width:100%;min-height:80vh;border:1px solid hsl(var(--border));border-radius:12px;background:#fff;display:block;" ` +
+                `style="width:100%;height:80vh;border:1px solid hsl(var(--border));border-radius:12px;background:#fff;display:block;" ` +
                 `srcdoc="${escapedDoc}"></iframe>`;
               articleHtml = `${banner}${iframe}`;
               articleEmbeds = [];
