@@ -60,6 +60,64 @@ const triggerHtmlDownload = (filename: string, html: string): void => {
   }
 };
 
+/**
+ * Convert the captured page into a readable, script-free HTML document before
+ * previewing or downloading it. This keeps the page start-to-finish, but makes
+ * the saved/downloaded copy read-only and prevents scripts/forms from running.
+ */
+const makeReadOnlySnapshotHtml = (html: string): string => {
+  if (!html) return '';
+  if (typeof window === 'undefined') {
+    return html.replace(/<script\b[\s\S]*?<\/script>/gi, '');
+  }
+  try {
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parsed.documentElement ? parsed : new DOMParser().parseFromString(`<!DOCTYPE html><html><head></head><body>${html}</body></html>`, 'text/html');
+    const head = doc.head || doc.documentElement.insertBefore(doc.createElement('head'), doc.body || null);
+
+    doc.querySelectorAll('script, object, embed').forEach((el) => el.remove());
+    doc.querySelectorAll<HTMLElement>('*').forEach((el) => {
+      Array.from(el.attributes).forEach((attr) => {
+        if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+      });
+      el.setAttribute('contenteditable', 'false');
+      el.removeAttribute('autofocus');
+      if (el instanceof HTMLAnchorElement) {
+        el.target = '_blank';
+        el.rel = 'noopener noreferrer';
+      }
+      if (
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLTextAreaElement ||
+        el instanceof HTMLSelectElement ||
+        el instanceof HTMLButtonElement
+      ) {
+        el.setAttribute('disabled', 'disabled');
+        el.setAttribute('aria-disabled', 'true');
+      }
+    });
+
+    const csp = doc.createElement('meta');
+    csp.setAttribute('http-equiv', 'Content-Security-Policy');
+    csp.setAttribute('content', "script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'");
+    head.insertBefore(csp, head.firstChild);
+
+    const style = doc.createElement('style');
+    style.setAttribute('data-flowist-readonly', 'true');
+    style.textContent = `
+      html, body { user-select: text; -webkit-user-select: text; }
+      [contenteditable] { -webkit-user-modify: read-only !important; }
+      input, textarea, select, button { pointer-events: none !important; }
+    `;
+    head.appendChild(style);
+
+    const originalDoctype = html.match(/^\s*<!doctype[^>]*>/i)?.[0] || '<!DOCTYPE html>';
+    return `${originalDoctype}\n${doc.documentElement.outerHTML}`;
+  } catch {
+    return html.replace(/<script\b[\s\S]*?<\/script>/gi, '');
+  }
+};
+
 type Stage = 'idle' | 'validating' | 'downloading' | 'extracting' | 'fetching' | 'embedding' | 'saving';
 
 /** StrictMode/remount guard for concurrent duplicate work only.
@@ -520,7 +578,7 @@ const WebClipper = () => {
             articleLeadImage = String(data.leadImage || '').trim();
             articleExcerpt = String(data.excerpt || '').trim();
             articlePublished = String(data.publishedTime || '').trim();
-            articleHtml = String(data.contentHtml || data.content || '').trim();
+            articleHtml = String(data.rawHtml || data.contentHtml || data.content || '').trim();
             articleIsFallback = data.fallback === true;
             articleEmbeds = Array.isArray(data.embeds) ? data.embeds.filter((x: unknown) => typeof x === 'string') : [];
             articleLinks = Array.isArray(data.importantLinks)
@@ -539,6 +597,14 @@ const WebClipper = () => {
               leadImage: !!articleLeadImage,
               fallback: articleIsFallback,
             });
+            if (data.truncated === true) {
+              fetchFailure = {
+                code: 'too_large',
+                message: 'The full HTML page exceeded the capture limit, so Flowist refused to save a half-page snapshot.',
+              };
+              articleHtml = '';
+            }
+
             // ── Full-page offline snapshot ─────────────────────────────
             // The edge function returns the ENTIRE inlined document
             // (DOCTYPE + <html> + <head> + <body>, with CSS/images/fonts
@@ -548,14 +614,15 @@ const WebClipper = () => {
             // with title/hero/excerpt only — we do NOT paste the raw
             // document markup into the editor.
             if (clipMode === 'fullpage' && articleHtml) {
-              const snapshotBytes = new Blob([articleHtml]).size;
+              const readOnlySnapshot = makeReadOnlySnapshotHtml(articleHtml);
+              const snapshotBytes = new Blob([readOnlySnapshot]).size;
               let host = '';
               try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
               const fname = `${filenameFromTitle(articleTitle || title, host)}.html`;
-              triggerHtmlDownload(fname, articleHtml);
+              triggerHtmlDownload(fname, readOnlySnapshot);
               // Keep the raw snapshot in state so the user can re-download it
               // from the read-only preview at any time.
-              setSnapshotHtml(articleHtml);
+              setSnapshotHtml(readOnlySnapshot);
               setSnapshotFilename(fname);
               const sizeLabel = formatBytes(snapshotBytes);
               const banner =
@@ -568,14 +635,14 @@ const WebClipper = () => {
               // its own styles, images, fonts inlined) as a read-only iframe
               // via srcdoc. The sandbox intentionally omits `allow-scripts`
               // so nothing inside the captured page can execute JS.
-              const escapedDoc = articleHtml
+              const escapedDoc = readOnlySnapshot
                 .replace(/&/g, '&amp;')
                 .replace(/"/g, '&quot;');
               const iframe =
                 `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
                 `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
                 `referrerpolicy="no-referrer" loading="lazy" ` +
-                `style="width:100%;height:80vh;border:1px solid hsl(var(--border));border-radius:12px;background:#fff;display:block;" ` +
+                `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:#fff;display:block;" ` +
                 `srcdoc="${escapedDoc}"></iframe>`;
               articleHtml = `${banner}${iframe}`;
               articleEmbeds = [];
@@ -677,7 +744,7 @@ const WebClipper = () => {
         const favicon = host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64` : '';
         const siteLabel = sanitizeForDisplay(articleSiteName || host || 'Web');
         parts.push(
-          `<section class="flowist-web-clip" data-block-type="webClip" ` +
+          `<section class="flowist-web-clip" data-block-type="webClip" contenteditable="false" aria-readonly="true" ` +
           `data-source-url="${safeUrl}" data-captured-at="${capturedAt}" ` +
           `data-site-name="${(articleSiteName || '').replace(/"/g, '&quot;')}" ` +
           `data-author="${(articleByline || '').replace(/"/g, '&quot;')}">`,
@@ -719,7 +786,7 @@ const WebClipper = () => {
           parts.push(`<blockquote class="flowist-web-clip-selection">${sanitizeForDisplay(selection)}</blockquote>`);
         }
         // Body wrapper — always full inline content; no snapshot/toggle UI.
-        parts.push(`<div class="flowist-web-clip-body" data-role="body">`);
+        parts.push(`<div class="flowist-web-clip-body" data-role="body" contenteditable="false" aria-readonly="true">`);
         // User preference: render the full captured article inline directly —
         // no compressed snapshot placeholder, no "View / Hide snapshot" toggle,
         // and no "Download captured HTML" button.
@@ -1141,7 +1208,8 @@ const WebClipper = () => {
                 <div
                   ref={contentEditorRef}
                   aria-readonly="true"
-                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[70vh] overflow-y-auto rounded-lg border border-input bg-background p-2 select-text [&_*]:pointer-events-auto"
+                  contentEditable={false}
+                  className="evernote-clip prose prose-sm dark:prose-invert max-w-none min-h-[240px] max-h-[70vh] overflow-y-auto rounded-lg border border-input bg-background p-2 select-text"
                   style={{ userSelect: 'text' }}
                   dangerouslySetInnerHTML={{ __html: previewHtml }}
                 />
