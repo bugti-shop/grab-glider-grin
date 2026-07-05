@@ -327,10 +327,11 @@ export const RichTextEditor = ({
 
       editor.focus();
 
-      // Append a fresh paragraph containing the command text + trailing space
-      // so trySlashLineShortcut sees a "just typed and pressed Space" line.
+      // Append a fresh paragraph containing the command text (no trailing
+      // space) — trySlashLineShortcut parses the block by its trimmed text
+      // and fires the command regardless of Space/Enter.
       const p = document.createElement('p');
-      p.textContent = raw + ' ';
+      p.textContent = raw;
       editor.appendChild(p);
 
       // Place the caret at the end of that paragraph.
@@ -346,11 +347,31 @@ export const RichTextEditor = ({
       sel?.removeAllRanges();
       sel?.addRange(range);
 
-      runSlashLineOnce(editor);
+      // Fire the shortcut directly, bypassing the reentrancy guard used for
+      // typed Space/Enter paths — the cheat-sheet click is a one-shot apply.
+      void trySlashLineShortcut(editor).then((ok) => {
+        if (ok) {
+          handleInput();
+        } else {
+          // Command needs more input (e.g. bare "/bold" with no arg): leave
+          // the trigger in place with a trailing space so the user can keep
+          // typing and the normal Space/Enter path will finish it.
+          if (p.firstChild) {
+            (p.firstChild as Text).data = raw + ' ';
+            const r = document.createRange();
+            r.setStart(p.firstChild, (p.firstChild as Text).data.length);
+            r.collapse(true);
+            sel?.removeAllRanges();
+            sel?.addRange(r);
+          }
+          handleInput();
+        }
+      });
     };
     window.addEventListener('flowist:apply-slash-command', handler as EventListener);
     return () => window.removeEventListener('flowist:apply-slash-command', handler as EventListener);
   }, []);
+
 
 
   
