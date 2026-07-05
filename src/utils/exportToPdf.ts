@@ -24,12 +24,30 @@ export interface PdfExportOptions {
   headerText?: string;
   footerText?: string;
   fontSize?: number;
+  /** Multiplier applied to the H1–H6 base ratios (default 1.0). */
+  headingScale?: number;
   // Note-specific styling
   noteType?: NoteType;
   stickyColor?: StickyColor;
   customColor?: string;
   preserveNoteStyle?: boolean;
 }
+
+/**
+ * Base H1–H6 size ratios, mirroring the editor's fixed rem scale so exported
+ * headings stay visually distinct at every body font-size.
+ * (Editor: 36 / 28 / 22 / 18 / 16 / 14 px vs. 16px body → 2.25 / 1.75 / 1.375
+ *  / 1.125 / 1.0 / 0.875.)
+ */
+const HEADING_BASE_RATIOS: Record<'H1' | 'H2' | 'H3' | 'H4' | 'H5' | 'H6', number> = {
+  H1: 2.25,
+  H2: 1.75,
+  H3: 1.375,
+  H4: 1.125,
+  H5: 1.0,
+  H6: 0.875,
+};
+
 
 export interface PdfExportResult {
   success: boolean;
