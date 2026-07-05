@@ -751,7 +751,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     if (!isReadOnlyWebClip) {
       await commitNote({ full: true });
     }
-  }, [commitNote]);
+  }, [commitNote, isReadOnlyWebClip]);
 
   // Use ref to always have access to the latest save function
   const handleSaveRef = useRef(handleSave);
@@ -769,7 +769,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     // Mark as closing to prevent re-entry
     if (!isOpenRef.current) return;
     
-    await commitNote({ full: true });
+    if (!isReadOnlyWebClip) {
+      await commitNote({ full: true });
+    }
     // Clear crash recovery since we saved successfully
     try { localStorage.removeItem('note_crash_recovery'); } catch {}
     
