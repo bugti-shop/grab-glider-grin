@@ -46,17 +46,13 @@ export const useQuickAddSync = () => {
       } catch {}
     };
 
-    const goToToday = (taskId?: string) => {
-      const target = "/todo/today";
-      if (locationRef.current !== target) {
-        try {
-          navigate(target, { state: taskId ? { highlightTaskId: taskId } : undefined });
-        } catch {
-          // Fallback to hard nav if router isn't ready yet.
-          try { window.location.assign(target); } catch {}
-        }
-      }
+    // No auto-navigation: the widget must NEVER pull the user into Today.
+    // We only refresh in-memory task state so that whenever the user opens
+    // the app themselves, Today already shows the widget-added task.
+    const goToToday = (_taskId?: string) => {
+      /* intentionally no-op — user opens the app when they want */
     };
+
 
     const drainPendingNavigation = () => {
       try {
