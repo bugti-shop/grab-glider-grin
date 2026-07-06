@@ -85,6 +85,7 @@ const Notebooks = () => {
 
   const persistFolders = async (next: FolderType[]) => {
     setFolders(next);
+    setNotebooksCache(next);
     await setSetting('folders', next);
     window.dispatchEvent(new Event('foldersUpdated'));
   };
