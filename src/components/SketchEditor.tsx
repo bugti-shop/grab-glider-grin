@@ -4749,6 +4749,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     if (undoStackRef.current.length === 0) return;
     redoStackRef.current.push(cloneLayers(layersRef.current));
     layersRef.current = undoStackRef.current.pop()!;
+    sketchPagesRef.current[sketchPageIndex] = layersRef.current;
     clearSelection();
     forceUpdate(n => n + 1);
     redrawAll();
