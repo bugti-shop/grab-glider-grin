@@ -28,34 +28,29 @@ export const useTourBootstrap = () => {
     ensureInstallDate().catch(() => {});
     hydrateFromCloud().catch(() => {});
 
-    // First-launch: open the Feature Guide modal once for EVERY user, then
-    // kick off the compulsory onboarding chain as soon as the modal closes so
-    // the first coach-mark ("Create your first task") appears with a Next
-    // button. Bumped to v4 alongside the trimmed 10-tour compulsory chain so
-    // existing installs re-run the new required flow once.
+    // First-launch: skip the welcome/question-mark sheet entirely for new
+    // users. Instead, wait 2 seconds so the app fully loads, then kick off
+    // the compulsory onboarding chain directly — the first coach-mark
+    // ("Create your first task") appears with a Next button and blocks all
+    // other UI until the user completes the tutorial. Bumped to v5 alongside
+    // the trimmed 12-tour compulsory chain so existing installs re-run.
     (async () => {
       try {
         const { getSetting, setSetting } = await import('@/utils/settingsStorage');
-        const KEY = 'feature-guide-first-launch-shown-v4';
-        const CHAIN_KEY = 'feature-guide-chain-started-v4';
+        const KEY = 'feature-guide-first-launch-shown-v5';
+        const CHAIN_KEY = 'feature-guide-chain-started-v5';
         const shown = await getSetting<boolean>(KEY, false);
         if (!shown) {
           await setSetting(KEY, true, { skipCloudSync: true });
           await setSetting(CHAIN_KEY, true, { skipCloudSync: true });
-          // Let the app fully load first, then open the welcome sheet after
-          // a short 2-second breather so the user isn't hit with a modal
-          // before the UI has settled.
           window.setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('feature-guide:open', {
-              detail: { startChainOnClose: true, compulsory: true },
-            }));
+            window.dispatchEvent(new CustomEvent('flowist-onboarding:start-chain'));
           }, 2000);
           return;
         }
         // Resume support: only auto-continue if the user actually started the
-        // chain on a previous launch. Existing users (installed before v4)
-        // and users who explicitly dismissed the welcome sheet should NOT
-        // have the tour auto-open on every relaunch.
+        // chain on a previous launch. Existing users who explicitly dismissed
+        // it should NOT have the tour auto-open on every relaunch.
         const chainStarted = await getSetting<boolean>(CHAIN_KEY, false);
         if (!chainStarted) return;
         await hydrateFromCloud().catch(() => {});
