@@ -26,7 +26,7 @@ import { CanvasTriangle, TriangleEdges, snapToTriangle } from '@/components/Canv
 import { Capacitor } from '@capacitor/core';
 
 import { toast } from 'sonner';
-import { recognizeShape } from '@/utils/shapeRecognition';
+import { recognizeShape, snapConnectorEndpoints, type SnapTarget } from '@/utils/shapeRecognition';
 
 // --- Imports from sketch modules ---
 import {
