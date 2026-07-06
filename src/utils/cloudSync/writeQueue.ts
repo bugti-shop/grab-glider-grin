@@ -9,6 +9,7 @@ import type { SyncTable, SyncRow } from './syncTables';
 
 const STORAGE_KEY = 'flowist_sync_write_queue_v1';
 const MAX_RETRIES = 8;
+const MAX_QUEUE_STORAGE_CHARS = 5 * 1024 * 1024;
 
 interface QueuedWrite {
   id: string;          // queue entry id
@@ -22,11 +23,25 @@ interface QueuedWrite {
 function load(): QueuedWrite[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw && raw.length > MAX_QUEUE_STORAGE_CHARS) {
+      // A legacy queue could contain many duplicated 100k-word notes. Parsing
+      // that JSON on startup blocks scrolling/navigation, so drop it and let
+      // fresh lightweight writes rebuild the queue.
+      localStorage.removeItem(STORAGE_KEY);
+      return [];
+    }
     return raw ? JSON.parse(raw) as QueuedWrite[] : [];
   } catch { return []; }
 }
 function save(q: QueuedWrite[]): void {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(q)); } catch {}
+  try {
+    const raw = JSON.stringify(q);
+    if (raw.length > MAX_QUEUE_STORAGE_CHARS) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(q.slice(-500)));
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, raw);
+  } catch {}
 }
 
 let flushing = false;
@@ -126,7 +141,12 @@ export async function flushQueue(): Promise<void> {
       if (!session?.user) return;
       const userId = session.user.id;
 
-      let q = load();
+      let q = load()
+        .map((entry) => {
+          const sanitized = sanitizeWriteForQueue({ table: entry.table, op: entry.op, row: entry.row });
+          return sanitized ? { ...entry, ...sanitized } : null;
+        })
+        .filter((entry): entry is QueuedWrite => !!entry);
       const remaining: QueuedWrite[] = [];
       const groups = new Map<string, QueuedWrite[]>();
       for (const entry of q) {
