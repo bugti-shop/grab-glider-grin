@@ -592,9 +592,9 @@ const Today = () => {
                   {item.repeatType && item.repeatType !== 'none' && <Repeat className="h-3 w-3 text-accent-purple flex-shrink-0" />}
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   {item.isPinned && <Pin className={cn(compactMode ? "h-3 w-3" : "h-3.5 w-3.5", "text-warning fill-warning flex-shrink-0")} />}
-                  <span className={cn(compactMode ? "text-xs" : "text-sm", "transition-all duration-300", (item.completed || isVisuallyPending) && "text-muted-foreground line-through")}>{item.text}</span>
+                  <span className={cn(compactMode ? "text-xs" : "text-sm", "min-w-0 truncate transition-all duration-300", (item.completed || isVisuallyPending) && "text-muted-foreground line-through")}>{item.text}</span>
                   {item.repeatType && item.repeatType !== 'none' && <Repeat className={cn(compactMode ? "h-2.5 w-2.5" : "h-3 w-3", "text-accent-purple flex-shrink-0")} />}
                 </div>
               )}
