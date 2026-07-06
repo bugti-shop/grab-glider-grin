@@ -4867,6 +4867,15 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     emitChange();
   }, [sketchPageIndex, redrawAll, emitChange, clearSelection]);
 
+  const renameSketchPage = useCallback((idx: number, name: string) => {
+    if (idx < 0 || idx >= sketchPageNamesRef.current.length) return;
+    const trimmed = name.trim() || `Page ${idx + 1}`;
+    if (sketchPageNamesRef.current[idx] === trimmed) return;
+    sketchPageNamesRef.current[idx] = trimmed;
+    forceUpdate(n => n + 1);
+    emitChange();
+  }, [emitChange]);
+
   // Refs so early pointer handlers can invoke undo/redo (defined below in render order)
   const handleUndoRef = useRef(handleUndo);
   const handleRedoRef = useRef(handleRedo);
