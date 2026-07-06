@@ -765,6 +765,7 @@ const TodoCalendar = () => {
   // Render tasks based on view mode
   const renderTasksView = () => {
     if (tasksForSelectedDate.length === 0) return null;
+    if (tasksForSelectedDate.length > 200) return renderFlatView();
 
     switch (viewMode) {
       case 'priority':
@@ -785,7 +786,7 @@ const TodoCalendar = () => {
   };
 
   const renderFlatView = () => {
-    if (uncompletedTasks.length > 200) {
+    if (tasksForSelectedDate.length > 200) {
       return (
         <div className="space-y-4">
           <FlatTaskList

@@ -98,7 +98,10 @@ export const mappers = {
       // be huge (the parsed article HTML). Skip it from the cloud row when it
       // exceeds a sane cap — the note still restores from the local snapshot.
       const HEAVY_BODY_LIMIT = 200 * 1024; // 200 KB
-      const body = typeof n.content === 'string' && n.content.length > HEAVY_BODY_LIMIT ? null : (n.content ?? null);
+      const isMetadataStub = Boolean((n as any).__contentStub);
+      const body = isMetadataStub || (typeof n.content === 'string' && n.content.length > HEAVY_BODY_LIMIT)
+        ? null
+        : (n.content ?? null);
       return {
         id: n.id,
         title: n.title ?? null,

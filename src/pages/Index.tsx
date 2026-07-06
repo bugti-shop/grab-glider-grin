@@ -971,7 +971,7 @@ const Index = () => {
     } catch {}
 
     const sources: Note[] = ids
-      .map(id => notes.find(n => n.id === id))
+      .map(id => notesMap.get(id))
       .filter((n): n is Note => !!n);
 
     let duplicatedCount = 0;
@@ -1013,12 +1013,12 @@ const Index = () => {
   };
 
   const handleBulkMoveToFolder = (folderId: string | null) => {
+    const idSet = new Set(selectedNoteIds);
     if (folderId) {
       // Only count notes moving into folder that aren't already there
-      const incoming = notes.filter(n => selectedNoteIds.includes(n.id) && n.folderId !== folderId).length;
+      const incoming = notes.filter(n => idSet.has(n.id) && n.folderId !== folderId).length;
       if (!canMoveNotesToFolder(folderId, incoming)) return;
     }
-    const idSet = new Set(selectedNoteIds);
     const updates: Note[] = [];
     setNotes(prev => {
       return prev.map(n => {
