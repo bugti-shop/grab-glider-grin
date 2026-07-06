@@ -13,7 +13,6 @@ import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import type { Note } from '@/types/note';
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
 import { getAdaptiveOverscan, useVirtualizationSettings } from '@/utils/virtualizationSettings';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface NotesVirtualGridProps {
   notes: Note[];
@@ -31,14 +30,6 @@ function getColumnsForWidth(w: number): number {
   if (w >= 1024) return 2; // lg
   return 1; // mobile/tablet — original full-width note card UI
 }
-
-const VirtualGridCardFallback = () => (
-  <div className="flex h-full w-full items-center justify-center rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
-    This note couldn’t render.
-  </div>
-);
-
-const VirtualGridRenderedCard = ({ note, renderCard }: { note: Note; renderCard: (note: Note) => ReactNode }) => <>{renderCard(note)}</>;
 
 export function NotesVirtualGrid({
   notes,
@@ -173,9 +164,7 @@ export function NotesVirtualGrid({
             >
               {row.map((note) => (
                 <div key={note.id} style={{ minWidth: 0, height: '100%', display: 'flex' }}>
-                  <ErrorBoundary fallback={<VirtualGridCardFallback />}>
-                    <VirtualGridRenderedCard note={note} renderCard={renderCard} />
-                  </ErrorBoundary>
+                  {renderCard(note)}
                 </div>
               ))}
             </div>
