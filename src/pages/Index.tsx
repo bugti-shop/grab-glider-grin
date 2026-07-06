@@ -52,6 +52,7 @@ import { NoteTypeVisibilitySheet } from '@/components/NoteTypeVisibilitySheet';
 import { loadDeletions, trackDeletion } from '@/utils/deletionTracker';
 import { uploadCategory } from '@/utils/googleDriveSync';
 import { withCopySuffix } from '@/utils/duplicateName';
+import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 import { toast } from 'sonner';
 
 const NOTE_TYPE_FOLDER_IDS = new Set(['sticky','lined','regular','code','sketch','voice','textformat','linkedin']);
@@ -1374,7 +1375,7 @@ const Index = () => {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold truncate">{note.title || t('notes.untitled')}</h3>
                         <p className="text-sm text-muted-foreground line-clamp-1">
-                          {note.content.replace(/<[^>]*>/g, '').trim() || t('notes.noContent')}
+                          {(note as any).__contentPreview || getTextPreviewFromHtml(note.content, 120) || t('notes.noContent')}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {t('notes.deleted')}: {note.deletedAt ? new Date(note.deletedAt).toLocaleDateString() : t('notes.unknown')}
@@ -1431,7 +1432,7 @@ const Index = () => {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold truncate">{note.title || t('notes.untitled')}</h3>
                         <p className="text-sm text-muted-foreground line-clamp-1">
-                          {note.content.replace(/<[^>]*>/g, '').trim() || t('notes.noContent')}
+                          {(note as any).__contentPreview || getTextPreviewFromHtml(note.content, 120) || t('notes.noContent')}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {t('notes.archived')}: {note.archivedAt ? new Date(note.archivedAt).toLocaleDateString() : t('notes.unknown')}
