@@ -113,8 +113,30 @@ export const FeatureGuideModal = ({ isOpen, onClose }: FeatureGuideModalProps) =
             value="features"
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 sm:px-5 py-4 space-y-5 m-0"
           >
-
-
+            {/* New highlight: Scientific Calculator + Unit Converter */}
+            <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
+                <p className="text-sm font-semibold leading-tight">New in this release</p>
+                <span className="ml-auto text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                  New
+                </span>
+              </div>
+              <ul className="mt-2 space-y-1.5">
+                <li className="flex items-start gap-2 text-sm">
+                  <Check className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
+                  <span className="leading-snug">
+                    <strong>Scientific Calculator</strong> — type math inline in any note (e.g. <code className="text-xs">sin(45) + √16 =</code>) and get instant results.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2 text-sm">
+                  <Check className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
+                  <span className="leading-snug">
+                    <strong>Unit Converter</strong> — convert units on the fly inside notes (e.g. <code className="text-xs">10 km to mi</code>) via the slash menu.
+                  </span>
+                </li>
+              </ul>
+            </div>
 
             {CATEGORY_ORDER.map((cat) => {
               const items = FEATURE_TOURS.filter((t) => t.category === cat);
