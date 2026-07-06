@@ -262,28 +262,8 @@ const Today = () => {
     sortedSections, toggleViewSectionCollapse, handleClearFilters,
   } = state;
 
-  useEffect(() => {
-    const openFirstTaskForTour = async () => {
-      let firstTask = uncompletedItems[0] ?? completedItems[0] ?? items[0];
-      if (!firstTask) {
-        // Auto-create a demo task so priority / focus / status tours have a
-        // target to open. Users can delete it after the tutorial ends.
-        try {
-          await handleAddTask({
-            title: 'My first task',
-            priority: 'none',
-            status: 'not-started',
-          } as any);
-        } catch {}
-        // Wait a tick for state to refresh, then re-read.
-        await new Promise((r) => setTimeout(r, 250));
-        firstTask = uncompletedItems[0] ?? completedItems[0] ?? items[0];
-      }
-      if (firstTask) setSelectedTask(firstTask);
-    };
-    window.addEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
-    return () => window.removeEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
-  }, [completedItems, items, setSelectedTask, uncompletedItems, handleAddTask]);
+  // openFirstTaskForTour listener is registered further below, after
+  // handleAddTask is available from useTodayActions.
 
   // Widget deep-link: ?add=1 → auto-open the task input sheet.
   // ?widget=1 marks this as a launcher-widget flow, so closing the sheet
