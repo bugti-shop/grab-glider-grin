@@ -158,6 +158,9 @@ export interface SketchData {
   audioRecording?: { dataUrl: string; duration: number };
   videoUrl?: string;
   videoBookmarks?: VideoBookmark[];
+  // Multi-page (non-PDF sketches). When present, `layers` mirrors pages[pageIndex] for backwards compat.
+  pages?: Layer[][];
+  pageIndex?: number;
 }
 
 export interface BBox {
