@@ -121,27 +121,14 @@ export const CATEGORY_LABELS: Record<TourCategory, string> = {
 export const ONBOARDING_CHAIN: string[] = [
   // Tasks
   'task-create-first',
-  'task-natural-language',
-  'task-scan-from-image',
   'task-set-priority',
-  'task-update-status',
-  'task-create-section',
-  'task-create-folder',
   'task-focus-mode',
-  'task-switch-view',
-  'task-journey',
   'task-create-habit',
-  'task-eisenhower',
-  'task-import',
   'task-batch-add',
   // Notes
   'notes-switch-dashboard',
   'notes-create-first',
   'notes-create-notebook',
-  'notes-sketch',
-  'notes-import',
-  'notes-scan',
-  'notes-editor-menu',
   // Personalization
   'personalize-theme',
   'personalize-app-lock',
