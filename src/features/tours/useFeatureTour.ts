@@ -97,6 +97,44 @@ export const useTourBootstrap = () => {
     };
     window.addEventListener('flowist-onboarding:action-completed', onActionCompleted);
 
+    // Activity watchdog: if the compulsory onboarding chain has been started
+    // but not finished, any user activity (click / key / task or note create)
+    // while NO tour is active should force-reopen the chain so new users
+    // can't just "click around" to escape the tutorial.
+    let watchdogPending = false;
+    const kickChainIfPending = async () => {
+      if (watchdogPending) return;
+      if (TourManager.isActive()) return;
+      watchdogPending = true;
+      try {
+        const { getSetting } = await import('@/utils/settingsStorage');
+        const CHAIN_KEY = 'feature-guide-chain-started-v5';
+        const chainStarted = await getSetting<boolean>(CHAIN_KEY, false);
+        if (!chainStarted) return;
+        const { ONBOARDING_CHAIN } = await import('./tourRegistry');
+        const { hasSeenTour } = await import('./TourStateStore');
+        for (const id of ONBOARDING_CHAIN) {
+          if (!(await hasSeenTour(id))) {
+            if (!TourManager.isActive()) {
+              TourManager.startTour(id, { chain: true, forced: true });
+            }
+            return;
+          }
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        // small cooldown so a burst of clicks doesn't spam startTour
+        setTimeout(() => { watchdogPending = false; }, 800);
+      }
+    };
+    const activityHandler = () => { kickChainIfPending(); };
+    window.addEventListener('pointerdown', activityHandler, { capture: true });
+    window.addEventListener('keydown', activityHandler, { capture: true });
+    window.addEventListener('flowist-tasks-updated', activityHandler);
+    window.addEventListener('flowist-notes-updated', activityHandler);
+
+
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') hydrateFromCloud().catch(() => {});
     });
