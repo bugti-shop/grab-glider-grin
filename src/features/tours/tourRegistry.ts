@@ -121,10 +121,7 @@ export const CATEGORY_LABELS: Record<TourCategory, string> = {
 export const ONBOARDING_CHAIN: string[] = [
   // Tasks
   'task-create-first',
-  'task-set-priority',
-  'task-focus-mode',
   'task-create-habit',
-  'task-batch-add',
   // Notes
   'notes-switch-dashboard',
   'notes-create-first',
