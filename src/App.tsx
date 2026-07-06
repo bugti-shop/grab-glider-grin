@@ -99,6 +99,7 @@ const HabitSections = lazy(() => import("./pages/todo/HabitSections"));
 const HabitGallery = lazy(() => import("./pages/todo/HabitGallery"));
 const WebClipper = lazy(() => import("./pages/WebClipper"));
 const FetchArticleTest = lazy(() => import("./pages/FetchArticleTest"));
+const TaskBench = lazy(() => import("./pages/dev/TaskBench"));
 const Reminders = lazy(() => import("./pages/Reminders"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding"));
