@@ -572,6 +572,9 @@ const NoteCardInner = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, on
       (b.updatedAt instanceof Date ? b.updatedAt.getTime() : +new Date(b.updatedAt as any)) &&
     (a.tagIds?.join(',') ?? '') === (b.tagIds?.join(',') ?? '') &&
     (a.voiceRecordings?.length ?? 0) === (b.voiceRecordings?.length ?? 0) &&
+    prev.showContextMenu === next.showContextMenu &&
+    prev.noteProtection.hasPassword === next.noteProtection.hasPassword &&
+    prev.noteProtection.useBiometric === next.noteProtection.useBiometric &&
     prev.isSelectionMode === next.isSelectionMode &&
     prev.isSelected === next.isSelected
   );
