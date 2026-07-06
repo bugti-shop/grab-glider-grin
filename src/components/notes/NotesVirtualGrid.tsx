@@ -8,7 +8,7 @@
  * useWindowVirtualizer (no nested scroll container = bottom nav stays put,
  * page scroll behaves natively).
  */
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import type { Note } from '@/types/note';
 import { logPerfEvent, startScopedScrollFpsMonitor } from '@/utils/perfLogger';
@@ -41,7 +41,7 @@ export function NotesVirtualGrid({
     typeof window === 'undefined' ? 2 : getColumnsForWidth(window.innerWidth),
   );
   const resolvedRowHeight = estimatedRowHeight ?? virtualizationSettings.notes.rowHeight;
-  const resolvedOverscan = getAdaptiveOverscan(virtualizationSettings.notes.overscan, notes.length);
+  const resolvedOverscan = getAdaptiveOverscan(virtualizationSettings.notes.overscan, notes.length, 'notes');
   const resolvedWindowing = virtualizationSettings.notes.windowing;
 
   useEffect(() => {
@@ -50,13 +50,7 @@ export function NotesVirtualGrid({
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const rows = useMemo(() => {
-    const out: Note[][] = [];
-    for (let i = 0; i < notes.length; i += columns) {
-      out.push(notes.slice(i, i + columns));
-    }
-    return out;
-  }, [notes, columns]);
+  const rowCount = Math.ceil(notes.length / columns);
 
   // Offset accounts for the page header + filters that sit above this grid.
   const [scrollMargin, setScrollMargin] = useState(0);
@@ -73,22 +67,28 @@ export function NotesVirtualGrid({
   }, [columns, notes.length]);
 
   const containerVirtualizer = useVirtualizer({
-    count: rows.length,
+    count: rowCount,
     getScrollElement: () => parentRef.current,
     estimateSize: () => resolvedRowHeight,
     overscan: resolvedOverscan,
-    getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
+    getItemKey: (idx) => {
+      const row = notes.slice(idx * columns, idx * columns + columns);
+      return getRowKey?.(row, idx) ?? row[0]?.id ?? idx;
+    },
   });
 
   const windowVirtualizer = useWindowVirtualizer({
-    count: rows.length,
+    count: rowCount,
     estimateSize: () => resolvedRowHeight,
     // 6 rows of overscan (≈18 cards at 3-col) keeps fast flick-scrolling
     // smooth without paying paint cost for ~50 offscreen heavy cards when
     // the user has 5k+ notes with large bodies.
     overscan: resolvedOverscan,
     scrollMargin,
-    getItemKey: (idx) => getRowKey?.(rows[idx] ?? [], idx) ?? rows[idx]?.[0]?.id ?? idx,
+    getItemKey: (idx) => {
+      const row = notes.slice(idx * columns, idx * columns + columns);
+      return getRowKey?.(row, idx) ?? row[0]?.id ?? idx;
+    },
   });
 
   const virtualizer = resolvedWindowing ? windowVirtualizer : containerVirtualizer;
@@ -97,13 +97,13 @@ export function NotesVirtualGrid({
     logPerfEvent('render', {
       label: 'NotesVirtualGrid',
       itemCount: notes.length,
-      rows: rows.length,
+      rows: rowCount,
       columns,
       overscan: resolvedOverscan,
       rowHeight: resolvedRowHeight,
       windowing: resolvedWindowing ? 'window' : 'container',
     });
-  }, [columns, notes.length, resolvedOverscan, resolvedRowHeight, resolvedWindowing, rows.length]);
+  }, [columns, notes.length, resolvedOverscan, resolvedRowHeight, resolvedWindowing, rowCount]);
 
   useEffect(() => {
     const target = resolvedWindowing ? window : parentRef.current;
@@ -136,7 +136,7 @@ export function NotesVirtualGrid({
         }}
       >
         {virtualizer.getVirtualItems().map((vrow) => {
-          const row = rows[vrow.index];
+          const row = notes.slice(vrow.index * columns, vrow.index * columns + columns);
           if (!row) return null;
           return (
             <div

@@ -13,6 +13,7 @@ const prefetchPromises = new Map<string, Promise<void>>();
 const ROUTE_IMPORTS: Record<string, () => Promise<any>> = {
   '/notes': () => import('@/pages/Notes'),
   '/notesdashboard': () => import('@/pages/Index'),
+  '/notebooks': () => import('@/pages/Notebooks'),
   '/calendar': () => import('@/pages/NotesCalendar'),
   '/profile': () => import('@/pages/Profile'),
   '/settings': () => import('@/pages/Settings'),

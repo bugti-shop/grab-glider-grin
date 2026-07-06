@@ -14,6 +14,8 @@ export interface VirtualizationSettings {
   };
 }
 
+export type VirtualizationListType = 'tasks' | 'notes';
+
 const STORAGE_KEY = 'flowist:virtualization-settings:v4';
 const EVENT_NAME = 'flowist:virtualization-settings-changed';
 
@@ -27,7 +29,7 @@ export const DEFAULT_VIRTUALIZATION_SETTINGS: VirtualizationSettings = {
     windowing: true,
   },
   tasks: {
-    overscan: 18,
+    overscan: 12,
     rowHeight: 58,
     compactRowHeight: 44,
     windowing: true,
@@ -108,13 +110,30 @@ export function useVirtualizationSettings(): [VirtualizationSettings, (next: Vir
   return [settings, update];
 }
 
-export function getAdaptiveOverscan(baseOverscan: number, itemCount: number): number {
-  // Bias toward larger overscan on small/medium lists (smoother fast-scroll,
-  // no blank bands), trim it on very large lists to cap DOM cost.
-  if (itemCount >= 100_000) return Math.min(baseOverscan, 6);
-  if (itemCount >= 25_000) return Math.min(baseOverscan, 10);
-  if (itemCount >= 5_000) return Math.min(baseOverscan, 16);
-  return Math.max(baseOverscan, 20);
+export function getAdaptiveOverscan(
+  baseOverscan: number,
+  itemCount: number,
+  listType: VirtualizationListType = 'tasks',
+): number {
+  // Automatic tuning for large local datasets.  At 10k–50k rows, keeping the
+  // mounted DOM tiny is more important than a big offscreen buffer; otherwise
+  // fast route switches and momentum scrolling can stall long enough to show a
+  // blank page.  Notes are grid rows, so each overscan unit can mean 1–3 cards.
+  if (listType === 'notes') {
+    if (itemCount >= 50_000) return Math.min(baseOverscan, 3);
+    if (itemCount >= 10_000) return Math.min(baseOverscan, 4);
+    if (itemCount >= 5_000) return Math.min(baseOverscan, 5);
+    if (itemCount >= 1_000) return Math.min(baseOverscan, 6);
+    return Math.max(baseOverscan, 6);
+  }
+
+  if (itemCount >= 100_000) return Math.min(baseOverscan, 3);
+  if (itemCount >= 50_000) return Math.min(baseOverscan, 4);
+  if (itemCount >= 25_000) return Math.min(baseOverscan, 5);
+  if (itemCount >= 10_000) return Math.min(baseOverscan, 6);
+  if (itemCount >= 5_000) return Math.min(baseOverscan, 8);
+  if (itemCount >= 1_000) return Math.min(baseOverscan, 10);
+  return Math.max(baseOverscan, 14);
 }
 
 if (typeof window !== 'undefined') {

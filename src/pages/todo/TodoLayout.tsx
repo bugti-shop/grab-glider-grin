@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, startTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -72,10 +72,10 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={async () => {
+                onClick={() => {
                   triggerHaptic('heavy').catch(() => {});
-                  await prefetchRoute('/notesdashboard');
-                  navigate('/notesdashboard');
+                  void prefetchRoute('/notesdashboard');
+                  startTransition(() => navigate('/notesdashboard'));
                 }}
                 className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-transparent active:bg-transparent"
                 title={t('common.switchToNotes')}
