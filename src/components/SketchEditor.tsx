@@ -4232,6 +4232,24 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     if (e.pointerType === 'touch') {
       activeTouchesRef.current.delete(e.pointerId);
       if (activeTouchesRef.current.size < 2) gestureStateRef.current = null;
+      // Fire multi-finger tap gesture when the last finger releases
+      if (activeTouchesRef.current.size === 0 && touchTapRef.current) {
+        const tap = touchTapRef.current;
+        touchTapRef.current = null;
+        const duration = Date.now() - tap.startTime;
+        if (multiFingerGesturesRef.current && !tap.moved && duration < 350 && !isDrawingRef.current) {
+          if (tap.maxFingers === 2) {
+            triggerHaptic('light');
+            handleUndoRef.current?.();
+            return;
+          }
+          if (tap.maxFingers === 3) {
+            triggerHaptic('light');
+            handleRedoRef.current?.();
+            return;
+          }
+        }
+      }
     }
 
     // Laser pointer release
