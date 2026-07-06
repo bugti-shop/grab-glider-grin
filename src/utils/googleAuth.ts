@@ -162,16 +162,22 @@ const refreshAccessTokenViaRefreshToken = async (
   refreshToken?: string,
 ): Promise<{ accessToken: string; expiresIn: number; newRefreshToken?: string }> => {
   const data = await callEdgeFunction<{
-    access_token: string;
+    access_token: string | null;
     expires_in?: number;
     refresh_token?: string;
+    reason?: string;
   }>('refresh-google-token', refreshToken ? { refresh_token: refreshToken } : {});
+
+  if (!data.access_token) {
+    throw new Error(data.reason || 'no_refresh_token');
+  }
 
   return {
     accessToken: data.access_token,
     expiresIn: data.expires_in || 3600,
     newRefreshToken: data.refresh_token || undefined,
   };
+
 };
 
 // ── Native (@capgo/capacitor-social-login → Supabase credential) ──────────

@@ -61,7 +61,9 @@ serve(async (req) => {
     const refreshToken = tokenRow?.google_refresh_token ?? "";
 
     if (!refreshToken) {
-      return json({ error: "No refresh token available" }, 400);
+      // Not an error — user simply hasn't connected Google Drive (or token was revoked).
+      // Return 200 so the client doesn't treat it as a runtime error / blank-screen trigger.
+      return json({ access_token: null, reason: "no_refresh_token" }, 200);
     }
 
     const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
