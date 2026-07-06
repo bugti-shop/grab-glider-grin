@@ -435,7 +435,7 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
       frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
       frame.setAttribute('loading', 'eager');
       frame.classList.add('webclip-iframe');
-      frame.setAttribute('style', 'width:100%;height:min(87vh, 640px);border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
+      frame.setAttribute('style', 'width:100%;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
       embed.appendChild(frame);
     }
     frame.removeAttribute('srcdoc');
