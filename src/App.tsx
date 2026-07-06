@@ -99,6 +99,7 @@ const HabitSections = lazy(() => import("./pages/todo/HabitSections"));
 const HabitGallery = lazy(() => import("./pages/todo/HabitGallery"));
 const WebClipper = lazy(() => import("./pages/WebClipper"));
 const FetchArticleTest = lazy(() => import("./pages/FetchArticleTest"));
+const TaskBench = lazy(() => import("./pages/dev/TaskBench"));
 const Reminders = lazy(() => import("./pages/Reminders"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding"));
@@ -504,6 +505,7 @@ const AppRoutes = () => {
             <Route path="/clip" element={<WebClipper />} />
             <Route path="/webclipper" element={<WebClipper />} />
             <Route path="/dev/fetch-article" element={<FetchArticleTest />} />
+            <Route path="/dev/task-bench" element={<TaskBench />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/sync-diagnostics" element={<SyncDiagnostics />} />
             <Route path="/reminders" element={<Reminders />} />
