@@ -181,15 +181,22 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
   // the full local note is fetched lazily per-id when we actually apply.
   const meta = await loadNotesMetadataFromDB();
   const metaById = new Map(meta.map(n => [n.id, n]));
-  const heavyIdsToShrink: string[] = [];
+  const clipIdsToPurgeFromCloud: string[] = [];
   for (const r of rows) {
-    // Detect legacy heavy cloud rows (uploaded before we started stripping
-    // web-clip HTML / images from the sync payload). We'll re-upload a light
-    // version once the merge is done so the row shrinks in the cloud too.
-    const payloadStr = (r as any).payload ? JSON.stringify((r as any).payload) : '';
-    const isHeavy = payloadStr.length > 100_000 || ((r as any).body?.length ?? 0) > 200_000;
+    // Detect web-clipper rows (identified by fullPageSnapshot in the payload).
+    // Per user preference, web clips are LOCAL-ONLY and must be purged from
+    // the cloud on sight so they never round-trip again.
+    const payload = (r as any).payload as any;
+    const isWebClip = !!(payload && payload.fullPageSnapshot);
 
     if (r.is_deleted) { await deleteNoteFromDB(r.id, true); continue; }
+    if (isWebClip) {
+      clipIdsToPurgeFromCloud.push(r.id);
+      // Skip applying the cloud row: local IndexedDB is the source of truth
+      // for web clips. If the note doesn't exist locally, it was already
+      // deleted here — leaving cloud out of sync is the desired behavior.
+      continue;
+    }
     const existingMeta = metaById.get(r.id);
     const cloudTs = +new Date(r.updated_at ?? Date.now());
     const localTs = existingMeta ? +new Date(existingMeta.updatedAt as any) : 0;
@@ -197,31 +204,26 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
       if (localTs > cloudTs) {
         recordConflict({ table: 'notes', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
       }
-      if (isHeavy) heavyIdsToShrink.push(r.id);
       continue;
     }
     // Cloud wins — merge against the full local row (heavy fields preserved).
     const existingFull = existingMeta ? await loadNoteFromDB(r.id) : undefined;
     const merged = mappers.notes.mergeCloud(existingFull ?? undefined, r) as Note;
     await saveNoteToDBSingle(merged, true);
-    if (isHeavy) heavyIdsToShrink.push(r.id);
   }
 
-  // One-time cleanup: re-upload any legacy heavy rows using the current
-  // (stripped) mapper so the cloud row shrinks. Runs on idle so it never
-  // blocks the current sync tick.
-  if (heavyIdsToShrink.length) {
+  // Best-effort: purge legacy web-clip rows from the cloud on idle so the
+  // sync table stops carrying multi-MB HTML snapshots. This does NOT touch
+  // the local IndexedDB copy — clips remain fully usable offline.
+  if (clipIdsToPurgeFromCloud.length) {
     const schedule = (cb: () => void) =>
       (typeof (window as any).requestIdleCallback === 'function'
         ? (window as any).requestIdleCallback(cb, { timeout: 4000 })
         : setTimeout(cb, 1500));
-    schedule(async () => {
+    schedule(() => {
       try {
-        for (const id of heavyIdsToShrink) {
-          const full = await loadNoteFromDB(id);
-          if (!full) continue;
-          const row = mappers.notes.toCloud(full);
-          if (row) enqueueWrite('notes', 'upsert', row as any);
+        for (const id of clipIdsToPurgeFromCloud) {
+          enqueueWrite('notes', 'delete', { id } as any);
         }
       } catch { /* best-effort */ }
     });
