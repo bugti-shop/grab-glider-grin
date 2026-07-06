@@ -37,9 +37,11 @@ export const useTourBootstrap = () => {
       try {
         const { getSetting, setSetting } = await import('@/utils/settingsStorage');
         const KEY = 'feature-guide-first-launch-shown-v4';
+        const CHAIN_KEY = 'feature-guide-chain-started-v4';
         const shown = await getSetting<boolean>(KEY, false);
         if (!shown) {
           await setSetting(KEY, true, { skipCloudSync: true });
+          await setSetting(CHAIN_KEY, true, { skipCloudSync: true });
           // Fire immediately — no artificial delay so the welcome sheet
           // appears the instant the app is usable.
           window.dispatchEvent(new CustomEvent('feature-guide:open', {
@@ -47,9 +49,12 @@ export const useTourBootstrap = () => {
           }));
           return;
         }
-        // Resume support: welcome sheet already shown, but if the user closed
-        // the app mid-chain, auto-continue from the first not-yet-seen tour
-        // on the next launch — without reopening the welcome sheet.
+        // Resume support: only auto-continue if the user actually started the
+        // chain on a previous launch. Existing users (installed before v4)
+        // and users who explicitly dismissed the welcome sheet should NOT
+        // have the tour auto-open on every relaunch.
+        const chainStarted = await getSetting<boolean>(CHAIN_KEY, false);
+        if (!chainStarted) return;
         await hydrateFromCloud().catch(() => {});
         const { ONBOARDING_CHAIN } = await import('./tourRegistry');
         const { hasSeenTour } = await import('./TourStateStore');
@@ -61,6 +66,7 @@ export const useTourBootstrap = () => {
         }
       } catch {}
     })();
+
 
     // Whenever the welcome sheet closes AFTER a first-launch open, start the
     // onboarding chain from the first not-yet-seen tour. Individual chained
