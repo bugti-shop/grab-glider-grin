@@ -8061,7 +8061,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                     onClick={() => {
                       const newId = Math.max(...layersRef.current.map(l => l.id)) + 1;
                       const newName = `Layer ${newId}`;
-                      const newLayer = { id: newId, name: newName, strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true };
+                      const newLayer: Layer = { id: newId, name: newName, kind: 'custom', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true };
                       undoStackRef.current = [...undoStackRef.current.slice(-(MAX_UNDO - 1)), cloneLayers(layersRef.current)];
                       layersRef.current.push(newLayer);
                       setActiveLayerId(newId);
