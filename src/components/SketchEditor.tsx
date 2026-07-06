@@ -8099,6 +8099,16 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                   >
                     {layer.visible ? <Eye className="h-3.5 w-3.5 text-muted-foreground" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground/50" />}
                   </button>
+                  {(() => {
+                    const KindIcon =
+                      layer.kind === 'background' ? ImagePlus
+                      : layer.kind === 'grid' ? Grid3X3
+                      : layer.kind === 'text' ? Type
+                      : layer.kind === 'stickers' ? StickyNote
+                      : layer.kind === 'drawing' ? Pencil
+                      : Layers;
+                    return <KindIcon className="h-3 w-3 text-muted-foreground/70 flex-shrink-0" />;
+                  })()}
                   <span
                     className={cn('text-xs flex-1 truncate', !layer.visible && 'text-muted-foreground/50')}
                     onDoubleClick={(e) => {
