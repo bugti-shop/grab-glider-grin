@@ -28,20 +28,21 @@ export const useTourBootstrap = () => {
     ensureInstallDate().catch(() => {});
     hydrateFromCloud().catch(() => {});
 
-    // First-launch: open the Feature Guide modal once for EVERY user (existing
-    // installs too — hence the v3 key bump), then kick off the onboarding
-    // chain as soon as the modal closes so the first coach-mark ("Create your
-    // first task") appears with a Next button.
+    // First-launch: open the Feature Guide modal once for EVERY user, then
+    // kick off the compulsory onboarding chain as soon as the modal closes so
+    // the first coach-mark ("Create your first task") appears with a Next
+    // button. Bumped to v4 alongside the trimmed 10-tour compulsory chain so
+    // existing installs re-run the new required flow once.
     (async () => {
       try {
         const { getSetting, setSetting } = await import('@/utils/settingsStorage');
-        const KEY = 'feature-guide-first-launch-shown-v3';
+        const KEY = 'feature-guide-first-launch-shown-v4';
         const shown = await getSetting<boolean>(KEY, false);
         if (!shown) {
           await setSetting(KEY, true, { skipCloudSync: true });
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('feature-guide:open', {
-              detail: { startChainOnClose: true },
+              detail: { startChainOnClose: true, compulsory: true },
             }));
           }, 900);
         }
