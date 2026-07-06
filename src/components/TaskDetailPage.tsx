@@ -1231,13 +1231,32 @@ export const TaskDetailPage = ({
                 </div>
               );
             })()}
-            <button
-              onClick={() => setShowExtraReminderSheet(true)}
-              className="w-full flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors text-primary"
-            >
-              <Plus className="h-5 w-5" />
-              <span className="text-sm font-medium">{t('taskDetail.addReminder', 'Add reminder')}</span>
-            </button>
+            {(() => {
+              // Free plan is capped to N reminders per task (remindersPerTask,
+              // currently 1). Any attempt to add another must surface the
+              // paywall INSTEAD of opening the reminder sheet.
+              const currentList = (task as any).extraReminders as unknown[] | undefined;
+              const currentCount = Array.isArray(currentList)
+                ? currentList.length
+                : task.extraReminderTime
+                  ? 1
+                  : 0;
+              return (
+                <button
+                  onClick={() => {
+                    if (!requireCapacity('remindersPerTask', currentCount)) return;
+                    setShowExtraReminderSheet(true);
+                  }}
+                  className="w-full flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors text-primary"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span className="text-sm font-medium flex items-center gap-1">
+                    {t('taskDetail.addReminder', 'Add reminder')}
+                    {!isPro && currentCount >= 1 && <PremiumCrown size={12} />}
+                  </span>
+                </button>
+              );
+            })()}
           </div>
 
 
