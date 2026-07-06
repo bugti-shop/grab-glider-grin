@@ -200,6 +200,11 @@ class TourManagerImpl {
         // Forced tours cannot be dismissed by ✕ or overlay tap — user must
         // walk through every step.
         allowClose: !forced,
+        // Block clicks on the highlighted target too — during the mini sheet
+        // only the "Next" button should be interactive. Prevents the user
+        // from firing Create Note / Create Task / Create Notebook / etc.
+        // by tapping the pulsing element behind the popover.
+        disableActiveInteraction: true,
         overlayOpacity: 0.55,
         stagePadding: 6,
         stageRadius: 10,
