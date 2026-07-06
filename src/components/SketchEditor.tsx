@@ -1625,6 +1625,14 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   const layersRef = useRef<Layer[]>(createDefaultLayers());
   const undoStackRef = useRef<Layer[][]>([]);
   const redoStackRef = useRef<Layer[][]>([]);
+  // --- Sketch multi-page state (non-PDF sketches only) ---
+  // sketchPagesRef holds every page's layers array; the current page IS layersRef.current (same reference)
+  const sketchPagesRef = useRef<Layer[][]>([layersRef.current]);
+  const [sketchPageIndex, setSketchPageIndex] = useState(0);
+  const [sketchPageCount, setSketchPageCount] = useState(1);
+  const [pageThumbsOpen, setPageThumbsOpen] = useState(false);
+  // Per-page undo history (Phase 1: page-scoped)
+  const pageUndoStacksRef = useRef<Map<number, { undo: Layer[][]; redo: Layer[][] }>>(new Map());
 
   const isDrawingRef = useRef(false);
   const currentStrokeRef = useRef<Stroke | null>(null);
@@ -4195,10 +4203,18 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       return;
     }
     // Strip remote collab strokes from saved data (they belong to the collaboration, not this note)
-    const cleanLayers = layersRef.current.map(l => ({
+    const stripCollab = (ls: Layer[]): Layer[] => ls.map(l => ({
       ...l,
       strokes: l.strokes.filter(s => !s.collabStrokeId),
     }));
+    const cleanLayers = stripCollab(layersRef.current);
+    // Ensure current page reference in sketchPagesRef reflects the latest live layers
+    if (sketchPagesRef.current[sketchPageIndex] !== layersRef.current) {
+      sketchPagesRef.current[sketchPageIndex] = layersRef.current;
+    }
+    const cleanPages = sketchPagesRef.current.map(pg =>
+      pg === layersRef.current ? cleanLayers : stripCollab(pg)
+    );
     const data: SketchData = {
       layers: cleanLayers,
       activeLayerId,
@@ -4206,15 +4222,16 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       width: canvasSizeRef.current.w,
       height: canvasSizeRef.current.h,
       version: 2,
+      ...(cleanPages.length > 1 ? { pages: cleanPages, pageIndex: sketchPageIndex } : {}),
       ...(audioDataUrlRef.current ? { audioRecording: { dataUrl: audioDataUrlRef.current, duration: audioDurationRef.current } } : {}),
       ...(videoUrlRef.current ? { videoUrl: videoUrlRef.current, videoBookmarks: videoBookmarksRef.current } : {}),
     };
     const json = JSON.stringify(data);
     const strokeCount = layersRef.current.reduce((sum, l) => sum + l.strokes.length, 0);
-    console.log(`[SketchEditor] emitChange: ${strokeCount} strokes, json length: ${json.length}`);
+    console.log(`[SketchEditor] emitChange: ${strokeCount} strokes (page ${sketchPageIndex + 1}/${cleanPages.length}), json length: ${json.length}`);
     lastEmittedRef.current = json;
     onChange(json);
-  }, [onChange, activeLayerId, background]);
+  }, [onChange, activeLayerId, background, sketchPageIndex]);
 
   // Keep refs in sync
   emitChangeRef.current = emitChange;
@@ -4585,6 +4602,27 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     return () => window.removeEventListener('keydown', handleKey);
   }, [presentationMode, pdfPages.length, pdfPageIndex, exitPresentationMode]);
 
+  // Sketch-page keyboard shortcuts (non-PDF, non-presentation) — uses refs to actions declared later
+  const switchSketchPageRef = useRef<(i: number) => void>(() => {});
+  const addSketchPageRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (presentationMode || pdfPages.length > 0) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+      const meta = e.ctrlKey || e.metaKey;
+      if (e.key === 'PageDown' || (meta && e.key === 'ArrowRight')) {
+        if (sketchPageIndex < sketchPageCount - 1) { e.preventDefault(); switchSketchPageRef.current(sketchPageIndex + 1); }
+      } else if (e.key === 'PageUp' || (meta && e.key === 'ArrowLeft')) {
+        if (sketchPageIndex > 0) { e.preventDefault(); switchSketchPageRef.current(sketchPageIndex - 1); }
+      } else if (meta && e.shiftKey && (e.key === 'N' || e.key === 'n')) {
+        e.preventDefault(); addSketchPageRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [presentationMode, pdfPages.length, sketchPageIndex, sketchPageCount]);
+
   // Auto-hide cursor after 3s of inactivity in presentation mode
   useEffect(() => {
     if (!presentationMode) return;
@@ -4732,6 +4770,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     if (undoStackRef.current.length === 0) return;
     redoStackRef.current.push(cloneLayers(layersRef.current));
     layersRef.current = undoStackRef.current.pop()!;
+    sketchPagesRef.current[sketchPageIndex] = layersRef.current;
     clearSelection();
     forceUpdate(n => n + 1);
     redrawAll();
@@ -4742,17 +4781,90 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     if (redoStackRef.current.length === 0) return;
     undoStackRef.current.push(cloneLayers(layersRef.current));
     layersRef.current = redoStackRef.current.pop()!;
+    sketchPagesRef.current[sketchPageIndex] = layersRef.current;
     clearSelection();
     forceUpdate(n => n + 1);
     redrawAll();
     emitChange();
-  }, [redrawAll, emitChange, clearSelection]);
+  }, [redrawAll, emitChange, clearSelection, sketchPageIndex]);
+
+  // --- Multi-page navigation (non-PDF sketches) ---
+  const switchSketchPage = useCallback((newIndex: number) => {
+    if (newIndex < 0 || newIndex >= sketchPagesRef.current.length) return;
+    if (newIndex === sketchPageIndex) return;
+    // Save current page's undo/redo stacks
+    pageUndoStacksRef.current.set(sketchPageIndex, {
+      undo: undoStackRef.current,
+      redo: redoStackRef.current,
+    });
+    // Persist current live layers back to the pages array (already same ref, but be safe)
+    sketchPagesRef.current[sketchPageIndex] = layersRef.current;
+    // Switch to new page
+    layersRef.current = sketchPagesRef.current[newIndex];
+    const saved = pageUndoStacksRef.current.get(newIndex);
+    undoStackRef.current = saved?.undo ?? [];
+    redoStackRef.current = saved?.redo ?? [];
+    setSketchPageIndex(newIndex);
+    // Reset active layer id to the drawing layer of the target page if it exists
+    const drawing = layersRef.current.find(l => l.kind === 'drawing') ?? layersRef.current[Math.min(2, layersRef.current.length - 1)];
+    if (drawing) setActiveLayerId(drawing.id);
+    clearSelection();
+    forceUpdate(n => n + 1);
+    redrawAll();
+    emitChange();
+  }, [sketchPageIndex, redrawAll, emitChange, clearSelection]);
+
+  const addSketchPage = useCallback(() => {
+    const newLayers = createDefaultLayers();
+    const insertAt = sketchPageIndex + 1;
+    sketchPagesRef.current.splice(insertAt, 0, newLayers);
+    setSketchPageCount(sketchPagesRef.current.length);
+    // Shift saved undo stacks for pages after insertAt
+    const remapped = new Map<number, { undo: Layer[][]; redo: Layer[][] }>();
+    pageUndoStacksRef.current.forEach((stacks, idx) => {
+      remapped.set(idx >= insertAt ? idx + 1 : idx, stacks);
+    });
+    pageUndoStacksRef.current = remapped;
+    switchSketchPage(insertAt);
+  }, [sketchPageIndex, switchSketchPage]);
+
+  const deleteSketchPage = useCallback((idx: number) => {
+    if (sketchPagesRef.current.length <= 1) return;
+    sketchPagesRef.current.splice(idx, 1);
+    setSketchPageCount(sketchPagesRef.current.length);
+    pageUndoStacksRef.current.delete(idx);
+    // Shift stacks for pages after idx
+    const remapped = new Map<number, { undo: Layer[][]; redo: Layer[][] }>();
+    pageUndoStacksRef.current.forEach((stacks, i) => {
+      remapped.set(i > idx ? i - 1 : i, stacks);
+    });
+    pageUndoStacksRef.current = remapped;
+    const newIdx = Math.min(idx, sketchPagesRef.current.length - 1);
+    if (idx === sketchPageIndex) {
+      // We deleted the current page; jump to newIdx directly (no need to save deleted state)
+      layersRef.current = sketchPagesRef.current[newIdx];
+      const saved = pageUndoStacksRef.current.get(newIdx);
+      undoStackRef.current = saved?.undo ?? [];
+      redoStackRef.current = saved?.redo ?? [];
+      setSketchPageIndex(newIdx);
+      const drawing = layersRef.current.find(l => l.kind === 'drawing') ?? layersRef.current[0];
+      if (drawing) setActiveLayerId(drawing.id);
+      clearSelection();
+      forceUpdate(n => n + 1);
+      redrawAll();
+    } else if (idx < sketchPageIndex) {
+      setSketchPageIndex(sketchPageIndex - 1);
+    }
+    emitChange();
+  }, [sketchPageIndex, redrawAll, emitChange, clearSelection]);
 
   // Refs so early pointer handlers can invoke undo/redo (defined below in render order)
   const handleUndoRef = useRef(handleUndo);
   const handleRedoRef = useRef(handleRedo);
   useEffect(() => { handleUndoRef.current = handleUndo; }, [handleUndo]);
   useEffect(() => { handleRedoRef.current = handleRedo; }, [handleRedo]);
+  useEffect(() => { switchSketchPageRef.current = switchSketchPage; }, [switchSketchPage]);
+  useEffect(() => { addSketchPageRef.current = addSketchPage; }, [addSketchPage]);
 
   const handleClear = useCallback(() => {
     undoStackRef.current.push(cloneLayers(layersRef.current));
@@ -5855,22 +5967,43 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       const data = JSON.parse(dataStr);
       console.log(`[SketchEditor] loadInitialData: version=${data.version}, layers=${data.layers?.length}, dataStr length=${dataStr.length}`);
       if (data.version === 2 && data.layers) {
-        layersRef.current = data.layers.map((l: any) => ({ ...l, textAnnotations: l.textAnnotations || [], stickyNotes: l.stickyNotes || [], images: l.images || [] }));
-        const totalStrokes = layersRef.current.reduce((sum, l) => sum + l.strokes.length, 0);
-        console.log(`[SketchEditor] Loaded ${totalStrokes} strokes from initialData`);
-        // Track max text id, sticky id, image id
-        for (const l of layersRef.current) {
-          for (const ta of l.textAnnotations) {
-            if (ta.id >= nextTextIdRef.current) nextTextIdRef.current = ta.id + 1;
-          }
-          for (const sn of (l.stickyNotes || [])) {
-            if (sn.id >= nextStickyIdRef.current) nextStickyIdRef.current = sn.id + 1;
-          }
-          for (const img of (l.images || [])) {
-            if (img.id >= nextImageIdRef.current) nextImageIdRef.current = img.id + 1;
+        // Multi-page: load pages array if present, otherwise treat layers as single page
+        const normalizeLayers = (raw: any[]): Layer[] => raw.map((l: any) => ({
+          ...l,
+          textAnnotations: l.textAnnotations || [],
+          stickyNotes: l.stickyNotes || [],
+          images: l.images || [],
+          washiTapes: l.washiTapes || [],
+        }));
+        if (Array.isArray(data.pages) && data.pages.length > 0) {
+          sketchPagesRef.current = data.pages.map((pg: any[]) => normalizeLayers(pg));
+          const pi = Math.min(Math.max(0, data.pageIndex ?? 0), sketchPagesRef.current.length - 1);
+          layersRef.current = sketchPagesRef.current[pi];
+          setSketchPageIndex(pi);
+          setSketchPageCount(sketchPagesRef.current.length);
+        } else {
+          layersRef.current = normalizeLayers(data.layers);
+          sketchPagesRef.current = [layersRef.current];
+          setSketchPageIndex(0);
+          setSketchPageCount(1);
+        }
+        // Track max ids across ALL pages
+        for (const pg of sketchPagesRef.current) {
+          for (const l of pg) {
+            for (const ta of (l.textAnnotations || [])) {
+              if (ta.id >= nextTextIdRef.current) nextTextIdRef.current = ta.id + 1;
+            }
+            for (const sn of (l.stickyNotes || [])) {
+              if (sn.id >= nextStickyIdRef.current) nextStickyIdRef.current = sn.id + 1;
+            }
+            for (const img of (l.images || [])) {
+              if (img.id >= nextImageIdRef.current) nextImageIdRef.current = img.id + 1;
+            }
           }
         }
-        setActiveLayerId(data.activeLayerId ?? 1);
+        const totalStrokes = layersRef.current.reduce((sum, l) => sum + l.strokes.length, 0);
+        console.log(`[SketchEditor] Loaded ${totalStrokes} strokes, ${sketchPagesRef.current.length} page(s) from initialData`);
+        setActiveLayerId(data.activeLayerId ?? 3);
         if (data.background) setBackground(data.background);
         // Load audio recording if present
         if (data.audioRecording?.dataUrl) {
@@ -5892,6 +6025,9 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
         const layers = createDefaultLayers();
         layers[0].strokes = data.strokes;
         layersRef.current = layers;
+        sketchPagesRef.current = [layers];
+        setSketchPageIndex(0);
+        setSketchPageCount(1);
       }
       initialLoadDoneRef.current = true;
     } catch (e) { console.error('[SketchEditor] loadInitialData parse error:', e); initialLoadDoneRef.current = true; }
@@ -7116,6 +7252,93 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
         >
           <Focus className="h-5 w-5" />
         </button>
+      )}
+
+      {/* Sketch multi-page navigation (non-PDF sketches) */}
+      {pdfPages.length === 0 && !presentationMode && !focusMode && (
+        <>
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-card/85 backdrop-blur-md border border-border/50 rounded-full pl-1 pr-1 py-1 shadow-lg animate-fade-in">
+            <button
+              className="h-7 w-7 rounded-full flex items-center justify-center text-foreground/70 hover:text-foreground hover:bg-muted/70 disabled:opacity-30 transition-colors"
+              onClick={() => switchSketchPage(sketchPageIndex - 1)}
+              disabled={sketchPageIndex === 0}
+              title="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              className="text-[11px] font-medium text-foreground/80 px-2 min-w-[54px] text-center hover:text-foreground"
+              onClick={() => setPageThumbsOpen(v => !v)}
+              title="Show page thumbnails"
+            >
+              {sketchPageIndex + 1} / {sketchPageCount}
+            </button>
+            <button
+              className="h-7 w-7 rounded-full flex items-center justify-center text-foreground/70 hover:text-foreground hover:bg-muted/70 disabled:opacity-30 transition-colors"
+              onClick={() => switchSketchPage(sketchPageIndex + 1)}
+              disabled={sketchPageIndex >= sketchPageCount - 1}
+              title="Next page"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <div className="w-px h-4 bg-border/60 mx-0.5" />
+            <button
+              className="h-7 w-7 rounded-full flex items-center justify-center text-foreground/70 hover:text-foreground hover:bg-primary/15 transition-colors"
+              onClick={() => addSketchPage()}
+              title="Add page"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Thumbnail rail */}
+          {pageThumbsOpen && (
+            <div
+              className="absolute bottom-36 left-1/2 -translate-x-1/2 z-30 max-w-[92vw] bg-card/95 backdrop-blur-md border border-border/50 rounded-2xl shadow-xl p-2 animate-fade-in"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="flex gap-2 overflow-x-auto max-w-[88vw] pb-1">
+                {sketchPagesRef.current.map((pageLayers, i) => {
+                  const isActive = i === sketchPageIndex;
+                  const strokeCount = pageLayers.reduce((s, l) => s + l.strokes.length + (l.textAnnotations?.length || 0) + (l.stickyNotes?.length || 0) + (l.images?.length || 0), 0);
+                  return (
+                    <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1">
+                      <button
+                        onClick={() => switchSketchPage(i)}
+                        className={cn(
+                          "w-24 h-16 rounded-lg border-2 bg-background/80 flex items-center justify-center text-[10px] text-muted-foreground overflow-hidden transition-all",
+                          isActive ? "border-primary ring-2 ring-primary/30" : "border-border/60 hover:border-border"
+                        )}
+                        title={`Page ${i + 1}`}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className="text-[11px] font-semibold text-foreground/80">{i + 1}</span>
+                          <span className="text-[9px] text-muted-foreground/70">{strokeCount} items</span>
+                        </div>
+                      </button>
+                      {sketchPageCount > 1 && (
+                        <button
+                          onClick={() => deleteSketchPage(i)}
+                          className="text-[9px] text-muted-foreground/60 hover:text-destructive transition-colors"
+                          title="Delete page"
+                        >
+                          <Trash className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                <button
+                  onClick={() => addSketchPage()}
+                  className="flex-shrink-0 w-24 h-16 rounded-lg border-2 border-dashed border-border/60 hover:border-primary/60 hover:bg-primary/5 flex items-center justify-center text-muted-foreground hover:text-primary transition-all"
+                  title="Add page"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Presentation Mode overlay */}
