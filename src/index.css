@@ -1228,9 +1228,9 @@ body[data-tour-id="task-scan-from-image"] .flowist-tour-popover.driver-popover-s
  * Uses !important because the iframe carries an inline `style` attribute
  * (set by the hydration code) for width/border/etc. */
 iframe.webclip-iframe {
-  height: 60vh !important;
-  max-height: 560px !important;
-  min-height: 380px !important;
+  height: 55vh !important;
+  max-height: 520px !important;
+  min-height: 340px !important;
 }
 @media (min-width: 640px) {
   iframe.webclip-iframe {
