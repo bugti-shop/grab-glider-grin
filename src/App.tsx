@@ -18,7 +18,7 @@ import { useGoogleDriveSync } from "@/hooks/useGoogleDriveSync";
 import { useQuickAddSync } from "@/hooks/useQuickAddSync";
 import { useCloudSync } from "@/hooks/useCloudSync";
 const PremiumPaywall = lazy(() => import("@/components/PremiumPaywall").then(m => ({ default: m.PremiumPaywall })));
-const OnboardingFlow = lazy(() => import("@/components/OnboardingFlow").then(m => ({ default: m.OnboardingFlow })));
+
 
 
 import { NavigationLoader } from "@/components/NavigationLoader";
@@ -540,13 +540,15 @@ const DriveSyncBootstrap = () => (
 const AppContent = () => {
   useCloudSync();
   const [isAppLocked, setIsAppLocked] = useState<boolean | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(() => {
-    try {
-      return localStorage.getItem('onboarding_completed_flag') === 'true' ? false : null;
-    } catch {
-      return null;
+  // Onboarding removed — always treat as completed so the dashboard renders immediately.
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
+  useEffect(() => {
+    try { localStorage.setItem('onboarding_completed_flag', 'true'); } catch {}
+    setSetting('onboarding_completed', true).catch(() => {});
+    if (Capacitor.isNativePlatform()) {
+      Preferences.set({ key: 'onboarding_completed', value: 'true' }).catch(() => {});
     }
-  });
+  }, []);
   
   // Web-only landing page gate. Native apps NEVER show landing.
   // Multi-signal native detection (Capacitor.isNativePlatform can be false during very early boot
@@ -583,40 +585,12 @@ const AppContent = () => {
     sessionStorage.getItem('awaitingSubscriptionChoice') === 'true'
   );
 
-  // Check onboarding status
+  // Onboarding removed — only keep the landing dismissal listener and the
+  // sign-out reset that returns web users to the landing page.
   useEffect(() => {
-    const check = async () => {
-      // Read from BOTH IndexedDB-backed settings AND Capacitor Preferences (native).
-      // On iOS WKWebView, IndexedDB can occasionally be cleared by the system under
-      // storage pressure — Preferences (UserDefaults-backed) is the durable source.
-      let completed = await getSetting<boolean>('onboarding_completed', false);
-      if (!completed && Capacitor.isNativePlatform()) {
-        try {
-          const { value } = await Preferences.get({ key: 'onboarding_completed' });
-          if (value === 'true') {
-            completed = true;
-            // Re-hydrate IndexedDB so the rest of the app sees the flag too
-            await setSetting('onboarding_completed', true);
-            try { localStorage.setItem('onboarding_completed_flag', 'true'); } catch {}
-          }
-        } catch {}
-      }
-      setShowOnboarding(!completed);
-    };
-    check();
-
-    // Listen for onboarding reset (e.g. sign out, subscription cancel)
     const handleReset = () => {
       awaitingSubscriptionChoice.current = false;
       sessionStorage.removeItem('awaitingSubscriptionChoice');
-      // Only force a returning user through onboarding/language again if they
-      // truly have never completed it. Otherwise it's a frustrating dead-end.
-      const alreadyOnboarded = (() => {
-        try { return localStorage.getItem('onboarding_completed_flag') === 'true'; } catch { return false; }
-      })();
-      if (!alreadyOnboarded) setShowOnboarding(true);
-      // Web: send signed-out users back to landing, but KEEP onboarding flag
-      // so they don't get dumped into the language picker again on re-login.
       if (!isNative) {
         try {
           localStorage.removeItem('flowist_user_engaged');
@@ -627,22 +601,13 @@ const AppContent = () => {
       }
     };
     window.addEventListener('flowistOnboardingReset', handleReset);
-    
-    // Listen for landing dismissal (user clicked Get Started)
+
     const handleLandingDismissed = () => setShowLanding(false);
     window.addEventListener('flowistLandingDismissed', handleLandingDismissed);
-
-    // Listen for explicit "show landing" request (e.g. back from onboarding language step)
-    const handleShowLanding = () => {
-      setShowOnboarding(false);
-      setShowLanding(true);
-    };
-    window.addEventListener('flowistShowLanding', handleShowLanding);
 
     return () => {
       window.removeEventListener('flowistOnboardingReset', handleReset);
       window.removeEventListener('flowistLandingDismissed', handleLandingDismissed);
-      window.removeEventListener('flowistShowLanding', handleShowLanding);
     };
   }, [isNative]);
   
@@ -700,89 +665,17 @@ const AppContent = () => {
   const wasEverPro = useRef(false);
   if (isPro) wasEverPro.current = true;
 
-  // Handle subscription state
+  // Onboarding removed — subscription state no longer needs to gate/reset it.
   useEffect(() => {
     if (subLoading || isVerifyingCheckout) return;
-    
     if (isPro) {
       awaitingSubscriptionChoice.current = false;
       sessionStorage.removeItem('awaitingSubscriptionChoice');
-      
-      // If user is verified Pro but onboarding is still showing, auto-skip it
-      // This handles: subscribed user on web who refreshes or returns after sign-out grace
-      if (showOnboarding) {
-        console.log('[App] Subscribed user detected — auto-skipping onboarding');
-        setSetting('onboarding_completed', true).then(() => {
-          startTransition(() => setShowOnboarding(false));
-        });
-      }
-      return;
     }
-    
-    // Don't process non-pro logic while onboarding is active (user is going through it)
-    if (showOnboarding) return;
-    // Don't reset if onboarding just completed (trial/subscription state still propagating)
-    if (onboardingJustCompleted.current) return;
-    // Don't reset while the user is intentionally moving from onboarding to paywall/checkout
-    if (awaitingSubscriptionChoice.current) return;
-    // On native: if user was ever pro this session, don't reset — RC may just be slow
-    if (wasEverPro.current) return;
-    // Soft-paywall: brand-new free users get to use the app with limits — don't kick them back to onboarding
-    if (isNewFreeUser) return;
-    // No active subscription — but if the user previously completed onboarding,
-    // DO NOT wipe their progress and dump them back into language selection.
-    // The paywall (gated per-feature inside the app) is the correct gate for
-    // non-pro users. Wiping onboarding on every cold start was the root cause
-    // of "app restarts onboarding after sign-in + reopen" on iOS.
-    (async () => {
-      const alreadyOnboarded =
-        (typeof localStorage !== 'undefined' &&
-          localStorage.getItem('onboarding_completed_flag') === 'true') ||
-        (await getSetting<boolean>('onboarding_completed', false));
-      if (alreadyOnboarded) return; // keep them in the app; paywall will gate Pro features
-      await setSetting('onboarding_completed', false);
-      setShowOnboarding(true);
-    })();
-  }, [isPro, subLoading, showOnboarding, isVerifyingCheckout, isNewFreeUser]);
+  }, [isPro, subLoading, isVerifyingCheckout]);
 
-  useEffect(() => {
-    if (subLoading || isVerifyingCheckout || isPro || showOnboarding !== false || showLanding) return;
-    openPaywall('daily_free_reminder', { daily: true });
-  }, [isPro, subLoading, isVerifyingCheckout, showOnboarding, showLanding, openPaywall]);
-
-  // Grace period after onboarding completes — prevents the subscription effect
-  // from immediately resetting onboarding before trial/subscription state propagates
+  // Kept only so existing refs below don't error; onboarding never "completes" now.
   const onboardingJustCompleted = useRef(false);
-
-  const handleOnboardingComplete = useCallback(() => {
-    onboardingJustCompleted.current = true;
-    awaitingSubscriptionChoice.current = true;
-    sessionStorage.setItem('awaitingSubscriptionChoice', 'true');
-    // Persist engagement so refresh / cold start lands directly on the dashboard,
-    // never the landing page again (until sign-out or subscription expiry).
-    try {
-      localStorage.setItem('flowist_user_engaged', 'true');
-      localStorage.setItem('onboarding_completed_flag', 'true');
-      sessionStorage.setItem('flowist_landing_acknowledged', 'true');
-    } catch {}
-    // Native: mirror to Capacitor Preferences (UserDefaults / SharedPrefs) so the
-    // flag survives WKWebView storage purges and WebView resets.
-    if (Capacitor.isNativePlatform()) {
-      Preferences.set({ key: 'onboarding_completed', value: 'true' }).catch(() => {});
-    }
-    startTransition(() => {
-      setShowLanding(false);
-      setShowOnboarding(false);
-    });
-    // Ensure Notes dashboard reloads folders created during onboarding
-    setTimeout(() => {
-      window.dispatchEvent(new Event('foldersUpdated'));
-    }, 300);
-    // Clear the grace flag after subscription state has had time to update
-    setTimeout(() => {
-      onboardingJustCompleted.current = false;
-    }, 5000);
-  }, []);
 
   // Initialize keyboard height detection for mobile toolbar positioning
   useKeyboardHeight();
@@ -911,11 +804,6 @@ const AppContent = () => {
       <RadixPointerEventsRescue />
       
       
-      {showOnboarding && (
-        <Suspense fallback={<BrandedFallback />}>
-          <OnboardingFlow onComplete={handleOnboardingComplete} />
-        </Suspense>
-      )}
 
       
       <Suspense fallback={null}>
