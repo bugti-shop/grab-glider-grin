@@ -4863,6 +4863,8 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   const handleRedoRef = useRef(handleRedo);
   useEffect(() => { handleUndoRef.current = handleUndo; }, [handleUndo]);
   useEffect(() => { handleRedoRef.current = handleRedo; }, [handleRedo]);
+  useEffect(() => { switchSketchPageRef.current = switchSketchPage; }, [switchSketchPage]);
+  useEffect(() => { addSketchPageRef.current = addSketchPage; }, [addSketchPage]);
 
   const handleClear = useCallback(() => {
     undoStackRef.current.push(cloneLayers(layersRef.current));
