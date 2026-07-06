@@ -35,6 +35,8 @@ const RELEASE_NOTES: ReleaseNote[] = [
     date: 'July 2026',
     latest: true,
     items: [
+      'Scientific Calculator',
+      'Unit Converter',
       'Web Clipper',
       'Sign in with Email option',
       'Habit Tracker',
