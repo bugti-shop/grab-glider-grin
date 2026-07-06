@@ -470,17 +470,42 @@ export const saveNotesToDB = async (notes: Note[], skipSyncEvent = false): Promi
 export const saveNoteToDBSingle = async (note: Note, skipCloudSync = false): Promise<void> => {
   let noteToPersist = hydrateNote(note);
   if (isNoteContentStub(note)) {
-    const existing = await loadNoteFromDB(note.id);
-    if (existing) {
-      noteToPersist = hydrateNote({
-        ...existing,
-        ...note,
-        content: existing.content,
-        [CONTENT_STUB_FLAG]: undefined,
-        [CONTENT_PREVIEW_KEY]: undefined,
-        [CONTENT_LENGTH_KEY]: undefined,
-      });
+    // Fast metadata patch path: do not read/clone the full note body for
+    // archive/trash/favorite/move actions. Giant notes can be 100k+ words and
+    // reading them just to flip metadata blocks mobile Chrome.
+    if (notesCache) {
+      const idx = notesCache.findIndex(n => n.id === note.id);
+      if (idx >= 0) {
+        notesCache[idx] = !notesCacheIsMetadata
+          ? hydrateNote({ ...notesCache[idx], ...note, content: notesCache[idx].content })
+          : makeMetadataNote(noteToPersist);
+      } else {
+        notesCache.push(notesCacheIsMetadata ? makeMetadataNote(noteToPersist) : noteToPersist);
+      }
+      notesCacheVersion++;
     }
+
+    if (!skipCloudSync) {
+      import('@/utils/cloudSync/storeBridge').then(({ pushNotes }) => {
+        try { pushNotes([noteToPersist]); } catch {}
+      }).catch(() => {});
+    }
+
+    try {
+      await withRetry((database) => new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction([META_STORE_NAME], 'readwrite');
+        const metaStore = transaction.objectStore(META_STORE_NAME);
+        metaStore.put(serializeMetadataNote(noteToPersist));
+        transaction.oncomplete = () => {
+          window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
+          resolve();
+        };
+        transaction.onerror = () => reject(transaction.error);
+      }));
+    } catch (error) {
+      console.error('Error saving note metadata to IndexedDB:', error);
+    }
+    return;
   }
 
   // Update cache
