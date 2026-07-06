@@ -111,8 +111,17 @@ export interface FlatTaskListProps {
   onReorder?: (fromIndex: number, toIndex: number) => void;
   /** Disable keyboard navigation (default false). */
   disableKeyboard?: boolean;
+  /**
+   * Optional per-row invalidation key. When provided, MemoRowBody uses this
+   * (plus task ref + index + isActive) to decide whether to re-render — so
+   * an inline `renderRow` won't force every visible row to re-render on
+   * unrelated parent updates. Include any external state the row reads
+   * (swipe, expand, pending flags, selection, playing voice progress, etc.).
+   */
+  getRowVersion?: (row: FlatTaskRow, index: number) => string | number;
   className?: string;
 }
+
 
 const isTypingInForm = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) return false;
