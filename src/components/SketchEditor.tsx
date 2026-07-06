@@ -3165,6 +3165,8 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     }
 
     if (e.pointerType === 'touch' && isDrawingRef.current) return;
+    // Palm rejection / stylus-only mode: block finger drawing (multi-touch gestures & stylus/mouse still work)
+    if (stylusOnlyRef.current && e.pointerType === 'touch') return;
 
     // --- Text tool logic ---
     if (tool === 'text') {
