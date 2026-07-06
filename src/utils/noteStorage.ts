@@ -269,12 +269,28 @@ export const loadNotesMetadataFromDB = async (): Promise<Note[]> => {
 export const loadNoteFromDB = async (noteId: string): Promise<Note | null> => {
   try {
     return await withRetry((database) => new Promise<Note | null>((resolve, reject) => {
-      const transaction = database.transaction([STORE_NAME], 'readonly');
+      const transaction = database.transaction([STORE_NAME, META_STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
+      const metaStore = transaction.objectStore(META_STORE_NAME);
       const request = store.get(noteId);
+      const metaRequest = metaStore.get(noteId);
 
-      request.onsuccess = () => resolve(request.result ? hydrateNote(request.result) : null);
+      transaction.oncomplete = () => {
+        const full = request.result ? hydrateNote(request.result) : null;
+        const meta = metaRequest.result ? hydrateNote(metaRequest.result) : null;
+        if (!full) return resolve(meta);
+        if (!meta) return resolve(full);
+        resolve(hydrateNote({
+          ...full,
+          ...meta,
+          content: full.content,
+          [CONTENT_STUB_FLAG]: undefined,
+          [CONTENT_PREVIEW_KEY]: (meta as any)[CONTENT_PREVIEW_KEY] ?? (full as any)[CONTENT_PREVIEW_KEY],
+          [CONTENT_LENGTH_KEY]: (meta as any)[CONTENT_LENGTH_KEY] ?? (full as any)[CONTENT_LENGTH_KEY],
+        }));
+      };
       request.onerror = () => reject(request.error);
+      metaRequest.onerror = () => reject(metaRequest.error);
     }));
   } catch (error) {
     console.error('Error loading single note from IndexedDB:', error);
@@ -454,17 +470,42 @@ export const saveNotesToDB = async (notes: Note[], skipSyncEvent = false): Promi
 export const saveNoteToDBSingle = async (note: Note, skipCloudSync = false): Promise<void> => {
   let noteToPersist = hydrateNote(note);
   if (isNoteContentStub(note)) {
-    const existing = await loadNoteFromDB(note.id);
-    if (existing) {
-      noteToPersist = hydrateNote({
-        ...existing,
-        ...note,
-        content: existing.content,
-        [CONTENT_STUB_FLAG]: undefined,
-        [CONTENT_PREVIEW_KEY]: undefined,
-        [CONTENT_LENGTH_KEY]: undefined,
-      });
+    // Fast metadata patch path: do not read/clone the full note body for
+    // archive/trash/favorite/move actions. Giant notes can be 100k+ words and
+    // reading them just to flip metadata blocks mobile Chrome.
+    if (notesCache) {
+      const idx = notesCache.findIndex(n => n.id === note.id);
+      if (idx >= 0) {
+        notesCache[idx] = !notesCacheIsMetadata
+          ? hydrateNote({ ...notesCache[idx], ...note, content: notesCache[idx].content })
+          : makeMetadataNote(noteToPersist);
+      } else {
+        notesCache.push(notesCacheIsMetadata ? makeMetadataNote(noteToPersist) : noteToPersist);
+      }
+      notesCacheVersion++;
     }
+
+    if (!skipCloudSync) {
+      import('@/utils/cloudSync/storeBridge').then(({ pushNotes }) => {
+        try { pushNotes([noteToPersist]); } catch {}
+      }).catch(() => {});
+    }
+
+    try {
+      await withRetry((database) => new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction([META_STORE_NAME], 'readwrite');
+        const metaStore = transaction.objectStore(META_STORE_NAME);
+        metaStore.put(serializeMetadataNote(noteToPersist));
+        transaction.oncomplete = () => {
+          window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
+          resolve();
+        };
+        transaction.onerror = () => reject(transaction.error);
+      }));
+    } catch (error) {
+      console.error('Error saving note metadata to IndexedDB:', error);
+    }
+    return;
   }
 
   // Update cache
@@ -519,24 +560,37 @@ export const saveNoteToDBSingle = async (note: Note, skipCloudSync = false): Pro
 export const bulkPutNotesInDB = async (
   notes: Note[],
   skipCloudSync = false,
+  dispatchUpdate = true,
 ): Promise<void> => {
   if (notes.length === 0) return;
   const hydrated = notes.map(hydrateNote);
+  const hasContentStubs = hydrated.some(isNoteContentStub);
+  const maxContentLength = hydrated.reduce((max, note) => {
+    const len = typeof note.content === 'string' ? note.content.length : 0;
+    return len > max ? len : max;
+  }, 0);
 
   // Update in-memory cache so the UI reflects new rows immediately.
   if (notesCache) {
     const byId = new Map(notesCache.map((n, i) => [n.id, i]));
     for (const n of hydrated) {
-      const cached = notesCacheIsMetadata ? makeMetadataNote(n) : n;
       const idx = byId.get(n.id);
-      if (idx !== undefined) notesCache[idx] = cached;
-      else notesCache.push(cached);
+      if (idx !== undefined) {
+        notesCache[idx] = !notesCacheIsMetadata && isNoteContentStub(n)
+          ? hydrateNote({ ...notesCache[idx], ...n, content: notesCache[idx].content })
+          : notesCacheIsMetadata
+            ? makeMetadataNote(n)
+            : n;
+      } else {
+        notesCache.push(notesCacheIsMetadata ? makeMetadataNote(n) : n);
+      }
     }
     notesCacheVersion++;
   }
 
-  // Chunked transactions — keeps each txn quick and lets the main thread breathe.
-  const CHUNK = 500;
+  // Chunked transactions — adaptive for duplicated 100k-word notes. Keeping a
+  // 500-row transaction with giant HTML bodies can OOM mobile Chrome.
+  const CHUNK = hasContentStubs ? 50 : maxContentLength > 50_000 ? 20 : 500;
   for (let start = 0; start < hydrated.length; start += CHUNK) {
     const slice = hydrated.slice(start, start + CHUNK);
     try {
@@ -545,8 +599,16 @@ export const bulkPutNotesInDB = async (
         const store = tx.objectStore(STORE_NAME);
         const metaStore = tx.objectStore(META_STORE_NAME);
         for (const note of slice) {
-          store.put(serializeNote(note));
-          metaStore.put(serializeMetadataNote(note));
+          if (isNoteContentStub(note)) {
+            // Metadata-only bulk actions (trash/archive/favorite/move) must not
+            // read+clone the full note body. With thousands of 100k-word notes,
+            // store.get(id) itself can crash the tab. The full content row stays
+            // intact; the lightweight meta row drives list/calendar refreshes.
+            metaStore.put(serializeMetadataNote(note));
+          } else {
+            store.put(serializeNote(note));
+            metaStore.put(serializeMetadataNote(note));
+          }
         }
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
@@ -555,13 +617,12 @@ export const bulkPutNotesInDB = async (
       console.error('bulkPutNotesInDB chunk failed:', e);
     }
     // Yield to the UI between chunks so scrolling/clicks stay responsive.
-    if (start + CHUNK < hydrated.length) {
-      await new Promise(r => setTimeout(r, 0));
-    }
+    if (start + CHUNK < hydrated.length) await new Promise(r => setTimeout(r, 0));
   }
 
-  // Single coalesced event so list/contexts refresh once.
-  window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
+  // Single coalesced event so list/contexts refresh once. Bulk callers that
+  // stream multiple chunks can suppress per-chunk refreshes and dispatch once.
+  if (dispatchUpdate) window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
 
   if (!skipCloudSync) {
     import('@/utils/cloudSync/storeBridge').then(({ pushNotes }) => {

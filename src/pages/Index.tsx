@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, startTransition } from 'react';
+import { useState, useEffect, useMemo, useRef, startTransition, useCallback } from 'react';
 import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
 import { useSubscription, FREE_LIMITS, FREE_CAPACITY_LIMITS } from '@/contexts/SubscriptionContext';
@@ -260,7 +260,7 @@ const Index = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSaveNote = (note: Note): boolean => {
+  const handleSaveNote = useCallback((note: Note): boolean => {
     const isExisting = notes.some((n) => n.id === note.id);
     if (!isExisting && !isPro && !softRequireCreate('notes', notes.length)) {
       return false;
@@ -293,9 +293,9 @@ const Index = () => {
       return [noteMeta, ...prev];
     });
     return true;
-  };
+  }, [folders, isPro, notes.length, selectedFolderId, setNotes, softRequireCreate]);
 
-  const handleDeleteNote = (id: string) => {
+  const handleDeleteNote = useCallback((id: string) => {
     // Move to trash instead of permanent delete
     setNotes((prev) => {
       return prev.map((n) => {
@@ -306,9 +306,9 @@ const Index = () => {
       });
     });
     logActivity('note_delete', 'Note moved to trash', { entityId: id, entityType: 'note' });
-  };
+  }, [setNotes]);
 
-  const handleArchiveNote = (id: string) => {
+  const handleArchiveNote = useCallback((id: string) => {
     setNotes((prev) => {
       return prev.map((n) => {
         if (n.id !== id) return n;
@@ -318,9 +318,9 @@ const Index = () => {
       });
     });
     logActivity('note_archive', 'Note archived', { entityId: id, entityType: 'note' });
-  };
+  }, [setNotes]);
 
-  const handleRestoreFromTrash = (id: string) => {
+  const handleRestoreFromTrash = useCallback((id: string) => {
     setNotes((prev) => {
       return prev.map((n) => {
         if (n.id !== id) return n;
@@ -330,9 +330,9 @@ const Index = () => {
       });
     });
     logActivity('note_restore', 'Note restored from trash', { entityId: id, entityType: 'note' });
-  };
+  }, [setNotes]);
 
-  const handleRestoreFromArchive = (id: string) => {
+  const handleRestoreFromArchive = useCallback((id: string) => {
     setNotes((prev) => {
       return prev.map((n) => {
         if (n.id !== id) return n;
@@ -342,7 +342,7 @@ const Index = () => {
       });
     });
     logActivity('note_restore', 'Note restored from archive', { entityId: id, entityType: 'note' });
-  };
+  }, [setNotes]);
 
   const handlePermanentDelete = async (id: string) => {
     // Delete from IndexedDB first
@@ -359,7 +359,7 @@ const Index = () => {
     logActivity('note_delete', 'Trash emptied');
   };
 
-  const handleDuplicateNote = async (noteId: string) => {
+  const handleDuplicateNote = useCallback(async (noteId: string) => {
     const noteToDuplicate = notes.find(n => n.id === noteId);
     if (!noteToDuplicate) return;
 
@@ -383,9 +383,9 @@ const Index = () => {
     
     setNotes(prev => [makeMetadataNote(duplicatedNote), ...prev]);
     saveNoteToDBSingle(duplicatedNote);
-  };
+  }, [isPro, notes, requireCapacity, setNotes, softRequireCreate]);
 
-  const handleTogglePin = (noteId: string, e?: React.MouseEvent) => {
+  const handleTogglePin = useCallback((noteId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!requireFeature('pin_feature')) return;
     setNotes((prev) => {
@@ -402,9 +402,9 @@ const Index = () => {
         return n;
       });
     });
-  };
+  }, [requireFeature, setNotes]);
 
-  const handleToggleFavorite = (noteId: string) => {
+  const handleToggleFavorite = useCallback((noteId: string) => {
     setNotes((prev) => {
       return prev.map((n) => {
         if (n.id === noteId) {
@@ -415,7 +415,7 @@ const Index = () => {
         return n;
       });
     });
-  };
+  }, [setNotes]);
 
   const handleDragStart = (e: React.DragEvent, noteId: string) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -970,19 +970,16 @@ const Index = () => {
       toast.loading(`Duplicating ${ids.length} note${ids.length > 1 ? 's' : ''}…`, { id: 'bulk-dup' });
     } catch {}
 
-    // Parallel content loads with a concurrency cap so we don't fire 1000+
-    // IDB reads at once.
-    const CONCURRENCY = 8;
-    const duplicates: Note[] = [];
     const sources: Note[] = ids
-      .map(id => notes.find(n => n.id === id))
+      .map(id => notesMap.get(id))
       .filter((n): n is Note => !!n);
 
-    let cursor = 0;
-    const worker = async () => {
-      while (cursor < sources.length) {
-        const i = cursor++;
-        const source = sources[i];
+    let duplicatedCount = 0;
+    const BATCH = 20;
+    for (let start = 0; start < sources.length; start += BATCH) {
+      const batchSources = sources.slice(start, start + BATCH);
+      const duplicates: Note[] = [];
+      for (const source of batchSources) {
         const fullSource = isNoteContentStub(source)
           ? (await loadNoteFromDB(source.id)) || source
           : source;
@@ -996,32 +993,33 @@ const Index = () => {
           updatedAt: new Date(),
         });
       }
-    };
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, sources.length) }, worker));
+      if (duplicates.length) {
+        duplicatedCount += duplicates.length;
+        startTransition(() => setNotes(prev => [...duplicates.map(makeMetadataNote), ...prev]));
+        await bulkPutNotesInDB(duplicates, false, false);
+        try { toast.loading(`Duplicating ${duplicatedCount.toLocaleString()} / ${sources.length.toLocaleString()}…`, { id: 'bulk-dup' }); } catch {}
+      }
+      if (start + BATCH < sources.length) await new Promise(r => setTimeout(r, 0));
+    }
 
-    if (duplicates.length === 0) {
+    if (duplicatedCount === 0) {
       try { toast.dismiss('bulk-dup'); } catch {}
       return;
     }
 
-    // One state update for the whole batch.
-    setNotes(prev => [...duplicates.map(makeMetadataNote), ...prev]);
-
-    // One bulk transaction instead of N independent saves.
-    await bulkPutNotesInDB(duplicates);
-
     try {
-      toast.success(`Duplicated ${duplicates.length} note${duplicates.length > 1 ? 's' : ''}`, { id: 'bulk-dup' });
+      window.dispatchEvent(new Event('notesUpdated'));
+      toast.success(`Duplicated ${duplicatedCount} note${duplicatedCount > 1 ? 's' : ''}`, { id: 'bulk-dup' });
     } catch {}
   };
 
   const handleBulkMoveToFolder = (folderId: string | null) => {
+    const idSet = new Set(selectedNoteIds);
     if (folderId) {
       // Only count notes moving into folder that aren't already there
-      const incoming = notes.filter(n => selectedNoteIds.includes(n.id) && n.folderId !== folderId).length;
+      const incoming = notes.filter(n => idSet.has(n.id) && n.folderId !== folderId).length;
       if (!canMoveNotesToFolder(folderId, incoming)) return;
     }
-    const idSet = new Set(selectedNoteIds);
     const updates: Note[] = [];
     setNotes(prev => {
       return prev.map(n => {
@@ -1075,7 +1073,7 @@ const Index = () => {
     setIsSelectionMode(false);
   };
 
-  const filteredNotes = [...allFilteredNotes].sort((a, b) => {
+  const filteredNotes = useMemo(() => [...allFilteredNotes].sort((a, b) => {
     // Pinned notes always first
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return 1;
@@ -1093,7 +1091,11 @@ const Index = () => {
       default:
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     }
-  });
+  }), [allFilteredNotes, sortBy]);
+
+  const selectedNoteIdSet = useMemo(() => new Set(selectedNoteIds), [selectedNoteIds]);
+  const trashedNotes = useMemo(() => notes.filter(n => n.isDeleted), [notes]);
+  const archivedNotes = useMemo(() => notes.filter(n => n.isArchived && !n.isDeleted), [notes]);
 
   const favoriteNotes = useMemo(() => filteredNotes.filter(note => note.isFavorite), [filteredNotes]);
   const regularNotes = useMemo(() => filteredNotes.filter(note => !note.isFavorite), [filteredNotes]);
@@ -1242,8 +1244,8 @@ const Index = () => {
           onEnterSelectionMode={() => setIsSelectionMode(true)}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
-          trashedNotesCount={notes.filter(n => n.isDeleted).length}
-          archivedNotesCount={notes.filter(n => n.isArchived && !n.isDeleted).length}
+          trashedNotesCount={trashedNotes.length}
+          archivedNotesCount={archivedNotes.length}
           isGridView={isGridView}
           onToggleGridView={handleToggleGridView}
         />
@@ -1365,7 +1367,7 @@ const Index = () => {
                 <Trash2 className="h-5 w-5 text-destructive" />
                 {t('notes.trash')}
               </h2>
-              {notes.filter(n => n.isDeleted).length > 0 && (
+              {trashedNotes.length > 0 && (
                 <Button
                   size="sm"
                   variant="destructive"
@@ -1375,7 +1377,7 @@ const Index = () => {
                 </Button>
               )}
             </div>
-            {notes.filter(n => n.isDeleted).length === 0 ? (
+            {trashedNotes.length === 0 ? (
               <div className="text-center py-20">
                 <Trash2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                 <h3 className="text-lg font-medium mb-1">{t('notes.trashEmpty')}</h3>
@@ -1383,7 +1385,7 @@ const Index = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {notes.filter(n => n.isDeleted).map((note) => (
+                {trashedNotes.map((note) => (
                   <Card key={note.id} className="p-4 cv-auto-note">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
@@ -1432,7 +1434,7 @@ const Index = () => {
               <Archive className="h-5 w-5 text-muted-foreground" />
               {t('notes.archivedNotes')}
             </h2>
-            {notes.filter(n => n.isArchived && !n.isDeleted).length === 0 ? (
+            {archivedNotes.length === 0 ? (
               <div className="text-center py-20">
                 <Archive className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                 <h3 className="text-lg font-medium mb-1">{t('notes.noArchivedNotes')}</h3>
@@ -1440,7 +1442,7 @@ const Index = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {notes.filter(n => n.isArchived && !n.isDeleted).map((note) => (
+                {archivedNotes.map((note) => (
                   <Card key={note.id} className="p-4 cv-auto-note">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
@@ -1507,7 +1509,7 @@ const Index = () => {
                           onDragEnd={handleDragEnd}
                           onDragLeave={handleCardDragLeave}
                           isSelectionMode={isSelectionMode}
-                          isSelected={selectedNoteIds.includes(note.id)}
+                          isSelected={selectedNoteIdSet.has(note.id)}
                           onToggleSelection={handleToggleNoteSelection}
                           onDuplicate={handleDuplicateNote}
                         />
@@ -1547,7 +1549,7 @@ const Index = () => {
                           onDragEnd={handleDragEnd}
                           onDragLeave={handleCardDragLeave}
                           isSelectionMode={isSelectionMode}
-                          isSelected={selectedNoteIds.includes(note.id)}
+                          isSelected={selectedNoteIdSet.has(note.id)}
                           onToggleSelection={handleToggleNoteSelection}
                           onDuplicate={handleDuplicateNote}
                         />
@@ -1583,7 +1585,7 @@ const Index = () => {
                             onDragEnd={handleDragEnd}
                             onDragLeave={handleCardDragLeave}
                             isSelectionMode={isSelectionMode}
-                            isSelected={selectedNoteIds.includes(note.id)}
+                            isSelected={selectedNoteIdSet.has(note.id)}
                             onToggleSelection={handleToggleNoteSelection}
                             onDuplicate={handleDuplicateNote}
                           />
@@ -1622,7 +1624,7 @@ const Index = () => {
                           onDragEnd={handleDragEnd}
                           onDragLeave={handleCardDragLeave}
                           isSelectionMode={isSelectionMode}
-                          isSelected={selectedNoteIds.includes(note.id)}
+                          isSelected={selectedNoteIdSet.has(note.id)}
                           onToggleSelection={handleToggleNoteSelection}
                           onDuplicate={handleDuplicateNote}
                         />

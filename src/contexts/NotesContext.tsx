@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Note } from '@/types/note';
-import { loadNotesMetadataFromDB, saveNotesToDB, saveNoteToDBSingle, deleteNoteFromDB, migrateNotesToIndexedDB, makeMetadataNote, isNoteContentStub } from '@/utils/noteStorage';
+import { loadNotesMetadataFromDB, saveNotesToDB, saveNoteToDBSingle, deleteNoteFromDB, migrateNotesToIndexedDB, makeMetadataNote, isNoteContentStub, bulkPutNotesInDB } from '@/utils/noteStorage';
 import { getTextPreviewFromHtml } from '@/utils/contentPreview';
 import { useSubscription, SOFT_FREE_LIMITS } from '@/contexts/SubscriptionContext';
 
@@ -331,10 +331,11 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const bulkUpdateNotes = useCallback(async (noteIds: string[], updates: Partial<Note>) => {
+    const idSet = new Set(noteIds);
     const updatedNotes: Note[] = [];
     setNotes(prev =>
       prev.map(n => {
-        if (!noteIds.includes(n.id)) return n;
+        if (!idSet.has(n.id)) return n;
         const next: Note = {
           ...n,
           ...updates,
@@ -346,7 +347,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
 
     try {
-      await Promise.all(updatedNotes.map(n => saveNoteToDBSingle(n)));
+      await bulkPutNotesInDB(updatedNotes);
     } catch (error) {
       console.error('[NotesContext] Error persisting bulk note update:', error);
     }
