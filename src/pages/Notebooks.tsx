@@ -9,6 +9,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { genId } from '@/utils/genId';
+import { notebooksRuntimeCache, setNotebooksCache } from '@/utils/notebooksRuntimeCache';
 
 import {
   Dialog,
