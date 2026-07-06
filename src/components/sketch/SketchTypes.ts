@@ -130,6 +130,8 @@ export interface WashiTapeData {
   opacity: number;
 }
 
+export type LayerKind = 'background' | 'grid' | 'drawing' | 'text' | 'stickers' | 'custom';
+
 export interface Layer {
   id: number;
   name: string;
@@ -141,6 +143,8 @@ export interface Layer {
   opacity: number;
   visible: boolean;
   blendMode?: LayerBlendMode;
+  kind?: LayerKind;
+  locked?: boolean;
 }
 
 export interface SketchData {

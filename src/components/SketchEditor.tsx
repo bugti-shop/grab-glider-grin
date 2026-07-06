@@ -203,10 +203,21 @@ const TEXT_FONTS = [
 ];
 
 const createDefaultLayers = (): Layer[] => [
-  { id: 1, name: 'Layer 1', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
-  { id: 2, name: 'Layer 2', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
-  { id: 3, name: 'Layer 3', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
+  { id: 1, name: 'Background', kind: 'background', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
+  { id: 2, name: 'Grid', kind: 'grid', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
+  { id: 3, name: 'Drawing', kind: 'drawing', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
+  { id: 4, name: 'Text', kind: 'text', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
+  { id: 5, name: 'Stickers', kind: 'stickers', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
 ];
+
+const LAYER_KIND_LABELS: Record<string, string> = {
+  background: 'Background',
+  grid: 'Grid',
+  drawing: 'Drawing',
+  text: 'Text',
+  stickers: 'Stickers',
+  custom: 'Layer',
+};
 
 const ToolbarPenIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1217,7 +1228,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   const updateBrushSetting = (key: keyof BrushSettings, value: number) => {
     setBrushSettingsMap(prev => ({ ...prev, [tool]: { ...(prev[tool as DrawToolType] || DEFAULT_BRUSH_SETTINGS.pen), [key]: value } }));
   };
-  const [activeLayerId, setActiveLayerId] = useState(1);
+  const [activeLayerId, setActiveLayerId] = useState(3);
   const [background, setBackground] = useState<BackgroundType>('grid-sm');
   const [recentColors, setRecentColors] = useState<string[]>(['#1a1a1a']);
   const [eyedropperActive, setEyedropperActive] = useState(false);
@@ -1933,7 +1944,13 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     const vy0 = -pan.y / zoom;
     const vx1 = vx0 + w / zoom;
     const vy1 = vy0 + h / zoom;
-    drawBackground(ctx, vx0, vy0, vx1, vy1, background, gridColor, gridOpacity);
+    const bgLayer = layersRef.current.find(l => l.kind === 'background');
+    const gridLayer = layersRef.current.find(l => l.kind === 'grid');
+    const bgVisible = bgLayer ? bgLayer.visible : true;
+    const gridVisible = gridLayer ? gridLayer.visible : true;
+    if (bgVisible) {
+      drawBackground(ctx, vx0, vy0, vx1, vy1, gridVisible ? background : 'plain', gridColor, gridOpacity);
+    }
 
     // Draw PDF page as background if loaded
     if (pdfPages.length > 0) {
@@ -4917,7 +4934,13 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     const vy0 = -pan.y / zoom;
     const vx1 = vx0 + w / zoom;
     const vy1 = vy0 + h / zoom;
-    drawBackground(offCtx, vx0, vy0, vx1, vy1, background, gridColor, gridOpacity);
+    {
+      const _bgL = layersRef.current.find(l => l.kind === 'background');
+      const _gridL = layersRef.current.find(l => l.kind === 'grid');
+      const _bgVis = _bgL ? _bgL.visible : true;
+      const _gridVis = _gridL ? _gridL.visible : true;
+      if (_bgVis) drawBackground(offCtx, vx0, vy0, vx1, vy1, _gridVis ? background : 'plain', gridColor, gridOpacity);
+    }
 
     // Render layers
     for (const layer of layersRef.current) {
@@ -8038,7 +8061,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                     onClick={() => {
                       const newId = Math.max(...layersRef.current.map(l => l.id)) + 1;
                       const newName = `Layer ${newId}`;
-                      const newLayer = { id: newId, name: newName, strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true };
+                      const newLayer: Layer = { id: newId, name: newName, kind: 'custom', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true };
                       undoStackRef.current = [...undoStackRef.current.slice(-(MAX_UNDO - 1)), cloneLayers(layersRef.current)];
                       layersRef.current.push(newLayer);
                       setActiveLayerId(newId);
@@ -8076,6 +8099,16 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                   >
                     {layer.visible ? <Eye className="h-3.5 w-3.5 text-muted-foreground" /> : <EyeOff className="h-3.5 w-3.5 text-muted-foreground/50" />}
                   </button>
+                  {(() => {
+                    const KindIcon =
+                      layer.kind === 'background' ? ImagePlus
+                      : layer.kind === 'grid' ? Grid3X3
+                      : layer.kind === 'text' ? Type
+                      : layer.kind === 'stickers' ? StickyNote
+                      : layer.kind === 'drawing' ? Pencil
+                      : Layers;
+                    return <KindIcon className="h-3 w-3 text-muted-foreground/70 flex-shrink-0" />;
+                  })()}
                   <span
                     className={cn('text-xs flex-1 truncate', !layer.visible && 'text-muted-foreground/50')}
                     onDoubleClick={(e) => {
