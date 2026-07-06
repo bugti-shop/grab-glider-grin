@@ -203,10 +203,21 @@ const TEXT_FONTS = [
 ];
 
 const createDefaultLayers = (): Layer[] => [
-  { id: 1, name: 'Layer 1', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
-  { id: 2, name: 'Layer 2', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
-  { id: 3, name: 'Layer 3', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
+  { id: 1, name: 'Background', kind: 'background', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
+  { id: 2, name: 'Grid', kind: 'grid', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
+  { id: 3, name: 'Drawing', kind: 'drawing', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
+  { id: 4, name: 'Text', kind: 'text', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
+  { id: 5, name: 'Stickers', kind: 'stickers', strokes: [], textAnnotations: [], stickyNotes: [], images: [], washiTapes: [], opacity: 1, visible: true },
 ];
+
+const LAYER_KIND_LABELS: Record<string, string> = {
+  background: 'Background',
+  grid: 'Grid',
+  drawing: 'Drawing',
+  text: 'Text',
+  stickers: 'Stickers',
+  custom: 'Layer',
+};
 
 const ToolbarPenIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
