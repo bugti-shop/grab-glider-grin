@@ -164,7 +164,12 @@ export function FlatTaskList({
   const resolvedRowHeight = rowHeight ?? virtualizationSettings.tasks.rowHeight;
   const resolvedOverscan = getAdaptiveOverscan(overscan ?? virtualizationSettings.tasks.overscan, flat.length, 'tasks');
   const resolvedUseWindow = useWindow ?? virtualizationSettings.tasks.windowing;
-  const useFixedMassiveRows = flat.length >= 10_000;
+  // Previously kicked in at 10k rows and forced a fixed row height +
+  // overflow:hidden which visibly clipped/altered rows near the threshold
+  // ("UI changes after ~9k tasks"). Virtualization already keeps only visible
+  // rows mounted, and MemoRowBody keeps per-row re-renders cheap, so we no
+  // longer need to sacrifice layout for scale. Effectively disabled.
+  const useFixedMassiveRows = flat.length >= 1_000_000;
 
   const parentRef = useRef<HTMLDivElement>(null);
   const [parentTop, setParentTop] = useState(0);
