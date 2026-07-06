@@ -462,6 +462,41 @@ const Today = () => {
     return () => window.removeEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
   }, [completedItems, items, setSelectedTask, uncompletedItems, handleAddTask]);
 
+  // Seed a default "My First Task" for brand-new users so Today Tasks is never
+  // empty on first launch. Runs exactly once per install (flagged in localStorage).
+  const seededFirstTaskRef = useRef(false);
+  useEffect(() => {
+    if (seededFirstTaskRef.current) return;
+    try {
+      if (localStorage.getItem('flowist_default_task_seeded') === 'true') {
+        seededFirstTaskRef.current = true;
+        return;
+      }
+    } catch { return; }
+    // Wait until the task list has hydrated. `items` starts empty during the
+    // first render pass even when data exists, so we defer one tick to let
+    // the store populate before deciding whether to seed.
+    const timer = window.setTimeout(async () => {
+      if (seededFirstTaskRef.current) return;
+      if (items.length > 0) {
+        seededFirstTaskRef.current = true;
+        try { localStorage.setItem('flowist_default_task_seeded', 'true'); } catch {}
+        return;
+      }
+      seededFirstTaskRef.current = true;
+      try {
+        await handleAddTask({
+          title: 'My First Task',
+          priority: 'none',
+          status: 'not-started',
+        } as any);
+        try { localStorage.setItem('flowist_default_task_seeded', 'true'); } catch {}
+      } catch {}
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [items, handleAddTask]);
+
+
   // Resolve voice URLs
   const voiceItemsKey = items.filter(i => i.voiceRecording?.audioUrl).map(i => i.id).join(',');
   useMemo(() => { voice.resolveVoiceUrls(items); }, [voiceItemsKey]);
