@@ -441,6 +441,27 @@ const Today = () => {
   const { playingVoiceId, voiceProgress, voiceCurrentTime, voiceDuration, voicePlaybackSpeed, resolvedVoiceUrls, flatAudioRef } = voice;
   const { formatDuration, handleFlatVoicePlay, cycleVoicePlaybackSpeed, handleVoiceSeek, seekToPercent } = voice;
 
+  // Tour: open first task; auto-create one if the user has no tasks yet.
+  useEffect(() => {
+    const openFirstTaskForTour = async () => {
+      let firstTask = uncompletedItems[0] ?? completedItems[0] ?? items[0];
+      if (!firstTask) {
+        try {
+          await handleAddTask({
+            title: 'My first task',
+            priority: 'none',
+            status: 'not-started',
+          } as any);
+        } catch {}
+        await new Promise((r) => setTimeout(r, 300));
+        firstTask = uncompletedItems[0] ?? completedItems[0] ?? items[0];
+      }
+      if (firstTask) setSelectedTask(firstTask);
+    };
+    window.addEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
+    return () => window.removeEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
+  }, [completedItems, items, setSelectedTask, uncompletedItems, handleAddTask]);
+
   // Resolve voice URLs
   const voiceItemsKey = items.filter(i => i.voiceRecording?.audioUrl).map(i => i.id).join(',');
   useMemo(() => { voice.resolveVoiceUrls(items); }, [voiceItemsKey]);
