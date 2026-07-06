@@ -8239,6 +8239,17 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                 ))}
               </div>
             </div>
+            <div className="mt-2 pt-2 border-t border-border space-y-1.5">
+              <p className="text-[10px] font-medium text-muted-foreground mb-1">Input</p>
+              <label className="flex items-center justify-between gap-2 text-[11px] text-foreground cursor-pointer select-none">
+                <span className="flex-1">Palm rejection <span className="text-muted-foreground/70">(stylus only)</span></span>
+                <input type="checkbox" className="h-3.5 w-3.5 accent-primary" checked={stylusOnly} onChange={(e) => setStylusOnly(e.target.checked)} />
+              </label>
+              <label className="flex items-center justify-between gap-2 text-[11px] text-foreground cursor-pointer select-none">
+                <span className="flex-1">Two-finger tap = undo <span className="text-muted-foreground/70">(3-finger = redo)</span></span>
+                <input type="checkbox" className="h-3.5 w-3.5 accent-primary" checked={multiFingerGestures} onChange={(e) => setMultiFingerGestures(e.target.checked)} />
+              </label>
+            </div>
           </PopoverContent>
         </Popover>
 
