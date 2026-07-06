@@ -677,15 +677,44 @@ const WebClipper = () => {
               // Embed the ENTIRE captured document (start-to-finish) as a
               // read-only iframe via srcdoc. The sandbox intentionally omits
               // `allow-scripts` so nothing inside the captured page can execute JS.
-              const escapedDoc = readOnlySnapshot
-                .replace(/&/g, '&amp;')
-                .replace(/"/g, '&quot;');
-              const iframe =
-                `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
-                `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
-                `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
-                `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
-                `srcdoc="${escapedDoc}"></iframe>`;
+              // Big snapshots (> ~400 KB) blank out when embedded via a
+              // srcdoc attribute — Chromium/WebKit cap attribute payloads
+              // around 1 MB and truncate silently. For anything over the
+              // threshold, embed via a blob: URL instead so the iframe
+              // streams the exact bytes without any attribute-size limits.
+              const LARGE_SNAPSHOT_THRESHOLD = 400 * 1024;
+              const useBlobEmbed = snapshotBytes > LARGE_SNAPSHOT_THRESHOLD;
+              let iframe: string;
+              let escapedDoc = '';
+              if (useBlobEmbed) {
+                try {
+                  const blob = new Blob([readOnlySnapshot], { type: 'text/html;charset=utf-8' });
+                  const blobUrl = URL.createObjectURL(blob);
+                  iframe =
+                    `<iframe class="flowist-web-clip-page" data-role="page-embed" data-embed="blob" ` +
+                    `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+                    `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
+                    `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
+                    `src="${blobUrl}"></iframe>`;
+                } catch (blobErr) {
+                  console.warn('[webClipper] blob embed failed, falling back to srcdoc', blobErr);
+                  escapedDoc = readOnlySnapshot.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+                  iframe =
+                    `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
+                    `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+                    `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
+                    `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
+                    `srcdoc="${escapedDoc}"></iframe>`;
+                }
+              } else {
+                escapedDoc = readOnlySnapshot.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+                iframe =
+                  `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
+                  `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+                  `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
+                  `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
+                  `srcdoc="${escapedDoc}"></iframe>`;
+              }
 
               // ── Parity check ────────────────────────────────────────────
               // Verify the embedded snapshot HTML is byte-identical to what
