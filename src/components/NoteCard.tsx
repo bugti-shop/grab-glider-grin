@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, memo } from 'react';
+import { ReactNode, useState, useRef, useEffect, useMemo, memo } from 'react';
 import { AppTag, getAllTags } from '@/utils/tagStorage';
 import { useTranslation } from 'react-i18next';
 import { Note } from '@/types/note';
@@ -66,29 +66,120 @@ const RANDOM_COLORS = [
   'hsl(60, 90%, 75%)',
 ];
 
+const runCardActionSafely = (action: () => void | Promise<void>) => {
+  try {
+    const result = action();
+    if (result && typeof (result as Promise<void>).catch === 'function') {
+      (result as Promise<void>).catch((error) => {
+        console.error('[NoteCard] action failed:', error);
+      });
+    }
+  } catch (error) {
+    console.error('[NoteCard] action failed:', error);
+  }
+};
+
 const NoteCardFallback = ({ note }: { note: Note }) => (
-  <Card className="flex h-full w-full flex-col justify-center rounded-lg border border-border bg-card p-4 text-center">
+  <Card className="flex h-full w-full flex-col justify-center rounded-lg border border-border bg-card p-4 pr-12 text-center">
     <p className="line-clamp-1 text-sm font-semibold text-foreground">{sanitizeDisplayName(note.title || 'Note')}</p>
     <p className="mt-1 text-xs text-muted-foreground">This note couldn’t render.</p>
   </Card>
 );
 
-const NoteCardInner = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, onToggleFavorite, onMoveToFolder, onDragStart, onDragOver, onDrop, onDragEnd, onDragLeave, isSelectionMode = false, isSelected = false, onToggleSelection, onDuplicate, onHide, onProtect }: NoteCardProps) => {
+const NoteCardOptionsMenu = ({
+  note,
+  onEdit,
+  onDelete,
+  onArchive,
+  onTogglePin,
+  onToggleFavorite,
+  onDuplicate,
+  onHide,
+  onProtect,
+  noteProtection,
+  showContextMenu,
+  setShowContextMenu,
+}: Pick<NoteCardProps, 'note' | 'onEdit' | 'onDelete' | 'onArchive' | 'onTogglePin' | 'onToggleFavorite' | 'onDuplicate' | 'onHide' | 'onProtect'> & {
+  noteProtection: NoteProtection;
+  showContextMenu: boolean;
+  setShowContextMenu: (open: boolean) => void;
+}) => {
   const { t } = useTranslation();
-  const [showContextMenu, setShowContextMenu] = useState(false);
+  return (
+    <DropdownMenu open={showContextMenu} onOpenChange={setShowContextMenu}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t('common.options', 'Options')}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80 text-gray-800 shadow-sm backdrop-blur hover:bg-white"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-48 z-50 bg-background border border-border shadow-lg">
+        <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardActionSafely(() => onEdit(note)); }} className="gap-2">
+          <Edit className="h-4 w-4" />
+          {t('common.edit')}
+        </DropdownMenuItem>
+        {onTogglePin && (
+          <DropdownMenuItem onClick={(e) => { setShowContextMenu(false); runCardActionSafely(() => onTogglePin(note.id, e as any)); }} className="gap-2">
+            <Pin className={cn("h-4 w-4", note.isPinned && "fill-current")} />
+            {note.isPinned ? t('notes.unpin') : t('notes.pin')}
+          </DropdownMenuItem>
+        )}
+        {onToggleFavorite && (
+          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardActionSafely(() => onToggleFavorite(note.id)); }} className="gap-2">
+            <Star className={cn("h-4 w-4", note.isFavorite && "fill-warning text-warning")} />
+            {note.isFavorite ? t('notes.removeFromFavorites', 'Remove from Favorites') : t('notes.addToFavorites', 'Add to Favorites')}
+          </DropdownMenuItem>
+        )}
+        {onArchive && (
+          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardActionSafely(() => onArchive(note.id)); }} className="gap-2">
+            <Archive className="h-4 w-4" />
+            {t('notes.archive')}
+          </DropdownMenuItem>
+        )}
+        {onDuplicate && (
+          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardActionSafely(() => onDuplicate(note.id)); }} className="gap-2">
+            <Copy className="h-4 w-4" />
+            {t('common.duplicate')}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        {onHide && (
+          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardActionSafely(() => onHide(note.id)); }} className="gap-2">
+            <EyeOff className="h-4 w-4" />
+            {t('notes.hideNote', 'Hide Note')}
+          </DropdownMenuItem>
+        )}
+        {onProtect && (
+          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardActionSafely(() => onProtect(note.id)); }} className="gap-2">
+            <Shield className="h-4 w-4" />
+            {noteProtection.hasPassword || noteProtection.useBiometric ? t('notes.changeProtection', 'Change Protection') : t('notes.protectNote', 'Protect Note')}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardActionSafely(() => onDelete(note.id)); }} className="gap-2 text-destructive">
+          <Trash2 className="h-4 w-4" />
+          {t('notes.moveToTrash')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+const NoteCardInner = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, onToggleFavorite, onMoveToFolder, onDragStart, onDragOver, onDrop, onDragEnd, onDragLeave, isSelectionMode = false, isSelected = false, onToggleSelection, noteProtection, showContextMenu, setShowContextMenu }: NoteCardProps & { noteProtection: NoteProtection; showContextMenu: boolean; setShowContextMenu: (open: boolean) => void }) => {
+  const { t } = useTranslation();
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
-  const [noteProtection, setNoteProtection] = useState<NoteProtection>({ hasPassword: false, useBiometric: false });
   const [noteTags, setNoteTags] = useState<AppTag[]>([]);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPress = useRef(false);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   const swipeStartX = useRef<number | null>(null);
-
-  // Load protection status async
-  useEffect(() => {
-    getNoteProtection(note.id).then(setNoteProtection);
-  }, [note.id]);
 
   // Load tags for this note
   useEffect(() => {
@@ -213,36 +304,22 @@ const NoteCardInner = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, on
     swipeStartX.current = null;
   };
   
-  // Action handlers that reset swipe after action
-  const runCardAction = (action: () => void | Promise<void>) => {
-    try {
-      const result = action();
-      if (result && typeof (result as Promise<void>).catch === 'function') {
-        (result as Promise<void>).catch((error) => {
-          console.error('[NoteCard] action failed:', error);
-        });
-      }
-    } catch (error) {
-      console.error('[NoteCard] action failed:', error);
-    }
-  };
-
   const handleSwipeAction = async (action: () => void | Promise<void>) => {
     const hapticStyle = getHapticStyle();
     if (hapticStyle) {
       try { await Haptics.impact({ style: hapticStyle }); } catch (error) {}
     }
-    runCardAction(action);
+    runCardActionSafely(action);
     setSwipeOffset(0);
   };
 
   const handleClick = () => {
     if (isSelectionMode && onToggleSelection) {
-      runCardAction(() => onToggleSelection(note.id));
+      runCardActionSafely(() => onToggleSelection(note.id));
       return;
     }
     if (!isLongPress.current && !showContextMenu && !isSwiping) {
-      runCardAction(() => onEdit(note));
+      runCardActionSafely(() => onEdit(note));
     }
   };
 
@@ -300,70 +377,6 @@ const NoteCardInner = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, on
     const ms = note.updatedAt instanceof Date ? note.updatedAt.getTime() : new Date(note.updatedAt as any).getTime();
     return new Date(Number.isFinite(ms) ? ms : Date.now());
   }, [note.updatedAt]);
-
-  const menu = (
-    <DropdownMenu open={showContextMenu} onOpenChange={setShowContextMenu}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={t('common.options', 'Options')}
-          onClick={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          className="-mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-800 hover:bg-black/10"
-        >
-          <MoreVertical className="h-4 w-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-48 z-50 bg-background border border-border shadow-lg">
-        <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onEdit(note)); }} className="gap-2">
-          <Edit className="h-4 w-4" />
-          {t('common.edit')}
-        </DropdownMenuItem>
-        {onTogglePin && (
-          <DropdownMenuItem onClick={(e) => { setShowContextMenu(false); runCardAction(() => onTogglePin(note.id, e as any)); }} className="gap-2">
-            <Pin className={cn("h-4 w-4", note.isPinned && "fill-current")} />
-            {note.isPinned ? t('notes.unpin') : t('notes.pin')}
-          </DropdownMenuItem>
-        )}
-        {onToggleFavorite && (
-          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onToggleFavorite(note.id)); }} className="gap-2">
-            <Star className={cn("h-4 w-4", note.isFavorite && "fill-warning text-warning")} />
-            {note.isFavorite ? t('notes.removeFromFavorites', 'Remove from Favorites') : t('notes.addToFavorites', 'Add to Favorites')}
-          </DropdownMenuItem>
-        )}
-        {onArchive && (
-          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onArchive(note.id)); }} className="gap-2">
-            <Archive className="h-4 w-4" />
-            {t('notes.archive')}
-          </DropdownMenuItem>
-        )}
-        {onDuplicate && (
-          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onDuplicate(note.id)); }} className="gap-2">
-            <Copy className="h-4 w-4" />
-            {t('common.duplicate')}
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        {onHide && (
-          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onHide(note.id)); }} className="gap-2">
-            <EyeOff className="h-4 w-4" />
-            {t('notes.hideNote', 'Hide Note')}
-          </DropdownMenuItem>
-        )}
-        {onProtect && (
-          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onProtect(note.id)); }} className="gap-2">
-            <Shield className="h-4 w-4" />
-            {noteProtection.hasPassword || noteProtection.useBiometric ? t('notes.changeProtection', 'Change Protection') : t('notes.protectNote', 'Protect Note')}
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onDelete(note.id)); }} className="gap-2 text-destructive">
-          <Trash2 className="h-4 w-4" />
-          {t('notes.moveToTrash')}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
 
   return (
     <div className="relative overflow-hidden rounded-lg perf-contain-item h-full w-full flex">
@@ -472,7 +485,6 @@ const NoteCardInner = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, on
             {(noteProtection.hasPassword || noteProtection.useBiometric) && (
               <Lock className="h-4 w-4 text-primary shrink-0" />
             )}
-            {menu}
           </div>
 
           {/* Show metaDescription if available, otherwise show content preview */}
