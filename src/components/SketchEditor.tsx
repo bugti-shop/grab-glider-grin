@@ -4389,12 +4389,18 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
             }
 
             strokeToAdd.points = recognizedPoints;
-            strokeToAdd.tool =
-              recognized.type === 'circle'   ? 'circle'
-              : recognized.type === 'rect'   ? 'rect'
-              : recognized.type === 'triangle' ? 'triangle'
-              : recognized.type === 'arrow'  ? 'arrow'
-              : 'line';
+            // asFreehand types (brackets, braces) keep the original drawing
+            // tool and just render the cleaned-up polyline. Everything else
+            // switches to a dedicated shape tool.
+            if (!recognized.asFreehand) {
+              strokeToAdd.tool =
+                recognized.type === 'circle'    ? 'circle'
+                : recognized.type === 'rect'    ? 'rect'
+                : recognized.type === 'triangle'? 'triangle'
+                : recognized.type === 'arrow'   ? 'arrow'
+                : recognized.type === 'callout' ? 'speechBubble'
+                : 'line';
+            }
           }
         }
 
