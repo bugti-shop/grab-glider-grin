@@ -1,11 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import {
   GoogleUser,
   signInWithGoogle,
   signOutGoogle,
   getStoredGoogleUser,
   loadGoogleIdentityServices,
-  backgroundTokenRefresh,
   onSupabaseAuthStateChanged,
   captureOAuthSession,
   cancelNativeAutoPrompt,
@@ -23,14 +22,12 @@ interface GoogleAuthContextType {
 
 const GoogleAuthContext = createContext<GoogleAuthContextType | undefined>(undefined);
 
-const BG_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const SESSION_TTL = 365 * 24 * 3600 * 1000;
 
 export function GoogleAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<GoogleUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const refreshTimerRef = useRef<ReturnType<typeof setInterval>>();
 
   // Load stored user on mount + capture OAuth redirect session
   useEffect(() => {
