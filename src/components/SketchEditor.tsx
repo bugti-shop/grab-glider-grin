@@ -4225,7 +4225,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       width: canvasSizeRef.current.w,
       height: canvasSizeRef.current.h,
       version: 2,
-      ...(cleanPages.length > 1 ? { pages: cleanPages, pageIndex: sketchPageIndex } : {}),
+      ...(cleanPages.length > 1 ? { pages: cleanPages, pageIndex: sketchPageIndex, pageNames: [...sketchPageNamesRef.current] } : {}),
       ...(audioDataUrlRef.current ? { audioRecording: { dataUrl: audioDataUrlRef.current, duration: audioDurationRef.current } } : {}),
       ...(videoUrlRef.current ? { videoUrl: videoUrlRef.current, videoBookmarks: videoBookmarksRef.current } : {}),
     };
