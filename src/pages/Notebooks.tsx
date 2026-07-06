@@ -137,10 +137,10 @@ const Notebooks = () => {
     const load = async () => {
       const saved = await getSetting<FolderType[] | null>('folders', null);
       if (saved && saved.length > 0) {
-        setFolders(
-          saved.map((f) => ({ ...f, createdAt: new Date(f.createdAt as any) })),
-        );
-      } else {
+        const hydrated = saved.map((f) => ({ ...f, createdAt: new Date(f.createdAt as any) }));
+        setFolders(hydrated);
+        setNotebooksCache(hydrated);
+      } else if (!notebooksRuntimeCache.loaded) {
         const inbox: FolderType = {
           id: genId(),
           name: 'Inbox',
@@ -150,6 +150,7 @@ const Notebooks = () => {
           createdAt: new Date(),
         };
         setFolders([inbox]);
+        setNotebooksCache([inbox]);
         void setSetting('folders', [inbox]);
       }
     };
