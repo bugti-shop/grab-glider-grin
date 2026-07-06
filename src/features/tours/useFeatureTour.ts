@@ -45,6 +45,21 @@ export const useTourBootstrap = () => {
               detail: { startChainOnClose: true, compulsory: true },
             }));
           }, 900);
+          return;
+        }
+        // Resume support: welcome sheet already shown, but if the user closed
+        // the app mid-chain, auto-continue from the first not-yet-seen tour
+        // on the next launch — without reopening the welcome sheet.
+        await hydrateFromCloud().catch(() => {});
+        const { ONBOARDING_CHAIN } = await import('./tourRegistry');
+        const { hasSeenTour } = await import('./TourStateStore');
+        for (const id of ONBOARDING_CHAIN) {
+          if (!(await hasSeenTour(id))) {
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('flowist-onboarding:start-chain'));
+            }, 1200);
+            return;
+          }
         }
       } catch {}
     })();
