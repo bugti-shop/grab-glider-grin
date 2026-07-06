@@ -1021,18 +1021,22 @@ const Index = () => {
       const incoming = notes.filter(n => selectedNoteIds.includes(n.id) && n.folderId !== folderId).length;
       if (!canMoveNotesToFolder(folderId, incoming)) return;
     }
+    const idSet = new Set(selectedNoteIds);
+    const updates: Note[] = [];
     setNotes(prev => {
       return prev.map(n => {
-        if (!selectedNoteIds.includes(n.id)) return n;
+        if (!idSet.has(n.id)) return n;
         const updated = { ...n, folderId: folderId || undefined };
-        saveNoteToDBSingle(updated);
+        updates.push(updated);
         return updated;
       });
     });
+    if (updates.length) void bulkPutNotesInDB(updates);
     setSelectedNoteIds([]);
     setIsSelectionMode(false);
     setShowBulkFolderSheet(false);
   };
+
 
   // Single note move to folder (for swipe action)
   const handleMoveNoteToFolder = (noteId: string) => {
