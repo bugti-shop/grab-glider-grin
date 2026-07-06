@@ -3692,7 +3692,16 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-      activeTouchesRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+      const localX = e.clientX - rect.left;
+      const localY = e.clientY - rect.top;
+      activeTouchesRef.current.set(e.pointerId, { x: localX, y: localY });
+      // Multi-finger tap: cancel if any finger moves past threshold
+      if (touchTapRef.current && !touchTapRef.current.moved) {
+        const start = touchTapRef.current.starts.get(e.pointerId);
+        if (start && (Math.abs(localX - start.x) > 12 || Math.abs(localY - start.y) > 12)) {
+          touchTapRef.current.moved = true;
+        }
+      }
 
       const gesture = gestureStateRef.current;
       if (gesture?.isPinching && activeTouchesRef.current.size >= 2) {
