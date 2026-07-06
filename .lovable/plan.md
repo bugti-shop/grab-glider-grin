@@ -1,75 +1,53 @@
-# Flowist Feature Discovery & Onboarding Tour System
+# Multi-page hybrid — Phase 1: pages inside one sketch
 
-Progressive, low-friction discoverability: one contextual tip at a time, plus a persistent "Feature Guide" hub and a 7-day new-user checklist. Backed by a per-user seen-state table so tips don't repeat across reinstalls.
+Notebook-level list already exists (Notebooks page). This ship adds **pages inside a single sketch** — jaisa Procreate/Notability karta hai. Notebook↔sketch level hierarchy Phase 2 mein polish karenge.
 
-## What gets built
+## Scope (this turn)
 
-### 1. Backend — per-user tour state
-New table `user_feature_tours`:
-- `user_id` (uuid, ref auth.users)
-- `tour_id` (text)
-- `seen_at` (timestamptz)
-- `dismissed_forever` (boolean) — powers "Don't show tips like this again"
-- Primary key `(user_id, tour_id)`
-- RLS: users read/write only their own rows; standard GRANTs to `authenticated` + `service_role`
-- Realtime not required (writes are rare, local cache handles reads)
+1. **Data model**
+   - `SketchData` mein optional `pages?: Layer[][]` + `pageIndex?: number` add.
+   - Backwards compatible: agar `pages` nahi hai, current `layers` = single page.
+   - PDF sketches (jinke paas already `pdfAnnotations` hai) untouched — un mein multi-page pehle se hai.
 
-### 2. Core engine — `src/features/tours/`
-- **`tourRegistry.ts`** — declarative list of all tours (see structure in your prompt). No JSX; pure data. Categories: tasks / notes / notebooks / progress / journeys / settings.
-- **`TourManager.ts`** — singleton service:
-  - `startTour(id)`, `queueTour(id)`, `markSeen(id)`, `hasSeen(id)`, `dismissForever(id)`
-  - Guarantees single active tour; new triggers queue instead of interrupting
-  - Wraps driver.js with Flowist-styled popovers, Skip / Next / "Don't show again" buttons
-  - Auto-navigates to `route` before starting, waits for target selector to mount (with timeout + graceful bail)
-- **`useFeatureTour.ts`** — React hook: exposes manager + reactive `seenSet`
-- **`TourStateStore.ts`** — local cache (IndexedDB via existing settingsStorage) + Cloud sync. Reads instant from cache; background flush to Cloud on write; on auth login, hydrates cache from Cloud.
+2. **In-editor state**
+   - `sketchPages: Layer[][]` (default 1 page = current layers)
+   - `sketchPageIndex: number`
+   - Non-PDF sketches ke liye active. PDF loaded ho to skip (PDF ka apna system chalta rahega).
 
-### 3. UI components — `src/components/tours/`
-- **`FeatureGuideModal.tsx`** — opened from the existing header bell/help icon. Categorized list with icon, title, one-line description, "✓ Seen" / "New" badge, "Show me" button that closes modal → navigates → fires tour.
-- **`OnboardingChecklistCard.tsx`** — appears on Home for first 7 days (or until dismissed). Items: Create first task / Try a note type / Switch a task view / Explore Progress / Pick a theme. Auto-checks items via existing app events (task created, notes count > 0, layout changed, Progress route visited, theme changed). Collapsible + permanent "X" dismiss.
-- **`EmptyStateHint.tsx`** — small reusable secondary hint chip appended to existing empty states (Notes, Journeys) that opens the relevant tour.
+3. **Page navigation UI**
+   - Bottom-center chip: `‹  Page 2/5  ›` + `＋` add page button.
+   - Long-press/tap on chip → thumbnail rail (horizontal scroll on mobile, side sheet on desktop).
+   - Thumbnails render via `generateSvg(layers, w, h, background)` → data URL.
+   - Har thumbnail par delete (trash icon) + drag reorder (Phase 2).
 
-### 4. Wiring
-- Add `data-tour="…"` attributes to targeted elements (add-task sheet buttons, ⋮ menu, note-type picker, notebook add button, Progress tabs, theme selector). Only attribute additions — no layout changes.
-- Header bell/help icon → opens `FeatureGuideModal` on every screen.
-- Home screen → mount `OnboardingChecklistCard` above the task list (conditional).
-- Notes empty state → append `EmptyStateHint` for `note-types` tour.
-- Route-level `useEffect` on Home, Notebooks, Progress → fires `first-visit` tours through the manager.
-- `days-since-install` trigger uses existing install-date setting (fallback: profile `created_at`).
+4. **Persistence**
+   - `emitChange` mein current page ke layers ko `sketchPages[sketchPageIndex]` mein snapshot karke pura `pages` array `onChange` payload mein bhejein.
+   - `useEffect` on `initialData`: agar `initialData.pages` present hai to load karo, warna `[initialData.layers]` se seed karo.
 
-### 5. Priority tours (2–4 steps each, per your list)
-`task-add-basics`, `task-views`, `task-toolbar-power`, `note-types`, `notebooks-color-coding`, `progress-tab-overview`, `journeys-intro`, `themes-personalize` — all registered as data in `tourRegistry.ts`.
+5. **Keyboard shortcuts** (desktop)
+   - `PageDown` / `Ctrl+→` → next page
+   - `PageUp` / `Ctrl+←` → prev page
+   - `Ctrl+Shift+N` → add page
 
-## Design principles enforced in code
-- Single active tour: enforced by `TourManager` mutex.
-- Never repeats: `hasSeen` check before every auto-trigger.
-- Skippable: driver.js `allowClose: true` + explicit Skip button; "Don't show again" writes `dismissed_forever`.
-- Max 3 consecutive tips: queue caps auto-chained tours at 1; further tours require manual trigger.
-- Free + paid: no entitlement gate. Paid features get a small `<PremiumCrown/>` badge inside the tooltip text.
-- Mobile: driver.js configured with `stagePadding: 4`, `smoothScroll: true`, and popover width capped at `min(320px, 92vw)`.
+6. **Swipe navigation** (mobile)
+   - Existing presentation-mode swipe logic re-use — non-presentation mode mein bhi enable jab thumbnail rail visible ho.
+
+## Out of scope (Phase 2 — next turn)
+
+- Notebook-level "list of sketches" polish, drag-move pages between sketches
+- Page templates (bg per page override)
+- Page reorder drag & drop
+- Collab sync for page switches (already scaffolded via `onCollabPageSwitch`, verify only)
+- Undo/redo across page switches
 
 ## Technical notes
 
-```text
-src/
-├── features/tours/
-│   ├── tourRegistry.ts       # data-only list of tours
-│   ├── TourManager.ts        # driver.js wrapper + queue
-│   ├── TourStateStore.ts     # local cache + Cloud sync
-│   └── useFeatureTour.ts     # React hook
-├── components/tours/
-│   ├── FeatureGuideModal.tsx
-│   ├── OnboardingChecklistCard.tsx
-│   └── EmptyStateHint.tsx
-└── (data-tour="…" attributes added across existing screens)
-```
+- File: `src/components/SketchEditor.tsx` (~8.4k lines) — additive changes near existing PDF page nav for consistency.
+- File: `src/components/sketch/SketchTypes.ts` — extend `SketchData`.
+- File: `src/pages/NotebookDetail.tsx` / `SketchPage.tsx` — no changes; SketchData shape widening is backward compatible.
+- Layer semantic defaults (Background/Grid/Drawing/Text/Stickers) apply per page, freshly generated.
+- Thumbnail generation is off-screen SVG → cheap; regenerate only on page switch or on `emitChange` debounce.
 
-Dependencies to add: `driver.js` (~15 KB gzipped).
+## Approval
 
-DB migration adds `user_feature_tours` with RLS + GRANTs in the same statement.
-
-## Out of scope (kept intentionally small)
-- No analytics dashboard for tour funnels (can add later)
-- No A/B testing infrastructure
-- No animated illustrations inside tooltips — text + existing icons only
-- No changes to existing screens beyond adding `data-tour` attributes and mounting the 3 new components in their host screens
+OK karo to Phase 1 implement kar deta hun. "Just build" bolo to skip approval.
