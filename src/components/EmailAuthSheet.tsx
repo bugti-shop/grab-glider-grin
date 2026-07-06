@@ -46,8 +46,6 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
     };
   }, [resendCooldown]);
 
-  if (!open) return null;
-
   const startCooldown = () => setResendCooldown(45);
 
   const reset = () => {
@@ -194,6 +192,10 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
     return () => { sub.subscription.unsubscribe(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
+
+  // All hooks are declared above; safe to bail out now.
+  if (!open) return null;
+
 
   // Manual "I've verified — sign me in" fallback for mobile flows where the
   // link opens an external browser and the app WebView never sees the session.
