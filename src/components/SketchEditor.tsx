@@ -3098,7 +3098,24 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
 
     // Touch gesture tracking
     if (e.pointerType === 'touch') {
-      activeTouchesRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+      const localX = e.clientX - rect.left;
+      const localY = e.clientY - rect.top;
+      activeTouchesRef.current.set(e.pointerId, { x: localX, y: localY });
+
+      // Multi-finger tap gesture tracking (2-finger tap = undo, 3-finger tap = redo)
+      if (multiFingerGesturesRef.current) {
+        if (!touchTapRef.current || activeTouchesRef.current.size === 1) {
+          touchTapRef.current = {
+            startTime: Date.now(),
+            maxFingers: activeTouchesRef.current.size,
+            moved: false,
+            starts: new Map([[e.pointerId, { x: localX, y: localY }]]),
+          };
+        } else {
+          touchTapRef.current.maxFingers = Math.max(touchTapRef.current.maxFingers, activeTouchesRef.current.size);
+          touchTapRef.current.starts.set(e.pointerId, { x: localX, y: localY });
+        }
+      }
 
       if (activeTouchesRef.current.size >= 2) {
         if (isDrawingRef.current) {
