@@ -21,6 +21,8 @@ interface NotesVirtualGridProps {
   /** Approximate row height in px. Cards are roughly equal because the
    *  text is line-clamped to 4 lines + fixed header/footer chrome. */
   estimatedRowHeight?: number;
+  /** Override global window/container virtualization for nested scroll areas. */
+  useWindowing?: boolean;
 }
 
 function getColumnsForWidth(w: number): number {
@@ -34,6 +36,7 @@ export function NotesVirtualGrid({
   renderCard,
   getRowKey,
   estimatedRowHeight,
+  useWindowing,
 }: NotesVirtualGridProps) {
   const [virtualizationSettings] = useVirtualizationSettings();
   const parentRef = useRef<HTMLDivElement>(null);
@@ -42,7 +45,7 @@ export function NotesVirtualGrid({
   );
   const resolvedRowHeight = estimatedRowHeight ?? virtualizationSettings.notes.rowHeight;
   const resolvedOverscan = getAdaptiveOverscan(virtualizationSettings.notes.overscan, notes.length, 'notes');
-  const resolvedWindowing = virtualizationSettings.notes.windowing;
+  const resolvedWindowing = useWindowing ?? virtualizationSettings.notes.windowing;
 
   useEffect(() => {
     const onResize = () => setColumns(getColumnsForWidth(window.innerWidth));

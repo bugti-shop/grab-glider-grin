@@ -193,6 +193,7 @@ const NotesCalendar = () => {
                 <NotesVirtualGrid
                   notes={selectedDateNotes}
                   estimatedRowHeight={190}
+                  useWindowing={false}
                   getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
                   renderCard={(note) => (
                     <NoteCard
