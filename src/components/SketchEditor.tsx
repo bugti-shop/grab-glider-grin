@@ -5997,11 +5997,17 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
           sketchPagesRef.current = data.pages.map((pg: any[]) => normalizeLayers(pg));
           const pi = Math.min(Math.max(0, data.pageIndex ?? 0), sketchPagesRef.current.length - 1);
           layersRef.current = sketchPagesRef.current[pi];
+          // Load page names (fill missing with defaults)
+          const names = Array.isArray(data.pageNames) ? data.pageNames : [];
+          sketchPageNamesRef.current = sketchPagesRef.current.map((_, i) =>
+            (typeof names[i] === 'string' && names[i].trim()) ? names[i] : `Page ${i + 1}`
+          );
           setSketchPageIndex(pi);
           setSketchPageCount(sketchPagesRef.current.length);
         } else {
           layersRef.current = normalizeLayers(data.layers);
           sketchPagesRef.current = [layersRef.current];
+          sketchPageNamesRef.current = ['Page 1'];
           setSketchPageIndex(0);
           setSketchPageCount(1);
         }
