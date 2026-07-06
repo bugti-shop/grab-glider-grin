@@ -81,6 +81,7 @@ export const FEATURE_TOURS: FeatureTour[] = [
   hint('task-switch-view', 'tasks', 'Switch view — Timeline or Kanban', 'Open the ⋮ menu and switch between Flat, Kanban, Status, Timeline, or Priority.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-menu-view-modes"]', side: 'top' }),
   hint('task-journey', 'tasks', 'Choose your virtual journey', 'Turn long-term goals into a gamified adventure in Progress → Journeys.', '/todo/progress', { target: '[data-tour="progress-journeys"]' }),
   hint('task-create-habit', 'tasks', 'Create your first habit', 'Add a daily habit and start building streaks from the sidebar.', '/todo/settings', { beforeStart: '[data-tour="settings-more-tabs"]', target: '[data-tour="settings-habit-tracker"]', side: 'top' }),
+  hint('task-customize-navigation', 'tasks', 'Customize navigation in Task Dashboard', 'Reorder or hide the bottom tabs in your Task Dashboard to keep only what you use.', '/todo/settings', { target: '[data-tour="settings-customize-navigation"]', side: 'top' }),
   hint('task-eisenhower', 'tasks', 'Add tasks via Eisenhower Matrix', 'Drop tasks into the 4 quadrants to focus on what matters most.', '/todo/settings', { beforeStart: '[data-tour="settings-more-tabs"]', target: '[data-tour="settings-eisenhower-matrix"]', side: 'top' }),
   hint('task-import', 'tasks', 'Import tasks', 'Bring in tasks from CSV using the ⋮ → Import option.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-menu-import-tasks"]', side: 'left' }),
   hint('task-batch-add', 'tasks', 'Add batch tasks', 'Open ⋮ → Add multiple to paste or type many tasks at once.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-menu-batch-tasks"]', side: 'left' }),
@@ -97,6 +98,7 @@ export const FEATURE_TOURS: FeatureTour[] = [
   // ─── Personalization ──────────────────────────────────────────
   hint('personalize-theme', 'personalization', 'Personalize your theme', 'Open Settings → Appearance to switch between 9 themes or design your own.', '/settings', { target: '[data-tour="settings-appearance"]' }),
   hint('personalize-app-lock', 'personalization', 'Setup App Lock in Settings', 'Turn on App Lock in Settings to protect Flowist with a passcode or biometrics.', '/settings', { target: '[data-tour="settings-security"]' }),
+  hint('personalize-note-type-visibility', 'personalization', 'Choose which note types show on + New Note', 'Pick which note types (Regular, Sketch, Code, LinkedIn…) appear when you tap "+ New Note".', '/todo/settings', { target: '[data-tour="settings-note-type-visibility"]', side: 'top' }),
 ];
 
 
@@ -122,6 +124,7 @@ export const ONBOARDING_CHAIN: string[] = [
   // Tasks
   'task-create-first',
   'task-create-habit',
+  'task-customize-navigation',
   // Notes
   'notes-switch-dashboard',
   'notes-create-first',
@@ -129,6 +132,7 @@ export const ONBOARDING_CHAIN: string[] = [
   // Personalization
   'personalize-theme',
   'personalize-app-lock',
+  'personalize-note-type-visibility',
 ];
 
 /** ID of the tour that runs right after the given one finishes, or null at the end. */

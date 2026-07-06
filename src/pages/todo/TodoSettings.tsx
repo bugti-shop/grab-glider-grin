@@ -333,9 +333,10 @@ const TodoSettings = () => {
   };
 
   // Settings row component
-  const SettingsRow = ({ label, value, onClick }: { label: React.ReactNode; value?: string; onClick: () => void }) => (
+  const SettingsRow = ({ label, value, onClick, dataTour }: { label: React.ReactNode; value?: string; onClick: () => void; dataTour?: string }) => (
     <button
       onClick={onClick}
+      data-tour={dataTour}
       className="w-full flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted transition-colors"
     >
       <span className="text-foreground text-sm">{label}</span>
@@ -428,6 +429,7 @@ const TodoSettings = () => {
               onClick={() => setShowLanguageDialog(true)} 
             />
             <SettingsRow 
+              dataTour="settings-note-type-visibility"
               label={
                 <span className="inline-flex items-center gap-1.5">
                   {t('settings.noteTypeVisibility', 'Note Type Visibility')}
@@ -445,6 +447,7 @@ const TodoSettings = () => {
               onClick={() => setShowTasksSettingsSheet(true)} 
             />
             <SettingsRow 
+              dataTour="settings-customize-navigation"
               label={t('settings.customizeNavigation', 'Customize Navigation')}
               onClick={() => setShowCustomizeNavigationSheet(true)} 
             />
