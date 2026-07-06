@@ -175,18 +175,27 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
 }
 
 async function applyNotesFromCloud(rows: SyncRow[]) {
-  const { loadNotesFromDB, saveNoteToDBSingle, deleteNoteFromDB } = await import('@/utils/noteStorage');
-  const local = await loadNotesFromDB();
-  const byId = new Map(local.map(n => [n.id, n]));
+  const { loadNotesMetadataFromDB, loadNoteFromDB, saveNoteToDBSingle, deleteNoteFromDB } = await import('@/utils/noteStorage');
+  // Metadata read is light (no multi-MB web-clip HTML). We only need the
+  // updated_at to decide if the cloud row is newer than what we already have;
+  // the full local note is fetched lazily per-id when we actually apply.
+  const meta = await loadNotesMetadataFromDB();
+  const metaById = new Map(meta.map(n => [n.id, n]));
   for (const r of rows) {
     if (r.is_deleted) { await deleteNoteFromDB(r.id, true); continue; }
-    const merged = mappers.notes.mergeCloud(byId.get(r.id), r) as Note;
-    const existing = byId.get(r.id);
-    if (!existing || (existing.updatedAt as Date) < (merged.updatedAt as Date)) {
-      await saveNoteToDBSingle(merged, true);
-    } else if (+(existing.updatedAt as Date) > +(merged.updatedAt as Date)) {
-      recordConflict({ table: 'notes', rowId: r.id, localUpdatedAt: +(existing.updatedAt as Date), cloudUpdatedAt: +(merged.updatedAt as Date), resolution: 'kept_local' });
+    const existingMeta = metaById.get(r.id);
+    const cloudTs = +new Date(r.updated_at ?? Date.now());
+    const localTs = existingMeta ? +new Date(existingMeta.updatedAt as any) : 0;
+    if (existingMeta && localTs >= cloudTs) {
+      if (localTs > cloudTs) {
+        recordConflict({ table: 'notes', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
+      }
+      continue;
     }
+    // Cloud wins — merge against the full local row (heavy fields preserved).
+    const existingFull = existingMeta ? await loadNoteFromDB(r.id) : undefined;
+    const merged = mappers.notes.mergeCloud(existingFull ?? undefined, r) as Note;
+    await saveNoteToDBSingle(merged, true);
   }
 }
 
