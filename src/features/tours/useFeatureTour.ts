@@ -142,6 +142,10 @@ export const useTourBootstrap = () => {
       sub.subscription.unsubscribe();
       window.removeEventListener('flowist-onboarding:start-chain', onChainRequest);
       window.removeEventListener('flowist-onboarding:action-completed', onActionCompleted);
+      window.removeEventListener('pointerdown', activityHandler, { capture: true } as any);
+      window.removeEventListener('keydown', activityHandler, { capture: true } as any);
+      window.removeEventListener('flowist-tasks-updated', activityHandler);
+      window.removeEventListener('flowist-notes-updated', activityHandler);
     };
   }, [navigate]);
 };
