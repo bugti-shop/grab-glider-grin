@@ -518,7 +518,6 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
     a.isDeleted === b.isDeleted &&
     a.metaDescription === b.metaDescription &&
     (a as any).__contentPreview === (b as any).__contentPreview &&
-    a.content === b.content &&
     (a.updatedAt instanceof Date ? a.updatedAt.getTime() : +new Date(a.updatedAt as any)) ===
       (b.updatedAt instanceof Date ? b.updatedAt.getTime() : +new Date(b.updatedAt as any)) &&
     (a.tagIds?.join(',') ?? '') === (b.tagIds?.join(',') ?? '') &&
