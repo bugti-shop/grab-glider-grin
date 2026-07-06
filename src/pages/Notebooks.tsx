@@ -203,6 +203,7 @@ const Notebooks = () => {
     };
     const updated = [...folders, folder];
     setFolders(updated);
+    setNotebooksCache(updated);
     await setSetting('folders', updated);
     window.dispatchEvent(new Event('foldersUpdated'));
     setNewName('');
