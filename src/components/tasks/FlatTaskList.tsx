@@ -144,9 +144,15 @@ export function FlatTaskList({
   onToggleComplete,
   onReorder,
   disableKeyboard = false,
+  getRowVersion,
   className,
 }: FlatTaskListProps) {
   const [virtualizationSettings] = useVirtualizationSettings();
+  // Ref so MemoRowBody always calls the latest renderRow closure even when
+  // we're intentionally bailing out of re-renders on unchanged rows.
+  const renderRef = useRef(renderRow);
+  renderRef.current = renderRow;
+
   const liveFlatIndex = useMemo(() => index ?? flattenTasks(items), [index, items]);
   // Drag freeze: while a drag gesture is active we keep rendering the
   // snapshot captured at drag-start so virtualization indices, row positions,
