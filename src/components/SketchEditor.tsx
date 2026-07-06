@@ -1303,6 +1303,15 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   const [fillColor2, setFillColor2] = useState('#8b5cf6');
   const [fillAngle, setFillAngle] = useState(135);
   const [pressureOpacityEnabled, setPressureOpacityEnabled] = useState(false);
+  // Palm rejection: when true, only stylus/pen (Pointer Events pointerType==='pen') and mouse draw; touch is used for gestures only.
+  const [stylusOnly, setStylusOnly] = useState(false);
+  const stylusOnlyRef = useRef(false);
+  useEffect(() => { stylusOnlyRef.current = stylusOnly; }, [stylusOnly]);
+  // Two/three-finger tap gestures for undo/redo
+  const [multiFingerGestures, setMultiFingerGestures] = useState(true);
+  const multiFingerGesturesRef = useRef(true);
+  useEffect(() => { multiFingerGesturesRef.current = multiFingerGestures; }, [multiFingerGestures]);
+  const touchTapRef = useRef<{ startTime: number; maxFingers: number; moved: boolean; starts: Map<number, { x: number; y: number }> } | null>(null);
 
   // Pressure curve: [x1, y1, x2, y2] for cubic bezier control points (0-1 range)
   // Maps input pressure (x-axis) to output pressure (y-axis)
