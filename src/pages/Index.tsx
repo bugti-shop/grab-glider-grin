@@ -168,10 +168,12 @@ const Index = () => {
       const savedFolders = await getSetting<Folder[] | null>('folders', null);
       console.log('[Notes] Loaded folders from settings:', savedFolders?.length ?? 0, savedFolders?.map((f: any) => f.name));
       if (savedFolders && savedFolders.length > 0) {
-        setFolders(savedFolders.map((f: Folder) => ({
+        const nextFolders = savedFolders.map((f: Folder) => ({
           ...f,
           createdAt: new Date(f.createdAt),
-        })));
+        }));
+        notesDashboardRuntimeCache.folders = nextFolders;
+        setFolders(nextFolders);
         foldersLoadedRef.current = true;
       } else {
         const now = new Date();
@@ -180,6 +182,7 @@ const Index = () => {
           name: 'Inbox', color: '#3b82f6', icon: 'Folder',
           isDefault: true, createdAt: now, updatedAt: now,
         } as Folder;
+        notesDashboardRuntimeCache.folders = [inbox];
         setFolders([inbox]);
         foldersLoadedRef.current = true;
         void setSetting('folders', [inbox]);

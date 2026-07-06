@@ -184,6 +184,7 @@ export const useTodayState = () => {
       ]);
 
       let loadedItems = loadedItemsRaw;
+      todayRuntimeCache.items = loadedItems;
 
       // Defer rollover + archive to after initial render — show tasks first
       requestAnimationFrame(async () => {
@@ -193,6 +194,7 @@ export const useTodayState = () => {
           if (rolledOverCount > 0) {
             await saveTodoItems(rolledOverItems);
             loadedItems = rolledOverItems;
+            todayRuntimeCache.items = loadedItems;
             setItems(loadedItems);
             toast.info(t('todayPage.autoUpdatedRecurring', { count: rolledOverCount }), { icon: '🔄' });
           }
@@ -200,6 +202,7 @@ export const useTodayState = () => {
           const { activeTasks, archivedCount } = await archiveCompletedTasks(loadedItems, 3);
           if (archivedCount > 0) {
             await saveTodoItems(activeTasks);
+            todayRuntimeCache.items = activeTasks;
             setItems(activeTasks);
             toast.info(t('todayPage.archivedCompleted', { count: archivedCount }), { icon: '📦' });
           }
@@ -208,8 +211,10 @@ export const useTodayState = () => {
         }
       });
       
-      setItems(loadedItems);
+      todayRuntimeCache.items = loadedItems;
       setItemsLoaded(true);
+      todayRuntimeCache.itemsLoaded = true;
+      setItems(loadedItems);
     };
     loadAll();
 
@@ -222,7 +227,9 @@ export const useTodayState = () => {
       startTransition(() => {
         const savedFolders = g<Folder[] | null>('todoFolders', null);
         if (savedFolders && savedFolders.length > 0) {
-          setFolders(savedFolders.map((f: Folder) => ({ ...f, createdAt: new Date(f.createdAt) })));
+          const nextFolders = savedFolders.map((f: Folder) => ({ ...f, createdAt: new Date(f.createdAt) }));
+          todayRuntimeCache.folders = nextFolders;
+          setFolders(nextFolders);
         } else {
           // Bootstrap Inbox: every user has at least one default tasks folder.
           const now = new Date();
@@ -231,11 +238,14 @@ export const useTodayState = () => {
             name: 'Inbox', color: '#3b82f6', icon: 'Folder',
             isDefault: true, createdAt: now, updatedAt: now,
           } as Folder;
+          todayRuntimeCache.folders = [inbox];
           setFolders([inbox]);
           void setSetting('todoFolders', [inbox]);
         }
         const savedSections = g<TaskSection[]>('todoSections', []);
-        setSections(savedSections.length > 0 ? savedSections : getDefaultSections(t));
+        const nextSections = savedSections.length > 0 ? savedSections : getDefaultSections(t);
+        todayRuntimeCache.sections = nextSections;
+        setSections(nextSections);
         setShowCompleted(g<boolean>('todoShowCompleted', true));
         setDateFilter(g<DateFilter>('todoDateFilter', 'all'));
         setPriorityFilter(g<PriorityFilter>('todoPriorityFilter', 'all'));
@@ -246,12 +256,15 @@ export const useTodayState = () => {
         setSortBy(g<SortBy>('todoSortBy', 'date'));
         setSmartList(g<SmartListType>('todoSmartList', 'all'));
         const savedFolderId = g<string | null>('todoSelectedFolder', null);
-        setSelectedFolderId(savedFolderId === 'null' ? null : savedFolderId);
+        const nextSelectedFolderId = savedFolderId === 'null' ? null : savedFolderId;
+        todayRuntimeCache.selectedFolderId = nextSelectedFolderId;
+        setSelectedFolderId(nextSelectedFolderId);
         setDefaultSectionId(g<string>('todoDefaultSectionId', '') || undefined);
         setTaskAddPosition(g<'top' | 'bottom'>('todoTaskAddPosition', 'bottom'));
         setShowStatusBadge(g<boolean>('todoShowStatusBadge', true));
         setCompactMode(g<boolean>('todoCompactMode', false));
         setGroupByOption(g<'none' | 'section' | 'priority' | 'date'>('todoGroupByOption', 'none'));
+        todayRuntimeCache.settingsLoaded = true;
         setSettingsLoaded(true);
       });
     };
@@ -266,19 +279,25 @@ export const useTodayState = () => {
     const handleTasksFromSync = async () => {
       isFromSync = true;
       const loadedItems = await loadTodoItems();
+      todayRuntimeCache.items = loadedItems;
+      todayRuntimeCache.itemsLoaded = true;
       setItems(loadedItems);
       setItemsLoaded(true);
     };
     const handleSectionsFromSync = async () => {
       (window as any).__todaySyncFlag.sectionsFromSync = true;
       const savedSections = await getSetting<TaskSection[]>('todoSections', []);
-      setSections(savedSections.length > 0 ? savedSections : getDefaultSections(t));
+      const nextSections = savedSections.length > 0 ? savedSections : getDefaultSections(t);
+      todayRuntimeCache.sections = nextSections;
+      setSections(nextSections);
     };
     const handleFoldersFromSync = async () => {
       (window as any).__todaySyncFlag.foldersFromSync = true;
       const savedFolders = await getSetting<Folder[] | null>('todoFolders', null);
       if (savedFolders) {
-        setFolders(savedFolders.map((f: Folder) => ({ ...f, createdAt: new Date(f.createdAt) })));
+        const nextFolders = savedFolders.map((f: Folder) => ({ ...f, createdAt: new Date(f.createdAt) }));
+        todayRuntimeCache.folders = nextFolders;
+        setFolders(nextFolders);
       }
     };
 
@@ -293,7 +312,9 @@ export const useTodayState = () => {
     // External selection change (e.g. after import) — read setting & sync React state.
     const handleSelectedFolderChanged = async () => {
       const savedFolderId = await getSetting<string | null>('todoSelectedFolder', null);
-      setSelectedFolderId(savedFolderId === 'null' ? null : savedFolderId);
+      const nextSelectedFolderId = savedFolderId === 'null' ? null : savedFolderId;
+      todayRuntimeCache.selectedFolderId = nextSelectedFolderId;
+      setSelectedFolderId(nextSelectedFolderId);
     };
 
     window.addEventListener('tasksRestored', wrappedHandleTasksFromSync);
