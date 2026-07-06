@@ -187,6 +187,19 @@ const TEXT_FONTS = [
   { id: 'monospace', label: 'Mono' },
   { id: 'cursive', label: 'Cursive' },
   { id: '"Georgia", serif', label: 'Georgia' },
+  // Handwriting fonts (Google Fonts — loaded via index.html)
+  { id: '"Caveat", cursive', label: 'Caveat' },
+  { id: '"Kalam", cursive', label: 'Kalam' },
+  { id: '"Patrick Hand", cursive', label: 'Patrick Hand' },
+  { id: '"Indie Flower", cursive', label: 'Indie Flower' },
+  { id: '"Shadows Into Light", cursive', label: 'Shadows' },
+  { id: '"Architects Daughter", cursive', label: 'Architect' },
+  { id: '"Permanent Marker", cursive', label: 'Marker' },
+  { id: '"Dancing Script", cursive', label: 'Dancing' },
+  { id: '"Homemade Apple", cursive', label: 'Homemade' },
+  { id: '"Gochi Hand", cursive', label: 'Gochi' },
+  { id: '"Reenie Beanie", cursive', label: 'Reenie' },
+  { id: '"Pacifico", cursive', label: 'Pacifico' },
 ];
 
 const createDefaultLayers = (): Layer[] => [
