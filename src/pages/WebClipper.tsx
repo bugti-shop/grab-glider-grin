@@ -551,7 +551,7 @@ const WebClipper = () => {
       let stageTickerId: number | null = null;
 
       if (shouldFetchFull) {
-        const FETCH_TIMEOUT_MS = 60_000;
+        const FETCH_TIMEOUT_MS = 120_000;
         try {
           setStage('fetching');
           setProgress(null);
