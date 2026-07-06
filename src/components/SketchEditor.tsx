@@ -4602,6 +4602,26 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     return () => window.removeEventListener('keydown', handleKey);
   }, [presentationMode, pdfPages.length, pdfPageIndex, exitPresentationMode]);
 
+  // Sketch-page keyboard shortcuts (non-PDF, non-presentation)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (presentationMode || pdfPages.length > 0) return;
+      // Skip when typing in inputs
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+      const meta = e.ctrlKey || e.metaKey;
+      if (e.key === 'PageDown' || (meta && e.key === 'ArrowRight')) {
+        if (sketchPageIndex < sketchPageCount - 1) { e.preventDefault(); switchSketchPage(sketchPageIndex + 1); }
+      } else if (e.key === 'PageUp' || (meta && e.key === 'ArrowLeft')) {
+        if (sketchPageIndex > 0) { e.preventDefault(); switchSketchPage(sketchPageIndex - 1); }
+      } else if (meta && e.shiftKey && (e.key === 'N' || e.key === 'n')) {
+        e.preventDefault(); addSketchPage();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [presentationMode, pdfPages.length, sketchPageIndex, sketchPageCount, switchSketchPage, addSketchPage]);
+
   // Auto-hide cursor after 3s of inactivity in presentation mode
   useEffect(() => {
     if (!presentationMode) return;
