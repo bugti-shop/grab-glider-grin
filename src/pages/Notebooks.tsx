@@ -50,7 +50,7 @@ const Notebooks = () => {
   const { notesMeta } = useNotes();
   useFirstVisitTour('/notebooks');
 
-  const [folders, setFolders] = useState<FolderType[]>([]);
+  const [folders, setFolders] = useState<FolderType[]>(() => notebooksRuntimeCache.folders ?? []);
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState('');
