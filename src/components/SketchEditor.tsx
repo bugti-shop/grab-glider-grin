@@ -1628,9 +1628,12 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   // --- Sketch multi-page state (non-PDF sketches only) ---
   // sketchPagesRef holds every page's layers array; the current page IS layersRef.current (same reference)
   const sketchPagesRef = useRef<Layer[][]>([layersRef.current]);
+  const sketchPageNamesRef = useRef<string[]>(['Page 1']);
   const [sketchPageIndex, setSketchPageIndex] = useState(0);
   const [sketchPageCount, setSketchPageCount] = useState(1);
   const [pageThumbsOpen, setPageThumbsOpen] = useState(false);
+  const [editingPageNameIdx, setEditingPageNameIdx] = useState<number | null>(null);
+  const [editingPageNameValue, setEditingPageNameValue] = useState('');
   // Per-page undo history (Phase 1: page-scoped)
   const pageUndoStacksRef = useRef<Map<number, { undo: Layer[][]; redo: Layer[][] }>>(new Map());
 
@@ -4222,7 +4225,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       width: canvasSizeRef.current.w,
       height: canvasSizeRef.current.h,
       version: 2,
-      ...(cleanPages.length > 1 ? { pages: cleanPages, pageIndex: sketchPageIndex } : {}),
+      ...(cleanPages.length > 1 ? { pages: cleanPages, pageIndex: sketchPageIndex, pageNames: [...sketchPageNamesRef.current] } : {}),
       ...(audioDataUrlRef.current ? { audioRecording: { dataUrl: audioDataUrlRef.current, duration: audioDurationRef.current } } : {}),
       ...(videoUrlRef.current ? { videoUrl: videoUrlRef.current, videoBookmarks: videoBookmarksRef.current } : {}),
     };
@@ -4818,6 +4821,11 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     const newLayers = createDefaultLayers();
     const insertAt = sketchPageIndex + 1;
     sketchPagesRef.current.splice(insertAt, 0, newLayers);
+    // Generate a unique default name (Page N where N is the smallest int not already used)
+    const used = new Set(sketchPageNamesRef.current);
+    let n = sketchPagesRef.current.length;
+    while (used.has(`Page ${n}`)) n++;
+    sketchPageNamesRef.current.splice(insertAt, 0, `Page ${n}`);
     setSketchPageCount(sketchPagesRef.current.length);
     // Shift saved undo stacks for pages after insertAt
     const remapped = new Map<number, { undo: Layer[][]; redo: Layer[][] }>();
@@ -4831,6 +4839,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   const deleteSketchPage = useCallback((idx: number) => {
     if (sketchPagesRef.current.length <= 1) return;
     sketchPagesRef.current.splice(idx, 1);
+    sketchPageNamesRef.current.splice(idx, 1);
     setSketchPageCount(sketchPagesRef.current.length);
     pageUndoStacksRef.current.delete(idx);
     // Shift stacks for pages after idx
@@ -4857,6 +4866,15 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     }
     emitChange();
   }, [sketchPageIndex, redrawAll, emitChange, clearSelection]);
+
+  const renameSketchPage = useCallback((idx: number, name: string) => {
+    if (idx < 0 || idx >= sketchPageNamesRef.current.length) return;
+    const trimmed = name.trim() || `Page ${idx + 1}`;
+    if (sketchPageNamesRef.current[idx] === trimmed) return;
+    sketchPageNamesRef.current[idx] = trimmed;
+    forceUpdate(n => n + 1);
+    emitChange();
+  }, [emitChange]);
 
   // Refs so early pointer handlers can invoke undo/redo (defined below in render order)
   const handleUndoRef = useRef(handleUndo);
@@ -5979,11 +5997,17 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
           sketchPagesRef.current = data.pages.map((pg: any[]) => normalizeLayers(pg));
           const pi = Math.min(Math.max(0, data.pageIndex ?? 0), sketchPagesRef.current.length - 1);
           layersRef.current = sketchPagesRef.current[pi];
+          // Load page names (fill missing with defaults)
+          const names = Array.isArray(data.pageNames) ? data.pageNames : [];
+          sketchPageNamesRef.current = sketchPagesRef.current.map((_, i) =>
+            (typeof names[i] === 'string' && names[i].trim()) ? names[i] : `Page ${i + 1}`
+          );
           setSketchPageIndex(pi);
           setSketchPageCount(sketchPagesRef.current.length);
         } else {
           layersRef.current = normalizeLayers(data.layers);
           sketchPagesRef.current = [layersRef.current];
+          sketchPageNamesRef.current = ['Page 1'];
           setSketchPageIndex(0);
           setSketchPageCount(1);
         }
@@ -6026,6 +6050,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
         layers[0].strokes = data.strokes;
         layersRef.current = layers;
         sketchPagesRef.current = [layers];
+        sketchPageNamesRef.current = ['Page 1'];
         setSketchPageIndex(0);
         setSketchPageCount(1);
       }
@@ -7301,21 +7326,57 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                 {sketchPagesRef.current.map((pageLayers, i) => {
                   const isActive = i === sketchPageIndex;
                   const strokeCount = pageLayers.reduce((s, l) => s + l.strokes.length + (l.textAnnotations?.length || 0) + (l.stickyNotes?.length || 0) + (l.images?.length || 0), 0);
+                  const pageName = sketchPageNamesRef.current[i] || `Page ${i + 1}`;
+                  const isEditingName = editingPageNameIdx === i;
                   return (
-                    <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1">
+                    <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1 w-24">
                       <button
                         onClick={() => switchSketchPage(i)}
                         className={cn(
                           "w-24 h-16 rounded-lg border-2 bg-background/80 flex items-center justify-center text-[10px] text-muted-foreground overflow-hidden transition-all",
                           isActive ? "border-primary ring-2 ring-primary/30" : "border-border/60 hover:border-border"
                         )}
-                        title={`Page ${i + 1}`}
+                        title={pageName}
                       >
                         <div className="flex flex-col items-center">
                           <span className="text-[11px] font-semibold text-foreground/80">{i + 1}</span>
                           <span className="text-[9px] text-muted-foreground/70">{strokeCount} items</span>
                         </div>
                       </button>
+                      {isEditingName ? (
+                        <input
+                          autoFocus
+                          value={editingPageNameValue}
+                          onChange={(e) => setEditingPageNameValue(e.target.value)}
+                          onBlur={() => {
+                            renameSketchPage(i, editingPageNameValue);
+                            setEditingPageNameIdx(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              renameSketchPage(i, editingPageNameValue);
+                              setEditingPageNameIdx(null);
+                            } else if (e.key === 'Escape') {
+                              setEditingPageNameIdx(null);
+                            }
+                          }}
+                          maxLength={40}
+                          className="w-full h-5 text-[10px] px-1 rounded border border-primary/60 bg-background text-foreground text-center focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      ) : (
+                        <button
+                          className="w-full text-[10px] text-foreground/80 hover:text-foreground truncate px-0.5"
+                          onDoubleClick={() => { setEditingPageNameIdx(i); setEditingPageNameValue(pageName); }}
+                          onClick={(e) => {
+                            // Single click on already-active page → start editing; otherwise switch
+                            if (isActive) { setEditingPageNameIdx(i); setEditingPageNameValue(pageName); }
+                            else switchSketchPage(i);
+                          }}
+                          title="Double-click to rename"
+                        >
+                          {pageName}
+                        </button>
+                      )}
                       {sketchPageCount > 1 && (
                         <button
                           onClick={() => deleteSketchPage(i)}
