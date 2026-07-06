@@ -5,7 +5,7 @@ import { Eye, Sparkles, Trophy, Award } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ALL_ACHIEVEMENTS, loadAchievementsData } from '@/utils/gamificationStorage';
 import { loadTodoItems } from '@/utils/todoItemsStorage';
-import { loadNotesFromDB } from '@/utils/noteStorage';
+import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
 import { loadStreakData } from '@/utils/streakStorage';
 import { getJourneyBadges, loadJourneyData, JourneyBadge, RARITY_CONFIG } from '@/utils/virtualJourneyStorage';
 
@@ -30,7 +30,7 @@ export const ProfileAchievements = ({ onViewCertificate }: { onViewCertificate?:
       const [achievements, tasks, notes, streak] = await Promise.all([
         loadAchievementsData(),
         loadTodoItems(),
-        loadNotesFromDB(),
+        loadNotesMetadataFromDB(),
         loadStreakData('flowist_streak'),
       ]);
 

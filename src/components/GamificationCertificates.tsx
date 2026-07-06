@@ -17,7 +17,7 @@ const QRCodeSVG = lazy(() => import('qrcode.react').then(m => ({ default: m.QRCo
 import { Button } from '@/components/ui/button';
 import { triggerHaptic, triggerNotificationHaptic } from '@/utils/haptics';
 import { loadTodoItems } from '@/utils/todoItemsStorage';
-import { loadNotesFromDB } from '@/utils/noteStorage';
+import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
 import { loadFolders } from '@/utils/folderStorage';
 import { StreakData } from '@/utils/streakStorage';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
@@ -231,7 +231,7 @@ export const hasNewCertificates = async (longestStreak: number): Promise<boolean
   try {
     const [tasks, notes, folders, seenCerts, firstStepData] = await Promise.all([
       loadTodoItems(),
-      loadNotesFromDB(),
+      loadNotesMetadataFromDB(),
       loadFolders(),
       getSetting<string[]>('flowist_seen_certificates', []),
       getSetting<any>('flowist_first_step_earned', null),
@@ -295,7 +295,7 @@ export const GamificationCertificates = ({ isOpen, onClose, streakData }: Certif
       try {
         const [tasks, notes, folders, seenCerts, firstStepData] = await Promise.all([
           loadTodoItems(),
-          loadNotesFromDB(),
+          loadNotesMetadataFromDB(),
           loadFolders(),
           getSetting<string[]>('flowist_seen_certificates', []),
           getSetting<any>('flowist_first_step_earned', null),

@@ -17,7 +17,7 @@ import {
   Link2, Sigma, Globe, Palette, Type,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { loadNotesFromDB } from '@/utils/noteStorage';
+import { loadNoteFromDB, loadNotesMetadataFromDB } from '@/utils/noteStorage';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import type { Note } from '@/types/note';
 
@@ -120,7 +120,10 @@ function safeDomain(href: string): string {
 /** Parses a note's HTML content into a compact list of display blocks. */
 function extractBlocks(html: string, limit: number): Block[] {
   if (!html) return [];
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+  // Bound parsing cost: a duplicated 100k-word note should never make the
+  // dashboard parse multi-megabyte HTML on the main thread.
+  const boundedHtml = html.length > 80_000 ? html.slice(0, 80_000) : html;
+  const doc = new DOMParser().parseFromString(boundedHtml, 'text/html');
   const out: Block[] = [];
   const seenHrefs = new Set<string>();
 
@@ -211,7 +214,7 @@ export const NoteBlocksWidget = () => {
     (async () => {
       const [cfg, allNotes] = await Promise.all([
         getSetting<NoteBlocksConfig>(SETTINGS_KEY, DEFAULT_CONFIG),
-        loadNotesFromDB(),
+        loadNotesMetadataFromDB(),
       ]);
       setConfig({ ...DEFAULT_CONFIG, ...cfg });
       setNotes(allNotes);
@@ -229,6 +232,19 @@ export const NoteBlocksWidget = () => {
     () => notes.find((n) => n.id === config.noteId) ?? null,
     [notes, config.noteId],
   );
+
+  useEffect(() => {
+    if (!activeNote || !(activeNote as any).__contentStub) return;
+    let cancelled = false;
+    loadNoteFromDB(activeNote.id)
+      .then((full) => {
+        if (!cancelled && full) {
+          setNotes((prev) => prev.map((n) => (n.id === full.id ? full : n)));
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [activeNote?.id, (activeNote as any)?.__contentStub]);
 
   const blocks = useMemo(
     () => (activeNote ? extractBlocks(activeNote.content || '', config.maxBlocks) : []),

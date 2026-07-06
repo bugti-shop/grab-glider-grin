@@ -9,6 +9,7 @@ import type { SyncTable, SyncRow } from './syncTables';
 
 const STORAGE_KEY = 'flowist_sync_write_queue_v1';
 const MAX_RETRIES = 8;
+const MAX_QUEUE_STORAGE_CHARS = 5 * 1024 * 1024;
 
 interface QueuedWrite {
   id: string;          // queue entry id
@@ -22,11 +23,25 @@ interface QueuedWrite {
 function load(): QueuedWrite[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw && raw.length > MAX_QUEUE_STORAGE_CHARS) {
+      // A legacy queue could contain many duplicated 100k-word notes. Parsing
+      // that JSON on startup blocks scrolling/navigation, so drop it and let
+      // fresh lightweight writes rebuild the queue.
+      localStorage.removeItem(STORAGE_KEY);
+      return [];
+    }
     return raw ? JSON.parse(raw) as QueuedWrite[] : [];
   } catch { return []; }
 }
 function save(q: QueuedWrite[]): void {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(q)); } catch {}
+  try {
+    const raw = JSON.stringify(q);
+    if (raw.length > MAX_QUEUE_STORAGE_CHARS) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(q.slice(-500)));
+      return;
+    }
+    localStorage.setItem(STORAGE_KEY, raw);
+  } catch {}
 }
 
 let flushing = false;
@@ -34,6 +49,41 @@ let flushPromise: Promise<void> | null = null;
 let scheduledFlush: ReturnType<typeof setTimeout> | null = null;
 
 type WriteInput = Omit<QueuedWrite, 'id' | 'attempts' | 'enqueuedAt'>;
+
+const sanitizeWriteForQueue = (write: WriteInput): WriteInput | null => {
+  const row: any = { ...write.row };
+
+  if (write.table === 'notes') {
+    const payload = row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)
+      ? { ...row.payload }
+      : row.payload;
+
+    if (payload && typeof payload === 'object') {
+      delete payload.content;
+      delete payload.codeContent;
+      delete payload.fullPageSnapshot;
+      delete payload.images;
+      delete payload.floatingImages;
+      delete payload.voiceRecordings;
+      delete payload.attachments;
+      row.payload = payload;
+    }
+
+    if (typeof row.body === 'string' && row.body.length > 200 * 1024) {
+      row.body = null;
+    }
+  }
+
+  try {
+    // Never let one oversized localStorage queue entry freeze the whole app.
+    // The local IndexedDB copy remains the source of truth for huge note bodies.
+    if (JSON.stringify(row).length > 260 * 1024) return null;
+  } catch {
+    return null;
+  }
+
+  return { ...write, row };
+};
 
 const scheduleFlush = () => {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return;
@@ -54,15 +104,22 @@ export function enqueueWrite(
 
 export function enqueueWrites(writes: WriteInput[]): void {
   if (!writes.length) return;
-  const q = load();
+  const q = load()
+    .map((entry) => {
+      const sanitized = sanitizeWriteForQueue({ table: entry.table, op: entry.op, row: entry.row });
+      return sanitized ? { ...entry, ...sanitized } : null;
+    })
+    .filter((entry): entry is QueuedWrite => !!entry);
   // Dedupe once per batch. The previous per-row load/filter/save path made
   // duplicating only a few hundred tasks block the UI for seconds.
   const byKey = new Map(q.map(e => [`${e.table}:${e.row.id}`, e] as const));
   const now = Date.now();
   for (const write of writes) {
-    byKey.set(`${write.table}:${write.row.id}`, {
-      id: `${write.table}:${write.row.id}:${now}`,
-      ...write,
+    const sanitized = sanitizeWriteForQueue(write);
+    if (!sanitized) continue;
+    byKey.set(`${sanitized.table}:${sanitized.row.id}`, {
+      id: `${sanitized.table}:${sanitized.row.id}:${now}`,
+      ...sanitized,
       attempts: 0,
       enqueuedAt: now,
     });
@@ -84,7 +141,12 @@ export async function flushQueue(): Promise<void> {
       if (!session?.user) return;
       const userId = session.user.id;
 
-      let q = load();
+      let q = load()
+        .map((entry) => {
+          const sanitized = sanitizeWriteForQueue({ table: entry.table, op: entry.op, row: entry.row });
+          return sanitized ? { ...entry, ...sanitized } : null;
+        })
+        .filter((entry): entry is QueuedWrite => !!entry);
       const remaining: QueuedWrite[] = [];
       const groups = new Map<string, QueuedWrite[]>();
       for (const entry of q) {

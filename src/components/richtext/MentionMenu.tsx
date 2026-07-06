@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FileText, ListTodo, Loader2 } from 'lucide-react';
-import { loadNotesFromDB } from '@/utils/noteStorage';
+import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
 import { loadTasksFromDB } from '@/utils/taskStorage';
-import { stripHtml } from '@/lib/sanitize';
 
 export interface MentionItem {
   id: string;
@@ -41,12 +40,12 @@ export const MentionMenu = ({
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    Promise.all([loadNotesFromDB().catch(() => []), loadTasksFromDB().catch(() => [])])
+    Promise.all([loadNotesMetadataFromDB().catch(() => []), loadTasksFromDB().catch(() => [])])
       .then(([notes, tasks]) => {
         const noteItems: MentionItem[] = (notes || []).map((n: any) => ({
           id: n.id,
           type: 'note',
-          label: n.title?.trim() || stripHtml(n.content || '').slice(0, 60) || 'Untitled note',
+          label: n.title?.trim() || n.__contentPreview?.slice(0, 60) || n.content?.slice(0, 60) || 'Untitled note',
         }));
         const taskItems: MentionItem[] = (tasks || []).map((t: any) => ({
           id: t.id,
