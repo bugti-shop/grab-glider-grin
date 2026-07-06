@@ -5863,22 +5863,43 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       const data = JSON.parse(dataStr);
       console.log(`[SketchEditor] loadInitialData: version=${data.version}, layers=${data.layers?.length}, dataStr length=${dataStr.length}`);
       if (data.version === 2 && data.layers) {
-        layersRef.current = data.layers.map((l: any) => ({ ...l, textAnnotations: l.textAnnotations || [], stickyNotes: l.stickyNotes || [], images: l.images || [] }));
-        const totalStrokes = layersRef.current.reduce((sum, l) => sum + l.strokes.length, 0);
-        console.log(`[SketchEditor] Loaded ${totalStrokes} strokes from initialData`);
-        // Track max text id, sticky id, image id
-        for (const l of layersRef.current) {
-          for (const ta of l.textAnnotations) {
-            if (ta.id >= nextTextIdRef.current) nextTextIdRef.current = ta.id + 1;
-          }
-          for (const sn of (l.stickyNotes || [])) {
-            if (sn.id >= nextStickyIdRef.current) nextStickyIdRef.current = sn.id + 1;
-          }
-          for (const img of (l.images || [])) {
-            if (img.id >= nextImageIdRef.current) nextImageIdRef.current = img.id + 1;
+        // Multi-page: load pages array if present, otherwise treat layers as single page
+        const normalizeLayers = (raw: any[]): Layer[] => raw.map((l: any) => ({
+          ...l,
+          textAnnotations: l.textAnnotations || [],
+          stickyNotes: l.stickyNotes || [],
+          images: l.images || [],
+          washiTapes: l.washiTapes || [],
+        }));
+        if (Array.isArray(data.pages) && data.pages.length > 0) {
+          sketchPagesRef.current = data.pages.map((pg: any[]) => normalizeLayers(pg));
+          const pi = Math.min(Math.max(0, data.pageIndex ?? 0), sketchPagesRef.current.length - 1);
+          layersRef.current = sketchPagesRef.current[pi];
+          setSketchPageIndex(pi);
+          setSketchPageCount(sketchPagesRef.current.length);
+        } else {
+          layersRef.current = normalizeLayers(data.layers);
+          sketchPagesRef.current = [layersRef.current];
+          setSketchPageIndex(0);
+          setSketchPageCount(1);
+        }
+        // Track max ids across ALL pages
+        for (const pg of sketchPagesRef.current) {
+          for (const l of pg) {
+            for (const ta of (l.textAnnotations || [])) {
+              if (ta.id >= nextTextIdRef.current) nextTextIdRef.current = ta.id + 1;
+            }
+            for (const sn of (l.stickyNotes || [])) {
+              if (sn.id >= nextStickyIdRef.current) nextStickyIdRef.current = sn.id + 1;
+            }
+            for (const img of (l.images || [])) {
+              if (img.id >= nextImageIdRef.current) nextImageIdRef.current = img.id + 1;
+            }
           }
         }
-        setActiveLayerId(data.activeLayerId ?? 1);
+        const totalStrokes = layersRef.current.reduce((sum, l) => sum + l.strokes.length, 0);
+        console.log(`[SketchEditor] Loaded ${totalStrokes} strokes, ${sketchPagesRef.current.length} page(s) from initialData`);
+        setActiveLayerId(data.activeLayerId ?? 3);
         if (data.background) setBackground(data.background);
         // Load audio recording if present
         if (data.audioRecording?.dataUrl) {
@@ -5900,6 +5921,9 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
         const layers = createDefaultLayers();
         layers[0].strokes = data.strokes;
         layersRef.current = layers;
+        sketchPagesRef.current = [layers];
+        setSketchPageIndex(0);
+        setSketchPageCount(1);
       }
       initialLoadDoneRef.current = true;
     } catch (e) { console.error('[SketchEditor] loadInitialData parse error:', e); initialLoadDoneRef.current = true; }
