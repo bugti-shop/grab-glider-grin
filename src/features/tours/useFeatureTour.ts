@@ -42,11 +42,14 @@ export const useTourBootstrap = () => {
         if (!shown) {
           await setSetting(KEY, true, { skipCloudSync: true });
           await setSetting(CHAIN_KEY, true, { skipCloudSync: true });
-          // Fire immediately — no artificial delay so the welcome sheet
-          // appears the instant the app is usable.
-          window.dispatchEvent(new CustomEvent('feature-guide:open', {
-            detail: { startChainOnClose: true, compulsory: true },
-          }));
+          // Let the app fully load first, then open the welcome sheet after
+          // a short 2-second breather so the user isn't hit with a modal
+          // before the UI has settled.
+          window.setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('feature-guide:open', {
+              detail: { startChainOnClose: true, compulsory: true },
+            }));
+          }, 2000);
           return;
         }
         // Resume support: only auto-continue if the user actually started the
