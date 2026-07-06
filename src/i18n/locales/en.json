@@ -642,7 +642,7 @@
     "addTask": "Add Task",
     "addSubtask": "Add Subtask",
     "taskPlaceholder": "What do you need to do?",
-    "naturalLanguagePlaceholder": "e.g. Buy groceries tomorrow at 5pm",
+    "naturalLanguagePlaceholder": "Buy milk tomorrow 5pm #shopping @errands p1",
     "noTasks": "No tasks yet",
     "noSubtasks": "No subtasks yet",
     "subtasks": "Subtasks",

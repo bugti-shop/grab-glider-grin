@@ -201,7 +201,7 @@ const priorityPatterns: { pattern: RegExp; priority: 'high' | 'medium' | 'low' }
   { pattern: /\b(low priority|later|whenever|someday)\b/i, priority: 'low' },
   { pattern: /!{3,}/, priority: 'high' },
   { pattern: /!!/, priority: 'medium' },
-  // Priority shortcuts: p1, p2, p3
+  // Priority shortcuts: p1, p2, p3 (Todoist parity; p4 handled separately as "no priority")
   { pattern: /\bp1\b/i, priority: 'high' },
   { pattern: /\bp2\b/i, priority: 'medium' },
   { pattern: /\bp3\b/i, priority: 'low' },
@@ -606,6 +606,8 @@ export function parseNaturalLanguageTask(input: string): ParsedTask {
     priority = priorityResult.priority;
     text = text.replace(priorityResult.matched, '').trim();
   }
+  // p4 = no priority (Todoist convention) — strip the token without setting priority
+  text = text.replace(/\bp4\b/i, '').trim();
   
   // 12. Parse location (only from known places, not @folder conflicts)
   const locationResult = parseLocation(text);
@@ -648,7 +650,7 @@ export function parseNaturalLanguageTask(input: string): ParsedTask {
 // ─── Detection helper ───────────────────────────────────────────
 export function hasNaturalLanguagePatterns(input: string): boolean {
   // Quick add syntax
-  if (/#\w+/.test(input) || /#"[^"]+"/.test(input) || /@\w+/.test(input) || /!(?:high|med|low)\b/i.test(input)) return true;
+  if (/#\w+/.test(input) || /#"[^"]+"/.test(input) || /@\w+/.test(input) || /!(?:high|med|low)\b/i.test(input) || /\bp[1-4]\b/i.test(input)) return true;
   
   // Remind / notify
   if (/\b(?:remind(?:\s+me)?|notify(?:\s+me)?)\b/i.test(input)) return true;
