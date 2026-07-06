@@ -808,35 +808,11 @@ export const getValidAccessToken = async (): Promise<string | null> => {
 };
 
 /**
- * Proactive background refresh — refreshes token even if still fresh but close to expiry.
+ * Proactive background refresh — no-op. Supabase autoRefreshToken keeps the
+ * Lovable Cloud session alive silently; Google's provider_token is unused.
  */
 export const backgroundTokenRefresh = async (): Promise<void> => {
-  const user = await getStoredGoogleUser();
-  if (!user) return;
-
-  if (user.refreshToken) {
-    persistRefreshTokenBestEffort(user.refreshToken, user.email).catch(() => {});
-  }
-
-  if (user.accessTokenExpiresAt > Date.now() + PROACTIVE_REFRESH_BUFFER) return;
-
-  if (user.expiresAt < Date.now() + 30 * 24 * 3600 * 1000) {
-    user.expiresAt = Date.now() + SESSION_TTL;
-    await setSetting('googleUser', user);
-  }
-
-  const maxAttempts = isNative() ? NATIVE_REFRESH_RETRY_COUNT : WEB_REFRESH_RETRY_COUNT;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      await refreshGoogleToken();
-      return;
-    } catch {
-      if (attempt < maxAttempts - 1) {
-        await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt)));
-      }
-    }
-  }
-  console.warn('Background token refresh failed — will retry on next cycle');
+  return;
 };
 
 /**
