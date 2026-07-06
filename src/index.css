@@ -1139,6 +1139,7 @@ body.onboarding-active [data-vaul-drawer] {
   cursor: pointer;
 }
 .flowist-tour-popover .driver-popover-next-btn {
+  position: relative;
   min-width: 0;
   width: auto;
   min-height: 40px;
@@ -1148,7 +1149,18 @@ body.onboarding-active [data-vaul-drawer] {
   font-weight: 700;
   letter-spacing: 0.1px;
   box-sizing: border-box;
+  touch-action: manipulation;
   transition: background-color 120ms ease, opacity 120ms ease, transform 80ms ease;
+}
+/* Invisible extended hit area (~48px tall / +12px wider) so the tap target
+   meets mobile guidelines while the visible pill stays compact. */
+.flowist-tour-popover .driver-popover-next-btn::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: -12px;
+  bottom: -8px;
+  left: -12px;
 }
 .flowist-tour-popover .driver-popover-next-btn:hover,
 .flowist-tour-popover .driver-popover-next-btn:focus-visible {
