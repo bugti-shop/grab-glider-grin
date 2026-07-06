@@ -375,11 +375,10 @@ export const prepareWebClipEmbedsHtml = (html: string): string => {
       frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
       frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
       frame.setAttribute('loading', 'eager');
-      // Responsive height: full 87vh on desktop/tablet, capped on short mobile
-      // screens so the article box stays readable and doesn't overflow.
-      // The `.webclip-iframe` class + media query in index.css tunes it per screen.
+      // Responsive height comes from `.webclip-iframe` in index.css so mobile
+      // screens stay readable (not too tall) while tablet/desktop get more room.
       frame.classList.add('webclip-iframe');
-      frame.setAttribute('style', 'width:100%;height:min(87vh, 640px);border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
+      frame.setAttribute('style', 'width:100%;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
       frame.removeAttribute('srcdoc');
 
       if (encoded && !frame.getAttribute('src')?.startsWith(WEBCLIP_DATA_SRC_PREFIX)) {
