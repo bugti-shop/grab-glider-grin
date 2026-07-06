@@ -578,7 +578,7 @@ const NoteCardInner = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, on
 });
 NoteCardInner.displayName = 'NoteCardInner';
 
-export const NoteCard = (props: NoteCardProps) => {
+const NoteCardWrapper = (props: NoteCardProps) => {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [noteProtection, setNoteProtection] = useState<NoteProtection>({ hasPassword: false, useBiometric: false });
 
@@ -608,6 +608,7 @@ export const NoteCard = (props: NoteCardProps) => {
         onEdit={props.onEdit}
         onDelete={props.onDelete}
         onArchive={props.onArchive}
+
         onTogglePin={props.onTogglePin}
         onToggleFavorite={props.onToggleFavorite}
         onDuplicate={props.onDuplicate}
@@ -628,4 +629,23 @@ export const NoteCard = (props: NoteCardProps) => {
     </div>
   );
 };
+NoteCardWrapper.displayName = 'NoteCardWrapper';
+
+/**
+ * Memoized export. With 5k+ notes the inline `renderCard` in NotesVirtualGrid
+ * creates a fresh element for every visible card on every parent re-render
+ * (priority tap, task completion, filter change, etc.). Bailing out when the
+ * note reference + selection state are unchanged keeps priority/completion
+ * updates responsive across huge lists. Callbacks are intentionally excluded
+ * from the compare — they're either stable or safely reference the latest
+ * state via their own closures, matching the pattern already used by the
+ * inner `NoteCardInner` memo above.
+ */
+export const NoteCard = memo(NoteCardWrapper, (prev, next) => {
+  if (prev.note !== next.note) return false;
+  if (prev.isSelected !== next.isSelected) return false;
+  if (prev.isSelectionMode !== next.isSelectionMode) return false;
+  return true;
+});
 NoteCard.displayName = 'NoteCard';
+
