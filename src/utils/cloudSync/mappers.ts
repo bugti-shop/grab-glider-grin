@@ -70,14 +70,33 @@ export const mappers = {
   notes: {
     toCloud(n: Note) {
       if (!isUuid(n.id)) return null;
+      // Strip locally-owned heavy fields from the cloud payload. Web-clipper
+      // notes carry a multi-MB `fullPageSnapshot.gz` (raw HTML snapshot of the
+      // clipped page) plus embedded base64 media in `images`/`floatingImages`.
+      // Uploading these to the sync row balloons every bootstrap/refetch to
+      // tens of megabytes and stalls the app on startup while rows download.
+      // These fields stay local-only in IndexedDB; the cloud copy is metadata.
+      const {
+        fullPageSnapshot: _fps,
+        images: _imgs,
+        floatingImages: _fimgs,
+        voiceRecordings: _voice,
+        attachments: _atts,
+        ...lightPayload
+      } = n as any;
+      // Body is the note's HTML content. For full-page web clips this can also
+      // be huge (the parsed article HTML). Skip it from the cloud row when it
+      // exceeds a sane cap — the note still restores from the local snapshot.
+      const HEAVY_BODY_LIMIT = 200 * 1024; // 200 KB
+      const body = typeof n.content === 'string' && n.content.length > HEAVY_BODY_LIMIT ? null : (n.content ?? null);
       return {
         id: n.id,
         title: n.title ?? null,
-        body: n.content ?? null,
+        body,
         folder_id: isUuid(n.folderId) ? n.folderId : null,
         is_pinned: !!n.isPinned,
         tags: Array.isArray(n.tagIds) ? n.tagIds : [],
-        payload: n,
+        payload: lightPayload,
         is_deleted: !!n.isDeleted,
         created_at: iso(n.createdAt),
         updated_at: iso(n.updatedAt) ?? new Date().toISOString(),
@@ -91,13 +110,20 @@ export const mappers = {
         ...(payload ?? {}),
         id: r.id,
         title: r.title ?? local?.title ?? '',
-        content: r.body ?? local?.content ?? '',
+        // If cloud row body is null (heavy clip stripped from sync), keep local content.
+        content: (r.body ?? local?.content ?? ''),
         folderId: r.folder_id ?? local?.folderId,
         isPinned: !!r.is_pinned,
         tagIds: Array.isArray(r.tags) ? r.tags : (local?.tagIds ?? []),
         isDeleted: !!r.is_deleted,
         updatedAt: new Date(r.updated_at ?? Date.now()),
         createdAt: local?.createdAt ?? new Date(r.created_at ?? Date.now()),
+        // Preserve local-only heavy fields — cloud never owns these.
+        fullPageSnapshot: local?.fullPageSnapshot ?? (payload as any)?.fullPageSnapshot,
+        images: local?.images ?? (payload as any)?.images,
+        floatingImages: local?.floatingImages ?? (payload as any)?.floatingImages,
+        voiceRecordings: local?.voiceRecordings ?? (payload as any)?.voiceRecordings ?? [],
+        attachments: local?.attachments ?? (payload as any)?.attachments,
       } as Partial<Note> & { id: string };
     },
   },
