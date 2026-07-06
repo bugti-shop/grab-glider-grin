@@ -820,8 +820,8 @@ const Index = () => {
           continue;
         }
         
-        // Full content search (slow but thorough)
-        const plainContent = note.content.replace(/<[^>]*>/g, '').toLowerCase();
+        // Bounded preview search — never regex-scan a 100k-word note on mobile.
+        const plainContent = ((note as any).__contentPreview || getTextPreviewFromHtml(note.content, 500)).toLowerCase();
         if (plainContent.includes(search)) {
           results.push(note.id);
         }
