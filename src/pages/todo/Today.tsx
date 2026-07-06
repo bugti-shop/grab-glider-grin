@@ -683,10 +683,22 @@ const Today = () => {
       updateItem(item.id, { subtasks: reorderedFull });
       try { Haptics.impact({ style: ImpactStyle.Light }); } catch {}
     };
+    // Stop pointer / touch / mouse events from bubbling out of the subtask
+    // area. The parent task's <Draggable dragHandleProps> are spread on the
+    // whole row (row = task header + this inline subtask container), so
+    // without this the parent's drag sensor also grabs the touch and the
+    // ENTIRE container (parent + all subtasks) starts dragging when the user
+    // long-presses a single subtask. The nested subtask Draggable's own
+    // handlers fire first on the inner row, then this wrapper swallows the
+    // event so it never reaches the parent handle.
+    const stopDragBubble = (e: React.SyntheticEvent) => e.stopPropagation();
     return (
       <div
         className="ml-3 sm:ml-4 md:ml-5 pl-3 sm:pl-4 border-l-2 border-border/50"
-        onClick={(e) => e.stopPropagation()}
+        onClick={stopDragBubble}
+        onPointerDown={stopDragBubble}
+        onTouchStart={stopDragBubble}
+        onMouseDown={stopDragBubble}
       >
         <DragDropContext onDragEnd={handleSubtaskDragEnd}>
           <Droppable droppableId={`inline-subs-${item.id}`}>
