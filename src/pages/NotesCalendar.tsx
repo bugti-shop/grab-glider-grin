@@ -19,8 +19,22 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { CalendarBackgroundSheet } from '@/components/CalendarBackgroundSheet';
 import { getSetting } from '@/utils/settingsStorage';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+const CalendarPanelFallback = () => (
+  <div className="mx-4 my-4 rounded-lg border border-border bg-card p-4 text-center">
+    <p className="text-sm font-medium text-foreground">Calendar view couldn’t render.</p>
+    <p className="mt-1 text-xs text-muted-foreground">Your notes are safe. Use the notes tab while this view recovers.</p>
+  </div>
+);
+
+const NotesListFallback = () => (
+  <div className="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+    Notes for this date couldn’t render.
+  </div>
+);
 
 const NotesCalendar = () => {
   const { t } = useTranslation();
@@ -170,16 +184,18 @@ const NotesCalendar = () => {
           <h1 className="text-lg font-bold text-foreground">{t('nav.calendar', 'Calendar')}</h1>
         </div>
         {/* Calendar View with Background */}
-        <NotesCalendarView
-          selectedDate={date}
-          onDateSelect={setDate}
-          highlightedDates={noteDates}
-          showEmptyState={selectedDateNotes.length === 0}
-          emptyStateMessage={t('calendar.noNotes', 'No notes for the day.')}
-          emptyStateSubMessage={t('calendar.clickToCreate', 'Click "+" to create your notes.')}
-          calendarBackground={calendarBackground}
-          onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
-        />
+        <ErrorBoundary fallback={<CalendarPanelFallback />}>
+          <NotesCalendarView
+            selectedDate={date}
+            onDateSelect={setDate}
+            highlightedDates={noteDates}
+            showEmptyState={selectedDateNotes.length === 0}
+            emptyStateMessage={t('calendar.noNotes', 'No notes for the day.')}
+            emptyStateSubMessage={t('calendar.clickToCreate', 'Click "+" to create your notes.')}
+            calendarBackground={calendarBackground}
+            onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
+          />
+        </ErrorBoundary>
 
 
         {/* Notes for Selected Date - Scrollable */}
@@ -188,23 +204,25 @@ const NotesCalendar = () => {
             <h2 className="text-lg font-semibold text-foreground py-2 flex-shrink-0">
               {format(date || new Date(), 'MMMM dd, yyyy')}
             </h2>
-            <ScrollArea className="flex-1 perf-contain-scroll">
-              <div className="space-y-3 pb-4">
-                <NotesVirtualGrid
-                  notes={selectedDateNotes}
-                  estimatedRowHeight={190}
-                  useWindowing={false}
-                  getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
-                  renderCard={(note) => (
-                    <NoteCard
-                      note={note}
-                      onEdit={handleEditNote}
-                      onDelete={handleDeleteNote}
-                    />
-                  )}
-                />
-              </div>
-            </ScrollArea>
+            <ErrorBoundary fallback={<NotesListFallback />}>
+              <ScrollArea className="flex-1 perf-contain-scroll">
+                <div className="space-y-3 pb-4">
+                  <NotesVirtualGrid
+                    notes={selectedDateNotes}
+                    estimatedRowHeight={190}
+                    useWindowing={false}
+                    getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
+                    renderCard={(note) => (
+                      <NoteCard
+                        note={note}
+                        onEdit={handleEditNote}
+                        onDelete={handleDeleteNote}
+                      />
+                    )}
+                  />
+                </div>
+              </ScrollArea>
+            </ErrorBoundary>
           </div>
         )}
       </div>

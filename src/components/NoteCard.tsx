@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Note } from '@/types/note';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit, Mic, FileText, Pen, Pin, FileCode, GitBranch, AlignLeft, Archive, Star, Check, Copy, EyeOff, Shield, Lock, FolderInput, StickyNote } from 'lucide-react';
+import { Trash2, Edit, Mic, FileText, Pen, Pin, FileCode, GitBranch, AlignLeft, Archive, Star, Check, Copy, EyeOff, Shield, Lock, FolderInput, StickyNote, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { getNoteProtection, NoteProtection } from '@/utils/noteProtection';
@@ -12,6 +12,7 @@ import { getSetting } from '@/utils/settingsStorage';
 import { logActivity } from '@/utils/activityLogger';
 import { sanitizeDisplayName } from '@/utils/duplicateName';
 import { getTextPreviewFromHtml } from '@/utils/contentPreview';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,7 +66,14 @@ const RANDOM_COLORS = [
   'hsl(60, 90%, 75%)',
 ];
 
-export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, onToggleFavorite, onMoveToFolder, onDragStart, onDragOver, onDrop, onDragEnd, onDragLeave, isSelectionMode = false, isSelected = false, onToggleSelection, onDuplicate, onHide, onProtect }: NoteCardProps) => {
+const NoteCardFallback = ({ note }: { note: Note }) => (
+  <Card className="flex h-full w-full flex-col justify-center rounded-lg border border-border bg-card p-4 text-center">
+    <p className="line-clamp-1 text-sm font-semibold text-foreground">{sanitizeDisplayName(note.title || 'Note')}</p>
+    <p className="mt-1 text-xs text-muted-foreground">This note couldn’t render.</p>
+  </Card>
+);
+
+const NoteCardInner = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, onToggleFavorite, onMoveToFolder, onDragStart, onDragOver, onDrop, onDragEnd, onDragLeave, isSelectionMode = false, isSelected = false, onToggleSelection, onDuplicate, onHide, onProtect }: NoteCardProps) => {
   const { t } = useTranslation();
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState(0);
@@ -206,22 +214,35 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
   };
   
   // Action handlers that reset swipe after action
-  const handleSwipeAction = async (action: () => void) => {
+  const runCardAction = (action: () => void | Promise<void>) => {
+    try {
+      const result = action();
+      if (result && typeof (result as Promise<void>).catch === 'function') {
+        (result as Promise<void>).catch((error) => {
+          console.error('[NoteCard] action failed:', error);
+        });
+      }
+    } catch (error) {
+      console.error('[NoteCard] action failed:', error);
+    }
+  };
+
+  const handleSwipeAction = async (action: () => void | Promise<void>) => {
     const hapticStyle = getHapticStyle();
     if (hapticStyle) {
       try { await Haptics.impact({ style: hapticStyle }); } catch (error) {}
     }
-    action();
+    runCardAction(action);
     setSwipeOffset(0);
   };
 
   const handleClick = () => {
     if (isSelectionMode && onToggleSelection) {
-      onToggleSelection(note.id);
+      runCardAction(() => onToggleSelection(note.id));
       return;
     }
     if (!isLongPress.current && !showContextMenu && !isSwiping) {
-      onEdit(note);
+      runCardAction(() => onEdit(note));
     }
   };
 
@@ -274,6 +295,75 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
   }, [note.type, note.voiceRecordings?.length]);
 
   const BadgeIcon = badge.icon;
+
+  const updatedAtDate = useMemo(() => {
+    const ms = note.updatedAt instanceof Date ? note.updatedAt.getTime() : new Date(note.updatedAt as any).getTime();
+    return new Date(Number.isFinite(ms) ? ms : Date.now());
+  }, [note.updatedAt]);
+
+  const menu = (
+    <DropdownMenu open={showContextMenu} onOpenChange={setShowContextMenu}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={t('common.options', 'Options')}
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          className="-mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-800 hover:bg-black/10"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-48 z-50 bg-background border border-border shadow-lg">
+        <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onEdit(note)); }} className="gap-2">
+          <Edit className="h-4 w-4" />
+          {t('common.edit')}
+        </DropdownMenuItem>
+        {onTogglePin && (
+          <DropdownMenuItem onClick={(e) => { setShowContextMenu(false); runCardAction(() => onTogglePin(note.id, e as any)); }} className="gap-2">
+            <Pin className={cn("h-4 w-4", note.isPinned && "fill-current")} />
+            {note.isPinned ? t('notes.unpin') : t('notes.pin')}
+          </DropdownMenuItem>
+        )}
+        {onToggleFavorite && (
+          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onToggleFavorite(note.id)); }} className="gap-2">
+            <Star className={cn("h-4 w-4", note.isFavorite && "fill-warning text-warning")} />
+            {note.isFavorite ? t('notes.removeFromFavorites', 'Remove from Favorites') : t('notes.addToFavorites', 'Add to Favorites')}
+          </DropdownMenuItem>
+        )}
+        {onArchive && (
+          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onArchive(note.id)); }} className="gap-2">
+            <Archive className="h-4 w-4" />
+            {t('notes.archive')}
+          </DropdownMenuItem>
+        )}
+        {onDuplicate && (
+          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onDuplicate(note.id)); }} className="gap-2">
+            <Copy className="h-4 w-4" />
+            {t('common.duplicate')}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        {onHide && (
+          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onHide(note.id)); }} className="gap-2">
+            <EyeOff className="h-4 w-4" />
+            {t('notes.hideNote', 'Hide Note')}
+          </DropdownMenuItem>
+        )}
+        {onProtect && (
+          <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onProtect(note.id)); }} className="gap-2">
+            <Shield className="h-4 w-4" />
+            {noteProtection.hasPassword || noteProtection.useBiometric ? t('notes.changeProtection', 'Change Protection') : t('notes.protectNote', 'Protect Note')}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardAction(() => onDelete(note.id)); }} className="gap-2 text-destructive">
+          <Trash2 className="h-4 w-4" />
+          {t('notes.moveToTrash')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div className="relative overflow-hidden rounded-lg perf-contain-item h-full w-full flex">
@@ -382,6 +472,7 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
             {(noteProtection.hasPassword || noteProtection.useBiometric) && (
               <Lock className="h-4 w-4 text-primary shrink-0" />
             )}
+            {menu}
           </div>
 
           {/* Show metaDescription if available, otherwise show content preview */}
@@ -423,10 +514,10 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
 
           <div className="flex items-center justify-between gap-2 text-xs text-gray-600">
             <span>
-              {new Date(note.updatedAt).toLocaleDateString('en-US', {
+              {updatedAtDate.toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric'
-              })} • {new Date(note.updatedAt).toLocaleTimeString('en-US', {
+              })} • {updatedAtDate.toLocaleTimeString('en-US', {
                 hour: 'numeric',
                 minute: '2-digit',
                 hour12: true
@@ -440,59 +531,6 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
         </div>
       </Card>
 
-      <DropdownMenu open={showContextMenu} onOpenChange={setShowContextMenu}>
-        <DropdownMenuTrigger asChild>
-          <span className="sr-only">Open menu</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-48 z-50 bg-background border border-border shadow-lg">
-          <DropdownMenuItem onClick={() => { setShowContextMenu(false); onEdit(note); }} className="gap-2">
-            <Edit className="h-4 w-4" />
-            {t('common.edit')}
-          </DropdownMenuItem>
-          {onTogglePin && (
-            <DropdownMenuItem onClick={(e) => { setShowContextMenu(false); onTogglePin(note.id, e as any); }} className="gap-2">
-              <Pin className={cn("h-4 w-4", note.isPinned && "fill-current")} />
-              {note.isPinned ? t('notes.unpin') : t('notes.pin')}
-            </DropdownMenuItem>
-          )}
-          {onToggleFavorite && (
-            <DropdownMenuItem onClick={() => { setShowContextMenu(false); onToggleFavorite(note.id); }} className="gap-2">
-              <Star className={cn("h-4 w-4", note.isFavorite && "fill-warning text-warning")} />
-              {note.isFavorite ? t('notes.removeFromFavorites', 'Remove from Favorites') : t('notes.addToFavorites', 'Add to Favorites')}
-            </DropdownMenuItem>
-          )}
-          {onArchive && (
-            <DropdownMenuItem onClick={() => { setShowContextMenu(false); onArchive(note.id); }} className="gap-2">
-              <Archive className="h-4 w-4" />
-              {t('notes.archive')}
-            </DropdownMenuItem>
-          )}
-          {onDuplicate && (
-            <DropdownMenuItem onClick={() => { setShowContextMenu(false); onDuplicate(note.id); }} className="gap-2">
-              <Copy className="h-4 w-4" />
-              {t('common.duplicate')}
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuSeparator />
-          {onHide && (
-            <DropdownMenuItem onClick={() => { setShowContextMenu(false); onHide(note.id); }} className="gap-2">
-              <EyeOff className="h-4 w-4" />
-              {t('notes.hideNote', 'Hide Note')}
-            </DropdownMenuItem>
-          )}
-          {onProtect && (
-            <DropdownMenuItem onClick={() => { setShowContextMenu(false); onProtect(note.id); }} className="gap-2">
-              <Shield className="h-4 w-4" />
-              {noteProtection.hasPassword || noteProtection.useBiometric ? t('notes.changeProtection', 'Change Protection') : t('notes.protectNote', 'Protect Note')}
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => { setShowContextMenu(false); onDelete(note.id); }} className="gap-2 text-destructive">
-            <Trash2 className="h-4 w-4" />
-            {t('notes.moveToTrash')}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
   );
 }, (prev, next) => {
@@ -526,4 +564,18 @@ export const NoteCard = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, 
     prev.isSelected === next.isSelected
   );
 });
+NoteCardInner.displayName = 'NoteCardInner';
+
+export const NoteCard = (props: NoteCardProps) => {
+  const updatedAtMs = props.note.updatedAt instanceof Date
+    ? props.note.updatedAt.getTime()
+    : new Date(props.note.updatedAt as any).getTime();
+  const boundaryKey = `${props.note.id}:${Number.isFinite(updatedAtMs) ? updatedAtMs : 'invalid'}`;
+
+  return (
+    <ErrorBoundary key={boundaryKey} fallback={<NoteCardFallback note={props.note} />}>
+      <NoteCardInner {...props} />
+    </ErrorBoundary>
+  );
+};
 NoteCard.displayName = 'NoteCard';
