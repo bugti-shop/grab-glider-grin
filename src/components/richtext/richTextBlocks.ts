@@ -435,7 +435,8 @@ export const hydrateWebClipsIn = (root: HTMLElement | null, _threshold = 600) =>
       frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
       frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
       frame.setAttribute('loading', 'eager');
-      frame.setAttribute('style', 'width:100%;height:87vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
+      frame.classList.add('webclip-iframe');
+      frame.setAttribute('style', 'width:100%;height:min(87vh, 640px);border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
       embed.appendChild(frame);
     }
     frame.removeAttribute('srcdoc');
