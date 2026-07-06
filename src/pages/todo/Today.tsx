@@ -283,7 +283,7 @@ const Today = () => {
     };
     window.addEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
     return () => window.removeEventListener('flowist-tour-open-first-task', openFirstTaskForTour);
-  }, [completedItems, items, setSelectedTask, uncompletedItems]);
+  }, [completedItems, items, setSelectedTask, uncompletedItems, handleAddTask]);
 
   // Widget deep-link: ?add=1 → auto-open the task input sheet.
   // ?widget=1 marks this as a launcher-widget flow, so closing the sheet
