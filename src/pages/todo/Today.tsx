@@ -1160,7 +1160,9 @@ const Today = () => {
                   updateItem={updateItem}
                   handleSectionDragEnd={handleSectionDragEnd}
                   setOrderVersion={setOrderVersion}
+                  getRowVersion={getRowVersion}
                 />
+
               )}
             </Suspense>
           )}
