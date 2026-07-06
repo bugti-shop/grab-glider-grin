@@ -1228,7 +1228,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   const updateBrushSetting = (key: keyof BrushSettings, value: number) => {
     setBrushSettingsMap(prev => ({ ...prev, [tool]: { ...(prev[tool as DrawToolType] || DEFAULT_BRUSH_SETTINGS.pen), [key]: value } }));
   };
-  const [activeLayerId, setActiveLayerId] = useState(1);
+  const [activeLayerId, setActiveLayerId] = useState(3);
   const [background, setBackground] = useState<BackgroundType>('grid-sm');
   const [recentColors, setRecentColors] = useState<string[]>(['#1a1a1a']);
   const [eyedropperActive, setEyedropperActive] = useState(false);
