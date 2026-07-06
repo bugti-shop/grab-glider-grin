@@ -575,7 +575,7 @@ const Notes = () => {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={async () => {
+                onClick={() => {
                   void prefetchRoute('/todo/today');
                   startTransition(() => {
                     navigate('/todo/today');
