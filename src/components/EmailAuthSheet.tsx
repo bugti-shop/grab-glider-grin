@@ -46,8 +46,6 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
     };
   }, [resendCooldown]);
 
-  if (!open) return null;
-
   const startCooldown = () => setResendCooldown(45);
 
   const reset = () => {
