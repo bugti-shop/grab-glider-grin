@@ -606,6 +606,8 @@ export function parseNaturalLanguageTask(input: string): ParsedTask {
     priority = priorityResult.priority;
     text = text.replace(priorityResult.matched, '').trim();
   }
+  // p4 = no priority (Todoist convention) — strip the token without setting priority
+  text = text.replace(/\bp4\b/i, '').trim();
   
   // 12. Parse location (only from known places, not @folder conflicts)
   const locationResult = parseLocation(text);
