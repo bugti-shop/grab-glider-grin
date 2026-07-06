@@ -560,6 +560,7 @@ export const saveNoteToDBSingle = async (note: Note, skipCloudSync = false): Pro
 export const bulkPutNotesInDB = async (
   notes: Note[],
   skipCloudSync = false,
+  dispatchUpdate = true,
 ): Promise<void> => {
   if (notes.length === 0) return;
   const hydrated = notes.map(hydrateNote);
@@ -619,8 +620,9 @@ export const bulkPutNotesInDB = async (
     if (start + CHUNK < hydrated.length) await new Promise(r => setTimeout(r, 0));
   }
 
-  // Single coalesced event so list/contexts refresh once.
-  window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
+  // Single coalesced event so list/contexts refresh once. Bulk callers that
+  // stream multiple chunks can suppress per-chunk refreshes and dispatch once.
+  if (dispatchUpdate) window.dispatchEvent(new Event(skipCloudSync ? 'notesRestored' : 'notesUpdated'));
 
   if (!skipCloudSync) {
     import('@/utils/cloudSync/storeBridge').then(({ pushNotes }) => {

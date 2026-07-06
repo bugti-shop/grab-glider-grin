@@ -996,7 +996,7 @@ const Index = () => {
       if (duplicates.length) {
         duplicatedCount += duplicates.length;
         startTransition(() => setNotes(prev => [...duplicates.map(makeMetadataNote), ...prev]));
-        await bulkPutNotesInDB(duplicates);
+        await bulkPutNotesInDB(duplicates, false, false);
         try { toast.loading(`Duplicating ${duplicatedCount.toLocaleString()} / ${sources.length.toLocaleString()}…`, { id: 'bulk-dup' }); } catch {}
       }
       if (start + BATCH < sources.length) await new Promise(r => setTimeout(r, 0));
@@ -1008,6 +1008,7 @@ const Index = () => {
     }
 
     try {
+      window.dispatchEvent(new Event('notesUpdated'));
       toast.success(`Duplicated ${duplicatedCount} note${duplicatedCount > 1 ? 's' : ''}`, { id: 'bulk-dup' });
     } catch {}
   };
