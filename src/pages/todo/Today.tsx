@@ -529,7 +529,57 @@ const Today = () => {
     pendingVisualCompleteTimers.current.set(taskId, timer);
   }, []);
 
+  // ── Row-invalidation key for the virtualized flat list ──
+  // Passed to FlatView → FlatTaskList so the memoized row body knows exactly
+  // when a specific row's visual state changed. Without this, every visible
+  // row re-renders on every unrelated state update (priority change on task
+  // #42 would re-render all ~20 visible rows in an 11k list, causing the
+  // freeze). Task-property updates are already covered by the row.task
+  // reference compare inside MemoRowBody — here we only encode state that
+  // lives OUTSIDE the task object.
+  const globalRowVersion = useMemo(() => [
+    compactMode ? 1 : 0,
+    isSelectionMode ? 1 : 0,
+    showStatusBadge ? 1 : 0,
+    hideDetailsOptions.hideDateTime ? 1 : 0,
+    hideDetailsOptions.hideSubtasks ? 1 : 0,
+    hideDetailsOptions.hideStatus ? 1 : 0,
+    voicePlaybackSpeed,
+    allGlobalTags.length,
+  ].join('|'), [compactMode, isSelectionMode, showStatusBadge, hideDetailsOptions, voicePlaybackSpeed, allGlobalTags]);
+
+  const getRowVersion = useCallback((task: TodoItem): string => {
+    const id = task.id;
+    const swipeBit = swipeState?.id === id ? `s${swipeState.x}:${swipeState.isSwiping ? 1 : 0}` : '';
+    const expandedBit = expandedTasks.has(id) ? 'e' : '';
+    const pendingBit = pendingVisualCompleteIds.has(id) ? 'p' : '';
+    const activeBit = pendingCompleteId === id ? 'a' : '';
+    const selectedBit = selectedTaskIds.has(id) ? 'x' : '';
+    // Voice progress ticks frequently — only the currently-playing row
+    // includes it, so unrelated rows stay memo-stable.
+    const voiceBit = playingVoiceId === id
+      ? `v${voiceProgress}:${voiceCurrentTime}`
+      : '';
+    const voiceUrlBit = task.voiceRecording
+      ? `u${resolvedVoiceUrls[id] ?? ''}:${voiceDuration[id] ?? ''}`
+      : '';
+    return `${globalRowVersion}|${swipeBit}${expandedBit}${pendingBit}${activeBit}${selectedBit}${voiceBit}${voiceUrlBit}`;
+  }, [
+    globalRowVersion,
+    swipeState,
+    expandedTasks,
+    pendingVisualCompleteIds,
+    pendingCompleteId,
+    selectedTaskIds,
+    playingVoiceId,
+    voiceProgress,
+    voiceCurrentTime,
+    resolvedVoiceUrls,
+    voiceDuration,
+  ]);
+
   // ── Render helpers ──
+
 
   // Render task item in flat layout style for ALL view modes
   const renderTaskItem = (item: TodoItem) => {
@@ -1110,7 +1160,9 @@ const Today = () => {
                   updateItem={updateItem}
                   handleSectionDragEnd={handleSectionDragEnd}
                   setOrderVersion={setOrderVersion}
+                  getRowVersion={getRowVersion}
                 />
+
               )}
             </Suspense>
           )}

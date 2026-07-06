@@ -479,7 +479,14 @@ export const useTodayState = () => {
   const workerItemsRef = useRef<TodoItem[] | null>(null);
   const workerItemsVersionRef = useRef(0);
 
-  // Offload filtering + sorting to Web Worker
+  // Offload filtering + sorting to Web Worker.
+  //
+  // Debounce: at 5k+ tasks the structured-clone cost of posting the payload
+  // to the worker (and mapping the result back) becomes visible on the main
+  // thread. When the user rapidly changes priorities / completes several
+  // tasks in a row, we coalesce the resulting filter-sort passes into a
+  // single call after they pause, instead of dispatching one per keystroke.
+  const workerDispatchTimerRef = useRef<number | null>(null);
   useEffect(() => {
     if (!settingsLoaded || !effectiveSelectedFolderId) return;
     // For a single checkbox/delete tap, the existing worker result is still
@@ -520,12 +527,38 @@ export const useTodayState = () => {
     if (key === workerPayloadRef.current && workerResult) return;
     workerPayloadRef.current = key;
 
-    if (worker.isAvailable) {
+    if (!worker.isAvailable) return;
+
+    // Large-list debounce: coalesce rapid mutations (priority tap sprees,
+    // bulk selections, etc.) into a single dispatch after 220ms of quiet.
+    // Filter-only changes (search/sort dropdown) still dispatch immediately
+    // because the payload identity gates prevent bursts there anyway.
+    const dispatch = () => {
+      workerDispatchTimerRef.current = null;
       worker.filterSort(payload).then(result => {
         if (result) setWorkerResult(result);
       });
+    };
+    if (workerDispatchTimerRef.current) {
+      window.clearTimeout(workerDispatchTimerRef.current);
+      workerDispatchTimerRef.current = null;
+    }
+    if (items.length >= 5_000) {
+      workerDispatchTimerRef.current = window.setTimeout(dispatch, 220);
+    } else {
+      dispatch();
     }
   }, [items, folders, smartList, effectiveSelectedFolderId, priorityFilter, statusFilter, dateFilter, tagFilter, sortBy, deferredSearch, settingsLoaded]);
+
+  // Flush any pending dispatch on unmount so a queued call doesn't fire
+  // after the page has torn down.
+  useEffect(() => () => {
+    if (workerDispatchTimerRef.current) {
+      window.clearTimeout(workerDispatchTimerRef.current);
+      workerDispatchTimerRef.current = null;
+    }
+  }, []);
+
 
   // Main-thread fallback (used when worker hasn't returned yet or is unavailable)
   const processedItemsFallback = useMemo(() => {

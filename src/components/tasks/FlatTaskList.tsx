@@ -45,21 +45,37 @@ const HELLO_PANGEA_CAP = 200;
  * and active state are unchanged — so completing one task in a 5k list only
  * re-renders the toggled row plus any newly-virtualized neighbors, not the
  * whole window.
+ *
+ * When the caller passes a `version` string (derived from per-row state slices
+ * such as swipe/expand/pending flags), we compare that instead of the render
+ * function reference. This lets callers use an inline `renderRow` — which
+ * would otherwise change every parent re-render and defeat the memo — while
+ * still guaranteeing rows repaint when their own state actually changes.
+ * The latest render fn is read from `renderRef` at render time, so the closure
+ * inside the row body is never stale.
  */
 interface MemoRowBodyProps {
   row: FlatTaskRow;
   index: number;
   isActive: boolean;
-  render: (row: FlatTaskRow, index: number, isActive: boolean) => ReactNode;
+  version?: string | number;
+  renderRef: React.MutableRefObject<(row: FlatTaskRow, index: number, isActive: boolean) => ReactNode>;
+  render?: (row: FlatTaskRow, index: number, isActive: boolean) => ReactNode;
 }
-const MemoRowBody = memo(function MemoRowBody({ row, index, isActive, render }: MemoRowBodyProps) {
-  return <>{render(row, index, isActive)}</>;
-}, (prev, next) =>
-  prev.row.task === next.row.task &&
-  prev.index === next.index &&
-  prev.isActive === next.isActive &&
-  prev.render === next.render,
-);
+const MemoRowBody = memo(function MemoRowBody({ row, index, isActive, renderRef }: MemoRowBodyProps) {
+  return <>{renderRef.current(row, index, isActive)}</>;
+}, (prev, next) => {
+  if (prev.row.task !== next.row.task) return false;
+  if (prev.index !== next.index) return false;
+  if (prev.isActive !== next.isActive) return false;
+  // Prefer explicit per-row versioning when the caller supplies it.
+  if (prev.version !== undefined || next.version !== undefined) {
+    return prev.version === next.version;
+  }
+  // Legacy path: fall back to render-fn identity comparison.
+  return prev.render === next.render;
+});
+
 
 export interface FlatTaskListProps {
   /** Either a nested task tree (will be flattened) or an already-flat array of TodoItem. */
@@ -95,8 +111,17 @@ export interface FlatTaskListProps {
   onReorder?: (fromIndex: number, toIndex: number) => void;
   /** Disable keyboard navigation (default false). */
   disableKeyboard?: boolean;
+  /**
+   * Optional per-row invalidation key. When provided, MemoRowBody uses this
+   * (plus task ref + index + isActive) to decide whether to re-render — so
+   * an inline `renderRow` won't force every visible row to re-render on
+   * unrelated parent updates. Include any external state the row reads
+   * (swipe, expand, pending flags, selection, playing voice progress, etc.).
+   */
+  getRowVersion?: (row: FlatTaskRow, index: number) => string | number;
   className?: string;
 }
+
 
 const isTypingInForm = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) return false;
@@ -119,9 +144,15 @@ export function FlatTaskList({
   onToggleComplete,
   onReorder,
   disableKeyboard = false,
+  getRowVersion,
   className,
 }: FlatTaskListProps) {
   const [virtualizationSettings] = useVirtualizationSettings();
+  // Ref so MemoRowBody always calls the latest renderRow closure even when
+  // we're intentionally bailing out of re-renders on unchanged rows.
+  const renderRef = useRef(renderRow);
+  renderRef.current = renderRow;
+
   const liveFlatIndex = useMemo(() => index ?? flattenTasks(items), [index, items]);
   // Drag freeze: while a drag gesture is active we keep rendering the
   // snapshot captured at drag-start so virtualization indices, row positions,
@@ -374,7 +405,7 @@ export function FlatTaskList({
                             cursor: snapshot.isDragging ? 'grabbing' : 'grab',
                           }}
                         >
-                          <MemoRowBody row={row} index={i} isActive={isActive} render={renderRow} />
+                          <MemoRowBody row={row} index={i} isActive={isActive} renderRef={renderRef} render={renderRow} version={getRowVersion?.(row, i)} />
                         </div>
                       )}
                     </Draggable>
@@ -459,7 +490,7 @@ export function FlatTaskList({
                 ...((handleProps?.style ?? {}) as React.CSSProperties),
               }}
             >
-              <MemoRowBody row={row} index={vi.index} isActive={isActive} render={renderRow} />
+              <MemoRowBody row={row} index={vi.index} isActive={isActive} renderRef={renderRef} render={renderRow} version={getRowVersion?.(row, vi.index)} />
             </div>
           );
         })}

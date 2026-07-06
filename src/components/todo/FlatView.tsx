@@ -38,6 +38,14 @@ interface FlatViewProps {
   updateItem: (id: string, updates: Partial<TodoItem>) => void;
   handleSectionDragEnd: (result: DropResult) => void;
   setOrderVersion: React.Dispatch<React.SetStateAction<number>>;
+  /**
+   * Optional per-row invalidation key. Only used on the virtualized path.
+   * See FlatTaskList's `getRowVersion` — supplying this lets the memoized
+   * row body bail out even though `renderTaskItem` is a fresh inline
+   * closure each parent render, so priority/completion/filter changes on
+   * huge lists only repaint the affected row.
+   */
+  getRowVersion?: (task: TodoItem, index: number) => string | number;
 }
 
 export const FlatView = ({
@@ -57,7 +65,9 @@ export const FlatView = ({
   updateItem,
   handleSectionDragEnd,
   setOrderVersion,
+  getRowVersion,
 }: FlatViewProps) => {
+
   const { t } = useTranslation();
   const [virtualizationSettings] = useVirtualizationSettings();
   const useVirtualizedList = false;
@@ -167,12 +177,14 @@ export const FlatView = ({
                   try { Haptics.impact({ style: ImpactStyle.Light }); } catch {}
                 }}
                 renderRow={renderVirtualRow}
+                getRowVersion={getRowVersion ? (row, i) => getRowVersion(row.task, i) : undefined}
                 emptyState={
                   <div className="text-center py-20">
                     <p className="text-muted-foreground">{t('emptyStates.noTasks')}</p>
                   </div>
                 }
               />
+
             </div>
           )}
         </div>
@@ -197,7 +209,9 @@ export const FlatView = ({
                     useWindow={virtualizationSettings.tasks.windowing}
                   disableKeyboard
                   renderRow={renderCompletedRow}
+                  getRowVersion={getRowVersion ? (row, i) => getRowVersion(row.task, i) : undefined}
                 />
+
               </CollapsibleContent>
             </div>
           </Collapsible>
