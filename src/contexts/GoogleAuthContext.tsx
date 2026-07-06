@@ -119,44 +119,11 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [user?.uid]);
 
-  // Background token refresh
-  useEffect(() => {
-    if (!user) return;
-
-    backgroundTokenRefresh().catch(() => {});
-
-    refreshTimerRef.current = setInterval(() => {
-      backgroundTokenRefresh().then(async () => {
-        const refreshed = await getStoredGoogleUser();
-        if (refreshed) setUser(refreshed);
-      }).catch(() => {});
-    }, BG_REFRESH_INTERVAL);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        backgroundTokenRefresh().then(async () => {
-          const refreshed = await getStoredGoogleUser();
-          if (refreshed) setUser(refreshed);
-        }).catch(() => {});
-      }
-    };
-
-    const handleOnline = () => {
-      backgroundTokenRefresh().then(async () => {
-        const refreshed = await getStoredGoogleUser();
-        if (refreshed) setUser(refreshed);
-      }).catch(() => {});
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('online', handleOnline);
-
-    return () => {
-      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('online', handleOnline);
-    };
-  }, [user?.email]);
+  // NOTE: No Google access-token refresh loop needed anymore.
+  // Drive/Calendar integrations were removed, so we don't use Google's
+  // provider_token at all. Supabase (Lovable Cloud) auth session handles
+  // silent JWT rotation on its own (autoRefreshToken: true) — the sign-in
+  // session stays alive indefinitely without any popup or re-auth.
 
 
   const signIn = useCallback(async (explicit = false): Promise<GoogleUser> => {
