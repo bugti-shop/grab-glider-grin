@@ -720,38 +720,35 @@ const WebClipper = () => {
               // Verify the embedded snapshot HTML is byte-identical to what
               // was downloaded. Any divergence means a code path is silently
               // mutating the payload again — flag loudly.
-              try {
-                const unescaped = escapedDoc
-                  .replace(/&quot;/g, '"')
-                  .replace(/&amp;/g, '&');
-                const embeddedBytes = new Blob([unescaped]).size;
-                const identical = unescaped === readOnlySnapshot && embeddedBytes === snapshotBytes;
-                if (identical) {
-                  console.info('[webClipper][parity] snapshot ≡ downloaded', {
-                    bytes: snapshotBytes,
-                    filename: fname,
-                  });
-                } else {
-                  const diffAt = (() => {
-                    const n = Math.min(unescaped.length, readOnlySnapshot.length);
-                    for (let i = 0; i < n; i++) if (unescaped[i] !== readOnlySnapshot[i]) return i;
-                    return n;
-                  })();
-                  console.warn('[webClipper][parity] MISMATCH between embedded snapshot and downloaded file', {
-                    downloadedChars: readOnlySnapshot.length,
-                    embeddedChars: unescaped.length,
-                    downloadedBytes: snapshotBytes,
-                    embeddedBytes,
-                    firstDiffAt: diffAt,
-                    around: {
-                      downloaded: readOnlySnapshot.slice(Math.max(0, diffAt - 40), diffAt + 40),
-                      embedded: unescaped.slice(Math.max(0, diffAt - 40), diffAt + 40),
-                    },
-                    filename: fname,
-                  });
+              // Parity check only applies to the srcdoc path — blob-embedded
+              // snapshots stream the raw bytes so there is nothing to compare.
+              if (!useBlobEmbed && escapedDoc) {
+                try {
+                  const unescaped = escapedDoc
+                    .replace(/&quot;/g, '"')
+                    .replace(/&amp;/g, '&');
+                  const embeddedBytes = new Blob([unescaped]).size;
+                  const identical = unescaped === readOnlySnapshot && embeddedBytes === snapshotBytes;
+                  if (identical) {
+                    console.info('[webClipper][parity] snapshot ≡ downloaded', {
+                      bytes: snapshotBytes,
+                      filename: fname,
+                    });
+                  } else {
+                    console.warn('[webClipper][parity] MISMATCH (srcdoc escape drift)', {
+                      downloadedChars: readOnlySnapshot.length,
+                      embeddedChars: unescaped.length,
+                      filename: fname,
+                    });
+                  }
+                } catch (parityErr) {
+                  console.warn('[webClipper][parity] check threw', parityErr);
                 }
-              } catch (parityErr) {
-                console.warn('[webClipper][parity] check threw', parityErr);
+              } else {
+                console.info('[webClipper][parity] blob-embed skipped parity check', {
+                  bytes: snapshotBytes,
+                  filename: fname,
+                });
               }
 
               articleHtml = `${banner}${iframe}`;
