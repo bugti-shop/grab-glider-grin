@@ -1139,13 +1139,14 @@ body.onboarding-active [data-vaul-drawer] {
   cursor: pointer;
 }
 .flowist-tour-popover .driver-popover-next-btn {
-  min-width: 110px;
-  min-height: 46px;
-  padding: 12px 22px;
-  font-size: 17px;
-  line-height: 1.1;
+  min-width: 0;
+  width: auto;
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 16px;
+  line-height: 1;
   font-weight: 700;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.1px;
   box-sizing: border-box;
   transition: background-color 120ms ease, opacity 120ms ease, transform 80ms ease;
 }
@@ -1163,11 +1164,9 @@ body.onboarding-active [data-vaul-drawer] {
 .flowist-tour-popover .driver-popover-next-btn.is-loading {
   opacity: 0.6;
   cursor: not-allowed;
-  /* keep the same box so layout doesn't shift when state changes */
-  min-width: 110px;
-  min-height: 46px;
-  padding: 12px 22px;
-  font-size: 17px;
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 16px;
 }
 .flowist-tour-popover .driver-popover-prev-btn {
   background: hsl(var(--muted));
