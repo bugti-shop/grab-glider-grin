@@ -209,7 +209,9 @@ export const FlatView = ({
                     useWindow={virtualizationSettings.tasks.windowing}
                   disableKeyboard
                   renderRow={renderCompletedRow}
+                  getRowVersion={getRowVersion ? (row, i) => getRowVersion(row.task, i) : undefined}
                 />
+
               </CollapsibleContent>
             </div>
           </Collapsible>
