@@ -269,12 +269,28 @@ export const loadNotesMetadataFromDB = async (): Promise<Note[]> => {
 export const loadNoteFromDB = async (noteId: string): Promise<Note | null> => {
   try {
     return await withRetry((database) => new Promise<Note | null>((resolve, reject) => {
-      const transaction = database.transaction([STORE_NAME], 'readonly');
+      const transaction = database.transaction([STORE_NAME, META_STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
+      const metaStore = transaction.objectStore(META_STORE_NAME);
       const request = store.get(noteId);
+      const metaRequest = metaStore.get(noteId);
 
-      request.onsuccess = () => resolve(request.result ? hydrateNote(request.result) : null);
+      transaction.oncomplete = () => {
+        const full = request.result ? hydrateNote(request.result) : null;
+        const meta = metaRequest.result ? hydrateNote(metaRequest.result) : null;
+        if (!full) return resolve(meta);
+        if (!meta) return resolve(full);
+        resolve(hydrateNote({
+          ...full,
+          ...meta,
+          content: full.content,
+          [CONTENT_STUB_FLAG]: undefined,
+          [CONTENT_PREVIEW_KEY]: (meta as any)[CONTENT_PREVIEW_KEY] ?? (full as any)[CONTENT_PREVIEW_KEY],
+          [CONTENT_LENGTH_KEY]: (meta as any)[CONTENT_LENGTH_KEY] ?? (full as any)[CONTENT_LENGTH_KEY],
+        }));
+      };
       request.onerror = () => reject(request.error);
+      metaRequest.onerror = () => reject(metaRequest.error);
     }));
   } catch (error) {
     console.error('Error loading single note from IndexedDB:', error);
