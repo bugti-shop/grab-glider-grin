@@ -4821,6 +4821,11 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     const newLayers = createDefaultLayers();
     const insertAt = sketchPageIndex + 1;
     sketchPagesRef.current.splice(insertAt, 0, newLayers);
+    // Generate a unique default name (Page N where N is the smallest int not already used)
+    const used = new Set(sketchPageNamesRef.current);
+    let n = sketchPagesRef.current.length;
+    while (used.has(`Page ${n}`)) n++;
+    sketchPageNamesRef.current.splice(insertAt, 0, `Page ${n}`);
     setSketchPageCount(sketchPagesRef.current.length);
     // Shift saved undo stacks for pages after insertAt
     const remapped = new Map<number, { undo: Layer[][]; redo: Layer[][] }>();
@@ -4834,6 +4839,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   const deleteSketchPage = useCallback((idx: number) => {
     if (sketchPagesRef.current.length <= 1) return;
     sketchPagesRef.current.splice(idx, 1);
+    sketchPageNamesRef.current.splice(idx, 1);
     setSketchPageCount(sketchPagesRef.current.length);
     pageUndoStacksRef.current.delete(idx);
     // Shift stacks for pages after idx
