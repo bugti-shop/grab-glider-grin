@@ -108,16 +108,13 @@ const NoteCardOptionsMenu = ({
   return (
     <DropdownMenu open={showContextMenu} onOpenChange={setShowContextMenu}>
       <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={t('common.options', 'Options')}
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80 text-gray-800 shadow-sm backdrop-blur hover:bg-white"
-        >
-          <MoreVertical className="h-4 w-4" />
-        </button>
+        {/* Invisible anchor — menu opens via long-press on the card, matching
+            the original behavior. No visible button on the card surface. */}
+        <span
+          aria-hidden="true"
+          tabIndex={-1}
+          className="pointer-events-none absolute right-2 top-2 h-0 w-0 opacity-0"
+        />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-48 z-50 bg-background border border-border shadow-lg">
         <DropdownMenuItem onClick={() => { setShowContextMenu(false); runCardActionSafely(() => onEdit(note)); }} className="gap-2">
