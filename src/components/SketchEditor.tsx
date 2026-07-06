@@ -4934,7 +4934,13 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     const vy0 = -pan.y / zoom;
     const vx1 = vx0 + w / zoom;
     const vy1 = vy0 + h / zoom;
-    drawBackground(offCtx, vx0, vy0, vx1, vy1, background, gridColor, gridOpacity);
+    {
+      const _bgL = layersRef.current.find(l => l.kind === 'background');
+      const _gridL = layersRef.current.find(l => l.kind === 'grid');
+      const _bgVis = _bgL ? _bgL.visible : true;
+      const _gridVis = _gridL ? _gridL.visible : true;
+      if (_bgVis) drawBackground(offCtx, vx0, vy0, vx1, vy1, _gridVis ? background : 'plain', gridColor, gridOpacity);
+    }
 
     // Render layers
     for (const layer of layersRef.current) {
