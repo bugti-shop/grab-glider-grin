@@ -55,6 +55,7 @@ const todayRuntimeCache = ((globalThis as any).__flowistTodayRuntimeCache ??= {
   items: null as TodoItem[] | null,
   folders: null as Folder[] | null,
   sections: null as TaskSection[] | null,
+  processedItems: null as TodoItem[] | null,
   selectedFolderId: undefined as string | null | undefined,
   settingsLoaded: false,
   itemsLoaded: false,
@@ -531,6 +532,13 @@ export const useTodayState = () => {
     // If worker result is available, skip main-thread computation
     if (!settingsLoaded || !effectiveSelectedFolderId) return [];
     if (workerResult && worker.isAvailable) return null;
+    if (worker.isAvailable && items.length >= 10_000) {
+      // Do not sort/filter 10k–50k tasks on the UI thread while a fresh worker
+      // result is pending after refresh or bottom-nav remount. Show the last
+      // processed snapshot, or the raw lightweight list, then swap in the exact
+      // worker result when it arrives.
+      return todayRuntimeCache.processedItems ?? items;
+    }
 
     let filtered = items.filter(item => {
       if (smartList !== 'all') {
@@ -631,6 +639,10 @@ export const useTodayState = () => {
     }
     return processedItemsFallback || [];
   }, [workerResult, worker.isAvailable, items, processedItemsFallback, folders, effectiveSelectedFolderId, smartList, priorityFilter, statusFilter, dateFilter, tagFilter, deferredSearch, settingsLoaded]);
+
+  useEffect(() => {
+    if (processedItems.length > 0) todayRuntimeCache.processedItems = processedItems;
+  }, [processedItems]);
 
   const searchFilteredItems = useMemo(() => {
     // If worker already handled search, skip client-side search

@@ -576,8 +576,10 @@ const Notes = () => {
                 size="icon"
                 variant="ghost"
                 onClick={async () => {
-                  await prefetchRoute('/todo/today');
-                  navigate('/todo/today');
+                  void prefetchRoute('/todo/today');
+                  startTransition(() => {
+                    navigate('/todo/today');
+                  });
                 }}
                 title={t('common.switchToTodo')}
                 className="h-7 w-7 xs:h-8 xs:w-8 sm:h-10 sm:w-10 touch-target"
