@@ -1628,9 +1628,12 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   // --- Sketch multi-page state (non-PDF sketches only) ---
   // sketchPagesRef holds every page's layers array; the current page IS layersRef.current (same reference)
   const sketchPagesRef = useRef<Layer[][]>([layersRef.current]);
+  const sketchPageNamesRef = useRef<string[]>(['Page 1']);
   const [sketchPageIndex, setSketchPageIndex] = useState(0);
   const [sketchPageCount, setSketchPageCount] = useState(1);
   const [pageThumbsOpen, setPageThumbsOpen] = useState(false);
+  const [editingPageNameIdx, setEditingPageNameIdx] = useState<number | null>(null);
+  const [editingPageNameValue, setEditingPageNameValue] = useState('');
   // Per-page undo history (Phase 1: page-scoped)
   const pageUndoStacksRef = useRef<Map<number, { undo: Layer[][]; redo: Layer[][] }>>(new Map());
 
