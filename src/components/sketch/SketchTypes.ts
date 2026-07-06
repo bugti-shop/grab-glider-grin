@@ -161,6 +161,7 @@ export interface SketchData {
   // Multi-page (non-PDF sketches). When present, `layers` mirrors pages[pageIndex] for backwards compat.
   pages?: Layer[][];
   pageIndex?: number;
+  pageNames?: string[];
 }
 
 export interface BBox {
