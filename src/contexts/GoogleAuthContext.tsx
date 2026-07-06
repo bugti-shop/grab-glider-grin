@@ -1,11 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import {
   GoogleUser,
   signInWithGoogle,
   signOutGoogle,
   getStoredGoogleUser,
   loadGoogleIdentityServices,
-  backgroundTokenRefresh,
   onSupabaseAuthStateChanged,
   captureOAuthSession,
   cancelNativeAutoPrompt,
@@ -23,14 +22,12 @@ interface GoogleAuthContextType {
 
 const GoogleAuthContext = createContext<GoogleAuthContextType | undefined>(undefined);
 
-const BG_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const SESSION_TTL = 365 * 24 * 3600 * 1000;
 
 export function GoogleAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<GoogleUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const refreshTimerRef = useRef<ReturnType<typeof setInterval>>();
 
   // Load stored user on mount + capture OAuth redirect session
   useEffect(() => {
@@ -119,44 +116,11 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [user?.uid]);
 
-  // Background token refresh
-  useEffect(() => {
-    if (!user) return;
-
-    backgroundTokenRefresh().catch(() => {});
-
-    refreshTimerRef.current = setInterval(() => {
-      backgroundTokenRefresh().then(async () => {
-        const refreshed = await getStoredGoogleUser();
-        if (refreshed) setUser(refreshed);
-      }).catch(() => {});
-    }, BG_REFRESH_INTERVAL);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        backgroundTokenRefresh().then(async () => {
-          const refreshed = await getStoredGoogleUser();
-          if (refreshed) setUser(refreshed);
-        }).catch(() => {});
-      }
-    };
-
-    const handleOnline = () => {
-      backgroundTokenRefresh().then(async () => {
-        const refreshed = await getStoredGoogleUser();
-        if (refreshed) setUser(refreshed);
-      }).catch(() => {});
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('online', handleOnline);
-
-    return () => {
-      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('online', handleOnline);
-    };
-  }, [user?.email]);
+  // NOTE: No Google access-token refresh loop needed anymore.
+  // Drive/Calendar integrations were removed, so we don't use Google's
+  // provider_token at all. Supabase (Lovable Cloud) auth session handles
+  // silent JWT rotation on its own (autoRefreshToken: true) — the sign-in
+  // session stays alive indefinitely without any popup or re-auth.
 
 
   const signIn = useCallback(async (explicit = false): Promise<GoogleUser> => {
