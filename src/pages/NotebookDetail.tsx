@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Book, BookOpen, StickyNote, FileText, FileEdit, FileCode, PenTool, Type, Crown } from 'lucide-react';
 import { Folder as FolderType, Note, NoteType } from '@/types/note';
 import { getSetting } from '@/utils/settingsStorage';
+import { notebooksRuntimeCache, setNotebooksCache } from '@/utils/notebooksRuntimeCache';
 import { useNotes } from '@/contexts/NotesContext';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,10 @@ const NotebookDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { notes, setNotes } = useNotes();
-  const [folder, setFolder] = useState<FolderType | null>(null);
+  const [folder, setFolder] = useState<FolderType | null>(() => {
+    const cached = notebooksRuntimeCache.folders;
+    return cached ? cached.find((x) => x.id === id) ?? null : null;
+  });
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [defaultType, setDefaultType] = useState<NoteType>('regular');
@@ -43,6 +47,7 @@ const NotebookDetail = () => {
   useEffect(() => {
     const load = async () => {
       const saved = (await getSetting<FolderType[] | null>('folders', null)) || [];
+      if (saved.length > 0) setNotebooksCache(saved);
       const f = saved.find((x) => x.id === id) || null;
       setFolder(f);
     };

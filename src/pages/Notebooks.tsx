@@ -9,6 +9,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { genId } from '@/utils/genId';
+import { notebooksRuntimeCache, setNotebooksCache } from '@/utils/notebooksRuntimeCache';
 
 import {
   Dialog,
@@ -49,7 +50,7 @@ const Notebooks = () => {
   const { notesMeta } = useNotes();
   useFirstVisitTour('/notebooks');
 
-  const [folders, setFolders] = useState<FolderType[]>([]);
+  const [folders, setFolders] = useState<FolderType[]>(() => notebooksRuntimeCache.folders ?? []);
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -84,6 +85,7 @@ const Notebooks = () => {
 
   const persistFolders = async (next: FolderType[]) => {
     setFolders(next);
+    setNotebooksCache(next);
     await setSetting('folders', next);
     window.dispatchEvent(new Event('foldersUpdated'));
   };
@@ -135,10 +137,10 @@ const Notebooks = () => {
     const load = async () => {
       const saved = await getSetting<FolderType[] | null>('folders', null);
       if (saved && saved.length > 0) {
-        setFolders(
-          saved.map((f) => ({ ...f, createdAt: new Date(f.createdAt as any) })),
-        );
-      } else {
+        const hydrated = saved.map((f) => ({ ...f, createdAt: new Date(f.createdAt as any) }));
+        setFolders(hydrated);
+        setNotebooksCache(hydrated);
+      } else if (!notebooksRuntimeCache.loaded) {
         const inbox: FolderType = {
           id: genId(),
           name: 'Inbox',
@@ -148,6 +150,7 @@ const Notebooks = () => {
           createdAt: new Date(),
         };
         setFolders([inbox]);
+        setNotebooksCache([inbox]);
         void setSetting('folders', [inbox]);
       }
     };
@@ -200,6 +203,7 @@ const Notebooks = () => {
     };
     const updated = [...folders, folder];
     setFolders(updated);
+    setNotebooksCache(updated);
     await setSetting('folders', updated);
     window.dispatchEvent(new Event('foldersUpdated'));
     setNewName('');
