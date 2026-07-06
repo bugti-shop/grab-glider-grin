@@ -245,7 +245,7 @@ export const NotesCalendarView = ({
               <button className={cn(
                 "p-1.5 hover:bg-accent/50 rounded-full transition-colors",
                 useLightText && "hover:bg-white/20"
-              )}>
+              )} aria-label={t('common.options', 'Options')}>
                 <MoreVertical className={cn("w-5 h-5", useLightText ? "text-white/80" : "text-muted-foreground")} />
               </button>
             </DropdownMenuTrigger>
