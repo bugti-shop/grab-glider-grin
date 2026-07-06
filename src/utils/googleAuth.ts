@@ -755,12 +755,12 @@ export const getStoredGoogleUser = async (): Promise<GoogleUser | null> => {
 };
 
 /**
- * Session is always valid if Supabase session exists — never force logout.
+ * Session validity — Lovable Cloud (Supabase) manages the real auth session
+ * with autoRefreshToken + persistSession. As long as a stored Google user
+ * profile exists, treat the session as valid. Supabase silently rotates its
+ * own JWT in the background, so the user is never prompted to sign in again.
  */
-export const isSessionValid = (user: GoogleUser): boolean => {
-  if (user.refreshToken) return true;
-  return user.expiresAt > Date.now();
-};
+export const isSessionValid = (_user: GoogleUser): boolean => true;
 
 export const isAccessTokenFresh = (user: GoogleUser): boolean =>
   user.accessTokenExpiresAt > Date.now() + 60000;
@@ -769,25 +769,15 @@ export const isAccessTokenFresh = (user: GoogleUser): boolean =>
 export const isTokenValid = (user: GoogleUser): boolean =>
   isAccessTokenFresh(user);
 
+/**
+ * Google access-token refresh is a no-op now — Drive/Calendar integrations
+ * were removed, so we don't need Google's provider_token at all. The Lovable
+ * Cloud auth session (Supabase JWT) handles session persistence on its own.
+ */
 export const refreshGoogleToken = async (): Promise<GoogleUser> => {
-  if (tokenRefreshInProgress) return tokenRefreshInProgress;
-
-  tokenRefreshInProgress = (async () => {
-    if (isNative()) return nativeRefresh();
-
-    const silent = await silentWebRefresh();
-    if (silent) return silent;
-
-    const stored = await getStoredGoogleUser();
-    if (stored) return stored;
-    throw new Error('Token refresh failed');
-  })();
-
-  try {
-    return await tokenRefreshInProgress;
-  } finally {
-    tokenRefreshInProgress = null;
-  }
+  const stored = await getStoredGoogleUser();
+  if (stored) return stored;
+  throw new Error('No stored Google user');
 };
 
 /**
