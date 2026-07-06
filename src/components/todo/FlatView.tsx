@@ -177,12 +177,14 @@ export const FlatView = ({
                   try { Haptics.impact({ style: ImpactStyle.Light }); } catch {}
                 }}
                 renderRow={renderVirtualRow}
+                getRowVersion={getRowVersion ? (row, i) => getRowVersion(row.task, i) : undefined}
                 emptyState={
                   <div className="text-center py-20">
                     <p className="text-muted-foreground">{t('emptyStates.noTasks')}</p>
                   </div>
                 }
               />
+
             </div>
           )}
         </div>
