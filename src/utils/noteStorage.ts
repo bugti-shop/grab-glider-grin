@@ -532,17 +532,22 @@ export const bulkPutNotesInDB = async (
   if (notesCache) {
     const byId = new Map(notesCache.map((n, i) => [n.id, i]));
     for (const n of hydrated) {
-      const cached = notesCacheIsMetadata ? makeMetadataNote(n) : n;
       const idx = byId.get(n.id);
-      if (idx !== undefined) notesCache[idx] = cached;
-      else notesCache.push(cached);
+      if (idx !== undefined) {
+        notesCache[idx] = !notesCacheIsMetadata && isNoteContentStub(n)
+          ? hydrateNote({ ...notesCache[idx], ...n, content: notesCache[idx].content })
+          : notesCacheIsMetadata
+            ? makeMetadataNote(n)
+            : n;
+      } else {
+        notesCache.push(notesCacheIsMetadata ? makeMetadataNote(n) : n);
+      }
     }
     notesCacheVersion++;
   }
 
   // Chunked transactions — adaptive for duplicated 100k-word notes. Keeping a
-  // 500-row transaction with giant HTML bodies can OOM mobile Chrome; metadata
-  // patch rows also need smaller chunks because we merge against existing rows.
+  // 500-row transaction with giant HTML bodies can OOM mobile Chrome.
   const CHUNK = hasContentStubs ? 50 : maxContentLength > 50_000 ? 20 : 500;
   for (let start = 0; start < hydrated.length; start += CHUNK) {
     const slice = hydrated.slice(start, start + CHUNK);
@@ -553,25 +558,11 @@ export const bulkPutNotesInDB = async (
         const metaStore = tx.objectStore(META_STORE_NAME);
         for (const note of slice) {
           if (isNoteContentStub(note)) {
-            const request = store.get(note.id);
-            request.onsuccess = () => {
-              const existing = request.result ? hydrateNote(request.result) : null;
-              const merged = existing
-                ? hydrateNote({
-                    ...existing,
-                    ...note,
-                    content: existing.content,
-                    [CONTENT_STUB_FLAG]: undefined,
-                    [CONTENT_PREVIEW_KEY]: undefined,
-                    [CONTENT_LENGTH_KEY]: undefined,
-                  })
-                : note;
-              try { store.put(serializeNote(merged)); } catch {}
-              try { metaStore.put(serializeMetadataNote(merged)); } catch {}
-            };
-            request.onerror = () => {
-              try { metaStore.put(serializeMetadataNote(note)); } catch {}
-            };
+            // Metadata-only bulk actions (trash/archive/favorite/move) must not
+            // read+clone the full note body. With thousands of 100k-word notes,
+            // store.get(id) itself can crash the tab. The full content row stays
+            // intact; the lightweight meta row drives list/calendar refreshes.
+            metaStore.put(serializeMetadataNote(note));
           } else {
             store.put(serializeNote(note));
             metaStore.put(serializeMetadataNote(note));
