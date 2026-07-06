@@ -6050,6 +6050,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
         layers[0].strokes = data.strokes;
         layersRef.current = layers;
         sketchPagesRef.current = [layers];
+        sketchPageNamesRef.current = ['Page 1'];
         setSketchPageIndex(0);
         setSketchPageCount(1);
       }
