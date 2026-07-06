@@ -603,22 +603,20 @@ export const NoteCard = (props: NoteCardProps) => {
 
   return (
     <div className="relative h-full w-full">
-      <div className="absolute right-2 top-2 z-20">
-        <NoteCardOptionsMenu
-          note={props.note}
-          onEdit={props.onEdit}
-          onDelete={props.onDelete}
-          onArchive={props.onArchive}
-          onTogglePin={props.onTogglePin}
-          onToggleFavorite={props.onToggleFavorite}
-          onDuplicate={props.onDuplicate}
-          onHide={props.onHide}
-          onProtect={props.onProtect}
-          noteProtection={noteProtection}
-          showContextMenu={showContextMenu}
-          setShowContextMenu={setShowContextMenu}
-        />
-      </div>
+      <NoteCardOptionsMenu
+        note={props.note}
+        onEdit={props.onEdit}
+        onDelete={props.onDelete}
+        onArchive={props.onArchive}
+        onTogglePin={props.onTogglePin}
+        onToggleFavorite={props.onToggleFavorite}
+        onDuplicate={props.onDuplicate}
+        onHide={props.onHide}
+        onProtect={props.onProtect}
+        noteProtection={noteProtection}
+        showContextMenu={showContextMenu}
+        setShowContextMenu={setShowContextMenu}
+      />
       <ErrorBoundary key={boundaryKey} fallback={<NoteCardFallback note={props.note} />}>
         <NoteCardInner
           {...props}
