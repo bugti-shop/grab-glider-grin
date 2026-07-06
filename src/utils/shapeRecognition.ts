@@ -1,11 +1,22 @@
-// Shape Recognition — detects freehand circles, squares, triangles, lines
-// and arrows and converts them to perfect geometric shapes.
+// Shape Recognition — detects freehand circles, squares, triangles, lines,
+// arrows, brackets, curly braces, and callout bubbles, then converts them to
+// clean geometric forms.
 
 import type { Point } from '@/components/sketch/SketchTypes';
 
 export interface RecognizedShape {
-  type: 'circle' | 'rect' | 'triangle' | 'line' | 'arrow';
+  type:
+    | 'circle' | 'rect' | 'triangle' | 'line' | 'arrow'
+    | 'bracket-left' | 'bracket-right'
+    | 'brace-left' | 'brace-right'
+    | 'callout';
   points: Point[];
+  /**
+   * When true, the recognized shape should render as a freehand polyline (keep
+   * the original drawing tool). When false/undefined, `points` are the two
+   * corners of a bbox and the caller should switch the stroke to a shape tool.
+   */
+  asFreehand?: boolean;
 }
 
 /** Calculate the distance between two points */
