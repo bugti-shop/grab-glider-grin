@@ -1,4 +1,4 @@
-import { ReactNode, useState, useRef, useEffect, useMemo, memo } from 'react';
+import { useState, useRef, useEffect, useMemo, memo } from 'react';
 import { AppTag, getAllTags } from '@/utils/tagStorage';
 import { useTranslation } from 'react-i18next';
 import { Note } from '@/types/note';
@@ -579,15 +579,55 @@ const NoteCardInner = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, on
 NoteCardInner.displayName = 'NoteCardInner';
 
 export const NoteCard = (props: NoteCardProps) => {
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [noteProtection, setNoteProtection] = useState<NoteProtection>({ hasPassword: false, useBiometric: false });
+
+  useEffect(() => {
+    let cancelled = false;
+    getNoteProtection(props.note.id)
+      .then((protection) => {
+        if (!cancelled) setNoteProtection(protection);
+      })
+      .catch(() => {
+        if (!cancelled) setNoteProtection({ hasPassword: false, useBiometric: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [props.note.id]);
+
   const updatedAtMs = props.note.updatedAt instanceof Date
     ? props.note.updatedAt.getTime()
     : new Date(props.note.updatedAt as any).getTime();
   const boundaryKey = `${props.note.id}:${Number.isFinite(updatedAtMs) ? updatedAtMs : 'invalid'}`;
 
   return (
-    <ErrorBoundary key={boundaryKey} fallback={<NoteCardFallback note={props.note} />}>
-      <NoteCardInner {...props} />
-    </ErrorBoundary>
+    <div className="relative h-full w-full">
+      <div className="absolute right-2 top-2 z-20">
+        <NoteCardOptionsMenu
+          note={props.note}
+          onEdit={props.onEdit}
+          onDelete={props.onDelete}
+          onArchive={props.onArchive}
+          onTogglePin={props.onTogglePin}
+          onToggleFavorite={props.onToggleFavorite}
+          onDuplicate={props.onDuplicate}
+          onHide={props.onHide}
+          onProtect={props.onProtect}
+          noteProtection={noteProtection}
+          showContextMenu={showContextMenu}
+          setShowContextMenu={setShowContextMenu}
+        />
+      </div>
+      <ErrorBoundary key={boundaryKey} fallback={<NoteCardFallback note={props.note} />}>
+        <NoteCardInner
+          {...props}
+          noteProtection={noteProtection}
+          showContextMenu={showContextMenu}
+          setShowContextMenu={setShowContextMenu}
+        />
+      </ErrorBoundary>
+    </div>
   );
 };
 NoteCard.displayName = 'NoteCard';
