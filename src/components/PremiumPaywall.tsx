@@ -582,18 +582,20 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
     const previousBodyPointer = body.style.pointerEvents;
     html.style.overflow = 'hidden';
 
-    const neutralize = () => {
-      if (body.style.pointerEvents === 'none') body.style.pointerEvents = '';
-      if (body.hasAttribute('data-scroll-locked')) body.removeAttribute('data-scroll-locked');
-      body.style.removeProperty('margin-right');
-      body.style.removeProperty('overflow');
-    };
-    neutralize();
-    const observer = new MutationObserver(neutralize);
-    observer.observe(body, { attributes: true, attributeFilter: ['style', 'data-scroll-locked'] });
+    // One-shot neutralize on mount. Radix Dialog/Sheet leftovers can set
+    // body { pointer-events: none } / data-scroll-locked, which would block
+    // taps inside the paywall on Android WebView. We clear once here and let
+    // RadixPointerEventsRescue's own poll keep body clean afterwards.
+    // Previously a MutationObserver here was rewriting body.style on every
+    // mutation, which — combined with RadixPointerEventsRescue's observer —
+    // caused a chatty DOM-write loop that could starve tap-event processing
+    // on Android WebView (nothing clickable, only scrollable).
+    if (body.style.pointerEvents === 'none') body.style.pointerEvents = '';
+    if (body.hasAttribute('data-scroll-locked')) body.removeAttribute('data-scroll-locked');
+    body.style.removeProperty('margin-right');
+    body.style.removeProperty('overflow');
 
     return () => {
-      observer.disconnect();
       html.style.overflow = previousHtmlOverflow;
       body.removeAttribute('data-scroll-locked');
       body.style.removeProperty('margin-right');
@@ -605,7 +607,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
   }, []);
 
   return createPortal((
-    <div className="fixed inset-0 z-[2147483646] flex flex-col overflow-hidden"
+    <div className="fixed inset-0 z-[99999] flex flex-col overflow-hidden"
       style={{
         background: '#000',
         color: '#fff',
@@ -614,7 +616,15 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
         maxHeight: '100dvh',
         touchAction: 'auto',
         pointerEvents: 'auto',
+        // Force our own stacking context so nothing behind the paywall (Radix
+        // focus guards, tour popovers, etc.) can accidentally stack over it
+        // on Android WebView.
+        isolation: 'isolate',
+        // Eliminate the 300 ms tap delay some Android WebView versions still
+        // apply inside fixed full-screen overlays.
+        WebkitTapHighlightColor: 'rgba(0,0,0,0)',
       }}>
+
       <div className="flex-1 min-h-0 overflow-y-scroll overscroll-contain"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', pointerEvents: 'auto', paddingBottom: 'calc(260px + var(--safe-bottom, 0px))' }}>
 

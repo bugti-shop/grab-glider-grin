@@ -1221,3 +1221,26 @@ body[data-tour-id="task-scan-from-image"] .flowist-tour-popover.driver-popover-s
 
 
 
+
+/* ─── Web Clipper embedded article iframe — responsive height ─────────────
+ * Mobile: shorter box so it stays readable and doesn't overflow the screen.
+ * Tablet+: taller so long articles get more room per glance.
+ * Uses !important because the iframe carries an inline `style` attribute
+ * (set by the hydration code) for width/border/etc. */
+iframe.webclip-iframe {
+  height: 60vh !important;
+  max-height: 560px !important;
+  min-height: 380px !important;
+}
+@media (min-width: 640px) {
+  iframe.webclip-iframe {
+    height: 75vh !important;
+    max-height: 720px !important;
+  }
+}
+@media (min-width: 1024px) {
+  iframe.webclip-iframe {
+    height: 87vh !important;
+    max-height: none !important;
+  }
+}
