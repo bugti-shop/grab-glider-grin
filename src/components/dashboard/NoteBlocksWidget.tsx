@@ -120,7 +120,10 @@ function safeDomain(href: string): string {
 /** Parses a note's HTML content into a compact list of display blocks. */
 function extractBlocks(html: string, limit: number): Block[] {
   if (!html) return [];
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+  // Bound parsing cost: a duplicated 100k-word note should never make the
+  // dashboard parse multi-megabyte HTML on the main thread.
+  const boundedHtml = html.length > 80_000 ? html.slice(0, 80_000) : html;
+  const doc = new DOMParser().parseFromString(boundedHtml, 'text/html');
   const out: Block[] = [];
   const seenHrefs = new Set<string>();
 
