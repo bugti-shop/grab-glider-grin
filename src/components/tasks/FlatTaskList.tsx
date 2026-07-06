@@ -68,9 +68,8 @@ export interface FlatTaskListProps {
   index?: FlatTaskIndex;
   /** Estimated row height in px. Keep consistent with the rendered row. */
   rowHeight?: number;
-  /** Number of rows to render outside the viewport (default 24 — generous
-   *  buffer so flick-scrolling never reveals a blank white band before the
-   *  virtualizer catches up). */
+   /** Number of rows to render outside the viewport. Automatically clamped on
+    *  10k+ lists so bottom-nav switches and fast scroll stay lightweight. */
   overscan?: number;
   /** Optional fixed max-height (defaults to viewport-driven). Ignored when useWindow. */
   maxHeight?: number | string;
@@ -132,8 +131,9 @@ export function FlatTaskList({
   const flatIndex = frozenIndex ?? liveFlatIndex;
   const flat = flatIndex.flat;
   const resolvedRowHeight = rowHeight ?? virtualizationSettings.tasks.rowHeight;
-  const resolvedOverscan = getAdaptiveOverscan(overscan ?? virtualizationSettings.tasks.overscan, flat.length);
+  const resolvedOverscan = getAdaptiveOverscan(overscan ?? virtualizationSettings.tasks.overscan, flat.length, 'tasks');
   const resolvedUseWindow = useWindow ?? virtualizationSettings.tasks.windowing;
+  const useFixedMassiveRows = flat.length >= 10_000;
 
   const parentRef = useRef<HTMLDivElement>(null);
   const [parentTop, setParentTop] = useState(0);
@@ -403,9 +403,10 @@ export function FlatTaskList({
       data-virt-overscan={resolvedOverscan}
       data-virt-row-height={resolvedRowHeight}
       data-virt-windowing={resolvedUseWindow ? 'window' : 'container'}
+      data-virt-fixed-rows={useFixedMassiveRows ? 'true' : 'false'}
       style={
         resolvedUseWindow
-          ? { position: 'relative', width: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }
+          ? { position: 'relative', width: '100%', WebkitOverflowScrolling: 'touch', overflowAnchor: 'none' }
           : {
               height: maxHeight ?? '100%',
               overflowX: 'hidden',
@@ -430,13 +431,16 @@ export function FlatTaskList({
               data-active={isActive ? 'true' : 'false'}
               {...(itemProps ?? {})}
               {...(handleProps ?? {})}
-              ref={virtualizer.measureElement}
+              ref={useFixedMassiveRows ? undefined : virtualizer.measureElement}
               style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 width: '100%',
+                height: useFixedMassiveRows ? resolvedRowHeight : undefined,
+                overflow: useFixedMassiveRows ? 'hidden' : undefined,
                 contain: 'layout paint style',
+                containIntrinsicSize: `${resolvedRowHeight}px auto`,
                 transform: `translateY(${vi.start - scrollOffset}px)`,
                 // Source row is dimmed by the hook (opacity) while dragged;
                 // we additionally hide its hit area via the hook's pointer-
@@ -446,6 +450,7 @@ export function FlatTaskList({
                   ? '0 8px 24px hsl(var(--foreground) / 0.18), inset 0 0 0 2px hsl(var(--primary))'
                   : undefined,
                 opacity: 1,
+                willChange: 'transform',
                 cursor: dndEnabled ? (isBeingDragged ? 'grabbing' : 'grab') : undefined,
                 // pan-y keeps vertical list scroll working; the pointer hook
                 // arms via long-press and aborts cleanly on scroll-like motion.

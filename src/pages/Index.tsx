@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, startTransition } from 'react';
 import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
 import { useSubscription, FREE_LIMITS, FREE_CAPACITY_LIMITS } from '@/contexts/SubscriptionContext';
@@ -1137,10 +1137,12 @@ const Index = () => {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={async () => {
-                  await triggerHaptic('light');
-                  await prefetchRoute('/todo/today');
-                  navigate('/todo/today');
+                onClick={() => {
+                  void triggerHaptic('light');
+                  void prefetchRoute('/todo/today');
+                  startTransition(() => {
+                    navigate('/todo/today');
+                  });
                 }}
                 className="h-7 w-7 xs:h-8 xs:w-8 sm:h-9 sm:w-9 hover:bg-transparent active:bg-transparent touch-target"
                 title={t('common.switchToTodo')}

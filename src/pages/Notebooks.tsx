@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useFirstVisitTour } from '@/features/tours/useFeatureTour';
 import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';
+import { getAdaptiveOverscan } from '@/utils/virtualizationSettings';
 
 const NOTEBOOK_COLORS = [
   '#3b82f6', // blue
@@ -517,7 +518,7 @@ const VirtualNotebookGrid = ({
     estimateSize: () => rowHeight,
     // Larger overscan + measured row size keep rows mounted ahead of a fast fling
     // so users never see a blank patch during momentum scrolling.
-    overscan: 12,
+    overscan: getAdaptiveOverscan(10, items.length, 'notes'),
     scrollMargin,
   });
 

@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { startTransition, useCallback, useState, useEffect } from 'react';
 import { Home, Calendar, Settings, BarChart3, User, ListChecks, LayoutGrid, Hourglass } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -113,10 +113,13 @@ export const TodoBottomNavigation = () => {
     return item.customLabel || t(`nav.${item.id}`, item.label);
   };
 
-  const handleNavigation = useCallback(async (path: string) => {
+  const handleNavigation = useCallback((path: string) => {
+    if (path === location.pathname) return;
     triggerNavHaptic();
-    await prefetchRoute(path);
-    navigate(path, { state: { from: location.pathname } });
+    void prefetchRoute(path);
+    startTransition(() => {
+      navigate(path, { state: { from: location.pathname } });
+    });
   }, [navigate, location.pathname]);
 
 

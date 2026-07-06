@@ -71,6 +71,11 @@ function postToWorker<T>(type: string, payload: any): Promise<T> {
 // ── Serialization helpers ──
 // Convert TodoItem dates to strings for worker (structured clone can't handle Date reliably across all browsers)
 function serializeItems(items: any[]): any[] {
+  // For 10k+ tasks the map/spread below can block the main thread during route
+  // switches.  IndexedDB media is already offloaded, and structured clone
+  // handles Date objects, so pass the existing lightweight task objects through.
+  if (items.length >= 10_000) return items;
+
   return items.map(item => ({
     ...item,
     dueDate: item.dueDate ? new Date(item.dueDate).toISOString() : null,
