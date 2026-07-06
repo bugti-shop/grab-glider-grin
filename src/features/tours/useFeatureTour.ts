@@ -40,11 +40,11 @@ export const useTourBootstrap = () => {
         const shown = await getSetting<boolean>(KEY, false);
         if (!shown) {
           await setSetting(KEY, true, { skipCloudSync: true });
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('feature-guide:open', {
-              detail: { startChainOnClose: true, compulsory: true },
-            }));
-          }, 900);
+          // Fire immediately — no artificial delay so the welcome sheet
+          // appears the instant the app is usable.
+          window.dispatchEvent(new CustomEvent('feature-guide:open', {
+            detail: { startChainOnClose: true, compulsory: true },
+          }));
           return;
         }
         // Resume support: welcome sheet already shown, but if the user closed
@@ -55,9 +55,7 @@ export const useTourBootstrap = () => {
         const { hasSeenTour } = await import('./TourStateStore');
         for (const id of ONBOARDING_CHAIN) {
           if (!(await hasSeenTour(id))) {
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('flowist-onboarding:start-chain'));
-            }, 1200);
+            window.dispatchEvent(new CustomEvent('flowist-onboarding:start-chain'));
             return;
           }
         }

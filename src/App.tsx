@@ -596,8 +596,9 @@ const AppContent = () => {
       // If they already clicked "Get Started" (session OR persisted across reload), skip
       if (sessionStorage.getItem('flowist_landing_acknowledged') === 'true') return false;
       if (localStorage.getItem('flowist_landing_acknowledged') === 'true') return false;
-      // If onboarding was already completed before, treat as engaged user — go straight to app
-      if (localStorage.getItem('onboarding_completed_flag') === 'true') return false;
+      // Note: onboarding_completed_flag is now always set at boot (onboarding was removed),
+      // so it can't be used as a landing-skip signal. Only explicit engagement / acknowledgement
+      // above should bypass the landing page.
     } catch {}
     return true;
   });
