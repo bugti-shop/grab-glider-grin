@@ -44,6 +44,7 @@ import { FocusBackgroundBar } from "@/components/focus/FocusBackgroundBar";
 import { RadixPointerEventsRescue } from "@/components/RadixPointerEventsRescue";
 import { DesktopSidebar } from "@/components/desktop/DesktopSidebar";
 import { AuthDeepLinkBridge } from "@/components/AuthDeepLinkBridge";
+import { BottomNavigation } from "@/components/BottomNavigation";
 import { WidgetAddTask, WidgetNewSticky, WidgetNewLined, WidgetNewRegular, WidgetNewSketch } from "@/pages/WidgetEntry";
 import { useTourBootstrap } from "@/features/tours/useFeatureTour";
 
@@ -125,6 +126,26 @@ const EmptyFallback = () => null;
 
 // Branded fallback — silent (no spinner), but never leaves a blank white root.
 const BrandedFallback = () => <div className="min-h-screen bg-background" aria-hidden="true" />;
+
+const CalendarRouteFallback = () => (
+  <div className="min-h-screen min-h-screen-dynamic bg-background pb-20 flex flex-col items-center justify-center px-6 text-center">
+    <div className="max-w-sm rounded-lg border border-border bg-card p-5 shadow-sm">
+      <h1 className="text-lg font-semibold text-foreground">Calendar couldn’t render</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        The calendar hit a render issue, but the app is still available.
+      </p>
+      <button
+        type="button"
+        onClick={() => window.location.assign('/notesdashboard')}
+        className="mt-4 h-10 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground"
+      >
+        Back to Notes
+      </button>
+    </div>
+    <BottomNavigation />
+  </div>
+);
+
 // Detect stale chunk errors and auto-reload once
 const isChunkError = (error: any): boolean => {
   const msg = String(error?.message || error || '');
@@ -139,9 +160,9 @@ const isChunkError = (error: any): boolean => {
 
 const handleChunkError = () => {
   const key = 'chunk_reload_ts';
-  const last = Number(sessionStorage.getItem(key) || 0);
-  // Only auto-reload once per 30 seconds to avoid infinite loops
-  if (Date.now() - last > 30_000) {
+  const hasReloaded = sessionStorage.getItem(key);
+  // Only auto-reload once per tab to avoid refresh loops on heavy pages.
+  if (!hasReloaded) {
     sessionStorage.setItem(key, String(Date.now()));
     window.location.reload();
     return true;
@@ -168,7 +189,7 @@ if (typeof window !== 'undefined') {
     }
     console.error('Global error:', { message, source, lineno, colno, error });
     showGlobalError(error || message);
-    return false;
+    return true;
   };
   
   window.onunhandledrejection = (event) => {
@@ -184,6 +205,7 @@ if (typeof window !== 'undefined') {
       return;
     }
     console.error('Unhandled promise rejection:', event.reason);
+    event.preventDefault();
     showGlobalError(event.reason);
   };
 }
@@ -478,7 +500,7 @@ const AppRoutes = () => {
             <Route path="/notes" element={<Notes />} />
             <Route path="/notebooks" element={<Notebooks />} />
             <Route path="/notebook/:id" element={<NotebookDetail />} />
-            <Route path="/calendar" element={<NotesCalendar />} />
+            <Route path="/calendar" element={<ErrorBoundary fallback={<CalendarRouteFallback />}><NotesCalendar /></ErrorBoundary>} />
             <Route path="/clip" element={<WebClipper />} />
             <Route path="/webclipper" element={<WebClipper />} />
             <Route path="/dev/fetch-article" element={<FetchArticleTest />} />

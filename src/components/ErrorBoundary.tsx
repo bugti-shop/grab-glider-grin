@@ -75,11 +75,12 @@ export class ErrorBoundary extends Component<Props, State> {
     this.props.onError?.(error, errorInfo);
     this.setState(prev => ({ errorCount: prev.errorCount + 1 }));
 
-    // Auto-reload once for stale chunk errors
+    // Auto-reload once per tab for stale chunk errors. Repeating every few
+    // seconds makes heavy views look like they are crashing/refreshing forever.
     if (ErrorBoundary.isChunkError(error)) {
       const key = 'chunk_reload_ts';
-      const last = Number(sessionStorage.getItem(key) || 0);
-      if (Date.now() - last > 30_000) {
+      const hasReloaded = sessionStorage.getItem(key);
+      if (!hasReloaded) {
         sessionStorage.setItem(key, String(Date.now()));
         window.location.reload();
         return;
