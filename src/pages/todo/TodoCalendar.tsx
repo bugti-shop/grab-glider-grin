@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { TaskInputSheet } from '@/components/TaskInputSheet';
 import { TodoItem, Folder, CalendarEvent, Priority, TaskSection, TaskStatus } from '@/types/note';
 import { TaskItem } from '@/components/TaskItem';
+import { FlatTaskList } from '@/components/tasks/FlatTaskList';
 import { TaskDetailPage } from '@/components/TaskDetailPage';
 import { TaskFilterSheet, DateFilter, PriorityFilter, StatusFilter } from '@/components/TaskFilterSheet';
 import { SelectActionsSheet, SelectAction } from '@/components/SelectActionsSheet';
@@ -39,7 +40,8 @@ import { Flame, CalendarX, Clock as ClockIcon } from 'lucide-react';
 import { Calendar as CalendarIcon2 } from 'lucide-react';
 
 import { toast } from 'sonner';
-import { loadTodoItems, saveTodoItems } from '@/utils/todoItemsStorage';
+import { loadTodoItems, saveTodoItems, deleteTodoItem } from '@/utils/todoItemsStorage';
+import { bulkPutTasksInDB, bulkUpdateTasksInDB, updateTaskInDB } from '@/utils/taskStorage';
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { EventEditor } from '@/components/EventEditor';
@@ -424,21 +426,19 @@ const TodoCalendar = () => {
       case 'priority':
         setIsPrioritySheetOpen(true);
         return;
-      case 'duplicate':
-        for (const task of selectedTasks) {
-          const duplicatedTask: TodoItem = { ...task, id: genId(), completed: false };
-          const updatedItems = [...items, duplicatedTask];
-          setItems(updatedItems);
-          await saveTodoItems(updatedItems);
-        }
+      case 'duplicate': {
+        const duplicatedTasks = selectedTasks.map((task) => ({ ...task, id: genId(), completed: false, completedAt: undefined, modifiedAt: new Date() }));
+        setItems((prev) => [...duplicatedTasks, ...prev]);
+        await bulkPutTasksInDB(duplicatedTasks);
         toast.success(t('todayPage.duplicatedTasks', { count: selectedTasks.length }));
         break;
+      }
       case 'pin':
         const updatedPinItems = items.map(item => 
           selectedTaskIds.has(item.id) ? { ...item, isPinned: !item.isPinned } : item
         );
         setItems(updatedPinItems);
-        await saveTodoItems(updatedPinItems);
+        await bulkUpdateTasksInDB(updatedPinItems.filter(item => selectedTaskIds.has(item.id)));
         toast.success(t('todayPage.pinnedTasks', { count: selectedTasks.length }));
         break;
       case 'setStatus':
@@ -446,7 +446,7 @@ const TodoCalendar = () => {
           selectedTaskIds.has(item.id) ? { ...item, status: 'in-progress' as any } : item
         );
         setItems(updatedStatusItems);
-        await saveTodoItems(updatedStatusItems);
+        await bulkUpdateTasksInDB(updatedStatusItems.filter(item => selectedTaskIds.has(item.id)));
         toast.success(t('todayPage.updatedStatus', { count: selectedTasks.length }));
         break;
       case 'setRepeat':
@@ -460,7 +460,7 @@ const TodoCalendar = () => {
           selectedTaskIds.has(item.id) ? { ...item, dueDate: new Date() } : item
         );
         setItems(updatedDateItems);
-        await saveTodoItems(updatedDateItems);
+        await bulkUpdateTasksInDB(updatedDateItems.filter(item => selectedTaskIds.has(item.id)));
         toast.success(t('todayPage.updatedDueDate', { count: selectedTasks.length }));
         break;
     }
@@ -474,7 +474,7 @@ const TodoCalendar = () => {
       selectedTaskIds.has(item.id) ? { ...item, folderId: folderId || undefined } : item
     );
     setItems(updatedItems);
-    await saveTodoItems(updatedItems);
+    await bulkUpdateTasksInDB(updatedItems.filter(item => selectedTaskIds.has(item.id)));
     toast.success(t('todayPage.movedTasks', { count: selectedTaskIds.size }));
     setSelectedTaskIds(new Set());
     setIsSelectionMode(false);
@@ -487,7 +487,7 @@ const TodoCalendar = () => {
       selectedTaskIds.has(item.id) ? { ...item, priority } : item
     );
     setItems(updatedItems);
-    await saveTodoItems(updatedItems);
+    await bulkUpdateTasksInDB(updatedItems.filter(item => selectedTaskIds.has(item.id)));
     toast.success(t('todayPage.updatedPriority', { count: selectedTaskIds.size }));
     setSelectedTaskIds(new Set());
     setIsSelectionMode(false);
@@ -593,7 +593,7 @@ const TodoCalendar = () => {
         if (nextTask) {
           const updatedItems = [nextTask, ...items.map(t => t.id === itemId ? { ...t, ...updatesWithTimestamp } : t)];
           setItems(updatedItems);
-          saveTodoItems(updatedItems).catch(console.warn);
+          bulkPutTasksInDB([nextTask, { ...currentItem, ...updatesWithTimestamp }]).catch(console.warn);
           toast.success(t('todayPage.recurringTaskCompleted'), { icon: '🔄' });
           window.dispatchEvent(new Event('tasksUpdated'));
           return;
@@ -603,7 +603,7 @@ const TodoCalendar = () => {
     
     const updatedItems = items.map(task => task.id === itemId ? { ...task, ...updatesWithTimestamp } : task);
     setItems(updatedItems);
-    saveTodoItems(updatedItems).catch(console.warn);
+    updateTaskInDB(itemId, updatesWithTimestamp).catch(console.warn);
     window.dispatchEvent(new Event('tasksUpdated'));
   };
 
@@ -611,7 +611,7 @@ const TodoCalendar = () => {
     try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
     const updatedItems = items.filter(task => task.id !== itemId);
     setItems(updatedItems);
-    await saveTodoItems(updatedItems);
+    await deleteTodoItem(itemId);
     window.dispatchEvent(new Event('tasksUpdated'));
   };
 
@@ -785,6 +785,49 @@ const TodoCalendar = () => {
   };
 
   const renderFlatView = () => {
+    if (uncompletedTasks.length > 200) {
+      return (
+        <div className="space-y-4">
+          <FlatTaskList
+            items={uncompletedTasks}
+            rowHeight={68}
+            useWindow
+            renderRow={(row) => (
+              <div className="bg-card rounded-lg border border-border/50 overflow-hidden">
+                <TaskItem item={row.task} onUpdate={handleUpdateTask} onDelete={handleDeleteTask} onTaskClick={handleTaskClick} onImageClick={handleImageClick} allTasks={items} hideDetails hidePriorityBorder />
+              </div>
+            )}
+          />
+          {showCompleted && completedTasks.length > 0 && (
+            <Collapsible open={isCompletedOpen} onOpenChange={setIsCompletedOpen}>
+              <div className="bg-muted/50 rounded-xl p-3 border border-border/30">
+                <CollapsibleTrigger asChild>
+                  <button className="w-full flex items-center justify-between px-2 py-2 hover:bg-muted/60 rounded-lg transition-colors">
+                    <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t('todayPage.completed')}</span>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span className="text-sm font-medium">{completedTasks.length}</span>
+                      {isCompletedOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </div>
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-2 mt-2">
+                  <FlatTaskList
+                    items={completedTasks}
+                    rowHeight={68}
+                    useWindow
+                    renderRow={(row) => (
+                      <div className="opacity-70 bg-card rounded-lg border border-border/50 overflow-hidden">
+                        <TaskItem item={row.task} onUpdate={handleUpdateTask} onDelete={handleDeleteTask} onTaskClick={handleTaskClick} onImageClick={handleImageClick} allTasks={items} hideDetails hidePriorityBorder />
+                      </div>
+                    )}
+                  />
+                </CollapsibleContent>
+              </div>
+            </Collapsible>
+          )}
+        </div>
+      );
+    }
     return (
       <DragDropContext onDragStart={() => { isDraggingRef.current = true; }} onDragEnd={(result) => {
         isDraggingRef.current = true; // keep true so click is suppressed, reset in handleTaskClick

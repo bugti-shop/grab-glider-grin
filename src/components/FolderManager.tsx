@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Folder as FolderIcon, Plus, Edit2, Trash2, FolderOpen, FolderPlus, FolderMinus, MoreVertical, Star, ArrowUpDown, Clock, FileText, StickyNote, CheckSquare, Filter, Code, Palette, Receipt, Archive, LayoutGrid, List, PenTool, Upload, Download } from 'lucide-react';
 import { ImportDataSheet } from '@/components/ImportDataSheet';
@@ -103,8 +103,26 @@ export const FolderManager = ({
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
 
-  const availableNotes = notes.filter(note => note.folderId !== selectedFolderId);
-  const folderNotes = notes.filter(note => note.folderId === selectedFolderId);
+  const availableNotesCount = useMemo(() => {
+    let count = 0;
+    for (const note of notes) if (note.folderId !== selectedFolderId) count++;
+    return count;
+  }, [notes, selectedFolderId]);
+  const folderNotesCount = useMemo(() => {
+    let count = 0;
+    for (const note of notes) if (note.folderId === selectedFolderId) count++;
+    return count;
+  }, [notes, selectedFolderId]);
+  const availableNotes = useMemo(
+    () => (isAddNotesOpen ? notes.filter(note => note.folderId !== selectedFolderId) : []),
+    [isAddNotesOpen, notes, selectedFolderId],
+  );
+  const folderNotes = useMemo(
+    () => (isRemoveNotesOpen ? notes.filter(note => note.folderId === selectedFolderId) : []),
+    [isRemoveNotesOpen, notes, selectedFolderId],
+  );
+  const selectedNoteIdSet = useMemo(() => new Set(selectedNoteIds), [selectedNoteIds]);
+  const selectedRemoveNoteIdSet = useMemo(() => new Set(selectedRemoveNoteIds), [selectedRemoveNoteIds]);
 
   const handleCreate = () => {
     if (newFolderName.trim()) {
@@ -361,7 +379,7 @@ export const FolderManager = ({
             
             
             {/* Add Notes to Folder */}
-            {isCustomFolder && onAddNotesToFolder && availableNotes.length > 0 && (
+            {isCustomFolder && onAddNotesToFolder && availableNotesCount > 0 && (
               <DropdownMenuItem onClick={() => setIsAddNotesOpen(true)}>
                 <FolderPlus className="h-4 w-4 mr-2" />
                 {t('notesMenu.addNotesToFolder')}
@@ -369,7 +387,7 @@ export const FolderManager = ({
             )}
             
             {/* Remove Notes from Folder */}
-            {isCustomFolder && onRemoveNoteFromFolder && folderNotes.length > 0 && (
+            {isCustomFolder && onRemoveNoteFromFolder && folderNotesCount > 0 && (
               <DropdownMenuItem onClick={() => setIsRemoveNotesOpen(true)}>
                 <FolderMinus className="h-4 w-4 mr-2" />
                 {t('notesMenu.removeNotesFromFolder')}
@@ -423,7 +441,7 @@ export const FolderManager = ({
                     onClick={() => handleToggleNoteSelection(note.id)}
                   >
                     <Checkbox
-                      checked={selectedNoteIds.includes(note.id)}
+                      checked={selectedNoteIdSet.has(note.id)}
                       onCheckedChange={() => handleToggleNoteSelection(note.id)}
                     />
                     <div className="flex-1 min-w-0">
@@ -457,14 +475,14 @@ export const FolderManager = ({
             </p>
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-2">
-                {folderNotes.map((note) => (
+                    {folderNotes.map((note) => (
                   <div
                     key={note.id}
                     className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
                     onClick={() => handleToggleRemoveNoteSelection(note.id)}
                   >
                     <Checkbox
-                      checked={selectedRemoveNoteIds.includes(note.id)}
+                      checked={selectedRemoveNoteIdSet.has(note.id)}
                       onCheckedChange={() => handleToggleRemoveNoteSelection(note.id)}
                     />
                     <div className="flex-1 min-w-0">

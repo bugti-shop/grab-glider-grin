@@ -522,6 +522,11 @@ export const bulkPutNotesInDB = async (
 ): Promise<void> => {
   if (notes.length === 0) return;
   const hydrated = notes.map(hydrateNote);
+  const hasContentStubs = hydrated.some(isNoteContentStub);
+  const maxContentLength = hydrated.reduce((max, note) => {
+    const len = typeof note.content === 'string' ? note.content.length : 0;
+    return len > max ? len : max;
+  }, 0);
 
   // Update in-memory cache so the UI reflects new rows immediately.
   if (notesCache) {
@@ -535,8 +540,10 @@ export const bulkPutNotesInDB = async (
     notesCacheVersion++;
   }
 
-  // Chunked transactions — keeps each txn quick and lets the main thread breathe.
-  const CHUNK = 500;
+  // Chunked transactions — adaptive for duplicated 100k-word notes. Keeping a
+  // 500-row transaction with giant HTML bodies can OOM mobile Chrome; metadata
+  // patch rows also need smaller chunks because we merge against existing rows.
+  const CHUNK = hasContentStubs ? 50 : maxContentLength > 50_000 ? 20 : 500;
   for (let start = 0; start < hydrated.length; start += CHUNK) {
     const slice = hydrated.slice(start, start + CHUNK);
     try {
@@ -545,8 +552,30 @@ export const bulkPutNotesInDB = async (
         const store = tx.objectStore(STORE_NAME);
         const metaStore = tx.objectStore(META_STORE_NAME);
         for (const note of slice) {
-          store.put(serializeNote(note));
-          metaStore.put(serializeMetadataNote(note));
+          if (isNoteContentStub(note)) {
+            const request = store.get(note.id);
+            request.onsuccess = () => {
+              const existing = request.result ? hydrateNote(request.result) : null;
+              const merged = existing
+                ? hydrateNote({
+                    ...existing,
+                    ...note,
+                    content: existing.content,
+                    [CONTENT_STUB_FLAG]: undefined,
+                    [CONTENT_PREVIEW_KEY]: undefined,
+                    [CONTENT_LENGTH_KEY]: undefined,
+                  })
+                : note;
+              try { store.put(serializeNote(merged)); } catch {}
+              try { metaStore.put(serializeMetadataNote(merged)); } catch {}
+            };
+            request.onerror = () => {
+              try { metaStore.put(serializeMetadataNote(note)); } catch {}
+            };
+          } else {
+            store.put(serializeNote(note));
+            metaStore.put(serializeMetadataNote(note));
+          }
         }
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
@@ -555,9 +584,7 @@ export const bulkPutNotesInDB = async (
       console.error('bulkPutNotesInDB chunk failed:', e);
     }
     // Yield to the UI between chunks so scrolling/clicks stay responsive.
-    if (start + CHUNK < hydrated.length) {
-      await new Promise(r => setTimeout(r, 0));
-    }
+    if (start + CHUNK < hydrated.length) await new Promise(r => setTimeout(r, 0));
   }
 
   // Single coalesced event so list/contexts refresh once.

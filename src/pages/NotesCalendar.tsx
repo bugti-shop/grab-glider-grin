@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
 import { NotesCalendarView } from '@/components/NotesCalendarView';
@@ -18,6 +18,9 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CalendarBackgroundSheet } from '@/components/CalendarBackgroundSheet';
 import { getSetting } from '@/utils/settingsStorage';
+import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
+
+const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
 const NotesCalendar = () => {
   const { t } = useTranslation();
@@ -27,7 +30,6 @@ const NotesCalendar = () => {
   
   const { notes, setNotes } = useNotes();
   
-  const [selectedDateNotes, setSelectedDateNotes] = useState<Note[]>([]);
   // Use ref to track editing note ID to prevent stale reference issues
   const editingNoteIdRef = useRef<string | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -53,17 +55,12 @@ const NotesCalendar = () => {
     loadSettings();
   }, []);
 
-  // Filter notes for selected date
-  useEffect(() => {
-    if (date) {
-      const notesForDate = notes.filter(note =>
-        isSameDay(new Date(note.createdAt), date) &&
-        selectedNoteTypes.includes(note.type)
-      );
-      setSelectedDateNotes(notesForDate);
-    } else {
-      setSelectedDateNotes([]);
-    }
+  const selectedDateNotes = useMemo(() => {
+    if (!date) return [];
+    return notes.filter(note =>
+      isSameDay(new Date(note.createdAt), date) &&
+      selectedNoteTypes.includes(note.type)
+    );
   }, [date, notes, selectedNoteTypes]);
 
   // Keep editingNote in sync with notes array using ID reference
@@ -155,7 +152,14 @@ const NotesCalendar = () => {
   }, []);
 
   // Get all note dates for calendar indicators
-  const noteDates = notes.map(n => new Date(n.createdAt));
+  const noteDates = useMemo(() => {
+    const unique = new Map<string, Date>();
+    for (const note of notes) {
+      const created = new Date(note.createdAt);
+      unique.set(dateKey(created), created);
+    }
+    return Array.from(unique.values());
+  }, [notes]);
 
   return (
     <div className="min-h-screen min-h-screen-dynamic bg-background pb-14 flex flex-col">
@@ -186,14 +190,18 @@ const NotesCalendar = () => {
             </h2>
             <ScrollArea className="flex-1 perf-contain-scroll">
               <div className="space-y-3 pb-4">
-                {selectedDateNotes.map((note) => (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    onEdit={handleEditNote}
-                    onDelete={handleDeleteNote}
-                  />
-                ))}
+                <NotesVirtualGrid
+                  notes={selectedDateNotes}
+                  estimatedRowHeight={190}
+                  getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
+                  renderCard={(note) => (
+                    <NoteCard
+                      note={note}
+                      onEdit={handleEditNote}
+                      onDelete={handleDeleteNote}
+                    />
+                  )}
+                />
               </div>
             </ScrollArea>
           </div>
