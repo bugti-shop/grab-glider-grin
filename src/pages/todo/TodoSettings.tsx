@@ -333,9 +333,10 @@ const TodoSettings = () => {
   };
 
   // Settings row component
-  const SettingsRow = ({ label, value, onClick }: { label: React.ReactNode; value?: string; onClick: () => void }) => (
+  const SettingsRow = ({ label, value, onClick, dataTour }: { label: React.ReactNode; value?: string; onClick: () => void; dataTour?: string }) => (
     <button
       onClick={onClick}
+      data-tour={dataTour}
       className="w-full flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted transition-colors"
     >
       <span className="text-foreground text-sm">{label}</span>
