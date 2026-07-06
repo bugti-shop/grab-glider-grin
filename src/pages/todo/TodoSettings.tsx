@@ -429,6 +429,7 @@ const TodoSettings = () => {
               onClick={() => setShowLanguageDialog(true)} 
             />
             <SettingsRow 
+              dataTour="settings-note-type-visibility"
               label={
                 <span className="inline-flex items-center gap-1.5">
                   {t('settings.noteTypeVisibility', 'Note Type Visibility')}
@@ -446,6 +447,7 @@ const TodoSettings = () => {
               onClick={() => setShowTasksSettingsSheet(true)} 
             />
             <SettingsRow 
+              dataTour="settings-customize-navigation"
               label={t('settings.customizeNavigation', 'Customize Navigation')}
               onClick={() => setShowCustomizeNavigationSheet(true)} 
             />
