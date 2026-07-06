@@ -1,10 +1,10 @@
-// Shape Recognition — detects freehand circles, squares, and triangles
-// and converts them to perfect geometric shapes
+// Shape Recognition — detects freehand circles, squares, triangles, lines
+// and arrows and converts them to perfect geometric shapes.
 
 import type { Point } from '@/components/sketch/SketchTypes';
 
-interface RecognizedShape {
-  type: 'circle' | 'rect' | 'triangle';
+export interface RecognizedShape {
+  type: 'circle' | 'rect' | 'triangle' | 'line' | 'arrow';
   points: Point[];
 }
 
@@ -34,8 +34,7 @@ const isClosed = (pts: Point[], threshold: number): boolean => {
 /** Count dominant corners using angle changes */
 const detectCorners = (pts: Point[], angleThreshold = 35): number[] => {
   if (pts.length < 5) return [];
-  
-  // Downsample to reduce noise
+
   const step = Math.max(1, Math.floor(pts.length / 60));
   const sampled: Point[] = [];
   for (let i = 0; i < pts.length; i += step) sampled.push(pts[i]);
@@ -60,7 +59,6 @@ const detectCorners = (pts: Point[], angleThreshold = 35): number[] => {
     const angle = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
 
     if (angle > angleThreshold) {
-      // Suppress nearby corners (non-maximum suppression)
       if (corners.length === 0 || i - corners[corners.length - 1] > windowSize) {
         corners.push(i);
       }
@@ -70,16 +68,108 @@ const detectCorners = (pts: Point[], angleThreshold = 35): number[] => {
   return corners;
 };
 
+/** Compute avg perpendicular distance from a set of points to the line a→b */
+const avgLineDeviation = (pts: Point[], a: Point, b: Point): number => {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 1) return Infinity;
+  let sum = 0;
+  for (const p of pts) sum += Math.abs((dy * p.x - dx * p.y + b.x * a.y - b.y * a.x)) / len;
+  return sum / pts.length;
+};
+
+/** Attempt line recognition — open stroke that is nearly straight */
+const tryLine = (pts: Point[]): RecognizedShape | null => {
+  if (pts.length < 4) return null;
+  const start = pts[0];
+  const end = pts[pts.length - 1];
+  const chord = dist(start, end);
+  if (chord < 15) return null;
+
+  const pLen = pathLength(pts);
+  const straightness = chord / pLen;              // 1 = perfectly straight
+  if (straightness < 0.9) return null;
+
+  const dev = avgLineDeviation(pts, start, end);
+  if (dev / chord > 0.05) return null;
+
+  const pressure = pts[0].pressure;
+  return {
+    type: 'line',
+    points: [
+      { x: start.x, y: start.y, pressure },
+      { x: end.x, y: end.y, pressure },
+    ],
+  };
+};
+
+/**
+ * Attempt arrow recognition — a mostly-straight shaft ending with a small
+ * hooked "V" arrowhead. Looks at the last ~25% of the stroke for a sharp
+ * doubling-back.
+ */
+const tryArrow = (pts: Point[]): RecognizedShape | null => {
+  if (pts.length < 10) return null;
+
+  const start = pts[0];
+  const end = pts[pts.length - 1];
+  const chord = dist(start, end);
+  if (chord < 25) return null;
+
+  const pLen = pathLength(pts);
+  // Arrow tail extra length must be modest — accept up to ~40% overshoot
+  if (pLen / chord > 1.6) return null;
+
+  // Split into shaft (~first 70%) + head (~last 30%)
+  const splitAt = Math.floor(pts.length * 0.7);
+  const shaft = pts.slice(0, splitAt + 1);
+  const head = pts.slice(splitAt);
+  if (head.length < 3) return null;
+
+  // Shaft must be roughly straight
+  const shaftChord = dist(shaft[0], shaft[shaft.length - 1]);
+  const shaftLen = pathLength(shaft);
+  if (shaftChord < 15 || shaftChord / shaftLen < 0.9) return null;
+
+  // Arrowhead detection: within `head`, find max-angle corner (the tip)
+  let tipIdx = -1;
+  let tipAngle = 0;
+  for (let i = 1; i < head.length - 1; i++) {
+    const a = head[i - 1], b = head[i], c = head[i + 1];
+    const dx1 = b.x - a.x, dy1 = b.y - a.y;
+    const dx2 = c.x - b.x, dy2 = c.y - b.y;
+    const l1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+    const l2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+    if (l1 < 0.5 || l2 < 0.5) continue;
+    const dot = (dx1 * dx2 + dy1 * dy2) / (l1 * l2);
+    const ang = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
+    if (ang > tipAngle) { tipAngle = ang; tipIdx = i; }
+  }
+  // Real arrowhead has a sharp turn (≥ ~70°)
+  if (tipIdx < 0 || tipAngle < 70) return null;
+
+  // Tip of the arrow — where the shaft ends
+  const tip = head[tipIdx];
+
+  const pressure = pts[0].pressure;
+  return {
+    type: 'arrow',
+    points: [
+      { x: start.x, y: start.y, pressure },
+      { x: tip.x, y: tip.y, pressure },
+    ],
+  };
+};
+
 /** Attempt circle recognition */
 const tryCircle = (pts: Point[]): RecognizedShape | null => {
   if (pts.length < 12) return null;
 
-  // Only treat as circle if 0-2 corners (not a rectangle/square)
   const corners = detectCorners(pts, 40);
   if (corners.length >= 3 && corners.length <= 5) return null;
 
   const c = centroid(pts);
-  
+
   let sumR = 0;
   const radii: number[] = [];
   for (const p of pts) {
@@ -99,7 +189,6 @@ const tryCircle = (pts: Point[]): RecognizedShape | null => {
   const circumference = 2 * Math.PI * meanR;
   const lengthRatio = pLen / circumference;
 
-  // Check aspect ratio — circles should be roughly 1:1
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of pts) {
     if (p.x < minX) minX = p.x;
@@ -111,7 +200,8 @@ const tryCircle = (pts: Point[]): RecognizedShape | null => {
   const h = maxY - minY;
   const aspectRatio = Math.min(w, h) / Math.max(w, h);
 
-  if (cv < 0.18 && lengthRatio > 0.7 && lengthRatio < 1.7 && aspectRatio > 0.6) {
+  // Slightly tighter thresholds → cleaner circle recognition
+  if (cv < 0.16 && lengthRatio > 0.75 && lengthRatio < 1.6 && aspectRatio > 0.65) {
     const pressure = pts[0].pressure;
     return {
       type: 'circle',
@@ -130,11 +220,8 @@ const tryRectangle = (pts: Point[]): RecognizedShape | null => {
   if (pts.length < 10) return null;
 
   const corners = detectCorners(pts, 40);
-  
-  // A rectangle/square must have exactly 3-5 corners (4 ideal, allow slight variance)
   if (corners.length < 3 || corners.length > 5) return null;
 
-  // Use bounding box approach for rectangles
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of pts) {
     if (p.x < minX) minX = p.x;
@@ -146,8 +233,6 @@ const tryRectangle = (pts: Point[]): RecognizedShape | null => {
   const h = maxY - minY;
   if (w < 10 || h < 10) return null;
 
-  // Check how well points follow the bounding box edges
-  // For each point, compute min distance to any edge of the bbox
   let totalDist = 0;
   for (const p of pts) {
     const dLeft = Math.abs(p.x - minX);
@@ -160,14 +245,12 @@ const tryRectangle = (pts: Point[]): RecognizedShape | null => {
   const diagonal = Math.sqrt(w * w + h * h);
   const fitRatio = avgDist / diagonal;
 
-  // Also check path length vs perimeter
   const pLen = pathLength(pts);
   const perimeter = 2 * (w + h);
   const lengthRatio = pLen / perimeter;
 
-  // Stricter fit for more accurate rectangle detection
-  if (fitRatio < 0.05 && lengthRatio > 0.75 && lengthRatio < 1.5) {
-    // Return bounding box points (start=top-left, end=bottom-right) for shape drawing
+  // Slightly tighter fit
+  if (fitRatio < 0.045 && lengthRatio > 0.8 && lengthRatio < 1.4) {
     const pressure = pts[0].pressure;
     return {
       type: 'rect',
@@ -186,17 +269,12 @@ const tryTriangle = (pts: Point[]): RecognizedShape | null => {
   if (pts.length < 8) return null;
 
   const corners = detectCorners(pts, 30);
-  
-  // Triangle should have ~3 corners
   if (corners.length < 2 || corners.length > 5) return null;
 
-  // Find the 3 most prominent corners (largest angles)
-  // Map corners back to sampled points
   const step = Math.max(1, Math.floor(pts.length / 60));
   const sampled: Point[] = [];
   for (let i = 0; i < pts.length; i += step) sampled.push(pts[i]);
 
-  // Get corner points in original coords
   const cornerAngles: { idx: number; angle: number; point: Point }[] = [];
   const windowSize = Math.max(2, Math.floor(sampled.length / 12));
 
@@ -215,21 +293,16 @@ const tryTriangle = (pts: Point[]): RecognizedShape | null => {
     cornerAngles.push({ idx: ci, angle, point: sampled[ci] });
   }
 
-  // Also add start point as potential corner
   cornerAngles.push({ idx: 0, angle: 180, point: sampled[0] });
 
   if (cornerAngles.length < 3) return null;
 
-  // Sort by angle (largest first) and take top 3
   cornerAngles.sort((a, b) => b.angle - a.angle);
   const top3 = cornerAngles.slice(0, 3);
-
-  // Sort by position along path for correct winding
   top3.sort((a, b) => a.idx - b.idx);
 
   const [p1, p2, p3] = top3.map(c => c.point);
 
-  // Verify triangle: check area is reasonable
   const area = Math.abs((p2.x - p1.x) * (p3.y - p1.y) - (p3.x - p1.x) * (p2.y - p1.y)) / 2;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of pts) {
@@ -241,7 +314,6 @@ const tryTriangle = (pts: Point[]): RecognizedShape | null => {
   const bboxArea = (maxX - minX) * (maxY - minY);
   if (bboxArea < 100 || area / bboxArea < 0.2) return null;
 
-  // Verify points follow triangle edges
   const triVerts = [p1, p2, p3];
   let totalDist = 0;
   for (const p of pts) {
@@ -260,10 +332,9 @@ const tryTriangle = (pts: Point[]): RecognizedShape | null => {
   }
   const avgDist = totalDist / pts.length;
   const diagonal = Math.sqrt(bboxArea);
-  
-  if (avgDist / diagonal < 0.08) {
+
+  if (avgDist / diagonal < 0.07) {
     const pressure = pts[0].pressure;
-    // Return bounding box points (start=top-left, end=bottom-right) for shape drawing
     return {
       type: 'triangle',
       points: [
@@ -279,27 +350,95 @@ const tryTriangle = (pts: Point[]): RecognizedShape | null => {
 /**
  * Attempt to recognize a freehand stroke as a geometric shape.
  * Returns the recognized shape with perfect points, or null if no match.
+ *
+ * Order:
+ *  1. Closed strokes → rectangle, triangle, circle
+ *  2. Open strokes   → arrow (with head), line
  */
 export const recognizeShape = (pts: Point[]): RecognizedShape | null => {
-  if (pts.length < 8) return null;
+  if (pts.length < 4) return null;
 
-  // Must be roughly closed
   const pLen = pathLength(pts);
   if (pLen < 20) return null;
-  const closedThreshold = pLen * 0.2; // 20% of path length
-  if (!isClosed(pts, closedThreshold)) return null;
 
-  // Try rectangle FIRST — only shapes with 3-5 clear corners qualify
-  const rect = tryRectangle(pts);
-  if (rect) return rect;
+  const closedThreshold = pLen * 0.2;
+  const closed = isClosed(pts, closedThreshold);
 
-  // Try triangle
-  const triangle = tryTriangle(pts);
-  if (triangle) return triangle;
+  if (closed) {
+    const rect = tryRectangle(pts);
+    if (rect) return rect;
 
-  // Fallback: anything with 0-2 corners tries circle
-  const circle = tryCircle(pts);
-  if (circle) return circle;
+    const triangle = tryTriangle(pts);
+    if (triangle) return triangle;
+
+    const circle = tryCircle(pts);
+    if (circle) return circle;
+  } else {
+    // Open stroke: prefer arrow (has a hooked head) before line
+    const arrow = tryArrow(pts);
+    if (arrow) return arrow;
+
+    const line = tryLine(pts);
+    if (line) return line;
+  }
 
   return null;
+};
+
+// ─────────────────────────────────────────────────────────────
+// Connector snapping — snap arrow/line endpoints to nearby
+// shape bounding boxes or text annotations for clean diagrams.
+// ─────────────────────────────────────────────────────────────
+
+export interface SnapTarget {
+  /** Axis-aligned bounding box of the target element */
+  bbox: { x: number; y: number; w: number; h: number };
+}
+
+/** Nearest point on an axis-aligned rect edge to point p */
+const nearestPointOnRect = (
+  p: Point,
+  r: { x: number; y: number; w: number; h: number },
+): Point => {
+  const cx = Math.max(r.x, Math.min(p.x, r.x + r.w));
+  const cy = Math.max(r.y, Math.min(p.y, r.y + r.h));
+  // If point is inside, project to nearest edge; otherwise clamp already gives edge.
+  if (cx > r.x && cx < r.x + r.w && cy > r.y && cy < r.y + r.h) {
+    const dLeft = p.x - r.x;
+    const dRight = r.x + r.w - p.x;
+    const dTop = p.y - r.y;
+    const dBottom = r.y + r.h - p.y;
+    const min = Math.min(dLeft, dRight, dTop, dBottom);
+    if (min === dLeft) return { x: r.x, y: p.y, pressure: p.pressure };
+    if (min === dRight) return { x: r.x + r.w, y: p.y, pressure: p.pressure };
+    if (min === dTop) return { x: p.x, y: r.y, pressure: p.pressure };
+    return { x: p.x, y: r.y + r.h, pressure: p.pressure };
+  }
+  return { x: cx, y: cy, pressure: p.pressure };
+};
+
+/**
+ * Snap the start and end of a 2-point connector (line/arrow) to the
+ * nearest edge of any target within `threshold` world-units.
+ */
+export const snapConnectorEndpoints = (
+  points: Point[],
+  targets: SnapTarget[],
+  threshold: number,
+): Point[] => {
+  if (points.length !== 2 || targets.length === 0) return points;
+  const [start, end] = points;
+
+  const snapOne = (p: Point): Point => {
+    let best: Point = p;
+    let bestD = threshold;
+    for (const t of targets) {
+      const cand = nearestPointOnRect(p, t.bbox);
+      const d = Math.sqrt((cand.x - p.x) ** 2 + (cand.y - p.y) ** 2);
+      if (d < bestD) { bestD = d; best = cand; }
+    }
+    return best;
+  };
+
+  return [snapOne(start), snapOne(end)];
 };
