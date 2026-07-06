@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useHardwareBackButton } from '@/hooks/useHardwareBackButton';
 import { widgetDataSync, WidgetConfig, WidgetType, WIDGET_TYPES } from '@/utils/widgetDataSync';
-import { loadNotesFromDB } from '@/utils/noteStorage';
+import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
 import { getSetting } from '@/utils/settingsStorage';
 import { Note } from '@/types/note';
 import { toast } from 'sonner';
@@ -54,7 +54,7 @@ export const WidgetSettingsSheet = ({ isOpen, onClose }: WidgetSettingsSheetProp
     const configs = await widgetDataSync.getWidgetConfigs();
     setWidgetConfigs(configs);
     
-    const loadedNotes = await loadNotesFromDB();
+    const loadedNotes = await loadNotesMetadataFromDB();
     setNotes(loadedNotes);
     
     const loadedSections = await getSetting<TaskSection[]>('task_sections', []);

@@ -1,7 +1,7 @@
 import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameMonth } from "date-fns";
 import { ChevronLeft, ChevronRight, ChevronDown, MoreVertical, Image } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { loadNotesFromDB } from '@/utils/noteStorage';
+import { loadNotesMetadataFromDB } from '@/utils/noteStorage';
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import {
@@ -96,7 +96,7 @@ export const NotesCalendarView = ({
     }
 
     const loadNotes = async () => {
-      const notes = await loadNotesFromDB();
+      const notes = await loadNotesMetadataFromDB();
       const dates = notes.map(note => new Date(note.createdAt));
       setNoteDates(dates);
     };
