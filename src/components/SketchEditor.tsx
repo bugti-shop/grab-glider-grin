@@ -1944,7 +1944,13 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     const vy0 = -pan.y / zoom;
     const vx1 = vx0 + w / zoom;
     const vy1 = vy0 + h / zoom;
-    drawBackground(ctx, vx0, vy0, vx1, vy1, background, gridColor, gridOpacity);
+    const bgLayer = layersRef.current.find(l => l.kind === 'background');
+    const gridLayer = layersRef.current.find(l => l.kind === 'grid');
+    const bgVisible = bgLayer ? bgLayer.visible : true;
+    const gridVisible = gridLayer ? gridLayer.visible : true;
+    if (bgVisible) {
+      drawBackground(ctx, vx0, vy0, vx1, vy1, gridVisible ? background : 'plain', gridColor, gridOpacity);
+    }
 
     // Draw PDF page as background if loaded
     if (pdfPages.length > 0) {
