@@ -34,7 +34,10 @@ const NotebookDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { notes, setNotes } = useNotes();
-  const [folder, setFolder] = useState<FolderType | null>(null);
+  const [folder, setFolder] = useState<FolderType | null>(() => {
+    const cached = notebooksRuntimeCache.folders;
+    return cached ? cached.find((x) => x.id === id) ?? null : null;
+  });
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [defaultType, setDefaultType] = useState<NoteType>('regular');
@@ -44,6 +47,7 @@ const NotebookDetail = () => {
   useEffect(() => {
     const load = async () => {
       const saved = (await getSetting<FolderType[] | null>('folders', null)) || [];
+      if (saved.length > 0) setNotebooksCache(saved);
       const f = saved.find((x) => x.id === id) || null;
       setFolder(f);
     };
