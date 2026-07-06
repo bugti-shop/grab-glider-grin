@@ -57,7 +57,7 @@ const HabitGallery = () => {
 
   return (
     <div className="min-h-screen bg-muted/30 pb-32">
-      <header className="safe-area-top bg-muted/30 px-4 pt-3 pb-2 flex items-center gap-3">
+      <header className="safe-area-top bg-muted/30 px-4 pt-6 pb-2 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>

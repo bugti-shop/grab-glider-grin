@@ -469,7 +469,7 @@ const Habits = () => {
   return (
     <div className="min-h-screen bg-muted/30 pb-32">
       {/* Header */}
-      <header className="safe-area-top bg-background px-4 pt-3 pb-2 flex items-center justify-between">
+      <header className="safe-area-top bg-background px-4 pt-6 pb-2 flex items-center justify-between">
         <h1 className="text-3xl font-bold text-foreground">Habit</h1>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => navigate('/todo/habits/stats')}>

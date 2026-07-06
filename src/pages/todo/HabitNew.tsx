@@ -282,7 +282,7 @@ const HabitNew = () => {
 
   return (
     <div className="min-h-screen bg-muted/30 pb-28">
-      <header className="safe-area-top bg-muted/30 px-4 pt-3 pb-3 flex items-center gap-3">
+      <header className="safe-area-top bg-muted/30 px-4 pt-6 pb-3 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => (step === STEP_BASICS ? navigate(-1) : setStep(STEP_BASICS))}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
