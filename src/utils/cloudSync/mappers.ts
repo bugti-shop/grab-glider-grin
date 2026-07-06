@@ -70,6 +70,11 @@ export const mappers = {
   notes: {
     toCloud(n: Note) {
       if (!isUuid(n.id)) return null;
+      // Web-clipper notes are local-only. They carry a multi-MB fullPageSnapshot
+      // (gzipped raw HTML of the clipped page) and, per user preference, must
+      // never round-trip through cloud sync. Returning null here makes the
+      // write queue skip the row entirely (upserts AND deletes are no-ops).
+      if ((n as any).fullPageSnapshot) return null;
       // Strip locally-owned heavy fields from the cloud payload. Web-clipper
       // notes carry a multi-MB `fullPageSnapshot.gz` (raw HTML snapshot of the
       // clipped page) plus embedded base64 media in `images`/`floatingImages`.
