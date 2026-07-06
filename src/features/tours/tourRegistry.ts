@@ -124,6 +124,7 @@ export const ONBOARDING_CHAIN: string[] = [
   // Tasks
   'task-create-first',
   'task-create-habit',
+  'task-customize-navigation',
   // Notes
   'notes-switch-dashboard',
   'notes-create-first',
@@ -131,6 +132,7 @@ export const ONBOARDING_CHAIN: string[] = [
   // Personalization
   'personalize-theme',
   'personalize-app-lock',
+  'personalize-note-type-visibility',
 ];
 
 /** ID of the tour that runs right after the given one finishes, or null at the end. */
