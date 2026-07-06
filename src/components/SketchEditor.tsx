@@ -4760,11 +4760,82 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     if (redoStackRef.current.length === 0) return;
     undoStackRef.current.push(cloneLayers(layersRef.current));
     layersRef.current = redoStackRef.current.pop()!;
+    sketchPagesRef.current[sketchPageIndex] = layersRef.current;
     clearSelection();
     forceUpdate(n => n + 1);
     redrawAll();
     emitChange();
-  }, [redrawAll, emitChange, clearSelection]);
+  }, [redrawAll, emitChange, clearSelection, sketchPageIndex]);
+
+  // --- Multi-page navigation (non-PDF sketches) ---
+  const switchSketchPage = useCallback((newIndex: number) => {
+    if (newIndex < 0 || newIndex >= sketchPagesRef.current.length) return;
+    if (newIndex === sketchPageIndex) return;
+    // Save current page's undo/redo stacks
+    pageUndoStacksRef.current.set(sketchPageIndex, {
+      undo: undoStackRef.current,
+      redo: redoStackRef.current,
+    });
+    // Persist current live layers back to the pages array (already same ref, but be safe)
+    sketchPagesRef.current[sketchPageIndex] = layersRef.current;
+    // Switch to new page
+    layersRef.current = sketchPagesRef.current[newIndex];
+    const saved = pageUndoStacksRef.current.get(newIndex);
+    undoStackRef.current = saved?.undo ?? [];
+    redoStackRef.current = saved?.redo ?? [];
+    setSketchPageIndex(newIndex);
+    // Reset active layer id to the drawing layer of the target page if it exists
+    const drawing = layersRef.current.find(l => l.kind === 'drawing') ?? layersRef.current[Math.min(2, layersRef.current.length - 1)];
+    if (drawing) setActiveLayerId(drawing.id);
+    clearSelection();
+    forceUpdate(n => n + 1);
+    redrawAll();
+    emitChange();
+  }, [sketchPageIndex, redrawAll, emitChange, clearSelection]);
+
+  const addSketchPage = useCallback(() => {
+    const newLayers = createDefaultLayers();
+    const insertAt = sketchPageIndex + 1;
+    sketchPagesRef.current.splice(insertAt, 0, newLayers);
+    setSketchPageCount(sketchPagesRef.current.length);
+    // Shift saved undo stacks for pages after insertAt
+    const remapped = new Map<number, { undo: Layer[][]; redo: Layer[][] }>();
+    pageUndoStacksRef.current.forEach((stacks, idx) => {
+      remapped.set(idx >= insertAt ? idx + 1 : idx, stacks);
+    });
+    pageUndoStacksRef.current = remapped;
+    switchSketchPage(insertAt);
+  }, [sketchPageIndex, switchSketchPage]);
+
+  const deleteSketchPage = useCallback((idx: number) => {
+    if (sketchPagesRef.current.length <= 1) return;
+    sketchPagesRef.current.splice(idx, 1);
+    setSketchPageCount(sketchPagesRef.current.length);
+    pageUndoStacksRef.current.delete(idx);
+    // Shift stacks for pages after idx
+    const remapped = new Map<number, { undo: Layer[][]; redo: Layer[][] }>();
+    pageUndoStacksRef.current.forEach((stacks, i) => {
+      remapped.set(i > idx ? i - 1 : i, stacks);
+    });
+    pageUndoStacksRef.current = remapped;
+    const newIdx = Math.min(idx, sketchPagesRef.current.length - 1);
+    if (idx === sketchPageIndex) {
+      // We deleted the current page; jump to newIdx directly (no need to save deleted state)
+      layersRef.current = sketchPagesRef.current[newIdx];
+      const saved = pageUndoStacksRef.current.get(newIdx);
+      undoStackRef.current = saved?.undo ?? [];
+      redoStackRef.current = saved?.redo ?? [];
+      setSketchPageIndex(newIdx);
+      const drawing = layersRef.current.find(l => l.kind === 'drawing') ?? layersRef.current[0];
+      if (drawing) setActiveLayerId(drawing.id);
+      clearSelection();
+      forceUpdate(n => n + 1);
+      redrawAll();
+    } else if (idx < sketchPageIndex) {
+      setSketchPageIndex(sketchPageIndex - 1);
+    }
+    emitChange();
+  }, [sketchPageIndex, redrawAll, emitChange, clearSelection]);
 
   // Refs so early pointer handlers can invoke undo/redo (defined below in render order)
   const handleUndoRef = useRef(handleUndo);
