@@ -181,7 +181,14 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
   // the full local note is fetched lazily per-id when we actually apply.
   const meta = await loadNotesMetadataFromDB();
   const metaById = new Map(meta.map(n => [n.id, n]));
+  const heavyIdsToShrink: string[] = [];
   for (const r of rows) {
+    // Detect legacy heavy cloud rows (uploaded before we started stripping
+    // web-clip HTML / images from the sync payload). We'll re-upload a light
+    // version once the merge is done so the row shrinks in the cloud too.
+    const payloadStr = (r as any).payload ? JSON.stringify((r as any).payload) : '';
+    const isHeavy = payloadStr.length > 100_000 || ((r as any).body?.length ?? 0) > 200_000;
+
     if (r.is_deleted) { await deleteNoteFromDB(r.id, true); continue; }
     const existingMeta = metaById.get(r.id);
     const cloudTs = +new Date(r.updated_at ?? Date.now());
@@ -190,12 +197,34 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
       if (localTs > cloudTs) {
         recordConflict({ table: 'notes', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
       }
+      if (isHeavy) heavyIdsToShrink.push(r.id);
       continue;
     }
     // Cloud wins — merge against the full local row (heavy fields preserved).
     const existingFull = existingMeta ? await loadNoteFromDB(r.id) : undefined;
     const merged = mappers.notes.mergeCloud(existingFull ?? undefined, r) as Note;
     await saveNoteToDBSingle(merged, true);
+    if (isHeavy) heavyIdsToShrink.push(r.id);
+  }
+
+  // One-time cleanup: re-upload any legacy heavy rows using the current
+  // (stripped) mapper so the cloud row shrinks. Runs on idle so it never
+  // blocks the current sync tick.
+  if (heavyIdsToShrink.length) {
+    const schedule = (cb: () => void) =>
+      (typeof (window as any).requestIdleCallback === 'function'
+        ? (window as any).requestIdleCallback(cb, { timeout: 4000 })
+        : setTimeout(cb, 1500));
+    schedule(async () => {
+      try {
+        for (const id of heavyIdsToShrink) {
+          const full = await loadNoteFromDB(id);
+          if (!full) continue;
+          const row = mappers.notes.toCloud(full);
+          if (row) enqueueWrite('notes', 'upsert', row as any);
+        }
+      } catch { /* best-effort */ }
+    });
   }
 }
 
