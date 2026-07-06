@@ -87,6 +87,11 @@ export const mappers = {
         floatingImages: _fimgs,
         voiceRecordings: _voice,
         attachments: _atts,
+        // `body` is the single source of synced note text. Keeping `content`
+        // inside payload duplicated 100k-word notes into every queued cloud
+        // write and could freeze mobile browsers while localStorage parsed it.
+        content: _content,
+        codeContent: _codeContent,
         ...lightPayload
       } = n as any;
       // Body is the note's HTML content. For full-page web clips this can also

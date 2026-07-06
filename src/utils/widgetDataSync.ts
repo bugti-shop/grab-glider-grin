@@ -1,7 +1,8 @@
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { App as CapApp } from '@capacitor/app';
-import { loadNotesFromDB } from './noteStorage';
+import { getTextPreviewFromHtml } from './contentPreview';
+import { loadNoteFromDB, loadNotesMetadataFromDB } from './noteStorage';
 import { loadTodoItems } from './todoItemsStorage';
 import { saveTodoItem } from './todoItemsStorage';
 import { getSetting, setSetting } from './settingsStorage';
@@ -327,7 +328,7 @@ class WidgetDataSyncManager {
    */
   async syncNotes(): Promise<void> {
     try {
-      const notes = await loadNotesFromDB();
+      const notes = await loadNotesMetadataFromDB();
       const now = new Date();
 
       // Group notes by type
@@ -345,10 +346,11 @@ class WidgetDataSyncManager {
 
       // Process notes (limit per type for widget performance)
       notes.slice(0, 50).forEach(note => {
+        const preview = (note as any).__contentPreview || getTextPreviewFromHtml(note.content, 200);
         const widgetNote: NoteWidgetData = {
           id: note.id,
           title: note.title || 'Untitled',
-          content: this.stripHtml(note.content).slice(0, 200),
+          content: preview,
           type: note.type,
           color: note.color,
           lastUpdated: new Date(note.updatedAt).toISOString(),
@@ -370,7 +372,7 @@ class WidgetDataSyncManager {
           id: n.id,
           title: n.title || 'Untitled',
           type: n.type,
-          preview: this.stripHtml(n.content).slice(0, 100),
+          preview: (n as any).__contentPreview || getTextPreviewFromHtml(n.content, 100),
         })),
         lastUpdated: now.toISOString(),
       };
@@ -539,14 +541,13 @@ class WidgetDataSyncManager {
    */
   async syncSpecificNote(noteId: string): Promise<void> {
     try {
-      const notes = await loadNotesFromDB();
-      const note = notes.find(n => n.id === noteId);
+      const note = await loadNoteFromDB(noteId);
       
       if (note) {
         const noteData: NoteWidgetData = {
           id: note.id,
           title: note.title || 'Untitled',
-          content: this.stripHtml(note.content),
+          content: getTextPreviewFromHtml(note.content, 500),
           type: note.type,
           color: note.color,
           lastUpdated: new Date(note.updatedAt).toISOString(),

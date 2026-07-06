@@ -35,6 +35,41 @@ let scheduledFlush: ReturnType<typeof setTimeout> | null = null;
 
 type WriteInput = Omit<QueuedWrite, 'id' | 'attempts' | 'enqueuedAt'>;
 
+const sanitizeWriteForQueue = (write: WriteInput): WriteInput | null => {
+  const row: any = { ...write.row };
+
+  if (write.table === 'notes') {
+    const payload = row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)
+      ? { ...row.payload }
+      : row.payload;
+
+    if (payload && typeof payload === 'object') {
+      delete payload.content;
+      delete payload.codeContent;
+      delete payload.fullPageSnapshot;
+      delete payload.images;
+      delete payload.floatingImages;
+      delete payload.voiceRecordings;
+      delete payload.attachments;
+      row.payload = payload;
+    }
+
+    if (typeof row.body === 'string' && row.body.length > 200 * 1024) {
+      row.body = null;
+    }
+  }
+
+  try {
+    // Never let one oversized localStorage queue entry freeze the whole app.
+    // The local IndexedDB copy remains the source of truth for huge note bodies.
+    if (JSON.stringify(row).length > 260 * 1024) return null;
+  } catch {
+    return null;
+  }
+
+  return { ...write, row };
+};
+
 const scheduleFlush = () => {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return;
   if (scheduledFlush) clearTimeout(scheduledFlush);
@@ -54,15 +89,22 @@ export function enqueueWrite(
 
 export function enqueueWrites(writes: WriteInput[]): void {
   if (!writes.length) return;
-  const q = load();
+  const q = load()
+    .map((entry) => {
+      const sanitized = sanitizeWriteForQueue({ table: entry.table, op: entry.op, row: entry.row });
+      return sanitized ? { ...entry, ...sanitized } : null;
+    })
+    .filter((entry): entry is QueuedWrite => !!entry);
   // Dedupe once per batch. The previous per-row load/filter/save path made
   // duplicating only a few hundred tasks block the UI for seconds.
   const byKey = new Map(q.map(e => [`${e.table}:${e.row.id}`, e] as const));
   const now = Date.now();
   for (const write of writes) {
-    byKey.set(`${write.table}:${write.row.id}`, {
-      id: `${write.table}:${write.row.id}:${now}`,
-      ...write,
+    const sanitized = sanitizeWriteForQueue(write);
+    if (!sanitized) continue;
+    byKey.set(`${sanitized.table}:${sanitized.row.id}`, {
+      id: `${sanitized.table}:${sanitized.row.id}:${now}`,
+      ...sanitized,
       attempts: 0,
       enqueuedAt: now,
     });
