@@ -18,8 +18,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const FETCH_TIMEOUT_MS = 25_000;
-const MAX_HTML_BYTES = 12 * 1024 * 1024; // 12MB hard cap on raw HTML
+const FETCH_TIMEOUT_MS = 90_000;
+const MAX_HTML_BYTES = 100 * 1024 * 1024; // 100MB hard cap on raw HTML
 
 const DEFAULT_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36 Flowist-Clipper/2.0";
