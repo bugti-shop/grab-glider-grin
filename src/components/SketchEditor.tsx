@@ -1303,6 +1303,15 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   const [fillColor2, setFillColor2] = useState('#8b5cf6');
   const [fillAngle, setFillAngle] = useState(135);
   const [pressureOpacityEnabled, setPressureOpacityEnabled] = useState(false);
+  // Palm rejection: when true, only stylus/pen (Pointer Events pointerType==='pen') and mouse draw; touch is used for gestures only.
+  const [stylusOnly, setStylusOnly] = useState(false);
+  const stylusOnlyRef = useRef(false);
+  useEffect(() => { stylusOnlyRef.current = stylusOnly; }, [stylusOnly]);
+  // Two/three-finger tap gestures for undo/redo
+  const [multiFingerGestures, setMultiFingerGestures] = useState(true);
+  const multiFingerGesturesRef = useRef(true);
+  useEffect(() => { multiFingerGesturesRef.current = multiFingerGestures; }, [multiFingerGestures]);
+  const touchTapRef = useRef<{ startTime: number; maxFingers: number; moved: boolean; starts: Map<number, { x: number; y: number }> } | null>(null);
 
   // Pressure curve: [x1, y1, x2, y2] for cubic bezier control points (0-1 range)
   // Maps input pressure (x-axis) to output pressure (y-axis)
@@ -3089,7 +3098,24 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
 
     // Touch gesture tracking
     if (e.pointerType === 'touch') {
-      activeTouchesRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+      const localX = e.clientX - rect.left;
+      const localY = e.clientY - rect.top;
+      activeTouchesRef.current.set(e.pointerId, { x: localX, y: localY });
+
+      // Multi-finger tap gesture tracking (2-finger tap = undo, 3-finger tap = redo)
+      if (multiFingerGesturesRef.current) {
+        if (!touchTapRef.current || activeTouchesRef.current.size === 1) {
+          touchTapRef.current = {
+            startTime: Date.now(),
+            maxFingers: activeTouchesRef.current.size,
+            moved: false,
+            starts: new Map([[e.pointerId, { x: localX, y: localY }]]),
+          };
+        } else {
+          touchTapRef.current.maxFingers = Math.max(touchTapRef.current.maxFingers, activeTouchesRef.current.size);
+          touchTapRef.current.starts.set(e.pointerId, { x: localX, y: localY });
+        }
+      }
 
       if (activeTouchesRef.current.size >= 2) {
         if (isDrawingRef.current) {
@@ -3139,6 +3165,8 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     }
 
     if (e.pointerType === 'touch' && isDrawingRef.current) return;
+    // Palm rejection / stylus-only mode: block finger drawing (multi-touch gestures & stylus/mouse still work)
+    if (stylusOnlyRef.current && e.pointerType === 'touch') return;
 
     // --- Text tool logic ---
     if (tool === 'text') {
@@ -3664,7 +3692,16 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-      activeTouchesRef.current.set(e.pointerId, { x: e.clientX - rect.left, y: e.clientY - rect.top });
+      const localX = e.clientX - rect.left;
+      const localY = e.clientY - rect.top;
+      activeTouchesRef.current.set(e.pointerId, { x: localX, y: localY });
+      // Multi-finger tap: cancel if any finger moves past threshold
+      if (touchTapRef.current && !touchTapRef.current.moved) {
+        const start = touchTapRef.current.starts.get(e.pointerId);
+        if (start && (Math.abs(localX - start.x) > 12 || Math.abs(localY - start.y) > 12)) {
+          touchTapRef.current.moved = true;
+        }
+      }
 
       const gesture = gestureStateRef.current;
       if (gesture?.isPinching && activeTouchesRef.current.size >= 2) {
@@ -4195,6 +4232,24 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     if (e.pointerType === 'touch') {
       activeTouchesRef.current.delete(e.pointerId);
       if (activeTouchesRef.current.size < 2) gestureStateRef.current = null;
+      // Fire multi-finger tap gesture when the last finger releases
+      if (activeTouchesRef.current.size === 0 && touchTapRef.current) {
+        const tap = touchTapRef.current;
+        touchTapRef.current = null;
+        const duration = Date.now() - tap.startTime;
+        if (multiFingerGesturesRef.current && !tap.moved && duration < 350 && !isDrawingRef.current) {
+          if (tap.maxFingers === 2) {
+            triggerHaptic('light');
+            handleUndoRef.current?.();
+            return;
+          }
+          if (tap.maxFingers === 3) {
+            triggerHaptic('light');
+            handleRedoRef.current?.();
+            return;
+          }
+        }
+      }
     }
 
     // Laser pointer release
@@ -4692,6 +4747,12 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     redrawAll();
     emitChange();
   }, [redrawAll, emitChange, clearSelection]);
+
+  // Refs so early pointer handlers can invoke undo/redo (defined below in render order)
+  const handleUndoRef = useRef(handleUndo);
+  const handleRedoRef = useRef(handleRedo);
+  useEffect(() => { handleUndoRef.current = handleUndo; }, [handleUndo]);
+  useEffect(() => { handleRedoRef.current = handleRedo; }, [handleRedo]);
 
   const handleClear = useCallback(() => {
     undoStackRef.current.push(cloneLayers(layersRef.current));
@@ -8177,6 +8238,17 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                   </button>
                 ))}
               </div>
+            </div>
+            <div className="mt-2 pt-2 border-t border-border space-y-1.5">
+              <p className="text-[10px] font-medium text-muted-foreground mb-1">Input</p>
+              <label className="flex items-center justify-between gap-2 text-[11px] text-foreground cursor-pointer select-none">
+                <span className="flex-1">Palm rejection <span className="text-muted-foreground/70">(stylus only)</span></span>
+                <input type="checkbox" className="h-3.5 w-3.5 accent-primary" checked={stylusOnly} onChange={(e) => setStylusOnly(e.target.checked)} />
+              </label>
+              <label className="flex items-center justify-between gap-2 text-[11px] text-foreground cursor-pointer select-none">
+                <span className="flex-1">Two-finger tap = undo <span className="text-muted-foreground/70">(3-finger = redo)</span></span>
+                <input type="checkbox" className="h-3.5 w-3.5 accent-primary" checked={multiFingerGestures} onChange={(e) => setMultiFingerGestures(e.target.checked)} />
+              </label>
             </div>
           </PopoverContent>
         </Popover>
