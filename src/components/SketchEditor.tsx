@@ -4702,6 +4702,12 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
     emitChange();
   }, [redrawAll, emitChange, clearSelection]);
 
+  // Refs so early pointer handlers can invoke undo/redo (defined below in render order)
+  const handleUndoRef = useRef(handleUndo);
+  const handleRedoRef = useRef(handleRedo);
+  useEffect(() => { handleUndoRef.current = handleUndo; }, [handleUndo]);
+  useEffect(() => { handleRedoRef.current = handleRedo; }, [handleRedo]);
+
   const handleClear = useCallback(() => {
     undoStackRef.current.push(cloneLayers(layersRef.current));
     redoStackRef.current = [];
