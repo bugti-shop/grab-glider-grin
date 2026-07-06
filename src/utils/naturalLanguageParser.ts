@@ -650,7 +650,7 @@ export function parseNaturalLanguageTask(input: string): ParsedTask {
 // ─── Detection helper ───────────────────────────────────────────
 export function hasNaturalLanguagePatterns(input: string): boolean {
   // Quick add syntax
-  if (/#\w+/.test(input) || /#"[^"]+"/.test(input) || /@\w+/.test(input) || /!(?:high|med|low)\b/i.test(input)) return true;
+  if (/#\w+/.test(input) || /#"[^"]+"/.test(input) || /@\w+/.test(input) || /!(?:high|med|low)\b/i.test(input) || /\bp[1-4]\b/i.test(input)) return true;
   
   // Remind / notify
   if (/\b(?:remind(?:\s+me)?|notify(?:\s+me)?)\b/i.test(input)) return true;
