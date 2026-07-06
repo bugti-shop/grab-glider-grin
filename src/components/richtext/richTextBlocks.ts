@@ -375,7 +375,7 @@ export const prepareWebClipEmbedsHtml = (html: string): string => {
       frame.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
       frame.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
       frame.setAttribute('loading', 'eager');
-      frame.setAttribute('style', 'width:100%;height:70vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
+      frame.setAttribute('style', 'width:100%;height:87vh;border:1px solid hsl(var(--border));border-radius:12px;background:white;display:block;');
       frame.removeAttribute('srcdoc');
 
       if (encoded && !frame.getAttribute('src')?.startsWith(WEBCLIP_DATA_SRC_PREFIX)) {
