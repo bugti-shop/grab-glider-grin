@@ -358,13 +358,179 @@ const tryTriangle = (pts: Point[]): RecognizedShape | null => {
   return null;
 };
 
+/* ─────────────────────────────────────────────────────────────
+ * Bracket / Brace / Callout detection
+ *
+ * Design notes on false-positive prevention:
+ *  • Brackets and braces demand a TALL narrow bbox (aspect h/w ≥ 2.2). This
+ *    single check filters out almost every rectangle / triangle / arrow.
+ *  • Both open-shape detectors are only called AFTER `tryArrow`, so anything
+ *    with an arrowhead never reaches them.
+ *  • Callout must be closed AND have a distinct outward "tail spike" — a
+ *    contiguous run of points whose radius from the centroid is clearly larger
+ *    than the surrounding average.
+ * ───────────────────────────────────────────────────────────── */
+
+const bbox = (pts: Point[]) => {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of pts) {
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
+};
+
+/** Bracket recognition: `[` or `]`. Tall narrow open stroke with a vertical
+ *  spine and two horizontal caps. Emitted as a clean 4-point polyline. */
+const tryBracket = (pts: Point[]): RecognizedShape | null => {
+  if (pts.length < 6) return null;
+  const b = bbox(pts);
+  if (b.h < 30) return null;
+  const aspect = b.h / Math.max(1, b.w);
+  if (aspect < 2.2) return null;
+
+  const first = pts[0], last = pts[pts.length - 1];
+  const nearTop = Math.min(Math.abs(first.y - b.minY), Math.abs(last.y - b.minY)) < b.h * 0.15;
+  const nearBottom = Math.min(Math.abs(first.y - b.maxY), Math.abs(last.y - b.maxY)) < b.h * 0.15;
+  if (!nearTop || !nearBottom) return null;
+
+  const mid = pts[Math.floor(pts.length / 2)];
+  const spineLeft = Math.abs(mid.x - b.minX) < Math.abs(mid.x - b.maxX);
+
+  const capsSide = spineLeft ? b.maxX : b.minX;
+  const capsX = (first.x + last.x) / 2;
+  if (Math.abs(capsX - capsSide) > b.w * 0.5) return null;
+
+  const spineX = spineLeft ? b.minX : b.maxX;
+  if (Math.abs(mid.x - spineX) > b.w * 0.35) return null;
+
+  const pressure = pts[0].pressure ?? 0.5;
+  const capX = spineLeft ? b.minX + b.w : b.minX;
+  const points: Point[] = spineLeft
+    ? [
+        { x: capX,   y: b.minY, pressure },
+        { x: b.minX, y: b.minY, pressure },
+        { x: b.minX, y: b.maxY, pressure },
+        { x: capX,   y: b.maxY, pressure },
+      ]
+    : [
+        { x: capX,   y: b.minY, pressure },
+        { x: b.maxX, y: b.minY, pressure },
+        { x: b.maxX, y: b.maxY, pressure },
+        { x: capX,   y: b.maxY, pressure },
+      ];
+
+  return { type: spineLeft ? 'bracket-left' : 'bracket-right', points, asFreehand: true };
+};
+
+/** Curly-brace recognition: `{` or `}`. Same aspect envelope as brackets but
+ *  with a pronounced middle bump toward one side (S-curve). */
+const tryBrace = (pts: Point[]): RecognizedShape | null => {
+  if (pts.length < 10) return null;
+  const b = bbox(pts);
+  if (b.h < 40) return null;
+  const aspect = b.h / Math.max(1, b.w);
+  if (aspect < 2.5) return null;
+
+  const first = pts[0], last = pts[pts.length - 1];
+  const nearTop = Math.min(Math.abs(first.y - b.minY), Math.abs(last.y - b.minY)) < b.h * 0.15;
+  const nearBottom = Math.min(Math.abs(first.y - b.maxY), Math.abs(last.y - b.maxY)) < b.h * 0.15;
+  if (!nearTop || !nearBottom) return null;
+
+  const capsX = (first.x + last.x) / 2;
+  let peakX = capsX;
+  const qStart = Math.floor(pts.length * 0.35);
+  const qEnd = Math.floor(pts.length * 0.65);
+  for (let i = qStart; i <= qEnd; i++) {
+    if (Math.abs(pts[i].x - capsX) > Math.abs(peakX - capsX)) peakX = pts[i].x;
+  }
+  const peakOffset = Math.abs(peakX - capsX);
+  if (peakOffset < b.w * 0.45) return null;
+  if (peakOffset < 10) return null;
+
+  const braceLeft = peakX < capsX;
+  const pressure = pts[0].pressure ?? 0.5;
+  const spineX = braceLeft ? b.minX : b.maxX;
+  const midX = braceLeft ? b.maxX : b.minX;
+  const midY = (b.minY + b.maxY) / 2;
+
+  // Sample a smooth S-curve polyline as the cleaned-up brace.
+  const samples = 40;
+  const points: Point[] = [];
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const y = b.minY + t * b.h;
+    const lobe = Math.sin(t * Math.PI);
+    const spinePull = 1 - Math.abs(2 * t - 1);
+    const x = midX + (spineX - midX) * (lobe * 0.5 + spinePull * 0.5);
+    if (i === 0)             { points.push({ x: midX, y: b.minY, pressure }); continue; }
+    if (i === samples)       { points.push({ x: midX, y: b.maxY, pressure }); continue; }
+    if (i === samples / 2)   { points.push({ x: spineX, y: midY, pressure }); continue; }
+    points.push({ x, y, pressure });
+  }
+
+  return { type: braceLeft ? 'brace-left' : 'brace-right', points, asFreehand: true };
+};
+
+/** Callout bubble: closed round-ish shape with a small outward tail spike.
+ *  Body must fit a circle well; a contiguous run of the perimeter must jut
+ *  out. Maps to the existing `speechBubble` shape. */
+const tryCallout = (pts: Point[]): RecognizedShape | null => {
+  if (pts.length < 20) return null;
+  const b = bbox(pts);
+  if (b.w < 30 || b.h < 30) return null;
+  const aspect = Math.min(b.w, b.h) / Math.max(b.w, b.h);
+  if (aspect < 0.5) return null;
+
+  const c = centroid(pts);
+  const radii = pts.map(p => Math.sqrt((p.x - c.x) ** 2 + (p.y - c.y) ** 2));
+  const meanR = radii.reduce((s, r) => s + r, 0) / radii.length;
+  if (meanR < 10) return null;
+
+  let bestStart = -1, bestLen = 0;
+  let curStart = -1, curLen = 0;
+  for (let i = 0; i < radii.length; i++) {
+    if (radii[i] > meanR * 1.35) {
+      if (curStart === -1) curStart = i;
+      curLen++;
+      if (curLen > bestLen) { bestLen = curLen; bestStart = curStart; }
+    } else {
+      curStart = -1; curLen = 0;
+    }
+  }
+  const tailFrac = bestLen / pts.length;
+  if (tailFrac < 0.03 || tailFrac > 0.25) return null;
+
+  const bodyRadii: number[] = [];
+  for (let i = 0; i < radii.length; i++) {
+    if (i >= bestStart && i < bestStart + bestLen) continue;
+    bodyRadii.push(radii[i]);
+  }
+  if (bodyRadii.length < 8) return null;
+  const bodyMean = bodyRadii.reduce((s, r) => s + r, 0) / bodyRadii.length;
+  let sqDev = 0;
+  for (const r of bodyRadii) sqDev += (r - bodyMean) ** 2;
+  const cv = Math.sqrt(sqDev / bodyRadii.length) / bodyMean;
+  if (cv > 0.22) return null;
+
+  const pressure = pts[0].pressure ?? 0.5;
+  return {
+    type: 'callout',
+    points: [
+      { x: b.minX, y: b.minY, pressure },
+      { x: b.maxX, y: b.maxY, pressure },
+    ],
+  };
+};
+
 /**
  * Attempt to recognize a freehand stroke as a geometric shape.
- * Returns the recognized shape with perfect points, or null if no match.
  *
  * Order:
- *  1. Closed strokes → rectangle, triangle, circle
- *  2. Open strokes   → arrow (with head), line
+ *  1. Closed strokes → callout → rectangle → triangle → circle
+ *  2. Open strokes   → arrow → bracket → brace → line
  */
 export const recognizeShape = (pts: Point[]): RecognizedShape | null => {
   if (pts.length < 4) return null;
@@ -376,6 +542,9 @@ export const recognizeShape = (pts: Point[]): RecognizedShape | null => {
   const closed = isClosed(pts, closedThreshold);
 
   if (closed) {
+    const callout = tryCallout(pts);
+    if (callout) return callout;
+
     const rect = tryRectangle(pts);
     if (rect) return rect;
 
@@ -385,9 +554,14 @@ export const recognizeShape = (pts: Point[]): RecognizedShape | null => {
     const circle = tryCircle(pts);
     if (circle) return circle;
   } else {
-    // Open stroke: prefer arrow (has a hooked head) before line
     const arrow = tryArrow(pts);
     if (arrow) return arrow;
+
+    const bracket = tryBracket(pts);
+    if (bracket) return bracket;
+
+    const brace = tryBrace(pts);
+    if (brace) return brace;
 
     const line = tryLine(pts);
     if (line) return line;
