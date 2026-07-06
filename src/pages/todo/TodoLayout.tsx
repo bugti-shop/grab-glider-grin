@@ -75,7 +75,9 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
                 onClick={() => {
                   triggerHaptic('heavy').catch(() => {});
                   void prefetchRoute('/notesdashboard');
-                  startTransition(() => navigate('/notesdashboard'));
+                  startTransition(() => {
+                    navigate('/notesdashboard');
+                  });
                 }}
                 className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-transparent active:bg-transparent"
                 title={t('common.switchToNotes')}
