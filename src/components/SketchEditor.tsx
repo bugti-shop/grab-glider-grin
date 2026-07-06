@@ -7326,21 +7326,57 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                 {sketchPagesRef.current.map((pageLayers, i) => {
                   const isActive = i === sketchPageIndex;
                   const strokeCount = pageLayers.reduce((s, l) => s + l.strokes.length + (l.textAnnotations?.length || 0) + (l.stickyNotes?.length || 0) + (l.images?.length || 0), 0);
+                  const pageName = sketchPageNamesRef.current[i] || `Page ${i + 1}`;
+                  const isEditingName = editingPageNameIdx === i;
                   return (
-                    <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1">
+                    <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1 w-24">
                       <button
                         onClick={() => switchSketchPage(i)}
                         className={cn(
                           "w-24 h-16 rounded-lg border-2 bg-background/80 flex items-center justify-center text-[10px] text-muted-foreground overflow-hidden transition-all",
                           isActive ? "border-primary ring-2 ring-primary/30" : "border-border/60 hover:border-border"
                         )}
-                        title={`Page ${i + 1}`}
+                        title={pageName}
                       >
                         <div className="flex flex-col items-center">
                           <span className="text-[11px] font-semibold text-foreground/80">{i + 1}</span>
                           <span className="text-[9px] text-muted-foreground/70">{strokeCount} items</span>
                         </div>
                       </button>
+                      {isEditingName ? (
+                        <input
+                          autoFocus
+                          value={editingPageNameValue}
+                          onChange={(e) => setEditingPageNameValue(e.target.value)}
+                          onBlur={() => {
+                            renameSketchPage(i, editingPageNameValue);
+                            setEditingPageNameIdx(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              renameSketchPage(i, editingPageNameValue);
+                              setEditingPageNameIdx(null);
+                            } else if (e.key === 'Escape') {
+                              setEditingPageNameIdx(null);
+                            }
+                          }}
+                          maxLength={40}
+                          className="w-full h-5 text-[10px] px-1 rounded border border-primary/60 bg-background text-foreground text-center focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      ) : (
+                        <button
+                          className="w-full text-[10px] text-foreground/80 hover:text-foreground truncate px-0.5"
+                          onDoubleClick={() => { setEditingPageNameIdx(i); setEditingPageNameValue(pageName); }}
+                          onClick={(e) => {
+                            // Single click on already-active page → start editing; otherwise switch
+                            if (isActive) { setEditingPageNameIdx(i); setEditingPageNameValue(pageName); }
+                            else switchSketchPage(i);
+                          }}
+                          title="Double-click to rename"
+                        >
+                          {pageName}
+                        </button>
+                      )}
                       {sketchPageCount > 1 && (
                         <button
                           onClick={() => deleteSketchPage(i)}
