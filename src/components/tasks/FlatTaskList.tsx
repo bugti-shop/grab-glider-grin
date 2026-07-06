@@ -490,7 +490,7 @@ export function FlatTaskList({
                 ...((handleProps?.style ?? {}) as React.CSSProperties),
               }}
             >
-              <MemoRowBody row={row} index={vi.index} isActive={isActive} render={renderRow} />
+              <MemoRowBody row={row} index={vi.index} isActive={isActive} renderRef={renderRef} render={renderRow} version={getRowVersion?.(row, vi.index)} />
             </div>
           );
         })}
