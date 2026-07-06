@@ -7231,6 +7231,93 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
         </button>
       )}
 
+      {/* Sketch multi-page navigation (non-PDF sketches) */}
+      {pdfPages.length === 0 && !presentationMode && !focusMode && (
+        <>
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-card/85 backdrop-blur-md border border-border/50 rounded-full pl-1 pr-1 py-1 shadow-lg animate-fade-in">
+            <button
+              className="h-7 w-7 rounded-full flex items-center justify-center text-foreground/70 hover:text-foreground hover:bg-muted/70 disabled:opacity-30 transition-colors"
+              onClick={() => switchSketchPage(sketchPageIndex - 1)}
+              disabled={sketchPageIndex === 0}
+              title="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              className="text-[11px] font-medium text-foreground/80 px-2 min-w-[54px] text-center hover:text-foreground"
+              onClick={() => setPageThumbsOpen(v => !v)}
+              title="Show page thumbnails"
+            >
+              {sketchPageIndex + 1} / {sketchPageCount}
+            </button>
+            <button
+              className="h-7 w-7 rounded-full flex items-center justify-center text-foreground/70 hover:text-foreground hover:bg-muted/70 disabled:opacity-30 transition-colors"
+              onClick={() => switchSketchPage(sketchPageIndex + 1)}
+              disabled={sketchPageIndex >= sketchPageCount - 1}
+              title="Next page"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <div className="w-px h-4 bg-border/60 mx-0.5" />
+            <button
+              className="h-7 w-7 rounded-full flex items-center justify-center text-foreground/70 hover:text-foreground hover:bg-primary/15 transition-colors"
+              onClick={() => addSketchPage()}
+              title="Add page"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Thumbnail rail */}
+          {pageThumbsOpen && (
+            <div
+              className="absolute bottom-36 left-1/2 -translate-x-1/2 z-30 max-w-[92vw] bg-card/95 backdrop-blur-md border border-border/50 rounded-2xl shadow-xl p-2 animate-fade-in"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="flex gap-2 overflow-x-auto max-w-[88vw] pb-1">
+                {sketchPagesRef.current.map((pageLayers, i) => {
+                  const isActive = i === sketchPageIndex;
+                  const strokeCount = pageLayers.reduce((s, l) => s + l.strokes.length + (l.textAnnotations?.length || 0) + (l.stickyNotes?.length || 0) + (l.images?.length || 0), 0);
+                  return (
+                    <div key={i} className="flex-shrink-0 flex flex-col items-center gap-1">
+                      <button
+                        onClick={() => switchSketchPage(i)}
+                        className={cn(
+                          "w-24 h-16 rounded-lg border-2 bg-background/80 flex items-center justify-center text-[10px] text-muted-foreground overflow-hidden transition-all",
+                          isActive ? "border-primary ring-2 ring-primary/30" : "border-border/60 hover:border-border"
+                        )}
+                        title={`Page ${i + 1}`}
+                      >
+                        <div className="flex flex-col items-center">
+                          <span className="text-[11px] font-semibold text-foreground/80">{i + 1}</span>
+                          <span className="text-[9px] text-muted-foreground/70">{strokeCount} items</span>
+                        </div>
+                      </button>
+                      {sketchPageCount > 1 && (
+                        <button
+                          onClick={() => deleteSketchPage(i)}
+                          className="text-[9px] text-muted-foreground/60 hover:text-destructive transition-colors"
+                          title="Delete page"
+                        >
+                          <Trash className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                <button
+                  onClick={() => addSketchPage()}
+                  className="flex-shrink-0 w-24 h-16 rounded-lg border-2 border-dashed border-border/60 hover:border-primary/60 hover:bg-primary/5 flex items-center justify-center text-muted-foreground hover:text-primary transition-all"
+                  title="Add page"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       {/* Presentation Mode overlay */}
       {presentationMode && (
         <>
