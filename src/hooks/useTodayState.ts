@@ -51,6 +51,15 @@ const getDefaultSections = (t: (key: string) => string): TaskSection[] => [
   { id: 'default', name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 }
 ];
 
+const todayRuntimeCache = ((globalThis as any).__flowistTodayRuntimeCache ??= {
+  items: null as TodoItem[] | null,
+  folders: null as Folder[] | null,
+  sections: null as TaskSection[] | null,
+  selectedFolderId: undefined as string | null | undefined,
+  settingsLoaded: false,
+  itemsLoaded: false,
+});
+
 export const useTodayState = () => {
   const { t } = useTranslation();
   const tasksSettings = useTasksSettings();
@@ -59,12 +68,14 @@ export const useTodayState = () => {
   const { tags: allGlobalTags } = useGlobalTags();
 
   // Core data
-  const [items, setItems] = useState<TodoItem[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [sections, setSections] = useState<TaskSection[]>(getDefaultSections(t));
+  const [items, setItems] = useState<TodoItem[]>(() => todayRuntimeCache.items ?? []);
+  const [folders, setFolders] = useState<Folder[]>(() => todayRuntimeCache.folders ?? []);
+  const [sections, setSections] = useState<TaskSection[]>(() => todayRuntimeCache.sections ?? getDefaultSections(t));
 
   // UI state
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(() =>
+    todayRuntimeCache.selectedFolderId === undefined ? null : todayRuntimeCache.selectedFolderId,
+  );
   // Initialize from URL synchronously so a widget tap (?add=1) opens the
   // Task Input Sheet on the FIRST paint — no main-screen flash in between.
   const [isInputOpen, setIsInputOpen] = useState(() => {
@@ -126,8 +137,8 @@ export const useTodayState = () => {
 
   // Misc
   const [orderVersion, setOrderVersion] = useState(0);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
-  const [itemsLoaded, setItemsLoaded] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(() => todayRuntimeCache.settingsLoaded);
+  const [itemsLoaded, setItemsLoaded] = useState(() => todayRuntimeCache.itemsLoaded);
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<TodoItem | null>(null);
   const [customSmartViews, setCustomSmartViews] = useState<CustomSmartView[]>([]);
   const [activeCustomViewId, setActiveCustomViewId] = useState<string | null>(null);
@@ -150,6 +161,13 @@ export const useTodayState = () => {
 
   const smartListData = useSmartLists(items);
   const effectiveSelectedFolderId = selectedFolderId ?? getFallbackFolderId(folders);
+
+  useEffect(() => { todayRuntimeCache.items = items; }, [items]);
+  useEffect(() => { todayRuntimeCache.folders = folders; }, [folders]);
+  useEffect(() => { todayRuntimeCache.sections = sections; }, [sections]);
+  useEffect(() => { todayRuntimeCache.selectedFolderId = selectedFolderId; }, [selectedFolderId]);
+  useEffect(() => { todayRuntimeCache.settingsLoaded = settingsLoaded; }, [settingsLoaded]);
+  useEffect(() => { todayRuntimeCache.itemsLoaded = itemsLoaded; }, [itemsLoaded]);
 
   // Sync showCompleted with tasks settings
   useEffect(() => {

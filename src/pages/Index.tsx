@@ -61,6 +61,11 @@ const getNoteFolderId = (note: Pick<Note, 'folderId'>, inboxFolderId?: string): 
   return inboxFolderId;
 };
 
+const notesDashboardRuntimeCache = ((globalThis as any).__flowistNotesDashboardRuntimeCache ??= {
+  folders: null as Folder[] | null,
+  selectedFolderId: undefined as string | null | undefined,
+});
+
 const Index = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -93,8 +98,10 @@ const Index = () => {
     return () => window.removeEventListener('featureVisibilityChanged', handleChange);
   }, []);
   
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [folders, setFolders] = useState<Folder[]>(() => notesDashboardRuntimeCache.folders ?? []);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(() =>
+    notesDashboardRuntimeCache.selectedFolderId === undefined ? null : notesDashboardRuntimeCache.selectedFolderId,
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [isFullSearch, setIsFullSearch] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -118,6 +125,9 @@ const Index = () => {
   
   // Note type selector dropdown state (for persistent notification integration)
   const [noteTypeSelectorOpen, setNoteTypeSelectorOpen] = useState(false);
+
+  useEffect(() => { notesDashboardRuntimeCache.folders = folders; }, [folders]);
+  useEffect(() => { notesDashboardRuntimeCache.selectedFolderId = selectedFolderId; }, [selectedFolderId]);
 
   // Load all preferences from IndexedDB
   useEffect(() => {
