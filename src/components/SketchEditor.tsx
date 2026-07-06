@@ -26,7 +26,7 @@ import { CanvasTriangle, TriangleEdges, snapToTriangle } from '@/components/Canv
 import { Capacitor } from '@capacitor/core';
 
 import { toast } from 'sonner';
-import { recognizeShape } from '@/utils/shapeRecognition';
+import { recognizeShape, snapConnectorEndpoints, type SnapTarget } from '@/utils/shapeRecognition';
 
 // --- Imports from sketch modules ---
 import {
@@ -4353,12 +4353,48 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
           strokeToAdd.points = chaikinSmooth(strokeToAdd.points, strokeSmoothing);
         }
 
-        // Shape recognition: convert freehand circle/square/triangle to perfect shapes
-        if (freehandTools.includes(strokeToAdd.tool) && strokeToAdd.points.length >= 8) {
+        // Shape recognition: convert freehand circle/square/triangle/line/arrow
+        // to perfect shapes. Arrows/lines additionally snap their endpoints to
+        // nearby shape or text-annotation bboxes for clean diagram connectors.
+        if (freehandTools.includes(strokeToAdd.tool) && strokeToAdd.points.length >= 4) {
           const recognized = recognizeShape(strokeToAdd.points);
           if (recognized) {
-            strokeToAdd.points = recognized.points;
-            strokeToAdd.tool = recognized.type === 'circle' ? 'circle' : recognized.type === 'rect' ? 'rect' : 'triangle';
+            let recognizedPoints = recognized.points;
+
+            if (recognized.type === 'arrow' || recognized.type === 'line') {
+              // Build snap targets from existing shape strokes + text annotations
+              // + sticky notes on the same layer. Threshold scales with zoom.
+              const targets: SnapTarget[] = [];
+              for (const s of layer.strokes) {
+                if (!isShapeTool(s.tool) || s.points.length < 2) continue;
+                const a = s.points[0], b = s.points[s.points.length - 1];
+                const x = Math.min(a.x, b.x);
+                const y = Math.min(a.y, b.y);
+                const w = Math.abs(b.x - a.x);
+                const h = Math.abs(b.y - a.y);
+                if (w < 4 && h < 4) continue;
+                targets.push({ bbox: { x, y, w, h } });
+              }
+              for (const ta of layer.textAnnotations || []) {
+                const lines = ta.text.split('\n');
+                const textH = Math.max(ta.fontSize, lines.length * ta.fontSize * 1.2);
+                const textW = Math.max(20, Math.max(...lines.map(l => l.length * ta.fontSize * 0.6)));
+                targets.push({ bbox: { x: ta.x, y: ta.y, w: textW, h: textH } });
+              }
+              for (const sn of layer.stickyNotes || []) {
+                targets.push({ bbox: { x: sn.x, y: sn.y, w: sn.width, h: sn.height } });
+              }
+              const snapThreshold = 32 / zoomRef.current;
+              recognizedPoints = snapConnectorEndpoints(recognized.points, targets, snapThreshold);
+            }
+
+            strokeToAdd.points = recognizedPoints;
+            strokeToAdd.tool =
+              recognized.type === 'circle'   ? 'circle'
+              : recognized.type === 'rect'   ? 'rect'
+              : recognized.type === 'triangle' ? 'triangle'
+              : recognized.type === 'arrow'  ? 'arrow'
+              : 'line';
           }
         }
 
