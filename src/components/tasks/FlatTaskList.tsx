@@ -405,7 +405,7 @@ export function FlatTaskList({
                             cursor: snapshot.isDragging ? 'grabbing' : 'grab',
                           }}
                         >
-                          <MemoRowBody row={row} index={i} isActive={isActive} render={renderRow} />
+                          <MemoRowBody row={row} index={i} isActive={isActive} renderRef={renderRef} render={renderRow} version={getRowVersion?.(row, i)} />
                         </div>
                       )}
                     </Draggable>
