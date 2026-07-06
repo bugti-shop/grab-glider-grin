@@ -4203,10 +4203,18 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       return;
     }
     // Strip remote collab strokes from saved data (they belong to the collaboration, not this note)
-    const cleanLayers = layersRef.current.map(l => ({
+    const stripCollab = (ls: Layer[]): Layer[] => ls.map(l => ({
       ...l,
       strokes: l.strokes.filter(s => !s.collabStrokeId),
     }));
+    const cleanLayers = stripCollab(layersRef.current);
+    // Ensure current page reference in sketchPagesRef reflects the latest live layers
+    if (sketchPagesRef.current[sketchPageIndex] !== layersRef.current) {
+      sketchPagesRef.current[sketchPageIndex] = layersRef.current;
+    }
+    const cleanPages = sketchPagesRef.current.map(pg =>
+      pg === layersRef.current ? cleanLayers : stripCollab(pg)
+    );
     const data: SketchData = {
       layers: cleanLayers,
       activeLayerId,
@@ -4214,15 +4222,16 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       width: canvasSizeRef.current.w,
       height: canvasSizeRef.current.h,
       version: 2,
+      ...(cleanPages.length > 1 ? { pages: cleanPages, pageIndex: sketchPageIndex } : {}),
       ...(audioDataUrlRef.current ? { audioRecording: { dataUrl: audioDataUrlRef.current, duration: audioDurationRef.current } } : {}),
       ...(videoUrlRef.current ? { videoUrl: videoUrlRef.current, videoBookmarks: videoBookmarksRef.current } : {}),
     };
     const json = JSON.stringify(data);
     const strokeCount = layersRef.current.reduce((sum, l) => sum + l.strokes.length, 0);
-    console.log(`[SketchEditor] emitChange: ${strokeCount} strokes, json length: ${json.length}`);
+    console.log(`[SketchEditor] emitChange: ${strokeCount} strokes (page ${sketchPageIndex + 1}/${cleanPages.length}), json length: ${json.length}`);
     lastEmittedRef.current = json;
     onChange(json);
-  }, [onChange, activeLayerId, background]);
+  }, [onChange, activeLayerId, background, sketchPageIndex]);
 
   // Keep refs in sync
   emitChangeRef.current = emitChange;
