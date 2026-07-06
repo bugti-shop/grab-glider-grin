@@ -578,7 +578,7 @@ const NoteCardInner = memo(({ note, onEdit, onDelete, onArchive, onTogglePin, on
 });
 NoteCardInner.displayName = 'NoteCardInner';
 
-export const NoteCard = (props: NoteCardProps) => {
+const NoteCardWrapper = (props: NoteCardProps) => {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [noteProtection, setNoteProtection] = useState<NoteProtection>({ hasPassword: false, useBiometric: false });
 
@@ -608,6 +608,7 @@ export const NoteCard = (props: NoteCardProps) => {
         onEdit={props.onEdit}
         onDelete={props.onDelete}
         onArchive={props.onArchive}
+
         onTogglePin={props.onTogglePin}
         onToggleFavorite={props.onToggleFavorite}
         onDuplicate={props.onDuplicate}
