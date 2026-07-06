@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Book, BookOpen, StickyNote, FileText, FileEdit, FileCode, PenTool, Type, Crown } from 'lucide-react';
 import { Folder as FolderType, Note, NoteType } from '@/types/note';
 import { getSetting } from '@/utils/settingsStorage';
+import { notebooksRuntimeCache, setNotebooksCache } from '@/utils/notebooksRuntimeCache';
 import { useNotes } from '@/contexts/NotesContext';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
