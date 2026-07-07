@@ -18,7 +18,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const FETCH_TIMEOUT_MS = 90_000;
+// Keep the app from applying its own short timeout. The platform still has a
+// hard execution ceiling, but this avoids killing large HTML pages prematurely.
+const FETCH_TIMEOUT_MS = 240_000;
 const MAX_HTML_BYTES = 100 * 1024 * 1024; // 100MB hard cap on raw HTML
 
 const DEFAULT_UA =
@@ -73,8 +75,10 @@ function rewriteImgTag(tag: string): string {
   return out;
 }
 
-/** Single-pass block-element remover (scripts, noscript, object, applet). */
-const REMOVE_BLOCKS_RE = /<(script|noscript|object|applet)\b[^>]*>[\s\S]*?<\/\1\s*>/gi;
+/** Single-pass block-element remover (scripts, object, applet). */
+const REMOVE_BLOCKS_RE = /<(script|object|applet)\b[^>]*>[\s\S]*?<\/\1\s*>/gi;
+/** Keep <noscript> fallback images/content instead of deleting them. */
+const UNWRAP_NOSCRIPT_RE = /<noscript\b[^>]*>([\s\S]*?)<\/noscript\s*>/gi;
 /** Void/self-closing plugin tags. */
 const REMOVE_VOID_RE = /<(?:script|embed)\b[^>]*\/?>/gi;
 /** Meta refresh (would redirect iframe). */
@@ -94,6 +98,15 @@ const IMG_TAG_RE = /<img\b[^>]*>/gi;
 function transformHtml(html: string, baseHref: string): string {
   let out = html;
   out = out.replace(REMOVE_BLOCKS_RE, "");
+  out = out.replace(UNWRAP_NOSCRIPT_RE, (_match, inner: string) => {
+    if (!inner) return "";
+    return inner
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, "&");
+  });
   out = out.replace(REMOVE_VOID_RE, "");
   out = out.replace(REMOVE_META_REFRESH_RE, "");
   out = out.replace(REMOVE_EVENT_HANDLERS_RE, "");
@@ -176,12 +189,17 @@ async function fetchHtml(url: string): Promise<{ html: string; finalUrl: string;
       const { done, value } = await reader.read();
       if (done) break;
       if (value) {
-        total += value.byteLength;
-        if (total > MAX_HTML_BYTES) {
+        const remaining = MAX_HTML_BYTES - total;
+        if (value.byteLength > remaining) {
           truncated = true;
+          if (remaining > 0) {
+            chunks.push(value.subarray(0, remaining));
+            total += remaining;
+          }
           try { await reader.cancel(); } catch { /* ignore */ }
           break;
         }
+        total += value.byteLength;
         chunks.push(value);
       }
     }
@@ -189,14 +207,11 @@ async function fetchHtml(url: string): Promise<{ html: string; finalUrl: string;
     const ctype = res.headers.get("content-type") || "";
     const charsetMatch = /charset=([^;\s]+)/i.exec(ctype);
     let charset = charsetMatch ? charsetMatch[1].toLowerCase() : "utf-8";
-    const buf = new Uint8Array(total > MAX_HTML_BYTES ? MAX_HTML_BYTES : total);
+    const buf = new Uint8Array(total);
     let off = 0;
     for (const c of chunks) {
-      const room = buf.length - off;
-      if (room <= 0) break;
-      const slice = c.byteLength > room ? c.subarray(0, room) : c;
-      buf.set(slice, off);
-      off += slice.byteLength;
+      buf.set(c, off);
+      off += c.byteLength;
     }
     let html: string;
     try {
@@ -263,7 +278,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       error: isAbort ? "Upstream fetch timed out" : `Upstream fetch failed: ${(err as Error)?.message || "unknown"}`,
       code: isAbort ? "timeout" : "network",
-    }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
   const { html: rawHtml, finalUrl, status, truncated } = fetched;
@@ -273,11 +288,20 @@ Deno.serve(async (req) => {
       error: "Upstream returned no HTML",
       code: "empty",
       status,
-    }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
   // Sanitize + add <base> so relative URLs resolve to the origin.
-  const safeHtml = transformHtml(rawHtml, finalUrl);
+  let safeHtml = "";
+  try {
+    safeHtml = transformHtml(rawHtml, finalUrl);
+  } catch (err) {
+    console.warn("[fetch-article] transform failed, returning raw script-stripped html", {
+      url: parsed.toString(),
+      error: (err as Error)?.message,
+    });
+    safeHtml = rawHtml.replace(/<script\b[\s\S]*?<\/script\s*>/gi, "");
+  }
 
   // Meta extraction for the note card.
   const title = pickTitle(rawHtml);
