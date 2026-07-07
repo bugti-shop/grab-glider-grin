@@ -476,12 +476,19 @@ const QuickAddSyncBridge = () => {
   return null;
 };
 
+const WebClipJobsBridge = () => {
+  const { useWebClipJobs } = require('@/hooks/useWebClipJobs');
+  useWebClipJobs();
+  return null;
+};
+
 const AppRoutes = () => {
   useGlobalShortcuts();
   return (
     <BrowserRouter>
       <ShareIntentBridge />
       <QuickAddSyncBridge />
+      <WebClipJobsBridge />
       <AuthDeepLinkBridge />
       <NavigationBackProvider>
         <NavigationLoader />
