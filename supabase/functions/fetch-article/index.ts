@@ -371,7 +371,7 @@ async function fetchHtml(url: string, userAgent: string = DEFAULT_UA): Promise<{
       redirect: "follow",
       signal: ctrl.signal,
       headers: {
-        "User-Agent": DEFAULT_UA,
+        "User-Agent": userAgent,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
       },
