@@ -35,7 +35,7 @@ const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: strin
   { id: 'fullpage',  icon: Download, titleKey: 'webClipper.modeFullPage',  descKey: 'webClipper.modeFullPageDesc',  fallbackTitle: 'Full page (offline snapshot)', fallbackDesc: 'Download the entire page as a single-file HTML for offline reading' },
 ];
 
-const FETCH_ARTICLE_TIMEOUT_MS = 6 * 60_000;
+const FETCH_ARTICLE_TIMEOUT_MS = 30 * 60_000;
 
 /** Slugify a title into a safe filename stem. */
 const filenameFromTitle = (title: string, host: string): string => {
