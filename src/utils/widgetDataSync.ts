@@ -504,7 +504,7 @@ class WidgetDataSyncManager {
       // read the same payload via UserDefaults(suiteName:). No-op on Android.
       if (Capacitor.getPlatform() === 'ios') {
         try {
-          await Preferences.configure({ group: 'group.nota.npd.com.shareextension' });
+          await Preferences.configure({ group: 'group.com.flowist.app.shareextension' });
           await Preferences.set({ key: WIDGET_HABITS_KEY, value: payload });
         } catch {}
         try {

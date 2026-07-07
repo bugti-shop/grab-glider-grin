@@ -58,7 +58,7 @@ Web is the existing baseline — the share-intent hook should be a no-op.
 See header of `ios/App/ShareExtension/ShareViewController.swift`. Summary:
 1. Add a **Share Extension** target in Xcode
 2. Drop in the scaffolded `ShareViewController.swift` + `Info.plist`
-3. Enable **App Groups** capability on BOTH targets: `group.nota.npd.com.shareextension`
+3. Enable **App Groups** capability on BOTH targets: `group.com.flowist.app.shareextension`
 4. Add `flowist` to `CFBundleURLSchemes` on the main app target's Info.plist
 5. Build & run on device or simulator
 

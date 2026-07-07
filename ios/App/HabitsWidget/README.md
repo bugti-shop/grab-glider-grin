@@ -22,7 +22,7 @@ extension entitlements file. The Xcode target itself must be added once:
    add to the **HabitsWidget** target only.
 4. In Signing & Capabilities for the **HabitsWidget** target:
    - Add **App Groups** → enable
-     `group.nota.npd.com.shareextension` (same group used by the
+     `group.com.flowist.app.shareextension` (same group used by the
      ShareExtension and the main app).
    - Set the entitlements file to `HabitsWidget/HabitsWidget.entitlements`.
 5. Build & run on a device. Long-press the home screen → add the
@@ -35,7 +35,7 @@ JS (widgetDataSync.syncHabits)
   └─ Capacitor Preferences (group: shareextension)
         key: flowist_widget_habits
               ↓
-UserDefaults(suiteName: "group.nota.npd.com.shareextension")
+UserDefaults(suiteName: "group.com.flowist.app.shareextension")
               ↓
 HabitsProvider → HabitsWidgetEntryView
 ```

@@ -19,7 +19,7 @@ class ShareViewController: UIViewController {
 
     // MUST match the App Group ID added in Signing & Capabilities for
     // BOTH the main app target and this extension target.
-    private let appGroupId = "group.nota.npd.com.shareextension"
+    private let appGroupId = "group.com.flowist.app.shareextension"
     private let hostAppScheme = "flowist"
 
     override func viewDidLoad() {

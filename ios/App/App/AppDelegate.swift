@@ -7,7 +7,7 @@ import SendIntent
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     private let shareStore = ShareStore.store
-    private let appGroupId = "group.nota.npd.com.shareextension"
+    private let appGroupId = "group.com.flowist.app.shareextension"
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
