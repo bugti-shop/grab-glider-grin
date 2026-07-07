@@ -1364,7 +1364,7 @@ export const RichTextEditor = ({
   }, []);
 
   // Smart Detection settings state
-  const [smartDetectionSettings, setSmartDetectionSettings] = useState<SmartDetectionSettings>({ urls: true, phoneNumbers: true, emailAddresses: true });
+  const [smartDetectionSettings, setSmartDetectionSettings] = useState<SmartDetectionSettings>({ urls: false, phoneNumbers: false, emailAddresses: false });
 
   // Load smart detection settings
   useEffect(() => {
