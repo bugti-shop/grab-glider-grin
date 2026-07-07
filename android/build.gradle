@@ -24,6 +24,17 @@ allprojects {
     }
 }
 
+// Force all Android library subprojects (e.g. send-intent, capacitor plugins)
+// to compile against the same SDK as the app. Fixes AAR metadata errors when
+// transitive AndroidX libs (activity 1.11, core 1.17) require compileSdk >= 36.
+subprojects {
+    plugins.withId('com.android.library') {
+        android {
+            compileSdkVersion rootProject.ext.compileSdkVersion
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
