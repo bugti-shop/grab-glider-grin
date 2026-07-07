@@ -105,6 +105,13 @@ async function fetchReaderFallback(url: string): Promise<{ html: string; finalUr
       },
     });
     const text = await res.text();
+    console.info("[fetch-article] reader fallback response", {
+      url,
+      readerUrl,
+      status: res.status,
+      chars: text.length,
+      challenge: CHALLENGE_RE.test(text),
+    });
     if (!res.ok || text.trim().length < 32 || CHALLENGE_RE.test(text)) return null;
     const truncated = text.length > MAX_HTML_BYTES;
     return {
@@ -113,7 +120,8 @@ async function fetchReaderFallback(url: string): Promise<{ html: string; finalUr
       status: res.status,
       truncated,
     };
-  } catch {
+  } catch (err) {
+    console.warn("[fetch-article] reader fallback failed", { url, error: (err as Error)?.message });
     return null;
   } finally {
     clearTimeout(timer);
@@ -381,6 +389,7 @@ Deno.serve(async (req) => {
     console.warn("[fetch-article] anti-bot/challenge page detected; trying reader fallback", { url: parsed.toString(), status });
     const fallback = await fetchReaderFallback(parsed.toString());
     if (fallback?.html) {
+      console.info("[fetch-article] reader fallback accepted", { url: parsed.toString(), chars: fallback.html.length });
       rawHtml = fallback.html;
       finalUrl = fallback.finalUrl;
       status = fallback.status;
