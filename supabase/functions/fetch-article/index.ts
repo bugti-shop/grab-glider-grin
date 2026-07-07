@@ -425,8 +425,14 @@ Deno.serve(async (req) => {
 
   let { html: rawHtml, finalUrl, status, truncated } = fetched;
 
-  if (CHALLENGE_RE.test(rawHtml)) {
-    console.warn("[fetch-article] anti-bot/challenge page detected; trying reader fallback", { url: parsed.toString(), status });
+  const isChallenge = CHALLENGE_RE.test(rawHtml);
+  const isEmptyShell = !isChallenge && looksLikeEmptyShell(rawHtml);
+  if (isChallenge || isEmptyShell) {
+    console.warn("[fetch-article] falling back to browser reader", {
+      url: parsed.toString(),
+      status,
+      reason: isChallenge ? "challenge" : "empty-shell",
+    });
     const fallback = await fetchReaderFallback(parsed.toString());
     if (fallback?.html) {
       console.info("[fetch-article] reader fallback accepted", { url: parsed.toString(), chars: fallback.html.length });
