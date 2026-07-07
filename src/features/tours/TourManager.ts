@@ -193,10 +193,19 @@ class TourManagerImpl {
     const buildDriver = (stepIndex: number): Driver => {
       const step = tour.steps[stepIndex];
       const isLast = stepIndex === tour.steps.length - 1;
+      const isFirst = stepIndex === 0;
+      const prevChainId = previousOnboardingTourId(tourId);
+      // Show a Back button whenever we can go somewhere: previous step OR
+      // (at first step in a chained tour) the previous chained tour.
+      const canGoBack = !isFirst || (inChain && !!prevChainId);
       // Popover button label: use "Next" whenever there's more to walk the
       // user through — either more steps in this tour, or another chained
       // tour queued up after it. "Got it" only appears at the very end.
       const nextLabel = !isLast || inChain ? 'Next' : 'Got it';
+      const buttons: Array<'previous' | 'next' | 'close'> = [];
+      if (canGoBack) buttons.push('previous');
+      buttons.push('next');
+      if (!forced) buttons.push('close');
       return driver({
         // Forced tours cannot be dismissed by ✕ or overlay tap — user must
         // walk through every step.
@@ -211,10 +220,42 @@ class TourManagerImpl {
         stageRadius: 10,
         smoothScroll: true,
         popoverClass: forced ? 'flowist-tour-popover flowist-tour-forced' : 'flowist-tour-popover',
-        showButtons: forced ? ['next'] : ['next', 'close'],
+        showButtons: buttons,
         nextBtnText: nextLabel,
         doneBtnText: nextLabel,
+        prevBtnText: 'Back',
         steps: [this.toDriverStep(step)],
+        onPrevClick: canGoBack
+          ? () => {
+              if (!isFirst) {
+                // Multi-step tour: go one step back.
+                suppressDestroy = true;
+                try { currentDrv?.destroy(); } catch {}
+                this.activeDriver = null;
+                runStep(stepIndex - 1);
+                return;
+              }
+              // First step: jump back to the previous tour in the onboarding
+              // chain. Reset its "seen" flag so startTour() actually re-runs
+              // it (chain-mode skips already-seen tours).
+              const backId = prevChainId!;
+              suppressDestroy = true;
+              try { currentDrv?.destroy(); } catch {}
+              this.activeDriver = null;
+              this.activeTourId = null;
+              try { delete document.body.dataset.tourActive; } catch {}
+              try { delete document.body.dataset.tourId; } catch {}
+              try { delete document.body.dataset.tourForced; } catch {}
+              if (this.forcedGuard) { clearInterval(this.forcedGuard); this.forcedGuard = null; }
+              this.forcedActive = false;
+              emitTourActiveChange(false);
+              (async () => {
+                try { await resetTour(backId); } catch {}
+                await this.closeTransientUi();
+                setTimeout(() => this.startTour(backId, { chain: true, forced, force: true }), BETWEEN_CHAIN_TOURS_DELAY_MS);
+              })();
+            }
+          : undefined,
         onNextClick: isLast
           ? () => {
               // Last step: mark done + advance onboarding chain if applicable.
@@ -223,7 +264,13 @@ class TourManagerImpl {
               this.activeDriver = null;
               void finalize({ advanceChain: inChain });
             }
-          : undefined,
+          : () => {
+              // Multi-step tour: advance to next step of the same tour.
+              suppressDestroy = true;
+              try { currentDrv?.destroy(); } catch {}
+              this.activeDriver = null;
+              runStep(stepIndex + 1);
+            },
         onDestroyed: async () => {
           if (suppressDestroy) {
             suppressDestroy = false;
