@@ -16,6 +16,7 @@ import { NotesProvider } from "@/contexts/NotesContext";
 import { GoogleAuthProvider } from "@/contexts/GoogleAuthContext";
 import { useGoogleDriveSync } from "@/hooks/useGoogleDriveSync";
 import { useQuickAddSync } from "@/hooks/useQuickAddSync";
+import { useWebClipJobs } from "@/hooks/useWebClipJobs";
 import { useCloudSync } from "@/hooks/useCloudSync";
 const PremiumPaywall = lazy(() => import("@/components/PremiumPaywall").then(m => ({ default: m.PremiumPaywall })));
 
@@ -476,12 +477,18 @@ const QuickAddSyncBridge = () => {
   return null;
 };
 
+const WebClipJobsBridge = () => {
+  useWebClipJobs();
+  return null;
+};
+
 const AppRoutes = () => {
   useGlobalShortcuts();
   return (
     <BrowserRouter>
       <ShareIntentBridge />
       <QuickAddSyncBridge />
+      <WebClipJobsBridge />
       <AuthDeepLinkBridge />
       <NavigationBackProvider>
         <NavigationLoader />

@@ -829,7 +829,9 @@
     "clipSaved": "Clip saved!",
     "clipping": "Clipping:",
     "selectedText": "Selected text:",
-    "viewNotes": "View Notes"
+    "viewNotes": "View Notes",
+    "clipQueued": "Clip queued in background",
+    "clipQueuedDesc": "The full page is being captured. Your note will update automatically when it's ready — you can close the app."
   },
   "bookmarklet": {
     "title": "Web Clipper",
