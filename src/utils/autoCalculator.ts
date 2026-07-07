@@ -1,80 +1,75 @@
 // Auto-calculator utility for detecting and solving math expressions in text
 // Works completely offline - no external API calls
+//
+// All evaluation is delegated to the shared mathjs instance in
+// `src/components/richtext/mathShortcut.ts`. This avoids `new Function` /
+// `eval` and keeps math semantics consistent across the app (inline math
+// shortcut, `=` trigger, and the auto-calculator all agree on results).
+
+import { create, all, type MathJsInstance } from 'mathjs';
+
+let mathInstance: MathJsInstance | null = null;
+function getMath(): MathJsInstance {
+  if (mathInstance) return mathInstance;
+  mathInstance = create(all, { number: 'number' });
+  // Disable dangerous meta-functions (same hardening as mathShortcut).
+  mathInstance.import({
+    import: function () { throw new Error('disabled'); },
+    createUnit: function () { throw new Error('disabled'); },
+  }, { override: true });
+  return mathInstance;
+}
 
 /**
- * Safely evaluates a mathematical expression
- * Supports: +, -, *, /, ^, parentheses, x (as multiplication), % (percentage)
- * 
+ * Safely evaluates a mathematical expression using mathjs.
+ * Supports: +, -, *, /, ^, parentheses, x/× (multiplication), ÷ (division),
+ * and % (percentage).
+ *
  * Percentage handling:
  * - "50+10%" means 50 + (10% of 50) = 55
  * - "100-20%" means 100 - (20% of 100) = 80
  * - "50*10%" means 50 * 0.1 = 5
  * - "100/50%" means 100 / 0.5 = 200
- * 
- * Works completely offline
  */
 export const safeEvaluate = (expression: string): number | null => {
   try {
-    // Clean the expression - remove spaces and trailing equals
     let cleaned = expression.trim().replace(/\s+/g, '').replace(/=+$/, '');
-    
-    // Replace common multiplication symbols with *
+    if (!cleaned) return null;
+
+    // Normalize alternate operator glyphs.
     cleaned = cleaned.replace(/×/g, '*').replace(/x/gi, '*').replace(/÷/g, '/');
-    
-    // Validate: only allow numbers, operators, decimal points, parentheses, and %
-    if (!/^[0-9+\-*/().^%]+$/.test(cleaned)) {
-      return null;
-    }
-    
-    // Prevent empty or single-number expressions (but allow % as operator)
-    if (!/[+\-*/^%]/.test(cleaned)) {
-      return null;
-    }
-    
-    // Replace ^ with ** for exponentiation
-    cleaned = cleaned.replace(/\^/g, '**');
-    
-    // Handle percentage calculations
-    // Pattern: number followed by +/- and number with %
-    // "50+10%" -> 50 + (50 * 10 / 100) = 55
-    // "100-20%" -> 100 - (100 * 20 / 100) = 80
-    cleaned = cleaned.replace(/(\d+(?:\.\d+)?)\s*([+\-])\s*(\d+(?:\.\d+)?)%/g, (match, base, op, percent) => {
-      const baseNum = parseFloat(base);
-      const percentNum = parseFloat(percent);
-      const percentValue = (baseNum * percentNum) / 100;
-      return `${baseNum}${op}${percentValue}`;
-    });
-    
-    // Handle multiplication/division with percentage: "50*10%" -> 50 * 0.1, "100/50%" -> 100 / 0.5
-    cleaned = cleaned.replace(/([*/])\s*(\d+(?:\.\d+)?)%/g, (match, op, percent) => {
-      const percentNum = parseFloat(percent);
-      return `${op}${percentNum / 100}`;
-    });
-    
-    // Handle standalone percentage at end (e.g., after other operations)
+
+    // Whitelist: digits, operators, decimals, parens, % only.
+    if (!/^[0-9+\-*/().^%]+$/.test(cleaned)) return null;
+    // Must contain at least one operator.
+    if (!/[+\-*/^%]/.test(cleaned)) return null;
+
+    // Percentage rewrites (before handing to mathjs so semantics match the
+    // "50+10% = 55" convention users expect from a calculator).
+    cleaned = cleaned.replace(
+      /(\d+(?:\.\d+)?)\s*([+\-])\s*(\d+(?:\.\d+)?)%/g,
+      (_m, base, op, percent) => {
+        const b = parseFloat(base);
+        const p = parseFloat(percent);
+        return `${b}${op}${(b * p) / 100}`;
+      },
+    );
+    cleaned = cleaned.replace(
+      /([*/])\s*(\d+(?:\.\d+)?)%/g,
+      (_m, op, percent) => `${op}${parseFloat(percent) / 100}`,
+    );
     cleaned = cleaned.replace(/(\d+(?:\.\d+)?)%/g, '($1/100)');
-    
-    // Prevent dangerous patterns (letters other than operators)
-    if (/[a-zA-Z_$]/.test(cleaned)) {
+
+    // Guard against division by literal zero.
+    if (/\/0(?![0-9.])/.test(cleaned)) return null;
+
+    const math = getMath();
+    const result = math.evaluate(cleaned);
+    if (typeof result !== 'number' || !isFinite(result) || isNaN(result)) {
       return null;
     }
-    
-    // Prevent division by zero patterns
-    if (/\/0(?![0-9.])/.test(cleaned)) {
-      return null;
-    }
-    
-    // Use Function constructor to safely evaluate (no access to globals)
-    // eslint-disable-next-line no-new-func
-    const result = new Function(`"use strict"; return (${cleaned})`)();
-    
-    // Check if result is a valid number
-    if (typeof result === 'number' && isFinite(result) && !isNaN(result)) {
-      // Round to avoid floating point issues
-      return Math.round(result * 1000000000) / 1000000000;
-    }
-    
-    return null;
+    // Round to avoid floating-point display noise.
+    return Math.round(result * 1e9) / 1e9;
   } catch {
     return null;
   }
