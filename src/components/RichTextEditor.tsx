@@ -1364,7 +1364,7 @@ export const RichTextEditor = ({
   }, []);
 
   // Smart Detection settings state
-  const [smartDetectionSettings, setSmartDetectionSettings] = useState<SmartDetectionSettings>({ urls: true, phoneNumbers: true, emailAddresses: true });
+  const [smartDetectionSettings, setSmartDetectionSettings] = useState<SmartDetectionSettings>({ urls: false, phoneNumbers: false, emailAddresses: false });
 
   // Load smart detection settings
   useEffect(() => {
@@ -1438,41 +1438,40 @@ export const RichTextEditor = ({
         if (newContent === lastContentRef.current) return;
         lastContentRef.current = newContent;
         const isLargeContent = newContent.length > 50000;
-        
-        // Large notes must stay typing/navigation-fast: avoid extra DOM/selection
-        // scanners on every keystroke and only persist the raw HTML debounced.
-        if (!isLargeContent) {
-          // Try auto-calculation for math expressions ending with =
-          tryAutoCalculate();
-          // No-`=` auto-eval: after typing a space following a math segment
-          // like "2+3 " or "sqrt(16) ", auto-append "= <result>".
-          if (
-            (inputType === 'insertText' ||
-              inputType === 'insertReplacementText' ||
-              inputType === 'insertCompositionText') &&
-            tryMathAutoOnSpace(editorRef.current)
-          ) {
-            // caret was updated inside the helper; let the normal flow continue.
-          }
-        
-          // Smart Detection: check for URLs, emails, phone numbers after space or punctuation
-          const selection = window.getSelection();
-          if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            const textNode = range.startContainer;
-            if (textNode.nodeType === Node.TEXT_NODE) {
-              const text = textNode.textContent || '';
-              const cursorPos = range.startOffset;
-              // Only trigger after space, punctuation, or newline
-              if (cursorPos > 0 && /[\s.,!?)\]}>]/.test(text.charAt(cursorPos - 1))) {
-                applySmartDetection(textNode as Text, cursorPos, smartDetectionSettings);
-              }
+
+        // Inline calculator, unit converter, smart detection, slash "/" and
+        // @mention triggers all operate on the caret's text node only — cheap
+        // enough to run on every keystroke regardless of note size. This is
+        // what makes these features work inside web-clipper / long notes.
+        tryAutoCalculate();
+        if (
+          (inputType === 'insertText' ||
+            inputType === 'insertReplacementText' ||
+            inputType === 'insertCompositionText') &&
+          tryMathAutoOnSpace(editorRef.current)
+        ) {
+          // caret was updated inside the helper; let the normal flow continue.
+        }
+
+        // Smart Detection: check for URLs, emails, phone numbers after space or punctuation
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const textNode = range.startContainer;
+          if (textNode.nodeType === Node.TEXT_NODE) {
+            const text = textNode.textContent || '';
+            const cursorPos = range.startOffset;
+            if (cursorPos > 0 && /[\s.,!?)\]}>]/.test(text.charAt(cursorPos - 1))) {
+              applySmartDetection(textNode as Text, cursorPos, smartDetectionSettings);
             }
           }
+        }
 
-          // === Slash command + @mention trigger detection ===
-          detectTriggers();
+        // === Slash command + @mention trigger detection ===
+        detectTriggers();
 
+        // Full-document scans stay gated to large notes for performance.
+        if (!isLargeContent) {
           // Persist any synced-block edits so other instances/tabs mirror in real time
           persistSyncedFrom(editorRef.current);
         }

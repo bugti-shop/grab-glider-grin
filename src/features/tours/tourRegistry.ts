@@ -142,5 +142,12 @@ export const nextOnboardingTourId = (currentId: string): string | null => {
   return ONBOARDING_CHAIN[idx + 1];
 };
 
+/** ID of the tour that ran right BEFORE the given one, or null at the start. */
+export const previousOnboardingTourId = (currentId: string): string | null => {
+  const idx = ONBOARDING_CHAIN.indexOf(currentId);
+  if (idx <= 0) return null;
+  return ONBOARDING_CHAIN[idx - 1];
+};
+
 export const firstOnboardingTourId = (): string => ONBOARDING_CHAIN[0];
 
