@@ -8,13 +8,9 @@ workflows:
       app_store_connect: Codemagic
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.flowist.app
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         BUNDLE_ID: "com.flowist.app"
-        PROVISIONING_PROFILE_NAME: "Flowist_Distribution"
         node: 22.11.0
       xcode: 26.0
       cocoapods: default
@@ -120,18 +116,10 @@ workflows:
 
       - name: Fetch fresh signing files from Apple
         script: |
-          # Every build: pull the latest App Store distribution profiles for
-          # all 3 bundle IDs (main app + ShareExtension + HabitsWidget) from
-          # App Store Connect. If Apple has invalidated old profiles (e.g.
-          # after a capability change), this regenerates them on the fly.
+          # Do not rely on Codemagic's pre-build ios_signing lookup because it
+          # fails when Apple has no existing profiles yet. Create/fetch them now.
           set -e
           app-store-connect fetch-signing-files "com.flowist.app" \
-            --type IOS_APP_STORE \
-            --create
-          app-store-connect fetch-signing-files "com.flowist.app.ShareExtension" \
-            --type IOS_APP_STORE \
-            --create
-          app-store-connect fetch-signing-files "com.flowist.app.HabitsWidget" \
             --type IOS_APP_STORE \
             --create
           # Install every fetched .mobileprovision into the local keychain /
