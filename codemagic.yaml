@@ -124,14 +124,16 @@ workflows:
 
       - name: Build & Archive
         script: |
+          # Let Codemagic's `xcode-project use-profiles` step drive signing.
+          # It writes the correct provisioning profile (with App Groups +
+          # Associated Domains + all extension targets) into the project,
+          # so we don't override PROVISIONING_PROFILE_SPECIFIER here.
           xcodebuild \
             -workspace "$XCODE_WORKSPACE" \
             -scheme "App" \
             -configuration Release \
             -archivePath build/App.xcarchive \
             -destination "generic/platform=iOS" \
-            CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_NAME" \
             clean archive
 
       - name: Export IPA
