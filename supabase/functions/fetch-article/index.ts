@@ -20,11 +20,105 @@ const corsHeaders = {
 
 // Keep the app from applying its own short timeout. The platform still has a
 // hard execution ceiling, but this avoids killing large HTML pages prematurely.
-const FETCH_TIMEOUT_MS = 240_000;
-const MAX_HTML_BYTES = 100 * 1024 * 1024; // 100MB hard cap on raw HTML
+const FETCH_TIMEOUT_MS = 12 * 60_000;
+const MAX_HTML_BYTES = 200 * 1024 * 1024; // 200MB hard cap on raw HTML
+const READER_FALLBACK_TIMEOUT_MS = 90_000;
 
 const DEFAULT_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36 Flowist-Clipper/2.0";
+
+const CHALLENGE_RE = /enable\s+javascript\s+and\s+cookies|disable\s+(?:your\s+)?ad\s*blocker|please\s+enable\s+js|checking\s+your\s+browser|verify\s+you\s+are\s+human|access\s+to\s+this\s+page\s+has\s+been\s+denied|cloudflare|perimeterx|datadome/i;
+
+function escapeHtml(value: string): string {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function markdownishToHtml(markdown: string, baseHref: string): string {
+  const lines = String(markdown || "").split(/\r?\n/);
+  const body: string[] = [];
+  let title = "";
+  let inList = false;
+
+  const closeList = () => {
+    if (inList) {
+      body.push("</ul>");
+      inList = false;
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      closeList();
+      continue;
+    }
+    const titleMatch = /^Title:\s*(.+)$/i.exec(line);
+    if (titleMatch) {
+      title = title || titleMatch[1].trim();
+      continue;
+    }
+    if (/^(URL Source|Published Time|Markdown Content|Warning):/i.test(line)) continue;
+
+    const heading = /^(#{1,6})\s+(.+)$/.exec(line);
+    if (heading) {
+      closeList();
+      const level = Math.min(6, heading[1].length);
+      body.push(`<h${level}>${escapeHtml(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    const bullet = /^[-*]\s+(.+)$/.exec(line);
+    if (bullet) {
+      if (!inList) {
+        body.push("<ul>");
+        inList = true;
+      }
+      body.push(`<li>${escapeHtml(bullet[1])}</li>`);
+      continue;
+    }
+
+    closeList();
+    const linked = escapeHtml(line).replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_m, text, href) => {
+      return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(text)}</a>`;
+    });
+    body.push(`<p>${linked}</p>`);
+  }
+  closeList();
+
+  return `<!DOCTYPE html><html><head><base href="${escapeHtml(baseHref)}"><meta name="referrer" content="no-referrer-when-downgrade"><title>${escapeHtml(title)}</title></head><body>${body.join("\n")}</body></html>`;
+}
+
+async function fetchReaderFallback(url: string): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean } | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), READER_FALLBACK_TIMEOUT_MS);
+  try {
+    const readerUrl = `https://r.jina.ai/http://${url}`;
+    const res = await fetch(readerUrl, {
+      signal: ctrl.signal,
+      headers: {
+        "Accept": "text/plain,text/markdown,*/*;q=0.8",
+        "User-Agent": DEFAULT_UA,
+      },
+    });
+    const text = await res.text();
+    if (!res.ok || text.trim().length < 32 || CHALLENGE_RE.test(text)) return null;
+    const truncated = text.length > MAX_HTML_BYTES;
+    return {
+      html: markdownishToHtml(truncated ? text.slice(0, MAX_HTML_BYTES) : text, url),
+      finalUrl: url,
+      status: res.status,
+      truncated,
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /** Absolute-URL resolver that never throws. */
 function absolutize(href: string, base: string): string {
@@ -281,7 +375,18 @@ Deno.serve(async (req) => {
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
-  const { html: rawHtml, finalUrl, status, truncated } = fetched;
+  let { html: rawHtml, finalUrl, status, truncated } = fetched;
+
+  if (CHALLENGE_RE.test(rawHtml)) {
+    console.warn("[fetch-article] anti-bot/challenge page detected; trying reader fallback", { url: parsed.toString(), status });
+    const fallback = await fetchReaderFallback(parsed.toString());
+    if (fallback?.html) {
+      rawHtml = fallback.html;
+      finalUrl = fallback.finalUrl;
+      status = fallback.status;
+      truncated = fallback.truncated;
+    }
+  }
 
   if (!rawHtml || rawHtml.length < 32) {
     return new Response(JSON.stringify({
