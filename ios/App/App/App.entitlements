@@ -12,7 +12,7 @@
 	     hand off URL / text / image / PDF payloads to the main app. -->
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.nota.npd.com.shareextension</string>
+		<string>group.com.flowist.app.shareextension</string>
 	</array>
 	<!-- Universal Links: tapping a https://flowist.me/... link
 	     opens the app instead of Safari (requires apple-app-site-association

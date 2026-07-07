@@ -2,7 +2,7 @@
 // Flowist — iOS home-screen widget that mirrors the Android HabitsListWidget.
 //
 // • Reads today's progress + due habits from the shared App Group
-//   (UserDefaults suite "group.nota.npd.com.shareextension", key
+//   (UserDefaults suite "group.com.flowist.app.shareextension", key
 //   "flowist_widget_habits") written by widgetDataSync.syncHabits.
 // • Each row is a Link to flowist://widget/todo/habits?check=<id> so the
 //   row tap opens the app and cycles status — identical to Android.
@@ -44,7 +44,7 @@ private struct HabitsPayload: Codable {
 private enum HabitsStore {
     /// Must match the App Group enabled on this widget target *and* the
     /// `group` value used in src/utils/widgetDataSync.ts.
-    static let suite = "group.nota.npd.com.shareextension"
+    static let suite = "group.com.flowist.app.shareextension"
     /// Key written from JS: `${WIDGET_PREFS_PREFIX}habits` → "flowist_widget_habits".
     /// Capacitor Preferences prefixes stored keys with "CapacitorStorage." —
     /// try both so this works regardless of plugin version.
