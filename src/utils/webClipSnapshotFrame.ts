@@ -34,7 +34,7 @@ export const hydrateSnapshotFrames = (root: HTMLElement | null, html: string): (
   if (!root || !html) return () => {};
   const frames = Array.from(
     root.querySelectorAll<HTMLIFrameElement>(
-      `iframe.${SNAPSHOT_FRAME_CLASS}[data-role="${SNAPSHOT_FRAME_ROLE}"][${SNAPSHOT_SOURCE_ATTR}="${SNAPSHOT_SOURCE_VALUE}"]`,
+      `iframe.${SNAPSHOT_FRAME_CLASS}[data-role="${SNAPSHOT_FRAME_ROLE}"]`,
     ),
   );
   if (!frames.length) return () => {};
