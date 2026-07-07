@@ -28,10 +28,13 @@ import {
   ATTACHMENT_LIMITS,
 } from '@/utils/webClipper';
 import { useWebClipperQuota } from '@/hooks/useWebClipperQuota';
+import { getCachedClip, putCachedClip } from '@/lib/webClipCache';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
   { id: 'fullpage',  icon: Download, titleKey: 'webClipper.modeFullPage',  descKey: 'webClipper.modeFullPageDesc',  fallbackTitle: 'Full page (offline snapshot)', fallbackDesc: 'Download the entire page as a single-file HTML for offline reading' },
 ];
+
+const FETCH_ARTICLE_TIMEOUT_MS = 6 * 60_000;
 
 /** Slugify a title into a safe filename stem. */
 const filenameFromTitle = (title: string, host: string): string => {
@@ -431,6 +434,57 @@ const WebClipper = () => {
     setSaving(false);
   };
 
+  const wrapFullPageSnapshot = (readOnlySnapshot: string, snapshotTitle: string, sourceUrl: string): string => {
+    const snapshotBytes = new Blob([readOnlySnapshot]).size;
+    let host = '';
+    try { host = new URL(sourceUrl).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+    const fname = `${filenameFromTitle(snapshotTitle || title, host)}.html`;
+    triggerHtmlDownload(fname, readOnlySnapshot);
+    setSnapshotHtml(readOnlySnapshot);
+    setSnapshotFilename(fname);
+    const sizeLabel = formatBytes(snapshotBytes);
+    const banner =
+      `<aside class="flowist-offline-snapshot-info" contenteditable="false" data-snapshot-filename="${fname.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
+        `<strong>📥 ${sanitizeForDisplay(t('webClipper.offlineSnapshotSaved', 'Offline snapshot saved to your device'))}</strong>` +
+        `<span>${sanitizeForDisplay(fname)} · ${sizeLabel}</span>` +
+        `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'The full page below is captured start-to-finish and stays readable inside this note. Tap "Open" in the header to view the original.'))}</em>` +
+      `</aside>`;
+    const LARGE_SNAPSHOT_THRESHOLD = 400 * 1024;
+    const useBlobEmbed = snapshotBytes > LARGE_SNAPSHOT_THRESHOLD;
+    let iframe: string;
+    let escapedDoc = '';
+    if (useBlobEmbed) {
+      try {
+        const blob = new Blob([readOnlySnapshot], { type: 'text/html;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        iframe =
+          `<iframe class="flowist-web-clip-page" data-role="page-embed" data-embed="blob" ` +
+          `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+          `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
+          `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
+          `src="${blobUrl}"></iframe>`;
+      } catch (blobErr) {
+        console.warn('[webClipper] blob embed failed, falling back to srcdoc', blobErr);
+        escapedDoc = readOnlySnapshot.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        iframe =
+          `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
+          `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+          `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
+          `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
+          `srcdoc="${escapedDoc}"></iframe>`;
+      }
+    } else {
+      escapedDoc = readOnlySnapshot.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      iframe =
+        `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
+        `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+        `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
+        `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
+        `srcdoc="${escapedDoc}"></iframe>`;
+    }
+    return `${banner}${iframe}`;
+  };
+
   /**
    * Fetch + assemble the clip and hand it to the editable preview UI.
    * Does NOT save to the DB — commitClip() does that when the user hits Save.
@@ -551,7 +605,6 @@ const WebClipper = () => {
       let stageTickerId: number | null = null;
 
       if (shouldFetchFull) {
-        const FETCH_TIMEOUT_MS = 120_000;
         try {
           setStage('fetching');
           setProgress(null);
@@ -573,12 +626,13 @@ const WebClipper = () => {
             hasAttachment: !!attachment,
             attachmentType,
             shareId: searchParams.get('shareId') || null,
-            timeoutMs: FETCH_TIMEOUT_MS,
+            timeoutMs: FETCH_ARTICLE_TIMEOUT_MS,
           });
+          const cachedClip = await getCachedClip(url).catch(() => null);
           const timeoutPromise = new Promise<never>((_, reject) => {
             const id = window.setTimeout(() => {
               reject(new DOMException('Timed out fetching full page', 'TimeoutError'));
-            }, FETCH_TIMEOUT_MS);
+            }, FETCH_ARTICLE_TIMEOUT_MS);
             controller.signal.addEventListener('abort', () => window.clearTimeout(id), { once: true });
           });
           const { data, error } = await Promise.race([
@@ -598,8 +652,15 @@ const WebClipper = () => {
           const fetchMs = Math.round(performance.now() - fetchStartedAt);
           if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
           if (error) {
-            console.warn('[webClipper] fetch-article transport error', { url, ms: fetchMs, message: error.message });
-            fetchFailure = { code: 'network', message: error.message };
+            console.warn('[webClipper] fetch-article transport error', { url, ms: fetchMs, message: error.message, hasCache: !!cachedClip });
+            if (cachedClip?.rawHtml) {
+              articleTitle = title;
+              articleSiteName = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+              articleExcerpt = t('webClipper.cachedSnapshotUsed', 'Using the last captured snapshot for this URL.');
+              articleHtml = wrapFullPageSnapshot(cachedClip.rawHtml, articleTitle, url);
+            } else {
+              fetchFailure = { code: 'network', message: error.message };
+            }
           } else if (data?.error) {
             console.warn('[webClipper] fetch-article returned error', {
               url,
@@ -608,7 +669,14 @@ const WebClipper = () => {
               status: data.status,
               error: data.error,
             });
-            fetchFailure = { code: String(data.code || 'upstream_error'), status: data.status, message: String(data.error) };
+            if (cachedClip?.rawHtml && (data.code === 'timeout' || data.code === 'network')) {
+              articleTitle = title;
+              articleSiteName = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+              articleExcerpt = t('webClipper.cachedSnapshotUsed', 'Using the last captured snapshot for this URL.');
+              articleHtml = wrapFullPageSnapshot(cachedClip.rawHtml, articleTitle, url);
+            } else {
+              fetchFailure = { code: String(data.code || 'upstream_error'), status: data.status, message: String(data.error) };
+            }
           } else if (data) {
             articleTitle = String(data.title || '').trim();
             articleByline = String(data.author || data.byline || '').trim();
@@ -641,6 +709,15 @@ const WebClipper = () => {
                 message: 'The full HTML page exceeded the capture limit, so Flowist refused to save a half-page snapshot.',
               };
               articleHtml = '';
+            }
+
+            if (articleHtml) {
+              void putCachedClip({
+                url,
+                rawHtml: articleHtml,
+                status: Number(data.status || 200),
+                bytes: new Blob([articleHtml]).size,
+              }).catch(() => {});
             }
 
             // ── Full-page offline snapshot ─────────────────────────────
