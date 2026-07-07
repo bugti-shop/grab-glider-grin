@@ -108,40 +108,74 @@ async function jsonResponse(data: unknown, init: ResponseInit = {}): Promise<Res
   }
 }
 
+/**
+ * Fallback: render the page through Jina Reader with the headless-browser
+ * engine and ask for HTML back (not markdown). This preserves images,
+ * layout, and works for JS-only pages (dashboards, earnings/traffic/backlink
+ * reports, anti-bot walls that require JS+cookies).
+ *
+ * Docs: https://jina.ai/reader — headers X-Return-Format, X-Engine,
+ * X-With-Images-Summary, X-With-Generated-Alt.
+ */
 async function fetchReaderFallback(url: string): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean } | null> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), READER_FALLBACK_TIMEOUT_MS);
   try {
-    const readerUrl = `https://r.jina.ai/http://${url}`;
+    // r.jina.ai accepts the raw URL directly (with scheme).
+    const readerUrl = `https://r.jina.ai/${url}`;
     const res = await fetch(readerUrl, {
       signal: ctrl.signal,
       headers: {
-        "Accept": "text/plain,text/markdown,*/*;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
         "User-Agent": DEFAULT_UA,
+        // Ask for the full rendered HTML — keeps <img>, <figure>, layout.
+        "X-Return-Format": "html",
+        // Use the headless browser so JS-rendered content actually resolves.
+        "X-Engine": "browser",
+        "X-With-Images-Summary": "true",
+        "X-With-Generated-Alt": "true",
+        // Give the page a moment to finish rendering before capture.
+        "X-Timeout": "45",
       },
     });
     const text = await res.text();
-    console.info("[fetch-article] reader fallback response", {
+    console.info("[fetch-article] reader(browser+html) fallback response", {
       url,
       readerUrl,
       status: res.status,
       chars: text.length,
       challenge: CHALLENGE_RE.test(text),
     });
-    if (!res.ok || text.trim().length < 32 || CHALLENGE_RE.test(text)) return null;
+    if (!res.ok || text.trim().length < 64 || CHALLENGE_RE.test(text)) return null;
     const truncated = text.length > MAX_HTML_BYTES;
-    return {
-      html: markdownishToHtml(truncated ? text.slice(0, MAX_HTML_BYTES) : text, url),
-      finalUrl: url,
-      status: res.status,
-      truncated,
-    };
+    const html = truncated ? text.slice(0, MAX_HTML_BYTES) : text;
+    return { html, finalUrl: url, status: res.status, truncated };
   } catch (err) {
     console.warn("[fetch-article] reader fallback failed", { url, error: (err as Error)?.message });
     return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** Heuristic: does the fetched HTML look like an empty JS shell (SPA that
+ *  didn't render server-side)? If so we should retry via the browser
+ *  fallback so we actually see the page contents (dashboards, reports, etc). */
+function looksLikeEmptyShell(html: string): boolean {
+  if (!html) return true;
+  // Strip scripts/styles/tags to see how much VISIBLE text exists.
+  const stripped = html
+    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, " ")
+    .replace(/<style\b[\s\S]*?<\/style\s*>/gi, " ")
+    .replace(/<noscript\b[\s\S]*?<\/noscript\s*>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const visibleLen = stripped.length;
+  const imgCount = (html.match(/<img\b/gi) || []).length;
+  // Very little text AND essentially no images → shell.
+  if (visibleLen < 400 && imgCount < 2) return true;
+  return false;
 }
 
 /** Absolute-URL resolver that never throws. */
@@ -391,8 +425,14 @@ Deno.serve(async (req) => {
 
   let { html: rawHtml, finalUrl, status, truncated } = fetched;
 
-  if (CHALLENGE_RE.test(rawHtml)) {
-    console.warn("[fetch-article] anti-bot/challenge page detected; trying reader fallback", { url: parsed.toString(), status });
+  const isChallenge = CHALLENGE_RE.test(rawHtml);
+  const isEmptyShell = !isChallenge && looksLikeEmptyShell(rawHtml);
+  if (isChallenge || isEmptyShell) {
+    console.warn("[fetch-article] falling back to browser reader", {
+      url: parsed.toString(),
+      status,
+      reason: isChallenge ? "challenge" : "empty-shell",
+    });
     const fallback = await fetchReaderFallback(parsed.toString());
     if (fallback?.html) {
       console.info("[fetch-article] reader fallback accepted", { url: parsed.toString(), chars: fallback.html.length });
