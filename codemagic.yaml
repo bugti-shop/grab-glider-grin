@@ -118,8 +118,25 @@ workflows:
                     CODE_SIGN_ENTITLEMENTS = App\/App.entitlements;' "$PROJ"
           fi
 
-      - name: Use Codemagic provisioning profiles
+      - name: Fetch fresh signing files from Apple
         script: |
+          # Every build: pull the latest App Store distribution profiles for
+          # all 3 bundle IDs (main app + ShareExtension + HabitsWidget) from
+          # App Store Connect. If Apple has invalidated old profiles (e.g.
+          # after a capability change), this regenerates them on the fly.
+          set -e
+          app-store-connect fetch-signing-files "com.flowist.app" \
+            --type IOS_APP_STORE \
+            --create
+          app-store-connect fetch-signing-files "com.flowist.app.ShareExtension" \
+            --type IOS_APP_STORE \
+            --create
+          app-store-connect fetch-signing-files "com.flowist.app.HabitsWidget" \
+            --type IOS_APP_STORE \
+            --create
+          # Install every fetched .mobileprovision into the local keychain /
+          # profile directory so xcodebuild can find them.
+          keychain add-certificates
           xcode-project use-profiles
 
       - name: Build & Archive
