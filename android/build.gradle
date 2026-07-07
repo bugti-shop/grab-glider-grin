@@ -28,9 +28,14 @@ allprojects {
 // to compile against the same SDK as the app. Fixes AAR metadata errors when
 // transitive AndroidX libs (activity 1.11, core 1.17) require compileSdk >= 36.
 subprojects {
-    plugins.withId('com.android.library') {
-        android {
-            compileSdkVersion rootProject.ext.compileSdkVersion
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                compileSdkVersion rootProject.ext.compileSdkVersion
+                if (project.android.hasProperty('buildToolsVersion')) {
+                    // leave buildTools as-is
+                }
+            }
         }
     }
 }
