@@ -28,10 +28,13 @@ import {
   ATTACHMENT_LIMITS,
 } from '@/utils/webClipper';
 import { useWebClipperQuota } from '@/hooks/useWebClipperQuota';
+import { getCachedClip, putCachedClip } from '@/lib/webClipCache';
 
 const MODE_OPTIONS: Array<{ id: ClipMode; icon: typeof FileText; titleKey: string; descKey: string; fallbackTitle: string; fallbackDesc: string }> = [
   { id: 'fullpage',  icon: Download, titleKey: 'webClipper.modeFullPage',  descKey: 'webClipper.modeFullPageDesc',  fallbackTitle: 'Full page (offline snapshot)', fallbackDesc: 'Download the entire page as a single-file HTML for offline reading' },
 ];
+
+const FETCH_ARTICLE_TIMEOUT_MS = 6 * 60_000;
 
 /** Slugify a title into a safe filename stem. */
 const filenameFromTitle = (title: string, host: string): string => {
@@ -551,7 +554,6 @@ const WebClipper = () => {
       let stageTickerId: number | null = null;
 
       if (shouldFetchFull) {
-        const FETCH_TIMEOUT_MS = 120_000;
         try {
           setStage('fetching');
           setProgress(null);
@@ -573,12 +575,13 @@ const WebClipper = () => {
             hasAttachment: !!attachment,
             attachmentType,
             shareId: searchParams.get('shareId') || null,
-            timeoutMs: FETCH_TIMEOUT_MS,
+            timeoutMs: FETCH_ARTICLE_TIMEOUT_MS,
           });
+          const cachedClip = await getCachedClip(url).catch(() => null);
           const timeoutPromise = new Promise<never>((_, reject) => {
             const id = window.setTimeout(() => {
               reject(new DOMException('Timed out fetching full page', 'TimeoutError'));
-            }, FETCH_TIMEOUT_MS);
+            }, FETCH_ARTICLE_TIMEOUT_MS);
             controller.signal.addEventListener('abort', () => window.clearTimeout(id), { once: true });
           });
           const { data, error } = await Promise.race([
@@ -598,8 +601,15 @@ const WebClipper = () => {
           const fetchMs = Math.round(performance.now() - fetchStartedAt);
           if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
           if (error) {
-            console.warn('[webClipper] fetch-article transport error', { url, ms: fetchMs, message: error.message });
-            fetchFailure = { code: 'network', message: error.message };
+            console.warn('[webClipper] fetch-article transport error', { url, ms: fetchMs, message: error.message, hasCache: !!cachedClip });
+            if (cachedClip?.rawHtml) {
+              articleHtml = cachedClip.rawHtml;
+              articleTitle = title;
+              articleSiteName = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+              articleExcerpt = t('webClipper.cachedSnapshotUsed', 'Using the last captured snapshot for this URL.');
+            } else {
+              fetchFailure = { code: 'network', message: error.message };
+            }
           } else if (data?.error) {
             console.warn('[webClipper] fetch-article returned error', {
               url,
@@ -608,7 +618,14 @@ const WebClipper = () => {
               status: data.status,
               error: data.error,
             });
-            fetchFailure = { code: String(data.code || 'upstream_error'), status: data.status, message: String(data.error) };
+            if (cachedClip?.rawHtml && (data.code === 'timeout' || data.code === 'network')) {
+              articleHtml = cachedClip.rawHtml;
+              articleTitle = title;
+              articleSiteName = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
+              articleExcerpt = t('webClipper.cachedSnapshotUsed', 'Using the last captured snapshot for this URL.');
+            } else {
+              fetchFailure = { code: String(data.code || 'upstream_error'), status: data.status, message: String(data.error) };
+            }
           } else if (data) {
             articleTitle = String(data.title || '').trim();
             articleByline = String(data.author || data.byline || '').trim();
@@ -641,6 +658,15 @@ const WebClipper = () => {
                 message: 'The full HTML page exceeded the capture limit, so Flowist refused to save a half-page snapshot.',
               };
               articleHtml = '';
+            }
+
+            if (articleHtml) {
+              void putCachedClip({
+                url,
+                rawHtml: articleHtml,
+                status: Number(data.status || 200),
+                bytes: new Blob([articleHtml]).size,
+              }).catch(() => {});
             }
 
             // ── Full-page offline snapshot ─────────────────────────────
