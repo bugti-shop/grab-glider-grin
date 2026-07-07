@@ -20,11 +20,129 @@ const corsHeaders = {
 
 // Keep the app from applying its own short timeout. The platform still has a
 // hard execution ceiling, but this avoids killing large HTML pages prematurely.
-const FETCH_TIMEOUT_MS = 240_000;
-const MAX_HTML_BYTES = 100 * 1024 * 1024; // 100MB hard cap on raw HTML
+const FETCH_TIMEOUT_MS = 12 * 60_000;
+const MAX_HTML_BYTES = 200 * 1024 * 1024; // 200MB hard cap on raw HTML
+const READER_FALLBACK_TIMEOUT_MS = 90_000;
 
 const DEFAULT_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36 Flowist-Clipper/2.0";
+
+const CHALLENGE_RE = /enable\s+javascript\s+and\s+cookies|disable\s+(?:your\s+)?ad\s*blocker|please\s+enable\s+js|checking\s+your\s+browser|verify\s+you\s+are\s+human|access\s+to\s+this\s+page\s+has\s+been\s+denied|cloudflare|perimeterx|datadome/i;
+
+function escapeHtml(value: string): string {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function markdownishToHtml(markdown: string, baseHref: string): string {
+  const lines = String(markdown || "").split(/\r?\n/);
+  const body: string[] = [];
+  let title = "";
+  let inList = false;
+
+  const closeList = () => {
+    if (inList) {
+      body.push("</ul>");
+      inList = false;
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      closeList();
+      continue;
+    }
+    const titleMatch = /^Title:\s*(.+)$/i.exec(line);
+    if (titleMatch) {
+      title = title || titleMatch[1].trim();
+      continue;
+    }
+    if (/^(URL Source|Published Time|Markdown Content|Warning):/i.test(line)) continue;
+
+    const heading = /^(#{1,6})\s+(.+)$/.exec(line);
+    if (heading) {
+      closeList();
+      const level = Math.min(6, heading[1].length);
+      body.push(`<h${level}>${escapeHtml(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    const bullet = /^[-*]\s+(.+)$/.exec(line);
+    if (bullet) {
+      if (!inList) {
+        body.push("<ul>");
+        inList = true;
+      }
+      body.push(`<li>${escapeHtml(bullet[1])}</li>`);
+      continue;
+    }
+
+    closeList();
+    const linked = escapeHtml(line).replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_m, text, href) => {
+      return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(text)}</a>`;
+    });
+    body.push(`<p>${linked}</p>`);
+  }
+  closeList();
+
+  return `<!DOCTYPE html><html><head><base href="${escapeHtml(baseHref)}"><meta name="referrer" content="no-referrer-when-downgrade"><title>${escapeHtml(title)}</title></head><body>${body.join("\n")}</body></html>`;
+}
+
+async function jsonResponse(data: unknown, init: ResponseInit = {}): Promise<Response> {
+  const json = JSON.stringify(data);
+  const headers = new Headers({ ...corsHeaders, "Content-Type": "application/json", ...(init.headers || {}) });
+  if (json.length < 128 * 1024 || typeof CompressionStream !== "function") {
+    return new Response(json, { ...init, headers });
+  }
+  try {
+    const stream = new Blob([json], { type: "application/json" }).stream().pipeThrough(new CompressionStream("gzip"));
+    headers.set("Content-Encoding", "gzip");
+    headers.set("Vary", "Accept-Encoding");
+    return new Response(stream, { ...init, headers });
+  } catch {
+    return new Response(json, { ...init, headers });
+  }
+}
+
+async function fetchReaderFallback(url: string): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean } | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), READER_FALLBACK_TIMEOUT_MS);
+  try {
+    const readerUrl = `https://r.jina.ai/http://${url}`;
+    const res = await fetch(readerUrl, {
+      signal: ctrl.signal,
+      headers: {
+        "Accept": "text/plain,text/markdown,*/*;q=0.8",
+        "User-Agent": DEFAULT_UA,
+      },
+    });
+    const text = await res.text();
+    console.info("[fetch-article] reader fallback response", {
+      url,
+      readerUrl,
+      status: res.status,
+      chars: text.length,
+      challenge: CHALLENGE_RE.test(text),
+    });
+    if (!res.ok || text.trim().length < 32 || CHALLENGE_RE.test(text)) return null;
+    const truncated = text.length > MAX_HTML_BYTES;
+    return {
+      html: markdownishToHtml(truncated ? text.slice(0, MAX_HTML_BYTES) : text, url),
+      finalUrl: url,
+      status: res.status,
+      truncated,
+    };
+  } catch (err) {
+    console.warn("[fetch-article] reader fallback failed", { url, error: (err as Error)?.message });
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /** Absolute-URL resolver that never throws. */
 function absolutize(href: string, base: string): string {
@@ -237,34 +355,24 @@ interface Body { url?: string; mode?: string }
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Method not allowed" }, { status: 405 });
   }
 
   let body: Body;
   try { body = await req.json(); } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const rawUrl = (body.url || "").trim();
   if (!rawUrl) {
-    return new Response(JSON.stringify({ error: "Missing url" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Missing url" }, { status: 400 });
   }
   let parsed: URL;
   try { parsed = new URL(rawUrl); } catch {
-    return new Response(JSON.stringify({ error: "Invalid URL" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Invalid URL" }, { status: 400 });
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return new Response(JSON.stringify({ error: "Only http(s) URLs are supported" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Only http(s) URLs are supported" }, { status: 400 });
   }
 
   console.info("[fetch-article] evernote-simple fetch", { url: parsed.toString() });
@@ -275,20 +383,32 @@ Deno.serve(async (req) => {
   } catch (err) {
     const isAbort = (err as Error)?.name === "AbortError";
     console.warn("[fetch-article] fetch failed", { url: parsed.toString(), error: (err as Error)?.message, isAbort });
-    return new Response(JSON.stringify({
+    return jsonResponse({
       error: isAbort ? "Upstream fetch timed out" : `Upstream fetch failed: ${(err as Error)?.message || "unknown"}`,
       code: isAbort ? "timeout" : "network",
-    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }, { status: 200 });
   }
 
-  const { html: rawHtml, finalUrl, status, truncated } = fetched;
+  let { html: rawHtml, finalUrl, status, truncated } = fetched;
+
+  if (CHALLENGE_RE.test(rawHtml)) {
+    console.warn("[fetch-article] anti-bot/challenge page detected; trying reader fallback", { url: parsed.toString(), status });
+    const fallback = await fetchReaderFallback(parsed.toString());
+    if (fallback?.html) {
+      console.info("[fetch-article] reader fallback accepted", { url: parsed.toString(), chars: fallback.html.length });
+      rawHtml = fallback.html;
+      finalUrl = fallback.finalUrl;
+      status = fallback.status;
+      truncated = fallback.truncated;
+    }
+  }
 
   if (!rawHtml || rawHtml.length < 32) {
-    return new Response(JSON.stringify({
+    return jsonResponse({
       error: "Upstream returned no HTML",
       code: "empty",
       status,
-    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }, { status: 200 });
   }
 
   // Sanitize + add <base> so relative URLs resolve to the origin.
@@ -340,8 +460,5 @@ Deno.serve(async (req) => {
     truncated,
   });
 
-  return new Response(JSON.stringify(responseBody), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return jsonResponse(responseBody, { status: 200 });
 });

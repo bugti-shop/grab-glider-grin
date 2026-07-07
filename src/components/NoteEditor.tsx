@@ -6,6 +6,7 @@ import { getCachedClip, putCachedClip, normalizeClipUrl } from '@/lib/webClipCac
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { compressImage, isCompressibleImage } from '@/utils/imageCompression';
 import { decompressHtml, formatBytesShort } from '@/utils/htmlCompression';
+import { hydrateSnapshotFrames } from '@/utils/webClipSnapshotFrame';
 import { useNavigate } from 'react-router-dom';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTranslation } from 'react-i18next';
@@ -234,6 +235,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [tocMaxLevel, setTocMaxLevel] = useState<number>(6);
   const isReadOnlyWebClip = !!note?.fullPageSnapshot || WEB_CLIP_RE.test(note?.content || '');
   const [readOnlySnapshotHtml, setReadOnlySnapshotHtml] = useState('');
+  const readOnlyContentRef = useRef<HTMLDivElement>(null);
   const currentNoteId = getCurrentNoteId();
   useEffect(() => {
     let cancelled = false;
@@ -441,6 +443,11 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     () => (isReadOnlyWebClip || isReadingMode ? sanitizeForDisplay(visibleReadOnlyContent) : ''),
     [visibleReadOnlyContent, isReadOnlyWebClip, isReadingMode],
   );
+
+  useEffect(() => {
+    if (!isReadOnlyWebClip || !readOnlySnapshotHtml || !readOnlyContentRef.current) return;
+    return hydrateSnapshotFrames(readOnlyContentRef.current, readOnlySnapshotHtml);
+  }, [isReadOnlyWebClip, readOnlySnapshotHtml, displayContentHtml]);
   
   // Calculate backlinks
   const backlinks = note ? findBacklinks(note, allNotes) : [];
@@ -2324,6 +2331,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   style={{ fontFamily, fontSize, fontWeight, lineHeight }}
                   dangerouslySetInnerHTML={{ __html: displayContentHtml }}
                   ref={(el) => {
+                    readOnlyContentRef.current = el;
                     if (el) {
                       el.querySelectorAll<HTMLElement>('[contenteditable], input, textarea, select, button').forEach((node) => {
                         node.setAttribute('contenteditable', 'false');
