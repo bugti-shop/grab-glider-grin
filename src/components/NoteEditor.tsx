@@ -2326,12 +2326,12 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   </div>
                 )}
                 <div
-                  ref={readOnlyContentRef}
                   className="prose prose-sm max-w-none dark:prose-invert select-text"
                   aria-readonly="true"
                   style={{ fontFamily, fontSize, fontWeight, lineHeight }}
                   dangerouslySetInnerHTML={{ __html: displayContentHtml }}
                   ref={(el) => {
+                    readOnlyContentRef.current = el;
                     if (el) {
                       el.querySelectorAll<HTMLElement>('[contenteditable], input, textarea, select, button').forEach((node) => {
                         node.setAttribute('contenteditable', 'false');
