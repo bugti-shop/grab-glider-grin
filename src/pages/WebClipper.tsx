@@ -434,6 +434,57 @@ const WebClipper = () => {
     setSaving(false);
   };
 
+  const wrapFullPageSnapshot = (readOnlySnapshot: string, snapshotTitle: string, sourceUrl: string): string => {
+    const snapshotBytes = new Blob([readOnlySnapshot]).size;
+    let host = '';
+    try { host = new URL(sourceUrl).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
+    const fname = `${filenameFromTitle(snapshotTitle || title, host)}.html`;
+    triggerHtmlDownload(fname, readOnlySnapshot);
+    setSnapshotHtml(readOnlySnapshot);
+    setSnapshotFilename(fname);
+    const sizeLabel = formatBytes(snapshotBytes);
+    const banner =
+      `<aside class="flowist-offline-snapshot-info" contenteditable="false" data-snapshot-filename="${fname.replace(/"/g, '&quot;')}" data-snapshot-bytes="${snapshotBytes}">` +
+        `<strong>📥 ${sanitizeForDisplay(t('webClipper.offlineSnapshotSaved', 'Offline snapshot saved to your device'))}</strong>` +
+        `<span>${sanitizeForDisplay(fname)} · ${sizeLabel}</span>` +
+        `<em>${sanitizeForDisplay(t('webClipper.offlineSnapshotHint', 'The full page below is captured start-to-finish and stays readable inside this note. Tap "Open" in the header to view the original.'))}</em>` +
+      `</aside>`;
+    const LARGE_SNAPSHOT_THRESHOLD = 400 * 1024;
+    const useBlobEmbed = snapshotBytes > LARGE_SNAPSHOT_THRESHOLD;
+    let iframe: string;
+    let escapedDoc = '';
+    if (useBlobEmbed) {
+      try {
+        const blob = new Blob([readOnlySnapshot], { type: 'text/html;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        iframe =
+          `<iframe class="flowist-web-clip-page" data-role="page-embed" data-embed="blob" ` +
+          `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+          `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
+          `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
+          `src="${blobUrl}"></iframe>`;
+      } catch (blobErr) {
+        console.warn('[webClipper] blob embed failed, falling back to srcdoc', blobErr);
+        escapedDoc = readOnlySnapshot.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+        iframe =
+          `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
+          `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+          `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
+          `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
+          `srcdoc="${escapedDoc}"></iframe>`;
+      }
+    } else {
+      escapedDoc = readOnlySnapshot.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+      iframe =
+        `<iframe class="flowist-web-clip-page" data-role="page-embed" ` +
+        `sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" ` +
+        `referrerpolicy="no-referrer-when-downgrade" loading="lazy" ` +
+        `style="width:100%;height:80vh;min-height:640px;border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--background));display:block;" ` +
+        `srcdoc="${escapedDoc}"></iframe>`;
+    }
+    return `${banner}${iframe}`;
+  };
+
   /**
    * Fetch + assemble the clip and hand it to the editable preview UI.
    * Does NOT save to the DB — commitClip() does that when the user hits Save.
@@ -603,10 +654,10 @@ const WebClipper = () => {
           if (error) {
             console.warn('[webClipper] fetch-article transport error', { url, ms: fetchMs, message: error.message, hasCache: !!cachedClip });
             if (cachedClip?.rawHtml) {
-              articleHtml = cachedClip.rawHtml;
               articleTitle = title;
               articleSiteName = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
               articleExcerpt = t('webClipper.cachedSnapshotUsed', 'Using the last captured snapshot for this URL.');
+              articleHtml = wrapFullPageSnapshot(cachedClip.rawHtml, articleTitle, url);
             } else {
               fetchFailure = { code: 'network', message: error.message };
             }
@@ -619,10 +670,10 @@ const WebClipper = () => {
               error: data.error,
             });
             if (cachedClip?.rawHtml && (data.code === 'timeout' || data.code === 'network')) {
-              articleHtml = cachedClip.rawHtml;
               articleTitle = title;
               articleSiteName = (() => { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } })();
               articleExcerpt = t('webClipper.cachedSnapshotUsed', 'Using the last captured snapshot for this URL.');
+              articleHtml = wrapFullPageSnapshot(cachedClip.rawHtml, articleTitle, url);
             } else {
               fetchFailure = { code: String(data.code || 'upstream_error'), status: data.status, message: String(data.error) };
             }
