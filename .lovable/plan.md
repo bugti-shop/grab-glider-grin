@@ -1,53 +1,55 @@
-# Multi-page hybrid — Phase 1: pages inside one sketch
+# Remove the iOS Share Extension
 
-Notebook-level list already exists (Notebooks page). This ship adds **pages inside a single sketch** — jaisa Procreate/Notability karta hai. Notebook↔sketch level hierarchy Phase 2 mein polish karenge.
+## Scope
 
-## Scope (this turn)
+Delete the "Save to Flowist" iOS Share Sheet extension. Keep the HabitsWidget (and its App Group), keep Universal Links, keep the Android share intent code (Android uses a separate mechanism — not affected).
 
-1. **Data model**
-   - `SketchData` mein optional `pages?: Layer[][]` + `pageIndex?: number` add.
-   - Backwards compatible: agar `pages` nahi hai, current `layers` = single page.
-   - PDF sketches (jinke paas already `pdfAnnotations` hai) untouched — un mein multi-page pehle se hai.
+## What gets removed
 
-2. **In-editor state**
-   - `sketchPages: Layer[][]` (default 1 page = current layers)
-   - `sketchPageIndex: number`
-   - Non-PDF sketches ke liye active. PDF loaded ho to skip (PDF ka apna system chalta rahega).
+**Native iOS files (deleted):**
+- `ios/App/ShareExtension/` (entire folder — `ShareViewController.swift`, `MainInterface.storyboard`, `Info.plist`)
+- ShareExtension target + build phases + embed-app-extension step in `ios/App/App.xcodeproj/project.pbxproj`
 
-3. **Page navigation UI**
-   - Bottom-center chip: `‹  Page 2/5  ›` + `＋` add page button.
-   - Long-press/tap on chip → thumbnail rail (horizontal scroll on mobile, side sheet on desktop).
-   - Thumbnails render via `generateSvg(layers, w, h, background)` → data URL.
-   - Har thumbnail par delete (trash icon) + drag reorder (Phase 2).
+**iOS code edits:**
+- `ios/App/App/AppDelegate.swift` — remove `import SendIntent`, `ShareStore`, `consumePendingShareItems()`, the `flowist://share` URL handler, and the `triggerSendIntent` notification post
+- `ios/App/App/App.entitlements` — leave App Group (widget still needs it) and Associated Domains (universal links); no changes needed
+- `ios/App/Podfile` — no changes (no ShareExtension-specific pods)
 
-4. **Persistence**
-   - `emitChange` mein current page ke layers ko `sketchPages[sketchPageIndex]` mein snapshot karke pura `pages` array `onChange` payload mein bhejein.
-   - `useEffect` on `initialData`: agar `initialData.pages` present hai to load karo, warna `[initialData.layers]` se seed karo.
+**TypeScript / app-side:**
+- `src/hooks/useShareIntent.ts` — delete (SendIntent listener no longer has anything to receive from iOS; Android side keeps working via `FlowistShareIntentPlugin`, so we split: keep Android path, drop iOS path)
+- Remove `send-intent` package from `package.json` if only used for iOS. If Android also uses it, keep it and just gate the listener to Android.
+- Any `<SendIntent>` route/component wiring in `App.tsx` / router
 
-5. **Keyboard shortcuts** (desktop)
-   - `PageDown` / `Ctrl+→` → next page
-   - `PageUp` / `Ctrl+←` → prev page
-   - `Ctrl+Shift+N` → add page
+## What stays
 
-6. **Swipe navigation** (mobile)
-   - Existing presentation-mode swipe logic re-use — non-presentation mode mein bhi enable jab thumbnail rail visible ho.
+- HabitsWidget + its App Group `group.nota.npd.com.shareextension` (used by `widgetDataSync.ts` → widget UserDefaults)
+- Associated Domains / Universal Links (`applinks:flowist.me`)
+- Android share receiver (`FlowistShareIntentPlugin.java`, intent filters in `AndroidManifest.xml`)
+- Web Clipper (in-app URL paste flow — unrelated)
 
-## Out of scope (Phase 2 — next turn)
+## Important: Codemagic build error is separate
 
-- Notebook-level "list of sketches" polish, drag-move pages between sketches
-- Page templates (bg per page override)
-- Page reorder drag & drop
-- Collab sync for page switches (already scaffolded via `onCollabPageSwitch`, verify only)
-- Undo/redo across page switches
+Deleting the Share Extension does **not** fix the current archive failure:
+
+```
+Provisioning profile "Flowist_Distribution" doesn't support
+the App Groups and Associated Domains capability.
+```
+
+You still need to, in Apple Developer portal:
+1. Enable **App Groups** and **Associated Domains** on App ID `com.flowist.app`
+2. Add `group.nota.npd.com.shareextension` to the App Group list (widget needs it)
+3. Regenerate & re-download the `Flowist_Distribution` profile
+
+If you want, we can **also** rename the App Group to `group.com.flowist.app` in the same pass so it matches your bundle prefix cleanly — say the word.
 
 ## Technical notes
 
-- File: `src/components/SketchEditor.tsx` (~8.4k lines) — additive changes near existing PDF page nav for consistency.
-- File: `src/components/sketch/SketchTypes.ts` — extend `SketchData`.
-- File: `src/pages/NotebookDetail.tsx` / `SketchPage.tsx` — no changes; SketchData shape widening is backward compatible.
-- Layer semantic defaults (Background/Grid/Drawing/Text/Stickers) apply per page, freshly generated.
-- Thumbnail generation is off-screen SVG → cheap; regenerate only on page switch or on `emitChange` debounce.
+- Removing a target from `project.pbxproj` requires editing multiple sections (`PBXNativeTarget`, `PBXContainerItemProxy`, `PBXTargetDependency`, `PBXCopyFilesBuildPhase` for embed-extension, `XCConfigurationList`). I'll do this via targeted edits and verify with `xcodebuild -list` on your next Codemagic run.
+- After merging, on your Mac: `rm -rf ios/App/Pods ios/App/Podfile.lock && npx cap sync ios && cd ios/App && pod install`.
+- Users on old builds will lose the "Save to Flowist" share sheet entry on next update — no data migration needed.
 
-## Approval
+## Answer these before I proceed
 
-OK karo to Phase 1 implement kar deta hun. "Just build" bolo to skip approval.
+1. Delete Share Extension only, or also **rename the App Group** to `group.com.flowist.app` in the same pass?
+2. Is `send-intent` used on Android in your code? (I'll check, but confirm if you know.)
