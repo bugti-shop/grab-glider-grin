@@ -8,6 +8,9 @@ workflows:
       app_store_connect: Codemagic
 
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.flowist.app
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         BUNDLE_ID: "com.flowist.app"
@@ -114,17 +117,9 @@ workflows:
                     CODE_SIGN_ENTITLEMENTS = App\/App.entitlements;' "$PROJ"
           fi
 
-      - name: Fetch fresh signing files from Apple
+      - name: Use Codemagic provisioning profiles
         script: |
-          # Do not rely on Codemagic's pre-build ios_signing lookup because it
-          # fails when Apple has no existing profiles yet. Create/fetch them now.
           set -e
-          app-store-connect fetch-signing-files "com.flowist.app" \
-            --type IOS_APP_STORE \
-            --create
-          # Install every fetched .mobileprovision into the local keychain /
-          # profile directory so xcodebuild can find them.
-          keychain add-certificates
           xcode-project use-profiles
 
       - name: Build & Archive
