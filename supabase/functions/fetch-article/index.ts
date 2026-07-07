@@ -92,6 +92,22 @@ function markdownishToHtml(markdown: string, baseHref: string): string {
   return `<!DOCTYPE html><html><head><base href="${escapeHtml(baseHref)}"><meta name="referrer" content="no-referrer-when-downgrade"><title>${escapeHtml(title)}</title></head><body>${body.join("\n")}</body></html>`;
 }
 
+async function jsonResponse(data: unknown, init: ResponseInit = {}): Promise<Response> {
+  const json = JSON.stringify(data);
+  const headers = new Headers({ ...corsHeaders, "Content-Type": "application/json", ...(init.headers || {}) });
+  if (json.length < 128 * 1024 || typeof CompressionStream !== "function") {
+    return new Response(json, { ...init, headers });
+  }
+  try {
+    const stream = new Blob([json], { type: "application/json" }).stream().pipeThrough(new CompressionStream("gzip"));
+    headers.set("Content-Encoding", "gzip");
+    headers.set("Vary", "Accept-Encoding");
+    return new Response(stream, { ...init, headers });
+  } catch {
+    return new Response(json, { ...init, headers });
+  }
+}
+
 async function fetchReaderFallback(url: string): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean } | null> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), READER_FALLBACK_TIMEOUT_MS);
@@ -339,34 +355,24 @@ interface Body { url?: string; mode?: string }
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Method not allowed" }, { status: 405 });
   }
 
   let body: Body;
   try { body = await req.json(); } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const rawUrl = (body.url || "").trim();
   if (!rawUrl) {
-    return new Response(JSON.stringify({ error: "Missing url" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Missing url" }, { status: 400 });
   }
   let parsed: URL;
   try { parsed = new URL(rawUrl); } catch {
-    return new Response(JSON.stringify({ error: "Invalid URL" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Invalid URL" }, { status: 400 });
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return new Response(JSON.stringify({ error: "Only http(s) URLs are supported" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Only http(s) URLs are supported" }, { status: 400 });
   }
 
   console.info("[fetch-article] evernote-simple fetch", { url: parsed.toString() });
@@ -377,10 +383,10 @@ Deno.serve(async (req) => {
   } catch (err) {
     const isAbort = (err as Error)?.name === "AbortError";
     console.warn("[fetch-article] fetch failed", { url: parsed.toString(), error: (err as Error)?.message, isAbort });
-    return new Response(JSON.stringify({
+    return jsonResponse({
       error: isAbort ? "Upstream fetch timed out" : `Upstream fetch failed: ${(err as Error)?.message || "unknown"}`,
       code: isAbort ? "timeout" : "network",
-    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }, { status: 200 });
   }
 
   let { html: rawHtml, finalUrl, status, truncated } = fetched;
@@ -398,11 +404,11 @@ Deno.serve(async (req) => {
   }
 
   if (!rawHtml || rawHtml.length < 32) {
-    return new Response(JSON.stringify({
+    return jsonResponse({
       error: "Upstream returned no HTML",
       code: "empty",
       status,
-    }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }, { status: 200 });
   }
 
   // Sanitize + add <base> so relative URLs resolve to the origin.
@@ -454,8 +460,5 @@ Deno.serve(async (req) => {
     truncated,
   });
 
-  return new Response(JSON.stringify(responseBody), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return jsonResponse(responseBody, { status: 200 });
 });
