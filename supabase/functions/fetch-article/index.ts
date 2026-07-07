@@ -109,54 +109,107 @@ async function jsonResponse(data: unknown, init: ResponseInit = {}): Promise<Res
 }
 
 /**
- * Fallback: render the page through Jina Reader with the headless-browser
- * engine and ask for HTML back (not markdown). This preserves images,
- * layout, and works for JS-only pages (dashboards, earnings/traffic/backlink
- * reports, anti-bot walls that require JS+cookies).
+ * Fallback chain for pages that block bots or need JS to render:
+ *   1. Retry the origin with a Googlebot UA (most publishers whitelist it
+ *      for SEO, which sidesteps "please enable JS/cookies" walls without
+ *      needing a paid renderer).
+ *   2. If that still looks like a challenge/shell, ask Jina Reader for the
+ *      RENDERED HTML (default engine, no API key required — free tier
+ *      already JS-renders and preserves <img>/<figure>/layout).
+ *   3. Last resort: Jina Reader in markdown mode wrapped to HTML — text
+ *      only, but better than a blank note.
  *
- * Docs: https://jina.ai/reader — headers X-Return-Format, X-Engine,
- * X-With-Images-Summary, X-With-Generated-Alt.
+ * Docs: https://jina.ai/reader (X-Return-Format, X-With-Images-Summary).
  */
-async function fetchReaderFallback(url: string): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean } | null> {
+const GOOGLEBOT_UA =
+  "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+
+async function fetchWithUA(url: string, ua: string): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean } | null> {
+  try {
+    return await fetchHtml(url, ua);
+  } catch (err) {
+    console.warn("[fetch-article] UA retry failed", { url, ua, error: (err as Error)?.message });
+    return null;
+  }
+}
+
+async function fetchJinaHtml(url: string): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean } | null> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), READER_FALLBACK_TIMEOUT_MS);
   try {
-    // r.jina.ai accepts the raw URL directly (with scheme).
     const readerUrl = `https://r.jina.ai/${url}`;
     const res = await fetch(readerUrl, {
       signal: ctrl.signal,
       headers: {
         "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
         "User-Agent": DEFAULT_UA,
-        // Ask for the full rendered HTML — keeps <img>, <figure>, layout.
         "X-Return-Format": "html",
-        // Use the headless browser so JS-rendered content actually resolves.
-        "X-Engine": "browser",
         "X-With-Images-Summary": "true",
         "X-With-Generated-Alt": "true",
-        // Give the page a moment to finish rendering before capture.
         "X-Timeout": "45",
       },
     });
     const text = await res.text();
-    console.info("[fetch-article] reader(browser+html) fallback response", {
-      url,
-      readerUrl,
-      status: res.status,
-      chars: text.length,
-      challenge: CHALLENGE_RE.test(text),
+    console.info("[fetch-article] jina(html) response", {
+      url, status: res.status, chars: text.length, challenge: CHALLENGE_RE.test(text),
     });
     if (!res.ok || text.trim().length < 64 || CHALLENGE_RE.test(text)) return null;
     const truncated = text.length > MAX_HTML_BYTES;
-    const html = truncated ? text.slice(0, MAX_HTML_BYTES) : text;
-    return { html, finalUrl: url, status: res.status, truncated };
+    return { html: truncated ? text.slice(0, MAX_HTML_BYTES) : text, finalUrl: url, status: res.status, truncated };
   } catch (err) {
-    console.warn("[fetch-article] reader fallback failed", { url, error: (err as Error)?.message });
+    console.warn("[fetch-article] jina html failed", { url, error: (err as Error)?.message });
     return null;
   } finally {
     clearTimeout(timer);
   }
 }
+
+async function fetchJinaMarkdown(url: string): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean } | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), READER_FALLBACK_TIMEOUT_MS);
+  try {
+    const readerUrl = `https://r.jina.ai/${url}`;
+    const res = await fetch(readerUrl, {
+      signal: ctrl.signal,
+      headers: { "Accept": "text/plain,text/markdown,*/*;q=0.8", "User-Agent": DEFAULT_UA },
+    });
+    const text = await res.text();
+    console.info("[fetch-article] jina(md) response", {
+      url, status: res.status, chars: text.length, challenge: CHALLENGE_RE.test(text),
+    });
+    if (!res.ok || text.trim().length < 32 || CHALLENGE_RE.test(text)) return null;
+    const truncated = text.length > MAX_HTML_BYTES;
+    return {
+      html: markdownishToHtml(truncated ? text.slice(0, MAX_HTML_BYTES) : text, url),
+      finalUrl: url,
+      status: res.status,
+      truncated,
+    };
+  } catch (err) {
+    console.warn("[fetch-article] jina md failed", { url, error: (err as Error)?.message });
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchReaderFallback(url: string): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean } | null> {
+  // Stage 1: Googlebot UA (bypasses most anti-bot / paywall soft-walls).
+  const gb = await fetchWithUA(url, GOOGLEBOT_UA);
+  if (gb && gb.html && !CHALLENGE_RE.test(gb.html) && !looksLikeEmptyShell(gb.html)) {
+    console.info("[fetch-article] googlebot retry accepted", { url, chars: gb.html.length });
+    return gb;
+  }
+  // Stage 2: Jina rendered HTML (preserves images).
+  const jhtml = await fetchJinaHtml(url);
+  if (jhtml) return jhtml;
+  // Stage 3: Jina markdown → wrapped HTML (text only, last resort).
+  const jmd = await fetchJinaMarkdown(url);
+  if (jmd) return jmd;
+  return null;
+}
+
+
 
 /** Heuristic: does the fetched HTML look like an empty JS shell (SPA that
  *  didn't render server-side)? If so we should retry via the browser
