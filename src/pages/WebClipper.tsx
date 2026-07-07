@@ -508,54 +508,6 @@ const WebClipper = () => {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      // ── Background-job fast path (fullpage URL captures) ──────────────
-      // Instead of blocking the UI on a 30–240s server fetch (which times
-      // out on Forbes/PCMag-sized image-heavy pages), enqueue a job on the
-      // server and create a placeholder note immediately. The useWebClipJobs
-      // hook (mounted at app root) subscribes to the job and finalizes the
-      // note body — including the offline .html download — when the worker
-      // completes. User can close the app; the capture keeps running.
-      if (clipMode === 'fullpage' && url && !attachment && !selection && !content) {
-        try {
-          const { data: sess } = await supabase.auth.getUser();
-          if (!sess?.user?.id) {
-            failWith('webClipper.errAuthTitle', 'Sign in required', 'webClipper.errAuthDesc', 'Please sign in to use the Web Clipper.');
-            return;
-          }
-          const noteId = crypto.randomUUID();
-          const { composePendingWebClipBody } = await import('@/utils/webClipCompose');
-          const pendingBody = composePendingWebClipBody(url, noteId);
-          let host = '';
-          try { host = new URL(url).hostname.replace(/^www\./, ''); } catch { /* ignore */ }
-          const placeholder: Note = {
-            id: noteId,
-            type: 'regular',
-            title: (title || host || 'Web clip').substring(0, MAX_LENGTHS.title),
-            content: pendingBody,
-            voiceRecordings: [],
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          await saveNoteToDBSingle(placeholder);
-          const { error: rpcErr } = await supabase.rpc('enqueue_web_clip_job', {
-            p_note_id: noteId, p_url: url,
-          });
-          if (rpcErr) throw rpcErr;
-          clearClipperQuery();
-          setSaved(true);
-          setStage('idle');
-          toast({
-            title: t('webClipper.clipQueued', 'Clip queued in background'),
-            description: t('webClipper.clipQueuedDesc', 'The full page is being captured. Your note will update automatically when it\'s ready — you can close the app.'),
-          });
-          setTimeout(() => navigate('/notesdashboard'), 900);
-          return;
-        } catch (bgErr) {
-          console.error('[webClipper] background enqueue failed, falling back to sync fetch', bgErr);
-          // Fall through to the legacy sync path below.
-        }
-      }
-
       // 1) Validate attachment (type + size) before doing any heavy work.
       if (attachment) {
         setStage('validating');

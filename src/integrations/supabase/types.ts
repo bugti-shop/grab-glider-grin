@@ -1535,57 +1535,6 @@ export type Database = {
         }
         Relationships: []
       }
-      web_clip_jobs: {
-        Row: {
-          attempts: number
-          bytes: number | null
-          created_at: string
-          error_code: string | null
-          error_message: string | null
-          finished_at: string | null
-          id: string
-          note_id: string
-          result: Json | null
-          started_at: string | null
-          status: Database["public"]["Enums"]["web_clip_job_status"]
-          updated_at: string
-          url: string
-          user_id: string
-        }
-        Insert: {
-          attempts?: number
-          bytes?: number | null
-          created_at?: string
-          error_code?: string | null
-          error_message?: string | null
-          finished_at?: string | null
-          id?: string
-          note_id: string
-          result?: Json | null
-          started_at?: string | null
-          status?: Database["public"]["Enums"]["web_clip_job_status"]
-          updated_at?: string
-          url: string
-          user_id: string
-        }
-        Update: {
-          attempts?: number
-          bytes?: number | null
-          created_at?: string
-          error_code?: string | null
-          error_message?: string | null
-          finished_at?: string | null
-          id?: string
-          note_id?: string
-          result?: Json | null
-          started_at?: string | null
-          status?: Database["public"]["Enums"]["web_clip_job_status"]
-          updated_at?: string
-          url?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
@@ -1620,10 +1569,6 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
-      }
-      enqueue_web_clip_job: {
-        Args: { p_note_id: string; p_url: string }
-        Returns: string
       }
       increment_ai_usage_if_under_limit: {
         Args: {
@@ -1684,11 +1629,9 @@ export type Database = {
           view_count: number
         }[]
       }
-      web_clips_dispatch: { Args: never; Returns: undefined }
     }
     Enums: {
       project_role: "owner" | "editor" | "viewer"
-      web_clip_job_status: "pending" | "processing" | "done" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1817,7 +1760,6 @@ export const Constants = {
   public: {
     Enums: {
       project_role: ["owner", "editor", "viewer"],
-      web_clip_job_status: ["pending", "processing", "done", "failed"],
     },
   },
 } as const
