@@ -363,7 +363,7 @@ function pickMeta(html: string, name: string): string {
 }
 
 /** Fetch with timeout + size cap. */
-async function fetchHtml(url: string): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean }> {
+async function fetchHtml(url: string, userAgent: string = DEFAULT_UA): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean }> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
