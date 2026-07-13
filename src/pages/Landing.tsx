@@ -347,7 +347,7 @@ export default function Landing() {
                     </div>
                   </a>
                   <a
-                    href="https://onelink.to/9xy8rz"
+                    href="https://play.google.com/store/apps/details?id=nota.npd.com"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-md bg-black px-3 text-white transition-transform active:translate-y-0.5"
