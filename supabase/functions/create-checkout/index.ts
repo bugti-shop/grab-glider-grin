@@ -10,9 +10,9 @@ const corsHeaders = {
 
 // Stripe Price IDs (Individual plans only — Family/Team are native iOS/Android)
 const PRICE_IDS: Record<string, string> = {
-  weekly: "price_1TRbliFAPtKh08jGPKXWPcPG",
-  monthly: "price_1TR6SoFAPtKh08jGW4lfGDYt",
-  yearly: "price_1TRbljFAPtKh08jGGf1qg42c",
+  weekly: "price_1TsvMUFAPtKh08jGgppw6EdS",
+  monthly: "price_1TsvLsFAPtKh08jGYUjyPA4Y",
+  yearly: "price_1TsvMoFAPtKh08jGgQg9cfM3",
 };
 
 
@@ -37,7 +37,7 @@ serve(async (req) => {
 
 
     // Initialize Stripe
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const stripe = new Stripe(Deno.env.get("STRIPE_RESTRICTED_API_KEY") || Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
 

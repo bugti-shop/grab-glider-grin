@@ -8,11 +8,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Product IDs to plan type mapping
-const PRODUCT_TO_PLAN: Record<string, string> = {
-  prod_UFxq1E9sWWYyYP: "weekly",
-  prod_UFxuZOFIvhkpxr: "monthly",
-  prod_UFxvRW5CagcDV1: "yearly",
+// Price IDs to plan type mapping
+const PRICE_TO_PLAN: Record<string, string> = {
+  price_1TsvMUFAPtKh08jGgppw6EdS: "weekly",
+  price_1TsvLsFAPtKh08jGYUjyPA4Y: "monthly",
+  price_1TsvMoFAPtKh08jGgQg9cfM3: "yearly",
 };
 
 const logStep = (step: string, details?: any) => {
@@ -29,11 +29,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+  const stripeKey = Deno.env.get("STRIPE_RESTRICTED_API_KEY") || Deno.env.get("STRIPE_SECRET_KEY");
   const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
 
   if (!stripeKey) {
-    logStep("ERROR: STRIPE_SECRET_KEY not set");
+    logStep("ERROR: Stripe key not set");
     return new Response(JSON.stringify({ error: "Server misconfigured" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -165,9 +165,9 @@ async function upsertSubscription(
     return;
   }
 
-  // Determine plan type from product
-  const productId = subscription.items.data[0]?.price?.product as string;
-  const planType = PRODUCT_TO_PLAN[productId] || "unknown";
+  // Determine plan type from price ID
+  const priceId = subscription.items.data[0]?.price?.id as string;
+  const planType = PRICE_TO_PLAN[priceId] || "unknown";
 
   const record = {
     user_email: email.toLowerCase(),

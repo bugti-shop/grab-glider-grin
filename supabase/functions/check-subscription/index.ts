@@ -65,9 +65,9 @@ serve(async (req) => {
   }
 
   try {
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const stripeKey = Deno.env.get("STRIPE_RESTRICTED_API_KEY") || Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
-      logStep("STRIPE_SECRET_KEY not set — returning subscribed:false");
+      logStep("Stripe key not set — returning subscribed:false");
       return jsonResponse({ subscribed: false, reason: "stripe_not_configured" });
     }
 
