@@ -210,35 +210,21 @@ function usePaywallLogic() {
           setTimeout(() => setAdminError(''), 4000);
         }
       } else {
-        // Web: check Stripe subscription status
+        // Web: check RevenueCat entitlement (user must be signed in — RC uses their user id)
         const { data: { session } } = await supabase.auth.getSession();
-        
-        // If no auth session, ask for email
-        if (!session?.access_token && !restoreEmail.trim()) {
-          setShowRestoreEmail(true);
-          setAdminError('Enter the email you used to subscribe');
+        if (!session?.user) {
+          setAdminError(t('ai.signInRequired', 'Sign in to restore purchases'));
           setTimeout(() => setAdminError(''), 5000);
-          setIsRestoring(false);
           return;
         }
-
-        const headers: Record<string, string> = {};
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
-        }
-
-        const { data, error } = await supabase.functions.invoke('check-subscription', {
-          body: restoreEmail.trim() ? { email: restoreEmail.trim() } : undefined,
-          headers,
-        });
-
-        if (data?.subscribed) {
-          // Mark as subscribed locally
-          try { localStorage.setItem('flowist_stripe_subscribed', 'true'); } catch {}
-          try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}
-          if (data.plan_type) {
-            (window as any).__stripePlanType = data.plan_type;
-          }
+        const { getRcCustomerInfo, RC_ENTITLEMENT_ID } = await import('@/lib/rcWeb');
+        const info = await getRcCustomerInfo();
+        const entitled = !!info?.entitlements.active[RC_ENTITLEMENT_ID];
+        if (entitled) {
+          try {
+            localStorage.setItem('flowist_stripe_subscribed', 'true');
+            localStorage.setItem('flowist_trial_used', 'true');
+          } catch {}
           window.dispatchEvent(new Event('stripeSubscriptionRestored'));
           closePaywall();
         } else {
