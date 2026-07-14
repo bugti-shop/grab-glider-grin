@@ -223,9 +223,19 @@ export default function AdminSmartLink() {
         <Stat label="Other (desktop/web)" value={stats.other} icon={Globe} />
       </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Stat label="App opens (installs)" value={stats.totalConversions} icon={Download} />
+        <Stat label="Click → install rate" value={`${stats.convRate}%`} icon={TrendingUp} />
+        <Stat label="iOS installs" value={stats.iosInstalls} icon={Apple} />
+        <Stat label="Android installs" value={stats.androidInstalls} icon={PlayCircle} />
+        <Stat label="Matched to a click" value={stats.matchedConversions} icon={LinkIcon} />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Chart title="Clicks per day" data={byDay(rows)} type="line" />
-        <Chart title="Store split" data={countBy(rows, "target")} type="pie" />
+        <Chart title="Installs per day" data={byDay(conversions as any)} type="line" />
+        <Chart title="Store split (clicks)" data={countBy(rows, "target")} type="pie" />
+        <Chart title="Install platform" data={countBy(conversions as any, "platform" as any)} type="pie" />
         <Chart title="Country" data={countBy(rows, "country")} />
         <Chart title="Operating system" data={countBy(rows, "os")} />
         <Chart title="Device type" data={countBy(rows, "device_type")} />
