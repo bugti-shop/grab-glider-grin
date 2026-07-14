@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Lock, RefreshCw, Link as LinkIcon, Smartphone, Globe, Apple, PlayCircle } from "lucide-react";
+import { ArrowLeft, Lock, RefreshCw, Link as LinkIcon, Smartphone, Globe, Apple, PlayCircle, Download, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +33,21 @@ type Row = {
   utm_source: string | null;
   utm_medium: string | null;
   utm_campaign: string | null;
+  click_id: string | null;
+  converted_at: string | null;
+  conversion_platform: string | null;
+};
+
+type Conversion = {
+  id: number;
+  created_at: string;
+  click_id: string | null;
+  platform: string | null;
+  install_referrer: string | null;
+  device_hash: string | null;
+  app_version: string | null;
+  country: string | null;
+  matched: boolean | null;
 };
 
 function countBy(rows: Row[], key: keyof Row): { name: string; value: number }[] {
@@ -115,6 +130,7 @@ export default function AdminSmartLink() {
   const [savedPw, setSavedPw] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
+  const [conversions, setConversions] = useState<Conversion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -124,8 +140,10 @@ export default function AdminSmartLink() {
       const { data, error } = await supabase.functions.invoke("admin-fetch-smart-link", { body: { password: pw } });
       if (error) throw error;
       setRows(((data as any)?.rows as Row[]) || []);
+      setConversions(((data as any)?.conversions as Conversion[]) || []);
     } catch (e) {
       setRows([]);
+      setConversions([]);
     } finally { setLoading(false); }
   };
 
@@ -149,8 +167,13 @@ export default function AdminSmartLink() {
     const android = rows.filter(r => r.target === "android").length;
     const other = rows.filter(r => r.target === "other").length;
     const reachedStore = rows.filter(r => r.reached_store).length;
-    return { total, ios, android, other, reachedStore };
-  }, [rows]);
+    const totalConversions = conversions.length;
+    const iosInstalls = conversions.filter(c => c.platform === "ios").length;
+    const androidInstalls = conversions.filter(c => c.platform === "android").length;
+    const matchedConversions = conversions.filter(c => c.matched).length;
+    const convRate = reachedStore > 0 ? Math.round((totalConversions / reachedStore) * 100) : 0;
+    return { total, ios, android, other, reachedStore, totalConversions, iosInstalls, androidInstalls, matchedConversions, convRate };
+  }, [rows, conversions]);
 
   if (!authenticated) {
     return (
