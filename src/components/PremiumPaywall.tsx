@@ -154,23 +154,33 @@ function usePaywallLogic() {
           setTimeout(() => setAdminError(''), 4000);
         }
       } else {
-        // Web: Stripe checkout
-        const { data: { session } } = await supabase.auth.getSession();
-        const headers: Record<string, string> = {};
-        if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
-
-        const { data, error } = await supabase.functions.invoke('create-checkout', {
-          body: { planType },
-          headers,
-        });
-
-        if (error || !data?.url) {
-          console.error('Checkout error:', error || data?.error);
-          setAdminError(data?.error || 'Failed to create checkout session');
+        // Web: RevenueCat Web Billing (RC-hosted Stripe checkout)
+        const { getRcOfferings, pickPackage, purchaseRcPackage, RC_ENTITLEMENT_ID } = await import('@/lib/rcWeb');
+        const { current } = await getRcOfferings();
+        if (!current) {
+          setAdminError('No subscription offering available. Please try again later.');
           setTimeout(() => setAdminError(''), 5000);
           return;
         }
-        window.location.href = data.url;
+        const pkg = pickPackage(current, planType as 'weekly' | 'monthly' | 'yearly');
+        if (!pkg) {
+          setAdminError(`Plan "${planType}" is not configured in RevenueCat.`);
+          setTimeout(() => setAdminError(''), 5000);
+          return;
+        }
+        const customerInfo = await purchaseRcPackage(pkg);
+        const entitled = !!customerInfo.entitlements.active[RC_ENTITLEMENT_ID];
+        if (entitled) {
+          try {
+            localStorage.setItem('flowist_stripe_subscribed', 'true');
+            localStorage.setItem('flowist_trial_used', 'true');
+          } catch {}
+          window.dispatchEvent(new CustomEvent('flowist:subscription-restored'));
+          closePaywall();
+        } else {
+          setAdminError(t('onboarding.paywall.purchaseCancelled'));
+          setTimeout(() => setAdminError(''), 4000);
+        }
       }
     } catch (error: any) {
       if (error.code !== 'PURCHASE_CANCELLED' && !error.userCancelled) {
@@ -200,35 +210,21 @@ function usePaywallLogic() {
           setTimeout(() => setAdminError(''), 4000);
         }
       } else {
-        // Web: check Stripe subscription status
+        // Web: check RevenueCat entitlement (user must be signed in — RC uses their user id)
         const { data: { session } } = await supabase.auth.getSession();
-        
-        // If no auth session, ask for email
-        if (!session?.access_token && !restoreEmail.trim()) {
-          setShowRestoreEmail(true);
-          setAdminError('Enter the email you used to subscribe');
+        if (!session?.user) {
+          setAdminError(t('ai.signInRequired', 'Sign in to restore purchases'));
           setTimeout(() => setAdminError(''), 5000);
-          setIsRestoring(false);
           return;
         }
-
-        const headers: Record<string, string> = {};
-        if (session?.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
-        }
-
-        const { data, error } = await supabase.functions.invoke('check-subscription', {
-          body: restoreEmail.trim() ? { email: restoreEmail.trim() } : undefined,
-          headers,
-        });
-
-        if (data?.subscribed) {
-          // Mark as subscribed locally
-          try { localStorage.setItem('flowist_stripe_subscribed', 'true'); } catch {}
-          try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}
-          if (data.plan_type) {
-            (window as any).__stripePlanType = data.plan_type;
-          }
+        const { getRcCustomerInfo, RC_ENTITLEMENT_ID } = await import('@/lib/rcWeb');
+        const info = await getRcCustomerInfo();
+        const entitled = !!info?.entitlements.active[RC_ENTITLEMENT_ID];
+        if (entitled) {
+          try {
+            localStorage.setItem('flowist_stripe_subscribed', 'true');
+            localStorage.setItem('flowist_trial_used', 'true');
+          } catch {}
           window.dispatchEvent(new Event('stripeSubscriptionRestored'));
           closePaywall();
         } else {
