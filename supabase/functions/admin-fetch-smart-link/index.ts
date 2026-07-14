@@ -23,15 +23,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data, error } = await supabase
-      .from("smart_link_clicks")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(Math.min(Number(limit) || 5000, 20000));
+    const cap = Math.min(Number(limit) || 5000, 20000);
 
-    if (error) throw error;
+    const [clicksRes, convRes] = await Promise.all([
+      supabase
+        .from("smart_link_clicks")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(cap),
+      supabase
+        .from("smart_link_conversions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(cap),
+    ]);
 
-    return new Response(JSON.stringify({ rows: data ?? [] }), {
+    if (clicksRes.error) throw clicksRes.error;
+    if (convRes.error) throw convRes.error;
+
+    return new Response(JSON.stringify({
+      rows: clicksRes.data ?? [],
+      conversions: convRes.data ?? [],
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
