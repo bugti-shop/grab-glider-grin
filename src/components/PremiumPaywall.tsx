@@ -714,7 +714,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           </div>
 
           {/* ── Trial terms (when eligible for selected plan) ── */}
-          {!hasUsedTrial && currentPlan?.hasTrial && (() => {
+          {Capacitor.isNativePlatform() && !hasUsedTrial && currentPlan?.hasTrial && (() => {
             const trialEnd = new Date();
             trialEnd.setDate(trialEnd.getDate() + 3);
             const endStr = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
