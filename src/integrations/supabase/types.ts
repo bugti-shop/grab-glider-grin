@@ -1077,6 +1077,78 @@ export type Database = {
           },
         ]
       }
+      smart_link_clicks: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device_model: string | null
+          device_type: string | null
+          device_vendor: string | null
+          id: number
+          ip_hash: string | null
+          language: string | null
+          os: string | null
+          os_version: string | null
+          reached_store: boolean
+          referrer: string | null
+          region: string | null
+          slug: string
+          target: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_model?: string | null
+          device_type?: string | null
+          device_vendor?: string | null
+          id?: number
+          ip_hash?: string | null
+          language?: string | null
+          os?: string | null
+          os_version?: string | null
+          reached_store?: boolean
+          referrer?: string | null
+          region?: string | null
+          slug?: string
+          target: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_model?: string | null
+          device_type?: string | null
+          device_vendor?: string | null
+          id?: number
+          ip_hash?: string | null
+          language?: string | null
+          os?: string | null
+          os_version?: string | null
+          reached_store?: boolean
+          referrer?: string | null
+          region?: string | null
+          slug?: string
+          target?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       subscription_status: {
         Row: {
           created_at: string
