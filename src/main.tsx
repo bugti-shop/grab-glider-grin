@@ -287,18 +287,6 @@ const __IS_QUICK_ADD_BOOT_MAIN__ =
   typeof window !== 'undefined' && window.location.pathname === '/quick-add';
 
 if (!__IS_QUICK_ADD_BOOT_MAIN__) {
-  // Configure RevenueCat Web SDK on load and re-identify on sign-in (web only)
-  if (!Capacitor.isNativePlatform()) {
-    import('./lib/rcWeb').then(({ configureRcWeb, identifyRcWebUser }) => {
-      configureRcWeb().catch((e) => console.warn('[RC Web] configure failed:', e));
-      import('./integrations/supabase/client').then(({ supabase }) => {
-        supabase.auth.onAuthStateChange((_event, session) => {
-          if (session?.user?.id) identifyRcWebUser(session.user.id).catch(() => {});
-        });
-      });
-    }).catch(() => {});
-  }
-
   // Background sync worker (web only, production builds only — guarded internally)
   import('./utils/cloudSync/registerSyncWorker').then(m => m.registerSyncWorker()).catch(() => {});
 
