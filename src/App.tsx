@@ -103,6 +103,8 @@ const TaskBench = lazy(() => import("./pages/dev/TaskBench"));
 const Reminders = lazy(() => import("./pages/Reminders"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminOnboarding = lazy(() => import("./pages/AdminOnboarding"));
+const AdminSmartLink = lazy(() => import("./pages/AdminSmartLink"));
+const SmartLink = lazy(() => import("./pages/SmartLink"));
 const Landing = lazy(() => import("./pages/Landing"));
 const PremiumUnlock = lazy(() => import("./pages/PremiumUnlock"));
 const PublicNote = lazy(() => import("./pages/PublicNote"));
@@ -529,6 +531,10 @@ const AppRoutes = () => {
             
             <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
             <Route path="/admin/onboarding" element={<AdminOnboarding />} />
+            <Route path="/admin/smart-link" element={<AdminSmartLink />} />
+            <Route path="/get" element={<SmartLink />} />
+            <Route path="/go" element={<SmartLink />} />
+            <Route path="/app" element={<SmartLink />} />
             <Route path="/w/add-task" element={<WidgetAddTask />} />
             <Route path="/w/new/sticky" element={<WidgetNewSticky />} />
             <Route path="/w/new/lined" element={<WidgetNewLined />} />
@@ -811,6 +817,10 @@ const AppContent = () => {
               <Route path="/p/:slug" element={<PublicNote />} />
               <Route path="/invite/:token" element={<AcceptInvite />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/get" element={<SmartLink />} />
+              <Route path="/go" element={<SmartLink />} />
+              <Route path="/app" element={<SmartLink />} />
+              <Route path="/admin/smart-link" element={<AdminSmartLink />} />
               <Route path="*" element={<Landing />} />
 
             </Routes>
