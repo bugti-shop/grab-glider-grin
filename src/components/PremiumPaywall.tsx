@@ -714,7 +714,7 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           </div>
 
           {/* ── Trial terms (when eligible for selected plan) ── */}
-          {!hasUsedTrial && currentPlan?.hasTrial && (() => {
+          {Capacitor.isNativePlatform() && !hasUsedTrial && currentPlan?.hasTrial && (() => {
             const trialEnd = new Date();
             trialEnd.setDate(trialEnd.getDate() + 3);
             const endStr = trialEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -751,11 +751,13 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           })()}
 
           <div className="mt-5 flex flex-col items-center gap-2">
-            <button onClick={handleRestore} disabled={isRestoring}
-              className="w-full rounded-xl py-2.5 text-[13px] font-semibold active:opacity-80"
-              style={{ background: 'transparent', border: `1.5px solid ${PRO_BLUE}`, color: PRO_BLUE }}>
-              {isRestoring ? t('onboarding.paywall.restoring') : 'Restore'}
-            </button>
+            {Capacitor.isNativePlatform() && (
+              <button onClick={handleRestore} disabled={isRestoring}
+                className="w-full rounded-xl py-2.5 text-[13px] font-semibold active:opacity-80"
+                style={{ background: 'transparent', border: `1.5px solid ${PRO_BLUE}`, color: PRO_BLUE }}>
+                {isRestoring ? t('onboarding.paywall.restoring') : 'Restore'}
+              </button>
+            )}
           </div>
 
           {adminError && <p className="text-xs text-center mt-3" style={{ color: '#f87171' }}>{adminError}</p>}
