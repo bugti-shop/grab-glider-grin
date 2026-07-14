@@ -57,9 +57,9 @@ export const STRIPE_PAYMENT_LINKS: Partial<Record<PlanType, string>> = {
 
 // Stripe Price IDs
 export const STRIPE_PRICE_IDS: Partial<Record<PlanType, string>> = {
-  weekly: 'price_1TRbliFAPtKh08jGPKXWPcPG',
-  monthly: 'price_1TR6SoFAPtKh08jGW4lfGDYt',
-  yearly: 'price_1TRbljFAPtKh08jGGf1qg42c',
+  weekly: 'price_1TsvMUFAPtKh08jGgppw6EdS',
+  monthly: 'price_1TsvLsFAPtKh08jGYUjyPA4Y',
+  yearly: 'price_1TsvMoFAPtKh08jGgQg9cfM3',
 };
 
 
