@@ -92,10 +92,7 @@ serve(async (req) => {
       subscription_data: {},
     };
 
-    // Only offer trial to individual monthly/yearly plans — not weekly, family, or team
-    if (!hadPreviousSubscription && (planType === "monthly" || planType === "yearly")) {
-      sessionConfig.subscription_data.trial_period_days = 3;
-    }
+    // Web checkout: no free trial on any plan (trial is native-only)
 
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
