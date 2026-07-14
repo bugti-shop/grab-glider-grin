@@ -789,9 +789,10 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
         {(() => {
           const ctaLabel = isPurchasing
             ? t('onboarding.paywall.processing')
-            : (!hasUsedTrial && currentPlan?.hasTrial)
+            : (Capacitor.isNativePlatform() && !hasUsedTrial && currentPlan?.hasTrial)
               ? 'Try for $0.00 Today'
               : `Subscribe · ${currentPlan?.price ?? ''}`;
+
 
           const onCta = () => {
             triggerTripleHeavyHaptic();
