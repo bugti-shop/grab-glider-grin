@@ -94,7 +94,13 @@ Deno.serve(async (req) => {
       "";
     const ip_hash = rawIp ? (await sha256(rawIp + ":flowist-smart-link")).slice(0, 32) : null;
 
+    // Accept a client-supplied click_id (so the browser can attach it to the
+    // Play Store `referrer` param before we've even round-tripped) or generate one.
+    const suppliedClickId = typeof body?.click_id === "string" ? body.click_id : null;
+    const click_id = suppliedClickId || crypto.randomUUID();
+
     await supabase.from("smart_link_clicks").insert({
+      click_id,
       slug,
       target,
       reached_store,
@@ -111,7 +117,7 @@ Deno.serve(async (req) => {
       ...parsed,
     });
 
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, click_id }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

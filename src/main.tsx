@@ -302,6 +302,13 @@ if (!__IS_QUICK_ADD_BOOT_MAIN__) {
     // Drain widget pending deep-link path EARLY so cold-start widget taps
     // (?add=1, ?newNote=sticky, etc.) land on the right route before pages mount.
     import('./utils/widgetDataSync').then((m) => m.widgetDataSync.initialize()).catch(() => {});
+
+    // First-launch install/conversion ping for smart-link attribution.
+    setTimeout(() => {
+      import('./utils/smartLinkConversion')
+        .then((m) => m.reportInstallConversionIfFirstLaunch())
+        .catch(() => {});
+    }, 2500);
   }
 
   // Defer ALL non-critical initialization until after first paint

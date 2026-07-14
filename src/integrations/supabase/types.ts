@@ -1081,6 +1081,11 @@ export type Database = {
         Row: {
           browser: string | null
           city: string | null
+          click_id: string | null
+          conversion_device_hash: string | null
+          conversion_install_referrer: string | null
+          conversion_platform: string | null
+          converted_at: string | null
           country: string | null
           created_at: string
           device_model: string | null
@@ -1104,6 +1109,11 @@ export type Database = {
         Insert: {
           browser?: string | null
           city?: string | null
+          click_id?: string | null
+          conversion_device_hash?: string | null
+          conversion_install_referrer?: string | null
+          conversion_platform?: string | null
+          converted_at?: string | null
           country?: string | null
           created_at?: string
           device_model?: string | null
@@ -1127,6 +1137,11 @@ export type Database = {
         Update: {
           browser?: string | null
           city?: string | null
+          click_id?: string | null
+          conversion_device_hash?: string | null
+          conversion_install_referrer?: string | null
+          conversion_platform?: string | null
+          converted_at?: string | null
           country?: string | null
           created_at?: string
           device_model?: string | null
@@ -1146,6 +1161,45 @@ export type Database = {
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+        }
+        Relationships: []
+      }
+      smart_link_conversions: {
+        Row: {
+          app_version: string | null
+          click_id: string | null
+          country: string | null
+          created_at: string
+          device_hash: string | null
+          id: number
+          install_referrer: string | null
+          matched: boolean
+          platform: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          app_version?: string | null
+          click_id?: string | null
+          country?: string | null
+          created_at?: string
+          device_hash?: string | null
+          id?: number
+          install_referrer?: string | null
+          matched?: boolean
+          platform?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          app_version?: string | null
+          click_id?: string | null
+          country?: string | null
+          created_at?: string
+          device_hash?: string | null
+          id?: number
+          install_referrer?: string | null
+          matched?: boolean
+          platform?: string | null
+          user_agent?: string | null
         }
         Relationships: []
       }
