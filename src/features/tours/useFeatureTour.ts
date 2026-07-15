@@ -28,17 +28,8 @@ export const useTourBootstrap = () => {
     ensureInstallDate().catch(() => {});
     hydrateFromCloud().catch(() => {});
 
-    // Detect web browser vs native app. On the web (flowist.me) we do NOT
-    // auto-start the compulsory onboarding chain — it blocks every click and
-    // crushes conversion for first-time visitors. The tutorial is still
-    // available via the "Feature Guide" (?) button in the header.
-    let isNative = false;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { Capacitor } = require('@capacitor/core');
-      isNative = !!Capacitor?.isNativePlatform?.();
-    } catch { isNative = false; }
-
+    // Auto-start compulsory onboarding on ALL platforms (web + native).
+    // User explicitly asked to restore the tutorial on the web.
     (async () => {
       try {
         const { getSetting, setSetting } = await import('@/utils/settingsStorage');
@@ -47,14 +38,12 @@ export const useTourBootstrap = () => {
         const shown = await getSetting<boolean>(KEY, false);
         if (!shown) {
           await setSetting(KEY, true, { skipCloudSync: true });
-          if (!isNative) return; // web: no auto tutorial
           await setSetting(CHAIN_KEY, true, { skipCloudSync: true });
           window.setTimeout(() => {
             window.dispatchEvent(new CustomEvent('flowist-onboarding:start-chain'));
           }, 2000);
           return;
         }
-        if (!isNative) return; // web: never auto-resume forced chain
         const chainStarted = await getSetting<boolean>(CHAIN_KEY, false);
         if (!chainStarted) return;
         await hydrateFromCloud().catch(() => {});
@@ -107,7 +96,6 @@ export const useTourBootstrap = () => {
     // can't just "click around" to escape the tutorial.
     let watchdogPending = false;
     const kickChainIfPending = async () => {
-      if (!isNative) return; // web: never force-reopen tutorial
       if (watchdogPending) return;
       if (TourManager.isActive()) return;
       watchdogPending = true;

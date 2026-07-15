@@ -493,7 +493,9 @@ const Index = () => {
       return;
     }
     if (!canCreateWithinSoftLimit('notes', notes.length)) {
-      softRequireCreate('notes', notes.length);
+      // Direct user action: always surface the paywall (bypass daily throttle
+      // that softRequireCreate applies) so the click never feels dead.
+      openPaywall('soft_limit_notes');
       return;
     }
     setDefaultType(type);
