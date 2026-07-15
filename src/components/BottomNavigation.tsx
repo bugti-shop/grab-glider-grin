@@ -38,14 +38,13 @@ export const BottomNavigation = () => {
   };
 
 
-  // Use startTransition for non-blocking navigation
+  // Instant navigation — fire haptic + navigate immediately (no startTransition deferral)
   const handleNavigation = useCallback((path: string) => {
+    if (location.pathname === path) return;
     triggerNavHaptic();
     void prefetchRoute(path);
-    startTransition(() => {
-      navigate(path);
-    });
-  }, [navigate]);
+    navigate(path);
+  }, [navigate, location.pathname]);
 
   // Calculate grid columns based on visible items
   const gridCols = customNavItems.length <= 3 ? 'grid-cols-3' 
