@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
-import { NotesCalendarView } from '@/components/NotesCalendarView';
+import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
 
 import { AppLogo } from '@/components/AppLogo';
 import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image } from 'lucide-react';
@@ -177,35 +177,31 @@ const NotesCalendar = () => {
 
   return (
     <div className="min-h-screen min-h-screen-dynamic bg-background pb-14 flex flex-col">
-      <div style={{ paddingTop: 'var(--safe-top, 0px)' }} className="flex-1 flex flex-col overflow-hidden">
+      <div style={{ paddingTop: 'var(--safe-top, 0px)' }} className="flex-1 flex flex-col min-h-0">
         {/* Header with App Logo */}
-        <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+        <div className="flex items-center gap-2 px-4 pt-3 pb-1 flex-shrink-0">
           <AppLogo />
           <h1 className="text-lg font-bold text-foreground">{t('nav.calendar', 'Calendar')}</h1>
         </div>
-        {/* Calendar View with Background */}
-        <ErrorBoundary fallback={<CalendarPanelFallback />}>
-          <NotesCalendarView
-            selectedDate={date}
-            onDateSelect={setDate}
-            highlightedDates={noteDates}
-            showEmptyState={selectedDateNotes.length === 0}
-            emptyStateMessage={t('calendar.noNotes', 'No notes for the day.')}
-            emptyStateSubMessage={t('calendar.clickToCreate', 'Click "+" to create your notes.')}
-            calendarBackground={calendarBackground}
-            onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
-          />
-        </ErrorBoundary>
 
+        {/* Scrollable area: calendar + notes list scroll together so the full month is revealed */}
+        <div className="flex-1 min-h-0 overflow-y-auto perf-contain-scroll">
+          <ErrorBoundary fallback={<CalendarPanelFallback />}>
+            <NotesCalendarPremium
+              selectedDate={date}
+              onDateSelect={setDate}
+              highlightedDates={noteDates}
+              onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
+              onAddClick={() => handleCreateNote('regular')}
+            />
+          </ErrorBoundary>
 
-        {/* Notes for Selected Date - Scrollable */}
-        {selectedDateNotes.length > 0 && (
-          <div className="flex-1 flex flex-col min-h-0 px-4">
-            <h2 className="text-lg font-semibold text-foreground py-2 flex-shrink-0">
-              {format(date || new Date(), 'MMMM dd, yyyy')}
-            </h2>
-            <ErrorBoundary fallback={<NotesListFallback />}>
-              <ScrollArea className="flex-1 perf-contain-scroll">
+          {selectedDateNotes.length > 0 && (
+            <div className="px-4 pt-2">
+              <h2 className="text-lg font-semibold text-foreground py-2">
+                {format(date || new Date(), 'MMMM dd, yyyy')}
+              </h2>
+              <ErrorBoundary fallback={<NotesListFallback />}>
                 <div className="space-y-3 pb-4">
                   <NotesVirtualGrid
                     notes={selectedDateNotes}
@@ -221,10 +217,10 @@ const NotesCalendar = () => {
                     )}
                   />
                 </div>
-              </ScrollArea>
-            </ErrorBoundary>
-          </div>
-        )}
+              </ErrorBoundary>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Floating Add Note button */}
