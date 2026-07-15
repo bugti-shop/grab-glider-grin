@@ -172,15 +172,16 @@ const pickSkeleton = (path: string) => {
 };
 
 export const RouteSkeleton = () => {
-  const location = useLocation();
   const isTourActive = useIsTourActive();
-  // Suppress skeleton entirely during feature tours so highlighted targets
-  // aren't hidden behind placeholder shimmer during lazy chunk loads.
   if (isTourActive) return null;
+  // Minimal fallback — just a subtle top progress bar. Full-page skeletons
+  // felt heavy and flashed on every route change, so keep it near-invisible.
   return (
-    <div aria-busy="true" aria-live="polite" role="status">
+    <div aria-busy="true" aria-live="polite" role="status" className="fixed top-0 left-0 right-0 z-[100] pointer-events-none">
       <span className="sr-only">Loading…</span>
-      {pickSkeleton(location.pathname)}
+      <div className="h-0.5 w-full overflow-hidden bg-transparent">
+        <div className="h-full w-1/3 bg-primary/60 animate-[loading-bar_1.2s_ease-in-out_infinite]" />
+      </div>
     </div>
   );
 };
