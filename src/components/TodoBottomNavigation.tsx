@@ -145,7 +145,12 @@ export const TodoBottomNavigation = () => {
               key={item.id}
               type="button"
               data-tour={`todo-${item.id}-link`}
-              onClick={() => { void handleNavigation(item.path); }}
+              onPointerDown={(e) => {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                prefetchRoute(item.path);
+                handleNavigation(item.path);
+              }}
+              onClick={(e) => e.preventDefault()}
               onPointerEnter={() => prefetchRoute(item.path)}
               onTouchStart={() => prefetchRoute(item.path)}
               className={cn(
