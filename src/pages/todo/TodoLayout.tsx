@@ -72,11 +72,16 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => {
-                  triggerHaptic('heavy').catch(() => {});
+                onPointerDown={() => {
+                  // Kick off prefetch on pointer-down so the chunk is warm by the time click fires
                   void prefetchRoute('/notesdashboard');
-                  startTransition(() => {
-                    navigate('/notesdashboard');
+                }}
+                onClick={() => {
+                  // Navigate synchronously first for instant route swap; defer side-effects
+                  navigate('/notesdashboard');
+                  // Non-blocking side effects
+                  Promise.resolve().then(() => {
+                    triggerHaptic('heavy').catch(() => {});
                   });
                 }}
                 className="h-8 w-8 sm:h-9 sm:w-9 hover:bg-transparent active:bg-transparent"
