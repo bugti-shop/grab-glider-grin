@@ -23,7 +23,8 @@ export const useSettingsPageState = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-  const { isPro, isPro: isProSub, customerInfo, presentPaywall, presentCustomerCenter, restorePurchases, isInitialized, requireFeature } = useSubscription();
+  const { isPro, customerInfo, presentPaywall, presentCustomerCenter, restorePurchases, isInitialized, requireFeature } = useSubscription();
+  const isProSub = isPro;
   const { currentTheme, setTheme } = useDarkMode();
   const toolbarOrder = useToolbarOrder();
 
