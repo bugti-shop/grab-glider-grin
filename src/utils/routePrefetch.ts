@@ -66,7 +66,10 @@ export function prefetchAllOnIdle(): void {
     return;
   }
 
-  const bottomNavRoutes = ['/notes', '/notesdashboard', '/profile', '/settings', '/calendar'];
+  const bottomNavRoutes = [
+    '/notes', '/notesdashboard', '/profile', '/settings', '/calendar',
+    '/todo/today', '/todo/progress', '/todo/calendar', '/todo/settings',
+  ];
   const tier = getNetworkTier();
 
   // Bottom-nav tabs: always — but still scheduled on idle to avoid jank
