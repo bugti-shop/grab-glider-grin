@@ -161,7 +161,6 @@ export const TextTaskExtractorSheet = ({
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           languageCode: (i18n.language || 'en').split('-')[0],
           languageName: 'auto',
-          webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
         },
         timeout: AI_TIMEOUT_MS,
       } as any);

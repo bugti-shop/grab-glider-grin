@@ -618,7 +618,6 @@ const WebClipper = () => {
                 // is the user's non-negotiable requirement.
                 url,
                 mode: 'fullpage',
-                webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
               },
             }),
             timeoutPromise,

@@ -24,7 +24,7 @@ interface ExtractRequest {
 }
 
 const AI_GATEWAY_TIMEOUT_MS = 40_000;
-const WEB_UNLOCK_CODE = "mustafabugti890";
+// Web-unlock bypass removed — Pro is verified via user_entitlements only.
 
 const MAX_IMAGE_BASE64_BYTES = 8 * 1024 * 1024;
 
@@ -118,8 +118,7 @@ Deno.serve(async (req) => {
           : `app_user_id.eq.${userId}`,
       );
     const nowMs = Date.now();
-    const hasWebUnlock = body.webUnlockCode === WEB_UNLOCK_CODE;
-    const isPro = hasWebUnlock || (ents || []).some((e: any) => {
+    const isPro = (ents || []).some((e: any) => {
       if (!e?.is_active) return false;
       const exp = e.expires_at ? new Date(e.expires_at).getTime() : Infinity;
       const grace = e.grace_period_expires_at

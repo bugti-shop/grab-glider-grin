@@ -156,7 +156,6 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             languageCode: (i18n.language || 'en').split('-')[0],
             languageName: 'auto',
             handwriting: opts?.handwriting === true,
-            webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
           },
           timeout: AI_SCAN_TIMEOUT_MS,
         },
@@ -213,7 +212,6 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
         body: {
           imageBase64: dataUrl,
           scanMode: 'object_count',
-          webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
         },
         timeout: AI_SCAN_TIMEOUT_MS,
       });
@@ -241,7 +239,6 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       const { data, error } = await supabase.functions.invoke('ai-extract-receipt', {
         body: {
           imageBase64: dataUrl,
-          webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
         },
         timeout: AI_SCAN_TIMEOUT_MS,
       });
@@ -515,7 +512,6 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
                     languageCode: (i18n.language || 'en').split('-')[0],
                     languageName: 'auto',
                     handwriting: opts?.handwriting === true,
-                    webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
                   },
                   timeout: AI_SCAN_TIMEOUT_MS,
                 },
