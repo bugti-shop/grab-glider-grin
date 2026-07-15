@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { triggerHaptic } from '@/utils/haptics';
 import { useTranslation } from 'react-i18next';
 import { getSetting } from '@/utils/settingsStorage';
-import { prefetchRoute } from '@/utils/routePrefetch';
+import { prefetchRoute, prefetchAllOnIdle } from '@/utils/routePrefetch';
 
 const triggerNavHaptic = () => {
   triggerHaptic('heavy').catch(() => {});
@@ -85,6 +85,9 @@ export const TodoBottomNavigation = () => {
   const allNavItems = useTodoNavigation();
   const visibleItems = allNavItems.filter(item => item.visible);
   const [countdownBadge, setCountdownBadge] = useState(0);
+
+  // Prefetch all lazy routes on idle so tab switches are instant
+  useEffect(() => { prefetchAllOnIdle(); }, []);
 
   useEffect(() => {
     let cancelled = false;
