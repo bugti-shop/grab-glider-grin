@@ -1143,7 +1143,7 @@ const Today = () => {
           // Explicit user gesture — bypass the daily paywall throttle so the
           // Add Task button never feels "dead". Show paywall so the user
           // understands why creation is blocked.
-          try { showFeaturePaywall('soft_limit_tasks'); } catch { softRequireCreate('tasks', items.length); }
+          try { openPaywall('soft_limit_tasks'); } catch { softRequireCreate('tasks', items.length); }
           return;
         }
         try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
