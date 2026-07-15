@@ -202,7 +202,7 @@ const FlatCompletionToggle = ({
 const Today = () => {
   const { t } = useTranslation();
   const location = useLocation();
-  const { softRequireCreate, canCreateWithinSoftLimit, showFeaturePaywall, isPro } = useSubscription();
+  const { softRequireCreate, canCreateWithinSoftLimit, openPaywall } = useSubscription();
 
   // ── All state from extracted hook ──
   const state = useTodayState();
