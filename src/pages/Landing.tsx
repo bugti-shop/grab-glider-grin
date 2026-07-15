@@ -44,35 +44,12 @@ export default function Landing() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // TikTok / paid-social mobile bounce killer:
-  // If a mobile visitor arrives from TikTok (or with utm_source=tiktok / ?to=store),
-  // send them straight to /get which OS-detects and forwards to the App/Play Store.
-  // This turns 3-second landing bounces into actual store impressions.
-  useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const forceStore = params.get('to') === 'store' || params.get('utm_medium') === 'paid_social';
-      const ref = (document.referrer || '').toLowerCase();
-      const utm = (params.get('utm_source') || '').toLowerCase();
-      const fromSocial = /tiktok|instagram|facebook|fb\.|snapchat|reddit\.com/.test(ref) ||
-        /tiktok|instagram|facebook|snapchat|reddit/.test(utm);
-      const ua = navigator.userAgent || '';
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
-      if (isMobile && (forceStore || fromSocial)) {
-        // Preserve utm params so smart-link analytics keeps attribution.
-        const qs = window.location.search ? window.location.search : '';
-        window.location.replace(`/get${qs}`);
-      }
-    } catch {}
-  }, []);
-
   // Aggressively preload onboarding + today chunks immediately so tapping
   // "Get Flowist Free" opens the language selection instantly (no 7s white page).
   useEffect(() => {
     import('@/components/OnboardingFlow').catch(() => {});
     import('@/pages/todo/Today').catch(() => {});
   }, []);
-
 
   // Track which section is currently in view (for footer link highlight)
   useEffect(() => {
