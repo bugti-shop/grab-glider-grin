@@ -534,7 +534,7 @@ const AppRoutes = () => {
             <Route path="/w/new/lined" element={<WidgetNewLined />} />
             <Route path="/w/new/regular" element={<WidgetNewRegular />} />
             <Route path="/w/new/sketch" element={<WidgetNewSketch />} />
-            <Route path="/mustafabugti890" element={<PremiumUnlock />} />
+            <Route path="/premium-unlock" element={<PremiumUnlock />} />
             <Route path="/quick-add" element={<QuickAdd />} />
             <Route path="/p/:slug" element={<PublicNote />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
@@ -807,7 +807,7 @@ const AppContent = () => {
             <Routes>
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-              <Route path="/mustafabugti890" element={<PremiumUnlock />} />
+              <Route path="/premium-unlock" element={<PremiumUnlock />} />
               <Route path="/p/:slug" element={<PublicNote />} />
               <Route path="/invite/:token" element={<AcceptInvite />} />
               <Route path="/auth/callback" element={<AuthCallback />} />

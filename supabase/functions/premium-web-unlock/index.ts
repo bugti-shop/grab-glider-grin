@@ -4,8 +4,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const WEB_UNLOCK_CODE = "mustafabugti890";
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -18,9 +16,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    const expectedCode = Deno.env.get("ADMIN_UNLOCK_CODE") || "";
+    if (!expectedCode) {
+      console.error("premium-web-unlock: ADMIN_UNLOCK_CODE not configured");
+      return new Response(JSON.stringify({ error: "Unlock not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const { code } = await req.json().catch(() => ({ code: "" }));
-    if (code !== WEB_UNLOCK_CODE) {
-      return new Response(JSON.stringify({ error: "Invalid unlock link" }), {
+    // Constant-time-ish compare
+    const a = String(code || "");
+    const b = expectedCode;
+    let mismatch = a.length !== b.length ? 1 : 0;
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) {
+      mismatch |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+    }
+    if (mismatch !== 0) {
+      return new Response(JSON.stringify({ error: "Invalid unlock code" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
