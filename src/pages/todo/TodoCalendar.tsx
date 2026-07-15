@@ -150,8 +150,9 @@ const TodoCalendar = () => {
     const today = startOfDay(new Date());
     const windowStart = addDays(today, -60);
     const windowEnd = addDays(today, 365);
-    const parseDate = (iso: string, hhmm?: string) => {
-      const [y, m, d] = iso.split('-').map(Number);
+    const parseDate = (iso: string | undefined, hhmm?: string) => {
+      const safeIso = (iso && typeof iso === 'string') ? iso : format(new Date(), 'yyyy-MM-dd');
+      const [y, m, d] = safeIso.split('-').map(Number);
       const [hh, mm] = (hhmm || '09:00').split(':').map(Number);
       return new Date(y, (m || 1) - 1, d || 1, hh || 9, mm || 0);
     };
