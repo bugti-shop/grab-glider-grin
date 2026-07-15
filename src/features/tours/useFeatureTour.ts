@@ -28,9 +28,20 @@ export const useTourBootstrap = () => {
     ensureInstallDate().catch(() => {});
     hydrateFromCloud().catch(() => {});
 
+    // Detect in-app browsers (TikTok, Instagram, Facebook, LINE, etc.).
+    // These WebViews often lose localStorage between sessions, which caused
+    // the forced onboarding chain to re-fire on every open and swallow the
+    // first ~10 bottom-nav taps behind an invisible overlay. Skip auto-tours
+    // entirely inside such browsers — users can still launch tutorials via
+    // the ❓ header button.
+    const ua = navigator.userAgent || '';
+    const isInAppBrowser =
+      /(TikTok|musical_ly|BytedanceWebview|Instagram|FBAN|FBAV|FB_IAB|Line\/|MicroMessenger|Snapchat|Pinterest|Twitter|LinkedInApp)/i.test(ua);
+
     // Auto-start compulsory onboarding on ALL platforms (web + native).
     // User explicitly asked to restore the tutorial on the web.
     (async () => {
+      if (isInAppBrowser) return;
       try {
         const { getSetting, setSetting } = await import('@/utils/settingsStorage');
         const KEY = 'feature-guide-first-launch-shown-v5';
@@ -57,6 +68,7 @@ export const useTourBootstrap = () => {
         }
       } catch {}
     })();
+
 
 
     // Whenever the welcome sheet closes AFTER a first-launch open, start the
@@ -121,9 +133,10 @@ export const useTourBootstrap = () => {
         setTimeout(() => { watchdogPending = false; }, 800);
       }
     };
-    const activityHandler = () => { kickChainIfPending(); };
+    const activityHandler = () => { if (!isInAppBrowser) kickChainIfPending(); };
     window.addEventListener('pointerdown', activityHandler, { capture: true });
     window.addEventListener('keydown', activityHandler, { capture: true });
+
     window.addEventListener('flowist-tasks-updated', activityHandler);
     window.addEventListener('flowist-notes-updated', activityHandler);
 
