@@ -200,7 +200,6 @@ export const ImageTaskExtractorSheet = ({
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             languageCode: (i18n.language || 'en').split('-')[0],
             languageName: 'auto',
-            webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
           },
           timeout: AI_SCAN_TIMEOUT_MS,
         },
@@ -278,7 +277,6 @@ export const ImageTaskExtractorSheet = ({
         body: {
           imageBase64: dataUrl,
           scanMode: 'object_count',
-          webUnlockCode: isAdminBypass ? 'mustafabugti890' : undefined,
         },
         timeout: AI_SCAN_TIMEOUT_MS,
       });
