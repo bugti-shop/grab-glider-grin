@@ -117,9 +117,7 @@ export const TodoBottomNavigation = () => {
     if (path === location.pathname) return;
     triggerNavHaptic();
     void prefetchRoute(path);
-    startTransition(() => {
-      navigate(path, { state: { from: location.pathname } });
-    });
+    navigate(path, { state: { from: location.pathname } });
   }, [navigate, location.pathname]);
 
 
