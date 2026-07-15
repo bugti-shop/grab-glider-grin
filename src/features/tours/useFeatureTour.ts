@@ -107,6 +107,7 @@ export const useTourBootstrap = () => {
     // can't just "click around" to escape the tutorial.
     let watchdogPending = false;
     const kickChainIfPending = async () => {
+      if (!isNative) return; // web: never force-reopen tutorial
       if (watchdogPending) return;
       if (TourManager.isActive()) return;
       watchdogPending = true;
