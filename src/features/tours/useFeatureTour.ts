@@ -133,9 +133,10 @@ export const useTourBootstrap = () => {
         setTimeout(() => { watchdogPending = false; }, 800);
       }
     };
-    const activityHandler = () => { kickChainIfPending(); };
+    const activityHandler = () => { if (!isInAppBrowser) kickChainIfPending(); };
     window.addEventListener('pointerdown', activityHandler, { capture: true });
     window.addEventListener('keydown', activityHandler, { capture: true });
+
     window.addEventListener('flowist-tasks-updated', activityHandler);
     window.addEventListener('flowist-notes-updated', activityHandler);
 
