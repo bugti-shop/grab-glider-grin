@@ -167,7 +167,10 @@ const Index = () => {
   useEffect(() => {
     const loadFolders = async () => {
       const savedFolders = await getSetting<Folder[] | null>('folders', null);
-      console.log('[Notes] Loaded folders from settings:', savedFolders?.length ?? 0, savedFolders?.map((f: any) => f.name));
+      // Note: previously logged folder names here; removed because printing a
+      // 700+ item array on every mount/foldersUpdated event was blocking the
+      // main thread for ~1-2s (rrweb + devtools serialize the whole array).
+
       if (savedFolders && savedFolders.length > 0) {
         const nextFolders = savedFolders.map((f: Folder) => ({
           ...f,
