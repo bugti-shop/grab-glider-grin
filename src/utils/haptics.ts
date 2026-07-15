@@ -5,7 +5,17 @@ import { Priority } from '@/types/note';
 export type HapticIntensity = 'light' | 'medium' | 'heavy';
 
 export const triggerHaptic = async (style: HapticIntensity = 'heavy') => {
-  if (!Capacitor.isNativePlatform()) return;
+  if (!Capacitor.isNativePlatform()) {
+    // Web fallback: use navigator.vibrate when available (Android Chrome, etc.)
+    try {
+      const nav = typeof navigator !== 'undefined' ? navigator : null;
+      if (nav && typeof nav.vibrate === 'function') {
+        const ms = style === 'light' ? 8 : style === 'medium' ? 15 : 25;
+        nav.vibrate(ms);
+      }
+    } catch {}
+    return;
+  }
 
   try {
     let impactStyle: ImpactStyle;
