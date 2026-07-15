@@ -1139,13 +1139,8 @@ const Today = () => {
       </main>
 
       <Button data-tour="todo-add-task" onClick={async () => {
-        if (!isPro && !canCreateWithinSoftLimit('tasks', items.length)) {
-          // Explicit user gesture — bypass the daily paywall throttle so the
-          // Add Task button never feels "dead". Show paywall so the user
-          // understands why creation is blocked.
-          try { openPaywall('soft_limit_tasks'); } catch { softRequireCreate('tasks', items.length); }
-          return;
-        }
+        // Always open the input sheet — never block the click. If the user
+        // hits a limit at save-time, the paywall triggers there.
         try { await Haptics.impact({ style: ImpactStyle.Heavy }); } catch {}
         setIsInputOpen(true);
       }} className="fixed left-4 right-4 z-30 h-12 text-base font-semibold lg:hidden" style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }} size="lg">
