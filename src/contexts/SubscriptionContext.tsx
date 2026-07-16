@@ -289,6 +289,15 @@ const hasActiveRevenueCatAccess = (info: CustomerInfo | null | undefined): boole
   );
 };
 
+const readRevenueCatAppUserID = async (): Promise<string | null> => {
+  try {
+    const result = await Purchases.getAppUserID();
+    return typeof result === 'string' ? result : (result as any)?.appUserID ?? null;
+  } catch {
+    return null;
+  }
+};
+
 export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
   // SECURITY: admin-bypass state is NEVER seeded from localStorage (trivially set
   // via devtools to unlock Pro). The real value loads asynchronously from the
@@ -509,6 +518,32 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
   // ==================== RevenueCat Logic ====================
 
+  const syncNativeEntitlementToBackend = useCallback(async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform()) return false;
+    try {
+      const rcAppUserID = await readRevenueCatAppUserID();
+      const { data, error } = await supabase.functions.invoke('sync-native-entitlement', {
+        body: { appUserID: rcAppUserID },
+      });
+      if (error) {
+        console.warn('RevenueCat: backend entitlement sync failed', error);
+        return false;
+      }
+      const subscribed = Boolean((data as any)?.subscribed);
+      if (subscribed) {
+        setRcIsPro(true);
+        try {
+          localStorage.setItem('flowist_rc_entitled', 'true');
+          localStorage.setItem('flowist_rc_verified_at', String(Date.now()));
+        } catch {}
+      }
+      return subscribed;
+    } catch (e) {
+      console.warn('RevenueCat: backend entitlement sync error', e);
+      return false;
+    }
+  }, []);
+
   const initialize = useCallback(async (userID?: string) => {
     if (!Capacitor.isNativePlatform()) {
       console.log('RevenueCat: Skipping initialization on web platform');
@@ -576,6 +611,8 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch {}
 
+      if (hasEntitlement) void syncNativeEntitlementToBackend();
+
       const offeringsData = await Purchases.getOfferings();
       setOfferings(offeringsData);
 
@@ -605,7 +642,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setRcLoading(false);
     }
-  }, []);
+  }, [syncNativeEntitlementToBackend]);
 
   const checkEntitlement = useCallback(async (): Promise<boolean> => {
     if (!Capacitor.isNativePlatform()) return false;
@@ -618,12 +655,13 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('flowist_rc_entitled', hasEntitlement ? 'true' : 'false');
         localStorage.setItem('flowist_rc_verified_at', String(Date.now()));
       } catch {}
+      if (hasEntitlement) void syncNativeEntitlementToBackend();
       return hasEntitlement;
     } catch (err) {
       console.error('RevenueCat: Error checking entitlement', err);
       return false;
     }
-  }, []);
+  }, [syncNativeEntitlementToBackend]);
 
   const getOfferingsData = useCallback(async (): Promise<PurchasesOfferings | null> => {
     if (!Capacitor.isNativePlatform()) return null;
@@ -650,6 +688,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       const hasEntitlement = hasActiveRevenueCatAccess(result.customerInfo);
       setRcIsPro(hasEntitlement);
       try { localStorage.setItem('flowist_rc_entitled', hasEntitlement ? 'true' : 'false'); localStorage.setItem('flowist_rc_verified_at', String(Date.now())); } catch {}
+      if (hasEntitlement) void syncNativeEntitlementToBackend();
       console.log('RevenueCat: Purchase successful', { isPro: hasEntitlement });
       return hasEntitlement;
     } catch (err: any) {
@@ -664,7 +703,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setRcLoading(false);
     }
-  }, []);
+  }, [syncNativeEntitlementToBackend]);
 
   const purchase = useCallback(async (productType: ProductType): Promise<boolean> => {
     if (!Capacitor.isNativePlatform()) {
@@ -763,6 +802,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       const hasEntitlement = hasActiveRevenueCatAccess(result.customerInfo);
       setRcIsPro(hasEntitlement);
       try { localStorage.setItem('flowist_rc_entitled', hasEntitlement ? 'true' : 'false'); localStorage.setItem('flowist_rc_verified_at', String(Date.now())); } catch {}
+      if (hasEntitlement) void syncNativeEntitlementToBackend();
       return hasEntitlement;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Purchase failed';
@@ -772,7 +812,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setRcLoading(false);
     }
-  }, [purchasePackage]);
+  }, [purchasePackage, syncNativeEntitlementToBackend]);
 
   const restorePurchases = useCallback(async (): Promise<boolean> => {
     if (!Capacitor.isNativePlatform()) return false;
@@ -784,6 +824,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       const hasEntitlement = hasActiveRevenueCatAccess(info);
       setRcIsPro(hasEntitlement);
       try { localStorage.setItem('flowist_rc_entitled', hasEntitlement ? 'true' : 'false'); localStorage.setItem('flowist_rc_verified_at', String(Date.now())); } catch {}
+      if (hasEntitlement) void syncNativeEntitlementToBackend();
       console.log('RevenueCat: Restore successful', { isPro: hasEntitlement });
       return hasEntitlement;
     } catch (err) {
@@ -794,7 +835,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setRcLoading(false);
     }
-  }, []);
+  }, [syncNativeEntitlementToBackend]);
 
   const presentPaywallRC = useCallback(async (): Promise<PAYWALL_RESULT> => {
     if (!Capacitor.isNativePlatform()) {
@@ -1153,6 +1194,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
           const hasEntitlement = hasActiveRevenueCatAccess(info);
           setRcIsPro(hasEntitlement);
           try { localStorage.setItem('flowist_rc_entitled', hasEntitlement ? 'true' : 'false'); localStorage.setItem('flowist_rc_verified_at', String(Date.now())); } catch {}
+          if (hasEntitlement) void syncNativeEntitlementToBackend();
           console.log('RevenueCat: Logged in with Firebase UID, isPro:', hasEntitlement);
           
           // Also check Stripe subscription for this Gmail (cross-platform sync)
@@ -1182,7 +1224,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
     window.addEventListener('googleAuthStateChanged', handleAuthChange);
     return () => window.removeEventListener('googleAuthStateChanged', handleAuthChange);
-  }, [isInitialized]);
+  }, [isInitialized, syncNativeEntitlementToBackend]);
 
   // Realtime: subscribe to user_entitlements changes (RevenueCat webhook -> instant revoke/grant)
   useEffect(() => {
@@ -1193,12 +1235,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const subscribe = async () => {
       try {
         // Use RevenueCat's actual appUserID — this is what the webhook receives.
-        let rcAppUserID: string | null = null;
-        try {
-          const result = await Purchases.getAppUserID();
-          // SDK returns either a string or { appUserID: string } depending on version
-          rcAppUserID = typeof result === 'string' ? result : (result as any)?.appUserID ?? null;
-        } catch {}
+        const rcAppUserID = await readRevenueCatAppUserID();
         const storedUser = await getStoredGoogleUser();
         const appUserID = rcAppUserID || storedUser?.uid || storedUser?.email;
         if (!appUserID || cancelled) return;
@@ -1219,13 +1256,13 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
           let active = !!row.is_active;
           // Respect grace period for billing issues
-          if (row.in_billing_retry && graceAt && graceAt > now) active = true;
+          if (graceAt && graceAt > now) active = true;
           // If expired, force revoke
-          if (expiresAt && expiresAt < now && !(row.in_billing_retry && graceAt && graceAt > now)) {
+          if (expiresAt && expiresAt < now && !(graceAt && graceAt > now)) {
             active = false;
           }
 
-          console.log('[Realtime Entitlement]', { event: row.last_event_type, active, expiresAt, graceAt });
+          console.log('[Realtime Entitlement]', { active, expiresAt, graceAt });
           setRcIsPro(active);
           try {
             localStorage.setItem('flowist_rc_entitled', active ? 'true' : 'false');
@@ -1282,6 +1319,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
               localStorage.setItem('flowist_rc_entitled', hasEntitlement ? 'true' : 'false');
               localStorage.setItem('flowist_rc_verified_at', String(Date.now()));
             } catch {}
+            if (hasEntitlement) void syncNativeEntitlementToBackend();
           }
         });
         currentListenerHandle = handle;
@@ -1300,7 +1338,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         (Purchases.removeCustomerInfoUpdateListener as any)(handleToRemove).catch(console.error);
       }
     };
-  }, []);
+  }, [syncNativeEntitlementToBackend]);
 
   // Re-check entitlement when app resumes from background (catches expired trials/subs)
   useEffect(() => {
@@ -1321,7 +1359,10 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
       } catch (err) {
         console.warn('RevenueCat: syncPurchases() failed', err);
       }
-      try { await checkEntitlement(); } catch (e) { console.warn('checkEntitlement failed', e); }
+      try {
+        const active = await checkEntitlement();
+        if (active) void syncNativeEntitlementToBackend();
+      } catch (e) { console.warn('checkEntitlement failed', e); }
     };
 
     const onVisibility = () => {
@@ -1341,7 +1382,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [isInitialized, checkEntitlement]);
+  }, [isInitialized, checkEntitlement, syncNativeEntitlementToBackend]);
   // On web: only Stripe-verified subscription or admin bypass grants access (no local trial)
   // On native: RevenueCat + local trial still works
   const isPro = Capacitor.isNativePlatform()

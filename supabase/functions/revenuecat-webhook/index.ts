@@ -76,7 +76,6 @@ Deno.serve(async (req) => {
     const eventType: string = event.type;
     const appUserId: string = event.app_user_id || event.original_app_user_id;
     const productId: string | null = event.product_id || null;
-    const store: string | null = event.store || null; // PLAY_STORE / APP_STORE / STRIPE
     const expirationAtMs: number | null = event.expiration_at_ms || null;
     const gracePeriodExpirationAtMs: number | null = event.grace_period_expiration_at_ms || null;
 
@@ -91,14 +90,12 @@ Deno.serve(async (req) => {
 
     // Determine active state
     let isActive = false;
-    let inBillingRetry = false;
 
     if (GRANT_EVENTS.has(eventType)) {
       isActive = true;
     } else if (BILLING_ISSUE_EVENTS.has(eventType)) {
       // Keep active during grace period
       isActive = gracePeriodExpirationAtMs ? gracePeriodExpirationAtMs > Date.now() : true;
-      inBillingRetry = true;
     } else if (REVOKE_EVENTS.has(eventType)) {
       // User-initiated cancellation OR expiration → revoke instantly, no grace period
       // Distinguish from billing issues (which DO get grace via BILLING_ISSUE_EVENTS above)
@@ -119,14 +116,10 @@ Deno.serve(async (req) => {
       app_user_id: appUserId,
       is_active: isActive,
       product_id: productId,
-      store,
       expires_at: expirationAtMs ? new Date(expirationAtMs).toISOString() : null,
       grace_period_expires_at: gracePeriodExpirationAtMs
         ? new Date(gracePeriodExpirationAtMs).toISOString()
         : null,
-      in_billing_retry: inBillingRetry,
-      last_event_type: eventType,
-      last_event_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
