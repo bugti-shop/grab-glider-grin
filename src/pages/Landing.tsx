@@ -310,7 +310,7 @@ export default function Landing() {
               <div className="pointer-events-none absolute -inset-4 sm:-inset-8 rounded-[48px] bg-black/5 blur-3xl" />
               <div className="relative flex items-end justify-center gap-[2%] sm:gap-[6%]">
                 {/* Phone 1 — Notes editor */}
-                <div className="relative w-[52%] -rotate-[6deg] translate-y-2 rounded-[18px] sm:rounded-[28px] md:rounded-[36px] bg-black p-[3px] sm:p-[5px] md:p-[7px] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.45)]">
+                <div className="relative w-[58%] sm:w-[52%] -rotate-[6deg] translate-y-2 rounded-[18px] sm:rounded-[28px] md:rounded-[36px] bg-black p-[3px] sm:p-[5px] md:p-[7px] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.45)]">
                   <div className="relative aspect-[9/19.5] overflow-hidden rounded-[15px] sm:rounded-[24px] md:rounded-[30px] bg-white">
                     <div className="absolute left-1/2 top-1 sm:top-2 z-10 h-2 sm:h-3 md:h-4 w-[38%] -translate-x-1/2 rounded-full bg-black" />
                     <div className="flex h-full flex-col px-1.5 pt-3 sm:px-2.5 sm:pt-5 md:px-3 md:pt-7 text-slate-900">
