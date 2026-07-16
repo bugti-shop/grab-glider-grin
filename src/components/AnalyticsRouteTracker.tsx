@@ -7,7 +7,8 @@ type LovableAnalyticsWindow = Window & {
   };
 };
 
-let pageLoadSessionId: string | null = null;
+const SESSION_KEY = "flowist-analytics-session";
+const SESSION_TTL_MS = 30 * 60 * 1000; // 30 min inactivity window
 
 const isAnalyticsHost = () => {
   const host = window.location.hostname;
@@ -19,25 +20,43 @@ const isAnalyticsHost = () => {
   );
 };
 
-const readCookie = (name: string) => {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-};
-
 const randomId = () => {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-const getPageLoadSessionId = () => {
-  if (!pageLoadSessionId) {
-    pageLoadSessionId = `flowist-${Date.now()}-${randomId()}`;
+type StoredSession = { id: string; ts: number };
+
+const readStoredSession = (): StoredSession | null => {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY) ?? localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StoredSession;
+    if (!parsed?.id || typeof parsed.ts !== "number") return null;
+    if (Date.now() - parsed.ts > SESSION_TTL_MS) return null;
+    return parsed;
+  } catch {
+    return null;
   }
-  return pageLoadSessionId;
 };
 
-const resetPageLoadSessionId = () => {
-  pageLoadSessionId = `flowist-${Date.now()}-${randomId()}`;
+const writeStoredSession = (s: StoredSession) => {
+  try {
+    const raw = JSON.stringify(s);
+    sessionStorage.setItem(SESSION_KEY, raw);
+    localStorage.setItem(SESSION_KEY, raw);
+  } catch {}
+};
+
+const getSessionId = () => {
+  const existing = readStoredSession();
+  if (existing) {
+    writeStoredSession({ id: existing.id, ts: Date.now() });
+    return existing.id;
+  }
+  const fresh = { id: `flowist-${Date.now()}-${randomId()}`, ts: Date.now() };
+  writeStoredSession(fresh);
+  return fresh.id;
 };
 
 const getProxyUrl = () => {
@@ -45,19 +64,14 @@ const getProxyUrl = () => {
   return script?.getAttribute("data-proxy-url") || "/~api/analytics";
 };
 
-const normalizePath = (path: string) => {
-  return path
-    // UUIDs → :id
+const normalizePath = (path: string) =>
+  path
     .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "/:id")
-    // long hex/alnum ids (>=16 chars) → :id
     .replace(/\/[A-Za-z0-9_-]{16,}/g, "/:id")
-    // pure numeric segments → :n
     .replace(/\/\d+(?=\/|$)/g, "/:n");
-};
 
 const getPageviewPayload = (): Record<string, unknown> => {
-  const rawPath = window.location.pathname;
-  const pathname = normalizePath(rawPath);
+  const pathname = normalizePath(window.location.pathname);
   return {
     "user-agent": window.navigator.userAgent,
     locale: window.navigator.languages?.[0] || window.navigator.language || "en",
@@ -65,8 +79,6 @@ const getPageviewPayload = (): Record<string, unknown> => {
     pathname,
     href: window.location.origin + pathname + window.location.search,
     title: document.title,
-    visit_id: getPageLoadSessionId(),
-    event_id: randomId(),
   };
 };
 
@@ -75,11 +87,7 @@ const postDirectPageview = (payload: Record<string, unknown>) => {
     timestamp: new Date().toISOString(),
     action: "page_hit",
     version: "1",
-    // Lovable analytics de-dupes visitors by session_id. To ensure every
-    // page visit (even from the same browser or multiple users sharing a
-    // device) is counted as a distinct visitor on that page, mint a brand
-    // new session_id per route ping.
-    session_id: `flowist-${Date.now()}-${randomId()}`,
+    session_id: getSessionId(),
     payload: JSON.stringify(payload),
   });
 
@@ -105,11 +113,6 @@ const trackPageview = (attempt = 0) => {
   const payload = getPageviewPayload();
   const w = window as LovableAnalyticsWindow;
 
-  // Always send a direct route ping. The injected analytics script also hooks
-  // pushState, but it uses a long-lived browser cookie and can hide repeat
-  // same-browser visits in the page-level Visitors table.
-  postDirectPageview(payload);
-
   try {
     if (typeof w.Tinybird?.trackEvent === "function") {
       w.Tinybird.trackEvent("page_hit", payload);
@@ -117,77 +120,30 @@ const trackPageview = (attempt = 0) => {
     }
   } catch {}
 
-  if (attempt < 10) {
-    window.setTimeout(() => trackPageview(attempt + 1), 200);
+  if (attempt < 5) {
+    window.setTimeout(() => trackPageview(attempt + 1), 300);
     return;
   }
 
+  // Fallback only if Tinybird never loaded
   postDirectPageview(payload);
 };
 
 /**
- * SPA pageview tracker for Lovable's built-in analytics.
- * The injected script tracks the first page load, so this component sends
- * reliable pageviews only for in-app route changes.
+ * SPA pageview tracker. Fires ONCE per real route change with a stable
+ * session id so a single browser visit isn't multiplied into dozens of hits.
  */
 export const AnalyticsRouteTracker = () => {
   const location = useLocation();
   const lastPath = useRef<string | null>(null);
-  const hasMounted = useRef(false);
 
   useEffect(() => {
     if (!isAnalyticsHost()) return;
-
-    const path = location.pathname + location.search + location.hash;
+    const path = location.pathname + location.search;
     if (lastPath.current === path) return;
     lastPath.current = path;
-
-    hasMounted.current = true;
-
-    // Fire immediately so repeat browser opens and TikTok in-app browser
-    // flickers/quick-exits still count on the active route.
     trackPageview();
-  }, [location.pathname, location.search, location.hash]);
-
-  // Re-ping on tab visibility change and just before unload so short sessions
-  // (TikTok webview flick-through) still register a heartbeat and the last route.
-  useEffect(() => {
-    if (!isAnalyticsHost()) return;
-
-    let hiddenAt = 0;
-
-    const ping = () => {
-      try { trackPageview(); } catch {}
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        hiddenAt = Date.now();
-        ping();
-        return;
-      }
-
-      if (document.visibilityState === "visible" && hiddenAt && Date.now() - hiddenAt > 5000) {
-        resetPageLoadSessionId();
-        ping();
-      }
-    };
-    const onPageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        resetPageLoadSessionId();
-        ping();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("pageshow", onPageShow);
-    window.addEventListener("pagehide", ping);
-    window.addEventListener("beforeunload", ping);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pageshow", onPageShow);
-      window.removeEventListener("pagehide", ping);
-      window.removeEventListener("beforeunload", ping);
-    };
-  }, []);
+  }, [location.pathname, location.search]);
 
   return null;
 };
