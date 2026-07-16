@@ -2,10 +2,11 @@ import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
 /**
- * Fires a pageview to Lovable's built-in analytics (Umami-compatible)
- * on every client-side route change. Without this, SPA navigation is
- * invisible to the hosting analytics — only the initial landing page
- * gets counted, which inflates bounce rate and hides real usage.
+ * Belt-and-suspenders SPA pageview tracker for Lovable's built-in
+ * analytics (flock.js → Tinybird). flock already hooks history.pushState
+ * so React Router navigations fire automatically, but on some browsers
+ * (in-app WebViews, back/forward cache) the hook can be bypassed.
+ * We call Tinybird.trackEvent directly on every route change as a fallback.
  */
 export const AnalyticsRouteTracker = () => {
   const location = useLocation();
@@ -16,7 +17,7 @@ export const AnalyticsRouteTracker = () => {
     if (lastPath.current === path) return;
     lastPath.current = path;
 
-    // Skip preview / iframe hosts — analytics only runs on real published domain
+    // Skip preview / localhost — analytics script only loads on published domain
     try {
       const host = window.location.hostname;
       if (
@@ -29,27 +30,13 @@ export const AnalyticsRouteTracker = () => {
       }
     } catch {}
 
-    // Update document title-based referrer for the tracker
     try {
-      // Umami (used by Lovable analytics)
       const w = window as unknown as {
-        umami?: { track: (fn?: (props: Record<string, unknown>) => Record<string, unknown>) => void };
+        Tinybird?: { trackEvent?: (name?: string) => void };
       };
-      if (w.umami && typeof w.umami.track === "function") {
-        w.umami.track((props) => ({
-          ...props,
-          url: path,
-          referrer: document.referrer,
-          title: document.title,
-        }));
-        return;
+      if (w.Tinybird && typeof w.Tinybird.trackEvent === "function") {
+        w.Tinybird.trackEvent("page_hit");
       }
-    } catch {}
-
-    // Fallback: dispatch a synthetic popstate so any listening analytics
-    // script that hooks history changes gets a signal.
-    try {
-      window.dispatchEvent(new Event("lovable:pageview"));
     } catch {}
   }, [location.pathname, location.search]);
 
