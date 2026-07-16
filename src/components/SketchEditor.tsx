@@ -55,6 +55,8 @@ import {
 import { WASHI_PATTERNS, washiPatternCache, drawTornEdge, drawWashiTape } from './sketch';
 import type { WashiTapePattern } from './sketch';
 import { BrushCustomizationPanel } from './sketch/BrushCustomizationPanel';
+import { SKETCH_TEMPLATES, SKETCH_STAMPS, type SketchTemplate, type SketchStamp } from './sketch/templates';
+import { LayoutTemplate } from 'lucide-react';
 
 // --- Built-in stickers (not extracted to modules) ---
 
@@ -5965,6 +5967,30 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
 
   const handleBackgroundChange = useCallback((bg: BackgroundType) => { setBackground(bg); }, []);
 
+  const applyTemplate = useCallback((tpl: SketchTemplate | SketchStamp) => {
+    const layer = layersRef.current.find(l => l.id === activeLayerId) || layersRef.current.find(l => l.kind === 'drawing');
+    if (!layer) return;
+    undoStackRef.current = [...undoStackRef.current.slice(-(MAX_UNDO - 1)), cloneLayers(layersRef.current)];
+    redoStackRef.current = [];
+    const cw = canvasSizeRef.current.w || 1200;
+    const ch = canvasSizeRef.current.h || 800;
+    const result = tpl.build({
+      w: cw,
+      h: ch,
+      nextTextId: () => nextTextIdRef.current++,
+      nextStickyId: () => nextStickyIdRef.current++,
+    });
+    if (!layer.textAnnotations) layer.textAnnotations = [];
+    if (!layer.stickyNotes) layer.stickyNotes = [];
+    if (result.textAnnotations?.length) layer.textAnnotations.push(...result.textAnnotations);
+    if (result.stickyNotes?.length) layer.stickyNotes.push(...result.stickyNotes);
+    if (result.background) setBackground(result.background);
+    forceUpdate(n => n + 1);
+    redrawAll();
+    emitChangeRef.current?.();
+    toast.success(`Inserted: ${tpl.label}`);
+  }, [activeLayerId, redrawAll]);
+
   useEffect(() => { redrawAll(); if (initialLoadDoneRef.current) emitChange(); }, [background]);
 
   // --- Init ---
@@ -8574,6 +8600,51 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
             </div>
           </PopoverContent>
         </Popover>
+
+        {/* Templates & stamps — one-tap starters */}
+        <Popover open={openToolbarPopover === 'templates'} onOpenChange={(o) => setOpenToolbarPopover(o ? 'templates' : null)}>
+          <PopoverTrigger asChild>
+            <button
+              aria-label="Templates"
+              className="h-9 w-9 flex-shrink-0 rounded-full flex items-center justify-center transition-all duration-200 text-foreground hover:bg-muted/80 hover:text-foreground active:scale-95"
+            >
+              <LayoutTemplate className="h-[18px] w-[18px]" strokeWidth={2} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-3 bg-card" align="center" side="top">
+            <p className="text-[11px] font-semibold text-foreground mb-1">Templates</p>
+            <p className="text-[10px] text-muted-foreground mb-2">Insert a ready-made layout, then tweak.</p>
+            <div className="grid grid-cols-1 gap-1.5 mb-3">
+              {SKETCH_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  onClick={() => { applyTemplate(tpl); setOpenToolbarPopover(null); }}
+                  className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted/60 active:scale-[0.98] transition"
+                >
+                  <span className="text-lg leading-none">{tpl.emoji}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[12px] font-medium text-foreground truncate">{tpl.label}</span>
+                    <span className="block text-[10px] text-muted-foreground truncate">{tpl.description}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] font-semibold text-foreground mb-1.5">Stamps</p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {SKETCH_STAMPS.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => { applyTemplate(s); setOpenToolbarPopover(null); }}
+                  className="flex flex-col items-center gap-0.5 rounded-md border border-border px-1 py-1.5 hover:bg-muted/60 active:scale-[0.98] transition"
+                >
+                  <span className="text-base leading-none">{s.emoji}</span>
+                  <span className="text-[9px] text-muted-foreground text-center leading-tight">{s.label}</span>
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+
 
         {/* Stroke width */}
         <Popover open={openToolbarPopover === 'stroke'} onOpenChange={(o) => setOpenToolbarPopover(o ? 'stroke' : null)}>
