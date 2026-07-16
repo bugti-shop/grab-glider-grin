@@ -467,8 +467,8 @@ export default function Landing() {
                   label: 'Habit Tracker',
                   title: 'Develop and maintain good habits',
                   desc: 'A rich habit library, flexible tracking options, and insightful statistics help you build good habits effortlessly and lead a fulfilling life.',
-                  img: landingHabitsImg2,
-                  alt: 'Habit streak chart',
+                  img: landingHabitsIphone,
+                  alt: 'Habit tracker app screen',
                 },
                 {
                   label: 'Countdown',
