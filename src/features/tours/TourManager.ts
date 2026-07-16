@@ -60,6 +60,17 @@ class TourManagerImpl {
     const tour = getTour(tourId);
     if (!tour) return;
 
+    // Global gate: on web (non-native) never auto-show tooltip tutorials.
+    // Only explicit user actions (❓ button → { force: true }) may launch a tour.
+    if (opts.auto || opts.chain || opts.forced) {
+      let isNative = false;
+      try {
+        // @ts-ignore
+        isNative = !!(window as any).Capacitor?.isNativePlatform?.();
+      } catch {}
+      if (!isNative && !opts.force) return;
+    }
+
     // A previous driver instance can occasionally remain referenced after its
     // DOM has already been removed. That made every later tutorial request sit
     // in the queue forever. Clear that stale state before deciding to queue.
