@@ -248,6 +248,8 @@ const bootstrap = async () => {
     } catch {}
   }
   try {
+    // Initialize PostHog analytics before first render (skips preview/localhost internally).
+    import('./lib/posthog').then((m) => m.initPostHog()).catch(() => {});
     renderApp();
   } catch (err) {
     console.error('[Boot] renderApp failed:', err);

@@ -653,6 +653,13 @@ const AppContent = () => {
         try { localStorage.setItem('flowist_user_engaged', 'true'); } catch {}
         setShowLanding(false);
 
+        // Identify user in PostHog
+        try {
+          import('@/lib/posthog').then(({ identifyUser }) => {
+            identifyUser(session.user.id, { email: session.user.email });
+          });
+        } catch {}
+
         // Resume a pending AI intent (e.g. the scanner the user tapped before sign-in).
         if (event === 'SIGNED_IN') {
           try {
@@ -676,6 +683,7 @@ const AppContent = () => {
           sessionStorage.removeItem('flowist_landing_acknowledged');
         } catch {}
         setShowLanding(true);
+        try { import('@/lib/posthog').then(({ resetPostHog }) => resetPostHog()); } catch {}
       }
     });
     // Initial check
