@@ -508,6 +508,7 @@ const AppRoutes = () => {
             <Route path="/webclipper" element={<WebClipper />} />
             <Route path="/dev/fetch-article" element={<FetchArticleTest />} />
             <Route path="/dev/task-bench" element={<TaskBench />} />
+            <Route path="/admin/analytics" element={<Suspense fallback={<RouteSkeleton />}><AdminAnalytics /></Suspense>} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/settings/sync-diagnostics" element={<SyncDiagnostics />} />
             <Route path="/reminders" element={<Reminders />} />
