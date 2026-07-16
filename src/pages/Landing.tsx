@@ -450,6 +450,7 @@ export default function Landing() {
                   desc: 'Notes, tasks, sketches, web clips — dump everything in one tap, before it slips away.',
                   img: howCaptureAsset.url,
                   alt: 'Capture notes on Flowist',
+                  tilt: '-rotate-[6deg] hover:-rotate-[4deg]',
                 },
                 {
                   step: '02',
@@ -457,45 +458,54 @@ export default function Landing() {
                   desc: 'Folders, tags, priorities & natural language. Your brain, sorted the way you think.',
                   img: howOrganizeAsset.url,
                   alt: 'Organize tasks in folders',
+                  tilt: 'rotate-[3deg] hover:rotate-[1deg]',
                 },
                 {
                   step: '03',
                   title: 'Focus',
-                  desc: 'Eisenhower Matrix + Pomodoro surface today\'s real priorities. Do less, finish more.',
+                  desc: "Eisenhower Matrix + Pomodoro surface today's real priorities. Do less, finish more.",
                   img: howFocusAsset.url,
                   alt: 'Focus with Eisenhower Matrix',
+                  tilt: 'rotate-[7deg] hover:rotate-[5deg]',
                 },
               ].map((s, i) => (
                 <li
                   key={s.step}
-                  className="relative flex flex-col items-center rounded-2xl border border-slate-200 bg-white/70 p-5 pt-6 shadow-[0_10px_40px_-20px_rgba(15,23,42,0.25)] backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1 sm:p-6"
+                  className="relative flex flex-col items-center"
                 >
-                  <div
-                    className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-bold tracking-widest text-white shadow-md"
-                    style={{ backgroundColor: BLUE }}
-                  >
-                    STEP {s.step}
-                  </div>
-
-                  <div className="relative mt-3 h-[280px] w-full overflow-hidden rounded-xl sm:h-[320px]">
+                  <div className="relative flex h-[360px] w-full items-center justify-center sm:h-[420px]">
+                    {/* Blue ambient glow behind mockup, matching hero */}
+                    <div
+                      className="pointer-events-none absolute left-1/2 top-1/2 h-[70%] w-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#3c78f0]/25 blur-[70px]"
+                      aria-hidden
+                    />
                     <img
                       src={s.img}
                       alt={s.alt}
                       loading="lazy"
                       decoding="async"
-                      className="absolute left-1/2 top-1/2 h-full w-auto -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-2xl"
+                      className={`relative h-full w-auto object-contain drop-shadow-[0_50px_70px_rgba(30,60,140,0.45)] transition-transform duration-700 ${s.tilt}`}
+                      style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
                     />
                   </div>
 
-                  <h3 className="mt-5 text-[20px] font-extrabold tracking-tight text-slate-900 sm:text-[22px]">
-                    {s.title}
-                  </h3>
-                  <p className="mt-2 text-center text-[13.5px] leading-relaxed text-slate-600 sm:text-[14.5px]">
+                  <div className="mt-4 flex items-center gap-2">
+                    <span
+                      className="rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-widest text-white"
+                      style={{ backgroundColor: BLUE }}
+                    >
+                      {s.step}
+                    </span>
+                    <h3 className="text-[20px] font-extrabold tracking-tight text-slate-900 sm:text-[22px]">
+                      {s.title}
+                    </h3>
+                  </div>
+                  <p className="mt-2 max-w-[280px] text-center text-[13.5px] leading-relaxed text-slate-600 sm:text-[14.5px]">
                     {s.desc}
                   </p>
 
                   {i < 2 && (
-                    <div className="pointer-events-none absolute right-[-18px] top-1/2 hidden -translate-y-1/2 md:block">
+                    <div className="pointer-events-none absolute right-[-14px] top-[38%] hidden md:block">
                       <ArrowRight className="h-6 w-6 text-slate-300" strokeWidth={2.5} />
                     </div>
                   )}
