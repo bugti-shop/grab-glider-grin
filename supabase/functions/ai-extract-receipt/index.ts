@@ -15,10 +15,55 @@ interface ExtractRequest {
 const AI_GATEWAY_TIMEOUT_MS = 40_000;
 // Pro is verified server-side via entitlements plus web Stripe subscriptions.
 const STRIPE_GRACE_PERIOD_MS = 2 * 24 * 60 * 60 * 1000;
+const REVENUECAT_ENTITLEMENT_ID = "Pro";
 const MAX_IMAGE_BASE64_BYTES = 8 * 1024 * 1024;
 
+const verifyRevenueCatAccess = async (admin: any, identifiers: string[]) => {
+  const rcSecret = Deno.env.get("REVENUECAT_SECRET_API_KEY");
+  if (!rcSecret || identifiers.length === 0) return false;
+
+  for (const identifier of identifiers) {
+    try {
+      const res = await fetch(
+        `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(identifier)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${rcSecret}`,
+            Accept: "application/json",
+          },
+        },
+      );
+      if (res.status === 404) continue;
+      if (!res.ok) {
+        console.warn("RevenueCat verify failed", { status: res.status });
+        continue;
+      }
+
+      const data = await res.json();
+      const entitlement = data?.subscriber?.entitlements?.[REVENUECAT_ENTITLEMENT_ID];
+      if (!entitlement) continue;
+
+      const expiresAt = entitlement.expires_date ? new Date(entitlement.expires_date).getTime() : Infinity;
+      if (Number.isFinite(expiresAt) && expiresAt <= Date.now()) continue;
+
+      const rows = identifiers.map((appUserId) => ({
+        app_user_id: appUserId,
+        is_active: true,
+        product_id: entitlement.product_identifier || entitlement.product_id || "revenuecat_pro",
+        expires_at: entitlement.expires_date || null,
+        grace_period_expires_at: null,
+      }));
+      await admin.from("user_entitlements").upsert(rows, { onConflict: "app_user_id" });
+      return true;
+    } catch (e) {
+      console.warn("RevenueCat verify error", String(e));
+    }
+  }
+  return false;
+};
+
 const hasActiveProAccess = async (admin: any, userId: string, userEmail: string) => {
-  const identifiers = [userId, userEmail].filter(Boolean);
+  const identifiers = Array.from(new Set([userId, userEmail].filter(Boolean)));
   const nowMs = Date.now();
 
   if (identifiers.length) {
@@ -35,6 +80,8 @@ const hasActiveProAccess = async (admin: any, userId: string, userEmail: string)
     });
     if (hasEntitlement) return true;
   }
+
+  if (await verifyRevenueCatAccess(admin, identifiers)) return true;
 
   if (!userEmail) return false;
   const { data: subs } = await admin
