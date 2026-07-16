@@ -5967,6 +5967,30 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
 
   const handleBackgroundChange = useCallback((bg: BackgroundType) => { setBackground(bg); }, []);
 
+  const applyTemplate = useCallback((tpl: SketchTemplate | SketchStamp) => {
+    const layer = layersRef.current.find(l => l.id === activeLayerId) || layersRef.current.find(l => l.kind === 'drawing');
+    if (!layer) return;
+    undoStackRef.current = [...undoStackRef.current.slice(-(MAX_UNDO - 1)), cloneLayers(layersRef.current)];
+    redoStackRef.current = [];
+    const cw = canvasSizeRef.current.w || 1200;
+    const ch = canvasSizeRef.current.h || 800;
+    const result = tpl.build({
+      w: cw,
+      h: ch,
+      nextTextId: () => nextTextIdRef.current++,
+      nextStickyId: () => nextStickyIdRef.current++,
+    });
+    if (!layer.textAnnotations) layer.textAnnotations = [];
+    if (!layer.stickyNotes) layer.stickyNotes = [];
+    if (result.textAnnotations?.length) layer.textAnnotations.push(...result.textAnnotations);
+    if (result.stickyNotes?.length) layer.stickyNotes.push(...result.stickyNotes);
+    if (result.background) setBackground(result.background);
+    forceUpdate(n => n + 1);
+    redrawAll();
+    emitChangeRef.current?.();
+    toast.success(`Inserted: ${tpl.label}`);
+  }, [activeLayerId, redrawAll]);
+
   useEffect(() => { redrawAll(); if (initialLoadDoneRef.current) emitChange(); }, [background]);
 
   // --- Init ---
