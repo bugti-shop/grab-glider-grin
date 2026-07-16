@@ -28,6 +28,9 @@ import landingCountdownImg from '@/assets/landing-countdown.jpg';
 import landingSyncDevicesImg from '@/assets/landing-sync-devices.webp';
 import heroTasksIphone from '@/assets/hero-tasks-iphone.png';
 import heroNotesIphone from '@/assets/hero-notes-iphone.png';
+import howCaptureAsset from '@/assets/how-capture.png.asset.json';
+import howOrganizeAsset from '@/assets/how-organize.png.asset.json';
+import howFocusAsset from '@/assets/how-focus.png.asset.json';
 
 const BLUE = '#3c78f0';
 const BLUE_DARK = '#2b5dbf';
@@ -423,7 +426,85 @@ export default function Landing() {
 
         {/* Trust bar removed per request */}
 
-        {/* Feature cards section removed per request */}
+        {/* How it works — 3 steps: Capture → Organize → Focus */}
+        <section className="relative overflow-hidden bg-gradient-to-b from-white to-slate-50 py-14 sm:py-20">
+          <div className="pointer-events-none absolute -top-24 left-1/2 h-[380px] w-[380px] -translate-x-1/2 rounded-full bg-[#3c78f0]/10 blur-[110px]" />
+          <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.18em]" style={{ color: BLUE }}>
+                How it works
+              </p>
+              <h2 className="mt-2 text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 sm:text-[38px]">
+                From scattered thoughts to <span style={{ color: BLUE }}>calm focus</span> in 3 steps
+              </h2>
+              <p className="mt-3 text-[14px] leading-relaxed text-slate-600 sm:text-[16px]">
+                Capture anything, organize it your way, then focus on what actually matters today.
+              </p>
+            </div>
+
+            <ol className="mt-10 grid grid-cols-1 gap-6 sm:mt-14 sm:gap-8 md:grid-cols-3">
+              {[
+                {
+                  step: '01',
+                  title: 'Capture',
+                  desc: 'Notes, tasks, sketches, web clips — dump everything in one tap, before it slips away.',
+                  img: howCaptureAsset.url,
+                  alt: 'Capture notes on Flowist',
+                },
+                {
+                  step: '02',
+                  title: 'Organize',
+                  desc: 'Folders, tags, priorities & natural language. Your brain, sorted the way you think.',
+                  img: howOrganizeAsset.url,
+                  alt: 'Organize tasks in folders',
+                },
+                {
+                  step: '03',
+                  title: 'Focus',
+                  desc: 'Eisenhower Matrix + Pomodoro surface today\'s real priorities. Do less, finish more.',
+                  img: howFocusAsset.url,
+                  alt: 'Focus with Eisenhower Matrix',
+                },
+              ].map((s, i) => (
+                <li
+                  key={s.step}
+                  className="relative flex flex-col items-center rounded-2xl border border-slate-200 bg-white/70 p-5 pt-6 shadow-[0_10px_40px_-20px_rgba(15,23,42,0.25)] backdrop-blur-sm transition-transform duration-300 hover:-translate-y-1 sm:p-6"
+                >
+                  <div
+                    className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-bold tracking-widest text-white shadow-md"
+                    style={{ backgroundColor: BLUE }}
+                  >
+                    STEP {s.step}
+                  </div>
+
+                  <div className="relative mt-3 h-[280px] w-full overflow-hidden rounded-xl sm:h-[320px]">
+                    <img
+                      src={s.img}
+                      alt={s.alt}
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute left-1/2 top-1/2 h-full w-auto -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-2xl"
+                    />
+                  </div>
+
+                  <h3 className="mt-5 text-[20px] font-extrabold tracking-tight text-slate-900 sm:text-[22px]">
+                    {s.title}
+                  </h3>
+                  <p className="mt-2 text-center text-[13.5px] leading-relaxed text-slate-600 sm:text-[14.5px]">
+                    {s.desc}
+                  </p>
+
+                  {i < 2 && (
+                    <div className="pointer-events-none absolute right-[-18px] top-1/2 hidden -translate-y-1/2 md:block">
+                      <ArrowRight className="h-6 w-6 text-slate-300" strokeWidth={2.5} />
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
 
 
 
