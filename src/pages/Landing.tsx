@@ -308,7 +308,7 @@ export default function Landing() {
             {/* Left: built mockups + sticky note */}
             <div className="relative">
               <div className="pointer-events-none absolute -inset-4 sm:-inset-8 rounded-[48px] bg-black/5 blur-3xl" />
-              <div className="relative flex items-end justify-center -gap-[2%] sm:gap-[6%]" style={{ gap: '-4%' }}>
+              <div className="relative flex items-end justify-center gap-[2%] sm:gap-[6%]">
                 {/* Phone 1 — Notes editor */}
                 <div className="relative w-[52%] -rotate-[6deg] translate-y-2 rounded-[18px] sm:rounded-[28px] md:rounded-[36px] bg-black p-[3px] sm:p-[5px] md:p-[7px] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.45)]">
                   <div className="relative aspect-[9/19.5] overflow-hidden rounded-[15px] sm:rounded-[24px] md:rounded-[30px] bg-white">
