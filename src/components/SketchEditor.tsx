@@ -7280,7 +7280,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
       )}
 
       {/* Sketch multi-page navigation (non-PDF sketches) */}
-      {pdfPages.length === 0 && !presentationMode && !focusMode && (
+      {pdfPages.length === 0 && !presentationMode && !focusMode && sketchPageCount > 1 && (
         <>
           <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-card/85 backdrop-blur-md border border-border/50 rounded-full pl-1 pr-1 py-1 shadow-lg animate-fade-in">
             <button
