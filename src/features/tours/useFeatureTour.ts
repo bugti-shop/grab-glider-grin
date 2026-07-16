@@ -50,7 +50,7 @@ export const useTourBootstrap = () => {
     // Auto-start compulsory onboarding on ALL platforms (web + native).
     // User explicitly asked to restore the tutorial on the web.
     (async () => {
-      if (isInAppBrowser) return;
+      if (skipAutoTours) return;
       try {
         const { getSetting, setSetting } = await import('@/utils/settingsStorage');
         const KEY = 'feature-guide-first-launch-shown-v5';
