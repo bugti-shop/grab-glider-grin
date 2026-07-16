@@ -430,10 +430,28 @@ export default function Landing() {
         {/* Trust bar removed per request */}
 
 
+        {/* What does Flowist include? */}
+        <section className="bg-white py-14 sm:py-20">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-8 px-5 text-center sm:mb-12 sm:px-6">
+              <h2 className="text-[32px] font-extrabold leading-[1.1] tracking-tight text-slate-900 sm:text-[48px]">
+                What does Flowist include?
+              </h2>
+            </div>
+            <IncludeCarousel
+              accent={BLUE}
+              items={[
+                { image: includeNotesImg.url, alt: 'Flowist notes dashboard', title: 'Beautiful notes, your way', desc: 'Sticky, lined, regular and code notes — organize thoughts in folders with a clean, distraction-free editor.' },
+                { image: includeTasksImg.url, alt: 'Flowist task list', title: 'Tasks that actually get done', desc: 'Folders, priorities and quick add. Plan your day and knock things off with a satisfying, focused flow.' },
+                { image: includeNotebooksImg.url, alt: 'Flowist notebooks grid', title: 'Notebooks for every part of life', desc: 'Group notes into colorful notebooks — Recipes, Journal, Ideas, Travel and anything else you dream up.' },
+                { image: includeHabitsImg.url, alt: 'Flowist habit tracker', title: 'Build habits that stick', desc: 'Track daily habits with a beautiful week strip, streaks and totals — small wins, every single day.' },
+                { image: includeMatrixImg.url, alt: 'Flowist Eisenhower Matrix', title: 'Prioritize what truly matters', desc: 'The Eisenhower Matrix sorts tasks by urgency and importance so you always work on what moves the needle.' },
+              ]}
+            />
+          </div>
+        </section>
 
 
-
-        {/* Comprehensive suite of features (TickTick-style 8-card grid) */}
         <section className="bg-gradient-to-b from-slate-100 to-white pt-8 pb-12 sm:pt-16 sm:pb-16">
           <div className="mx-auto max-w-5xl px-4 sm:px-6">
             <div className="mb-10 text-center sm:mb-14">
