@@ -492,14 +492,25 @@ export default function Landing() {
                     {c.desc}
                   </p>
                   <div className="mt-4 aspect-[4/3] overflow-hidden rounded-lg bg-slate-50 flex items-center justify-center">
-                    <img
-                      src={c.img}
-                      alt={c.alt}
-                      loading="lazy"
-                      width={1024}
-                      height={768}
-                      className={c.label === 'To-Do List' ? 'h-full w-auto object-contain' : 'h-full w-full object-cover'}
-                    />
+                    {(c.label === 'To-Do List' || c.label === 'Habit Tracker') ? (
+                      <img
+                        src={c.img}
+                        alt={c.alt}
+                        loading="lazy"
+                        width={1024}
+                        height={768}
+                        className="h-[140%] w-auto object-contain -rotate-[8deg] drop-shadow-xl"
+                      />
+                    ) : (
+                      <img
+                        src={c.img}
+                        alt={c.alt}
+                        loading="lazy"
+                        width={1024}
+                        height={768}
+                        className="h-full w-full object-cover"
+                      />
+                    )}
                   </div>
                 </article>
               ))}
