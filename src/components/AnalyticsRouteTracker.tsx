@@ -117,9 +117,30 @@ export const AnalyticsRouteTracker = () => {
       return;
     }
 
-    const timer = window.setTimeout(() => trackPageview(), 350);
-    return () => window.clearTimeout(timer);
+    // Fire immediately so TikTok in-app browser flickers/quick-exits still count.
+    trackPageview();
   }, [location.pathname, location.search, location.hash]);
+
+  // Re-ping on tab visibility change and just before unload so short sessions
+  // (TikTok webview flick-through) still register a heartbeat and the last route.
+  useEffect(() => {
+    if (!isAnalyticsHost()) return;
+
+    const ping = () => {
+      try { trackPageview(); } catch {}
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") ping();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", ping);
+    window.addEventListener("beforeunload", ping);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", ping);
+      window.removeEventListener("beforeunload", ping);
+    };
+  }, []);
 
   return null;
 };
