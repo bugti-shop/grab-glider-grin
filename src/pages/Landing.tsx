@@ -25,6 +25,8 @@ import landingHabitsImg from '@/assets/landing-habits.jpg';
 import landingHabitsImg2 from '@/assets/landing-habits-2.jpg';
 import landingCountdownImg from '@/assets/landing-countdown.jpg';
 import landingSyncDevicesImg from '@/assets/landing-sync-devices.webp';
+import heroTasksIphone from '@/assets/hero-tasks-iphone.png';
+import heroNotesIphone from '@/assets/hero-notes-iphone.png';
 
 const BLUE = '#3c78f0';
 const BLUE_DARK = '#2b5dbf';
@@ -369,10 +371,51 @@ export default function Landing() {
               
             </div>
 
-            {/* Hero side decoration (replaces inline cards) */}
+            {/* Hero mockups — stacked, tilted iPhones (Notion/Linear style) */}
             <div className="relative mx-auto hidden w-full max-w-md md:block">
-              <div className="absolute -inset-6 rounded-[40px] bg-[#3c78f0]/10 blur-3xl" />
-              <div className="relative aspect-[4/5] w-full rounded-[32px] border border-slate-200 bg-gradient-to-br from-[#eaf1ff] to-white shadow-[0_30px_80px_-30px_rgba(60,120,240,0.45)]" />
+              {/* Ambient glow */}
+              <div className="pointer-events-none absolute -inset-10 rounded-[48px] bg-gradient-to-br from-[#3c78f0]/25 via-[#8ab4ff]/15 to-transparent blur-3xl" />
+              <div className="pointer-events-none absolute right-0 top-8 h-64 w-64 rounded-full bg-[#3c78f0]/20 blur-[90px]" />
+
+              <div className="relative aspect-[5/6] w-full">
+                {/* Back phone — Notes, tilted left */}
+                <img
+                  src={heroNotesIphone}
+                  alt="Flowist notes dashboard on iPhone"
+                  loading="eager"
+                  decoding="async"
+                  className="absolute left-0 top-6 w-[62%] -rotate-[10deg] drop-shadow-[0_40px_60px_rgba(30,60,140,0.35)] transition-transform duration-700 hover:-rotate-[8deg]"
+                />
+                {/* Front phone — Tasks, tilted right, overlapping */}
+                <img
+                  src={heroTasksIphone}
+                  alt="Flowist task list on iPhone"
+                  loading="eager"
+                  decoding="async"
+                  className="absolute right-0 top-0 w-[64%] rotate-[8deg] drop-shadow-[0_50px_70px_rgba(30,60,140,0.45)] transition-transform duration-700 hover:rotate-[6deg]"
+                />
+              </div>
+            </div>
+
+            {/* Mobile hero mockups — single tilted stack */}
+            <div className="relative mx-auto -mt-2 mb-2 block w-full max-w-sm md:hidden">
+              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[#3c78f0]/15 blur-3xl" />
+              <div className="relative mx-auto aspect-[5/5] w-full">
+                <img
+                  src={heroNotesIphone}
+                  alt="Flowist notes dashboard on iPhone"
+                  loading="eager"
+                  decoding="async"
+                  className="absolute left-[6%] top-4 w-[58%] -rotate-[10deg] drop-shadow-[0_25px_40px_rgba(30,60,140,0.3)]"
+                />
+                <img
+                  src={heroTasksIphone}
+                  alt="Flowist task list on iPhone"
+                  loading="eager"
+                  decoding="async"
+                  className="absolute right-[6%] top-0 w-[60%] rotate-[8deg] drop-shadow-[0_30px_50px_rgba(30,60,140,0.4)]"
+                />
+              </div>
             </div>
           </div>
         </section>
