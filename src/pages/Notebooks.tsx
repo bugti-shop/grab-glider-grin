@@ -196,6 +196,10 @@ const Notebooks = () => {
       toast.error('A notebook with this name already exists');
       return;
     }
+    if (!requireCapacity('noteFolders', folders.length)) {
+      setAddOpen(false);
+      return;
+    }
     const folder: FolderType = {
       id: genId(),
       name,
