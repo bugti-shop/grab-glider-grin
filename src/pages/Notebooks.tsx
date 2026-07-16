@@ -5,6 +5,7 @@ import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { Folder as FolderType } from '@/types/note';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { useNotes } from '@/contexts/NotesContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +50,7 @@ const NOTEBOOK_COLORS = [
 const Notebooks = () => {
   const navigate = useNavigate();
   const { notesMeta } = useNotes();
+  const { requireCapacity } = useSubscription();
   useFirstVisitTour('/notebooks');
 
   const [folders, setFolders] = useState<FolderType[]>(() => notebooksRuntimeCache.folders ?? []);
@@ -194,6 +196,10 @@ const Notebooks = () => {
       toast.error('A notebook with this name already exists');
       return;
     }
+    if (!requireCapacity('noteFolders', folders.length)) {
+      setAddOpen(false);
+      return;
+    }
     const folder: FolderType = {
       id: genId(),
       name,
@@ -214,7 +220,7 @@ const Notebooks = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-40">
       {/* Header */}
       <header
         className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b"
@@ -446,7 +452,10 @@ const Notebooks = () => {
         className="fixed left-4 right-4 z-50 h-12 text-base font-semibold md:hidden"
         style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
         size="lg"
-        onClick={() => setAddOpen(true)}
+        onClick={() => {
+          if (!requireCapacity('noteFolders', folders.length)) return;
+          setAddOpen(true);
+        }}
       >
         <Plus className="h-5 w-5" />
         Add Notebook
@@ -570,7 +579,7 @@ const VirtualNotebookGrid = ({
                     onPointerUp={cancelPress}
                     onPointerLeave={cancelPress}
                     onPointerCancel={cancelPress}
-                    className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform select-none touch-none"
+                    className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform select-none touch-pan-y"
                   >
                     <div className="relative w-[90%] aspect-[3/4] pb-[5%]">
                       <div className="relative w-full h-full">
