@@ -636,29 +636,8 @@ export const CameraScannerScreen = ({
             {tapTrace}
           </div>
         )}
-        <ChipStrip>
 
-          {MODES.filter((m) => m.id !== 'gallery').map(({ id, label, icon: Icon }) => {
-            const active = mode === id;
-            const locked = false;
-            return (
-              <ChipButton
-                key={id}
-                active={active}
-                onSelect={() => {
-                  selectScannerMode(id, label, locked);
-                }}
-                data-scanner-mode={id}
-                data-scanner-label={label}
-                data-scanner-locked={locked ? 'true' : 'false'}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-                {locked && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
-              </ChipButton>
-            );
-          })}
-        </ChipStrip>
+
 
         {/* Shutter row — CamScanner-style: big centered shutter, tucked gallery, mode badge */}
         <div className="relative flex items-center justify-center h-[96px]">
