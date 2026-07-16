@@ -4,10 +4,6 @@ import { Menu, Check, Calendar, StickyNote, Sparkles, Repeat, RefreshCw, ArrowRi
 import { AppLogo } from '@/components/AppLogo';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { setSetting } from '@/utils/settingsStorage';
-import socialX from '@/assets/social-x.webp';
-import socialReddit from '@/assets/social-reddit.webp';
-import socialYoutube from '@/assets/social-youtube.webp';
-import socialInstagram from '@/assets/social-instagram.webp';
 import todoDashboardImage from '@/assets/flowist-todo-dashboard.webp';
 import sketchEditorImage from '@/assets/flowist-sketch-editor.webp';
 import linedNoteImage from '@/assets/flowist-lined-note.webp';
