@@ -23,6 +23,7 @@ import landingCalendarImg from '@/assets/landing-calendar.jpg';
 import landingPomodoroImg from '@/assets/landing-pomodoro.jpg';
 import landingHabitsImg from '@/assets/landing-habits.jpg';
 import landingHabitsImg2 from '@/assets/landing-habits-2.jpg';
+import landingHabitsIphone from '@/assets/landing-habits-iphone.png';
 import landingCountdownImg from '@/assets/landing-countdown.jpg';
 import landingSyncDevicesImg from '@/assets/landing-sync-devices.webp';
 import heroTasksIphone from '@/assets/hero-tasks-iphone.png';
