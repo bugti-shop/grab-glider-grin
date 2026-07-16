@@ -34,6 +34,11 @@ import includeTasksImg from '@/assets/flowist-include-tasks.png.asset.json';
 import includeNotebooksImg from '@/assets/flowist-include-notebooks.png.asset.json';
 import includeHabitsImg from '@/assets/flowist-include-habits.png.asset.json';
 import includeMatrixImg from '@/assets/flowist-include-matrix.png.asset.json';
+import includeBasicBlocksImg from '@/assets/flowist-include-basic-blocks.png.asset.json';
+import includeMarkdownImg from '@/assets/flowist-include-markdown.png.asset.json';
+import includeSlashImg from '@/assets/flowist-include-slash.png.asset.json';
+import includeWebClipperImg from '@/assets/flowist-include-webclipper.png.asset.json';
+import includeInlineCalcImg from '@/assets/flowist-include-inline-calc.png.asset.json';
 
 const BLUE = '#3c78f0';
 const BLUE_DARK = '#2b5dbf';
