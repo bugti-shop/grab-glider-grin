@@ -21,11 +21,47 @@ interface ExtractRequest {
 }
 
 const AI_GATEWAY_TIMEOUT_MS = 60_000;
-// Web-unlock bypass removed — Pro is verified via user_entitlements only.
+// Pro is verified server-side via entitlements plus web Stripe subscriptions.
+const STRIPE_GRACE_PERIOD_MS = 2 * 24 * 60 * 60 * 1000;
 const MAX_INPUT_CHARS = 400_000;   // ~100 pages — anything above is truncated
 const CHUNK_SIZE = 24_000;         // characters per AI call
 const CHUNK_OVERLAP = 1_200;       // overlap so tasks spanning a boundary aren't lost
 const MAX_PARALLEL_CHUNKS = 4;     // upper bound on concurrent AI calls
+
+const hasActiveProAccess = async (admin: any, userId: string, userEmail: string) => {
+  const identifiers = [userId, userEmail].filter(Boolean);
+  const nowMs = Date.now();
+
+  if (identifiers.length) {
+    const { data: ents } = await admin
+      .from("user_entitlements")
+      .select("is_active, expires_at, grace_period_expires_at, in_billing_retry")
+      .in("app_user_id", identifiers);
+
+    const hasEntitlement = (ents || []).some((e: any) => {
+      if (!e?.is_active) return false;
+      const exp = e.expires_at ? new Date(e.expires_at).getTime() : Infinity;
+      const grace = e.grace_period_expires_at ? new Date(e.grace_period_expires_at).getTime() : 0;
+      return exp > nowMs || grace > nowMs || e.in_billing_retry;
+    });
+    if (hasEntitlement) return true;
+  }
+
+  if (!userEmail) return false;
+  const { data: subs } = await admin
+    .from("subscriptions")
+    .select("status, current_period_end")
+    .eq("user_email", userEmail)
+    .in("status", ["active", "trialing", "past_due"])
+    .order("updated_at", { ascending: false })
+    .limit(3);
+
+  return (subs || []).some((sub: any) => {
+    if (sub.status === "active" || sub.status === "trialing") return true;
+    if (sub.status !== "past_due" || !sub.current_period_end) return false;
+    return Date.now() < new Date(sub.current_period_end).getTime() + STRIPE_GRACE_PERIOD_MS;
+  });
+};
 
 /**
  * Split a long text into overlapping chunks, preferring paragraph/line boundaries
@@ -140,21 +176,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Paid-Pro enforcement
-    const { data: ents } = await admin
-      .from("user_entitlements")
-      .select("is_active, expires_at, grace_period_expires_at, in_billing_retry")
-      .or(userEmail
-        ? `app_user_id.eq.${userId},app_user_id.eq.${userEmail}`
-        : `app_user_id.eq.${userId}`);
-    const nowMs = Date.now();
     const body = (await req.json()) as ExtractRequest;
-    const isPro = (ents || []).some((e: any) => {
-      if (!e?.is_active) return false;
-      const exp = e.expires_at ? new Date(e.expires_at).getTime() : Infinity;
-      const grace = e.grace_period_expires_at ? new Date(e.grace_period_expires_at).getTime() : 0;
-      return exp > nowMs || grace > nowMs || e.in_billing_retry;
-    });
+    const isPro = await hasActiveProAccess(admin, userId, userEmail);
     if (!isPro) {
       return new Response(
         JSON.stringify({ error: "AI task extraction is a Pro feature. Please upgrade to continue." }),
