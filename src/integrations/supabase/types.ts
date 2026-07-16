@@ -804,6 +804,39 @@ export type Database = {
         }
         Relationships: []
       }
+      page_events: {
+        Row: {
+          created_at: string
+          device: string | null
+          id: string
+          path: string
+          referrer: string | null
+          session_id: string
+          source: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          device?: string | null
+          id?: string
+          path: string
+          referrer?: string | null
+          session_id: string
+          source?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          device?: string | null
+          id?: string
+          path?: string
+          referrer?: string | null
+          session_id?: string
+          source?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
