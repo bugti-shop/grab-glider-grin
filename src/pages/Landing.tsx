@@ -29,52 +29,51 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf8f3] text-[#0a0a0a]">
-      {/* Nav */}
-      <header className="sticky top-0 z-30 bg-[#faf8f3]/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
+    <div className="min-h-screen bg-[#f5f1ea] text-[#0a0a0a]">
+      {/* Nav pill */}
+      <header className="px-4 pt-5 md:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between rounded-full border border-black/5 bg-white/70 px-5 py-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] backdrop-blur">
           <div className="flex items-center gap-2">
-            <AppLogo className="h-7 w-7" />
-            <span className="text-lg font-semibold tracking-tight">Flowist</span>
+            <AppLogo className="h-6 w-6" />
+            <span className="text-[15px] font-semibold tracking-tight">Flowist</span>
           </div>
           <button
             onClick={handleGetStarted}
-            className="rounded-full bg-[#0a0a0a] px-5 py-2 text-sm font-medium text-white transition hover:bg-black"
+            className="text-[14px] font-medium text-neutral-700 transition hover:text-black"
           >
-            Try Free
+            Sign in
           </button>
         </div>
       </header>
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-5 py-16 md:grid-cols-2 md:gap-8 md:px-8 md:py-24 lg:py-32">
-          {/* Left: copy */}
+        <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 pb-20 pt-14 md:grid-cols-2 md:gap-6 md:px-8 md:pb-28 md:pt-20 lg:pt-24">
+          {/* Left */}
           <div className="order-2 md:order-1">
-            <h1 className="text-[44px] font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl">
+            <h1 className="text-[42px] font-bold leading-[1.02] tracking-[-0.03em] sm:text-6xl lg:text-[72px]">
               Capture every idea,
               <br />
-              plan every day
+              plan every day.
             </h1>
-            <p className="mt-6 max-w-lg text-lg text-neutral-600 sm:text-xl">
-              Rich notes, tasks, calendar and habits — synced across all your devices.
+            <p className="mt-6 max-w-md text-[17px] leading-relaxed text-neutral-700 sm:text-lg">
+              Notes, tasks, calendar and habits in one beautiful app — synced across all your devices.
             </p>
 
-            <ul className="mt-8 space-y-4">
-              {['Beautiful note editor', 'Smart task priorities', 'Offline-first sync'].map((f) => (
-                <li key={f} className="flex items-center gap-3 text-base font-medium sm:text-lg">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0a0a0a]">
-                    <svg viewBox="0 0 24 24" className="h-4 w-4 text-white" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  </span>
-                  {f}
-                </li>
-              ))}
-            </ul>
+            {/* Rating row */}
+            <div className="mt-7 flex items-center gap-3">
+              <div className="flex">
+                {[0,1,2,3,4].map((i) => (
+                  <svg key={i} viewBox="0 0 24 24" className="h-4 w-4 text-[#ffb800]" fill="currentColor">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                ))}
+              </div>
+              <span className="text-sm font-medium text-neutral-700">4.8 · Loved by thousands</span>
+            </div>
 
             {/* Store buttons */}
-            <div className="mt-10 flex flex-wrap items-center gap-3">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <a
                 href={APP_STORE_URL}
                 target="_blank"
@@ -107,33 +106,26 @@ export default function Landing() {
                 </span>
               </a>
             </div>
-
-            <button
-              onClick={handleGetStarted}
-              className="mt-6 text-sm font-medium text-neutral-600 underline underline-offset-4 hover:text-black"
-            >
-              Or try the web app →
-            </button>
           </div>
 
-          {/* Right: phones */}
+          {/* Right: tilted phones */}
           <div className="relative order-1 md:order-2">
-            <div className="relative mx-auto flex h-[520px] max-w-md items-center justify-center sm:h-[600px]">
+            <div className="relative mx-auto flex h-[460px] max-w-md items-center justify-center sm:h-[560px] md:h-[620px]">
               {/* Back phone */}
-              <div className="absolute left-[8%] top-6 w-[52%] rotate-[-6deg] rounded-[36px] border-[10px] border-neutral-900 bg-neutral-900 shadow-2xl">
+              <div className="absolute left-[4%] top-4 w-[58%] rotate-[-10deg] rounded-[40px] border-[10px] border-neutral-900 bg-neutral-900 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.35)]">
                 <img
                   src={todoDashboardImage}
-                  alt="Flowist note editor"
-                  className="block w-full rounded-[26px]"
+                  alt="Flowist tasks dashboard"
+                  className="block w-full rounded-[30px]"
                   loading="eager"
                 />
               </div>
               {/* Front phone */}
-              <div className="absolute right-[6%] top-16 w-[52%] rotate-[4deg] rounded-[36px] border-[10px] border-neutral-900 bg-neutral-900 shadow-2xl">
+              <div className="absolute right-[2%] top-20 w-[58%] rotate-[8deg] rounded-[40px] border-[10px] border-neutral-900 bg-neutral-900 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.4)]">
                 <img
                   src={calendarViewImage}
                   alt="Flowist calendar"
-                  className="block w-full rounded-[26px]"
+                  className="block w-full rounded-[30px]"
                   loading="eager"
                 />
               </div>
@@ -144,3 +136,4 @@ export default function Landing() {
     </div>
   );
 }
+
