@@ -4,10 +4,6 @@ import { Menu, Check, Calendar, StickyNote, Sparkles, Repeat, RefreshCw, ArrowRi
 import { AppLogo } from '@/components/AppLogo';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { setSetting } from '@/utils/settingsStorage';
-import socialX from '@/assets/social-x.webp';
-import socialReddit from '@/assets/social-reddit.webp';
-import socialYoutube from '@/assets/social-youtube.webp';
-import socialInstagram from '@/assets/social-instagram.webp';
 import todoDashboardImage from '@/assets/flowist-todo-dashboard.webp';
 import sketchEditorImage from '@/assets/flowist-sketch-editor.webp';
 import linedNoteImage from '@/assets/flowist-lined-note.webp';
@@ -106,19 +102,16 @@ export default function Landing() {
 
   const menuGroups: { label: string; items: { label: string; href: string }[] }[] = [
     {
-      label: 'Made For',
+      label: 'Product',
       items: [
-        { label: 'Task Management', href: '#features' },
-        { label: 'Note Taking', href: '#features' },
-        { label: 'Sketching', href: '#features' },
-        { label: 'Habit Forming', href: '#features' },
-        { label: 'Daily Planning', href: '#features' },
+        { label: 'Features', href: '#features' },
+        { label: 'About', href: '#about' },
+        { label: 'FAQ', href: '#faq' },
       ],
     },
     {
-      label: 'Resources',
+      label: 'Legal',
       items: [
-        { label: 'FAQ', href: '#faq' },
         { label: 'Privacy', href: '/privacy-policy' },
         { label: 'Terms', href: '/terms-and-conditions' },
       ],
@@ -615,44 +608,22 @@ export default function Landing() {
 
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto max-w-6xl px-5 py-12 sm:px-6 sm:py-16">
-          {/* Top: logo + social icons */}
-          <div className="mb-6 flex flex-nowrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <AppLogo size="sm" />
-              <span className="text-base font-extrabold" style={{ color: BLUE }}>Flowist</span>
-            </div>
-            <div className="ml-auto flex items-center gap-3">
-              <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="Flowist on X (Twitter)" className="inline-block transition-transform hover:scale-105">
-                <img src={socialX} alt="X social icon" className="h-9 w-9 object-contain" loading="lazy" />
-              </a>
-              <a href="https://reddit.com" target="_blank" rel="noopener noreferrer" aria-label="Flowist on Reddit" className="inline-block transition-transform hover:scale-105">
-                <img src={socialReddit} alt="Reddit social icon" className="h-9 w-9 object-contain" loading="lazy" />
-              </a>
-              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="Flowist on YouTube" className="inline-block transition-transform hover:scale-105">
-                <img src={socialYoutube} alt="YouTube social icon" className="h-9 w-9 object-contain" loading="lazy" />
-              </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Flowist on Instagram" className="inline-block transition-transform hover:scale-105">
-                <img src={socialInstagram} alt="Instagram social icon" className="h-9 w-9 object-contain" loading="lazy" />
-              </a>
-            </div>
+          {/* Top: logo */}
+          <div className="mb-6 flex items-center gap-2">
+            <AppLogo size="sm" />
+            <span className="text-base font-extrabold" style={{ color: BLUE }}>Flowist</span>
           </div>
           <p className="mb-10 text-sm text-slate-500">© {new Date().getFullYear()} GMJP LLC.</p>
 
           {/* Link grid */}
-          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3">
             <div>
               <h4 className="mb-4 text-base font-bold text-slate-900">Company</h4>
               <ul className="space-y-3 text-sm text-slate-600">
                 <li><a href="/privacy-policy" className="hover:text-slate-900">Privacy</a></li>
                 <li><a href="/terms-and-conditions" className="hover:text-slate-900">Terms</a></li>
                 <li>
-                  <a
-                    href="#about"
-                    onClick={smoothScrollTo('about')}
-                    className="hover:text-slate-900"
-                  >
-                    About
-                  </a>
+                  <a href="#about" onClick={smoothScrollTo('about')} className="hover:text-slate-900">About</a>
                 </li>
               </ul>
             </div>
@@ -668,40 +639,11 @@ export default function Landing() {
               <h4 className="mb-4 text-base font-bold text-slate-900">Resources</h4>
               <ul className="space-y-3 text-sm text-slate-600">
                 <li>
-                  <a
-                    href="#faq"
-                    onClick={smoothScrollTo('faq')}
-                    className="hover:text-slate-900"
-                  >
-                    FAQ
-                  </a>
+                  <a href="#faq" onClick={smoothScrollTo('faq')} className="hover:text-slate-900">FAQ</a>
                 </li>
                 <li>
-                  <a
-                    href="#features"
-                    onClick={smoothScrollTo('features')}
-                    className="hover:text-slate-900"
-                  >
-                    Features
-                  </a>
+                  <a href="#features" onClick={smoothScrollTo('features')} className="hover:text-slate-900">Features</a>
                 </li>
-                <li>
-                  <a
-                    href="#about"
-                    onClick={smoothScrollTo('about')}
-                    className="hover:text-slate-900"
-                  >
-                    About
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-4 text-base font-bold text-slate-900">Flowist for</h4>
-              <ul className="space-y-3 text-sm text-slate-600">
-                <li><span>Students</span></li>
-                <li><span>Professionals</span></li>
-                <li><span>Creators</span></li>
               </ul>
             </div>
           </div>
