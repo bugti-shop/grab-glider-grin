@@ -102,12 +102,12 @@ export default function IncludeCarousel({
         style={{ touchAction: 'pan-y', cursor: dragging ? 'grabbing' : 'grab' }}
       >
         <div
-          className="flex items-end will-change-transform"
+          className="flex items-start will-change-transform"
           style={{
           transform: `translate3d(calc(${-active * 100}% + ${dragX}px), 0, 0)`,
             transition,
-            minHeight: 680,
           }}
+
         >
           {items.map((it) => (
             <div key={it.image} className="flex w-full shrink-0 items-end justify-center">
