@@ -321,31 +321,31 @@ export default function Landing() {
 
             {/* Right: copy */}
             <div className="text-center md:order-2 md:text-left">
-              <h1 className="mb-5 text-[32px] font-extrabold leading-[1.05] tracking-tight text-slate-900 sm:text-[44px] md:text-[56px]">
-                Capture every idea,<br />
-                plan every day
+              <h1 className="mb-4 text-[34px] font-extrabold leading-[1.1] tracking-tight text-slate-900 sm:mb-5 sm:text-[44px] md:text-[56px]">
+                <span className="block">Capture every idea,</span>
+                <span className="block">plan every day</span>
               </h1>
-              <p className="mx-auto mb-7 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg md:mx-0">
+              <p className="mx-auto mb-6 max-w-xl text-[15px] leading-relaxed text-slate-600 sm:mb-7 sm:text-lg md:mx-0">
                 Rich notes, tasks, calendar and habits — synced across all your devices.
               </p>
 
-              <ul className="mx-auto mb-8 flex max-w-md flex-col gap-3.5 text-left md:mx-0">
+              <ul className="mx-auto mb-7 flex max-w-md flex-col gap-3 text-left sm:mb-8 sm:gap-3.5 md:mx-0">
                 {[
                   'Beautiful note editor',
                   'Smart task priorities',
                   'Offline-first sync',
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-3">
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
-                      <Check className="h-4 w-4" strokeWidth={3} />
+                    <span className="inline-flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
+                      <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={3} />
                     </span>
-                    <span className="text-[16px] sm:text-[17px] font-semibold text-slate-900">{item}</span>
+                    <span className="text-[15px] sm:text-[17px] font-semibold leading-snug text-slate-900">{item}</span>
                   </li>
                 ))}
               </ul>
 
               <div className="mx-auto flex max-w-md flex-col gap-4 md:mx-0">
-                <div className="grid w-full grid-cols-2 gap-3">
+                <div className="grid w-full grid-cols-2 gap-2.5 sm:gap-3">
 
                   <a
                     href="https://apps.apple.com/us/app/flowist-ai-note-taker/id6772996510"
