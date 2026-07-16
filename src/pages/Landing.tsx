@@ -377,43 +377,43 @@ export default function Landing() {
               <div className="pointer-events-none absolute -inset-10 rounded-[48px] bg-gradient-to-br from-[#3c78f0]/25 via-[#8ab4ff]/15 to-transparent blur-3xl" />
               <div className="pointer-events-none absolute right-0 top-8 h-64 w-64 rounded-full bg-[#3c78f0]/20 blur-[90px]" />
 
-              <div className="relative aspect-[5/6] w-full">
-                {/* Back phone — Notes, tilted left */}
+              <div className="relative aspect-[6/5] w-full">
+                {/* Left phone — Notes, gently tilted left, lower */}
                 <img
                   src={heroNotesIphone}
                   alt="Flowist notes dashboard on iPhone"
                   loading="eager"
                   decoding="async"
-                  className="absolute left-0 top-6 w-[62%] -rotate-[10deg] drop-shadow-[0_40px_60px_rgba(30,60,140,0.35)] transition-transform duration-700 hover:-rotate-[8deg]"
+                  className="absolute left-[-2%] top-10 w-[54%] -rotate-[6deg] drop-shadow-[0_40px_60px_rgba(30,60,140,0.35)] transition-transform duration-700 hover:-rotate-[4deg]"
                 />
-                {/* Front phone — Tasks, tilted right, overlapping */}
+                {/* Right phone — Tasks, gently tilted right, raised */}
                 <img
                   src={heroTasksIphone}
                   alt="Flowist task list on iPhone"
                   loading="eager"
                   decoding="async"
-                  className="absolute right-0 top-0 w-[64%] rotate-[8deg] drop-shadow-[0_50px_70px_rgba(30,60,140,0.45)] transition-transform duration-700 hover:rotate-[6deg]"
+                  className="absolute right-[-2%] top-0 w-[54%] rotate-[6deg] drop-shadow-[0_50px_70px_rgba(30,60,140,0.45)] transition-transform duration-700 hover:rotate-[4deg]"
                 />
               </div>
             </div>
 
-            {/* Mobile hero mockups — single tilted stack */}
+            {/* Mobile hero mockups — two phones side by side, gentle tilt */}
             <div className="relative mx-auto -mt-2 mb-2 block w-full max-w-sm md:hidden">
               <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[#3c78f0]/15 blur-3xl" />
-              <div className="relative mx-auto aspect-[5/5] w-full">
+              <div className="relative mx-auto aspect-[6/5] w-full">
                 <img
                   src={heroNotesIphone}
                   alt="Flowist notes dashboard on iPhone"
                   loading="eager"
                   decoding="async"
-                  className="absolute left-[6%] top-4 w-[58%] -rotate-[10deg] drop-shadow-[0_25px_40px_rgba(30,60,140,0.3)]"
+                  className="absolute left-[-2%] top-6 w-[52%] -rotate-[6deg] drop-shadow-[0_25px_40px_rgba(30,60,140,0.3)]"
                 />
                 <img
                   src={heroTasksIphone}
                   alt="Flowist task list on iPhone"
                   loading="eager"
                   decoding="async"
-                  className="absolute right-[6%] top-0 w-[60%] rotate-[8deg] drop-shadow-[0_30px_50px_rgba(30,60,140,0.4)]"
+                  className="absolute right-[-2%] top-0 w-[52%] rotate-[6deg] drop-shadow-[0_30px_50px_rgba(30,60,140,0.4)]"
                 />
               </div>
             </div>
