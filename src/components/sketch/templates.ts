@@ -51,6 +51,58 @@ const mkSticky = (
   id, x, y, width: w, height: h, text, color, fontSize: 14,
 });
 
+export const SHOWCASE_TEMPLATE: SketchTemplate = {
+  id: 'showcase',
+  label: 'Showcase Mode',
+  emoji: '✨',
+  description: 'Demo the editor with rich pre-filled content',
+  build: ({ w, h, nextTextId, nextStickyId }) => {
+    const cw = Math.max(w, 1000);
+    const ch = Math.max(h, 720);
+    const texts: TextAnnotation[] = [
+      mkText(nextTextId(), 60, 50, 'Flowist Sketch Studio', { fontSize: 40, bold: true, color: '#4338CA' }),
+      mkText(nextTextId(), 60, 100, 'Layers • Sticky notes • Text • Templates • Brushes', {
+        fontSize: 16, italic: true, color: '#6B7280',
+      }),
+      mkText(nextTextId(), 60, 170, 'This Week', { fontSize: 22, bold: true }),
+      mkText(nextTextId(), 60, 430, 'Ideas Board', { fontSize: 22, bold: true }),
+    ];
+    const stickies: StickyNoteData[] = [];
+    const days = [
+      { d: 'Mon', c: '#BFDBFE', note: 'Kickoff review' },
+      { d: 'Tue', c: '#BBF7D0', note: 'Design system audit' },
+      { d: 'Wed', c: '#FDE68A', note: 'User interviews x3' },
+      { d: 'Thu', c: '#FBCFE8', note: 'Ship pricing page' },
+      { d: 'Fri', c: '#FED7AA', note: 'Retro + planning' },
+    ];
+    const startX = 60;
+    const startY = 200;
+    const colW = Math.min(180, (cw - 120 - 4 * 14) / 5);
+    days.forEach((day, i) => {
+      const x = startX + i * (colW + 14);
+      texts.push(mkText(nextTextId(), x + 8, startY - 6, day.d, { fontSize: 14, bold: true }));
+      stickies.push(mkSticky(nextStickyId(), x, startY, day.note, day.c, colW, 180));
+    });
+    const ideas = [
+      { t: '💡 Add AI summaries', c: '#FEF3C7' },
+      { t: '🎯 Focus timer widget', c: '#BBF7D0' },
+      { t: '🗂️ Nested notebooks', c: '#BFDBFE' },
+      { t: '🖌️ Custom brush packs', c: '#FBCFE8' },
+    ];
+    const ideasY = 460;
+    const ideaW = Math.min(220, (cw - 120 - 3 * 14) / 4);
+    ideas.forEach((idea, i) => {
+      stickies.push(mkSticky(nextStickyId(), startX + i * (ideaW + 14), ideasY, idea.t, idea.c, ideaW, 130));
+    });
+    texts.push(
+      mkText(nextTextId(), 60, ch - 60, '➜ Try: tap a sticky to edit, swap tools, or add a new layer.', {
+        fontSize: 13, italic: true, color: '#4B5563',
+      }),
+    );
+    return { textAnnotations: texts, stickyNotes: stickies, background: 'dotted' };
+  },
+};
+
 export const SKETCH_TEMPLATES: SketchTemplate[] = [
   {
     id: 'kanban',
