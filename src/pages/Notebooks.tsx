@@ -50,6 +50,7 @@ const NOTEBOOK_COLORS = [
 const Notebooks = () => {
   const navigate = useNavigate();
   const { notesMeta } = useNotes();
+  const { requireCapacity } = useSubscription();
   useFirstVisitTour('/notebooks');
 
   const [folders, setFolders] = useState<FolderType[]>(() => notebooksRuntimeCache.folders ?? []);
