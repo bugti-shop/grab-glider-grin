@@ -304,83 +304,133 @@ export default function Landing() {
         {/* Hero */}
         <section id="about" className="relative overflow-hidden scroll-mt-20 bg-[#f7f4ec]">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-[#f2ede1] via-[#f7f4ec] to-[#f7f4ec]" />
-          <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-10 px-5 pt-6 pb-12 sm:px-6 sm:pt-16 sm:pb-20 md:grid md:grid-cols-2 md:gap-14">
-            {/* Left: phones (full mockups, not cropped) */}
-
-            <div className="relative mx-auto w-full max-w-[520px] sm:max-w-[560px] md:order-1 md:max-w-[560px]">
-              <div className="pointer-events-none absolute -inset-6 sm:-inset-8 rounded-[48px] bg-black/5 blur-3xl" />
-              <img
-                src={landingHeroAsset.url}
-                alt="Flowist notes and calendar on iPhone"
-                loading="eager"
-                width={1200}
-                height={900}
-                className="relative block w-full h-auto object-contain mx-auto"
-              />
+          <div className="relative mx-auto grid max-w-6xl grid-cols-2 items-center gap-4 px-3 pt-6 pb-10 sm:gap-8 sm:px-6 sm:pt-14 sm:pb-16 md:gap-14 md:pt-16 md:pb-20">
+            {/* Left: built mockups + sticky note */}
+            <div className="relative">
+              <div className="pointer-events-none absolute -inset-4 sm:-inset-8 rounded-[48px] bg-black/5 blur-3xl" />
+              <div className="relative flex items-end justify-center gap-[6%]">
+                {/* Phone 1 — Notes editor */}
+                <div className="relative w-[52%] -rotate-[6deg] translate-y-2 rounded-[18px] sm:rounded-[28px] md:rounded-[36px] bg-black p-[3px] sm:p-[5px] md:p-[7px] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.45)]">
+                  <div className="relative aspect-[9/19.5] overflow-hidden rounded-[15px] sm:rounded-[24px] md:rounded-[30px] bg-white">
+                    <div className="absolute left-1/2 top-1 sm:top-2 z-10 h-2 sm:h-3 md:h-4 w-[38%] -translate-x-1/2 rounded-full bg-black" />
+                    <div className="flex h-full flex-col px-1.5 pt-3 sm:px-2.5 sm:pt-5 md:px-3 md:pt-7 text-slate-900">
+                      <div className="mb-1 flex items-center justify-between text-[5px] sm:text-[8px] md:text-[10px] font-semibold">
+                        <span>9:41</span>
+                        <span>≡ ✦ Flowist ⇪</span>
+                      </div>
+                      <span className="mb-0.5 sm:mb-1 self-start rounded-full bg-violet-100 px-1 py-[1px] text-[4px] sm:text-[7px] md:text-[9px] font-medium text-violet-700">Ideas</span>
+                      <h3 className="text-[7px] sm:text-[11px] md:text-[15px] font-bold leading-tight">Product Ideas</h3>
+                      <p className="mt-0.5 text-[4px] sm:text-[7px] md:text-[9px] text-slate-600">💡 Ideas that solve real problems.</p>
+                      <p className="mt-1 text-[5px] sm:text-[8px] md:text-[10px] font-semibold">1. Focus Mode</p>
+                      <p className="text-[4px] sm:text-[6px] md:text-[8px] text-slate-600 leading-snug">A minimal Pomodoro timer with website blocking and analytics.</p>
+                      <p className="mt-0.5 rounded-sm bg-yellow-100 px-0.5 text-[4px] sm:text-[6px] md:text-[8px] text-slate-800 leading-snug">Helps users stay deep in work.</p>
+                      <p className="mt-1 text-[5px] sm:text-[8px] md:text-[10px] font-semibold">2. AI Meeting Notes</p>
+                      <p className="text-[4px] sm:text-[6px] md:text-[8px] text-slate-600 leading-snug">Transcribe, summarize and extract action items.</p>
+                      <p className="mt-0.5 rounded-sm bg-violet-100 px-0.5 text-[4px] sm:text-[6px] md:text-[8px] text-slate-800 leading-snug">Saves time, keeps everyone aligned.</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Phone 2 — Calendar */}
+                <div className="relative w-[52%] rotate-[5deg] rounded-[18px] sm:rounded-[28px] md:rounded-[36px] bg-black p-[3px] sm:p-[5px] md:p-[7px] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.45)]">
+                  <div className="relative aspect-[9/19.5] overflow-hidden rounded-[15px] sm:rounded-[24px] md:rounded-[30px] bg-white">
+                    <div className="absolute left-1/2 top-1 sm:top-2 z-10 h-2 sm:h-3 md:h-4 w-[38%] -translate-x-1/2 rounded-full bg-black" />
+                    <div className="flex h-full flex-col px-1.5 pt-3 sm:px-2.5 sm:pt-5 md:px-3 md:pt-7 text-slate-900">
+                      <div className="mb-1 flex items-center justify-between text-[5px] sm:text-[8px] md:text-[10px] font-semibold">
+                        <span>9:41</span>
+                        <span>≡ Flowist ⌕ +</span>
+                      </div>
+                      <p className="text-[6px] sm:text-[10px] md:text-[13px] font-bold">May 2025 ⌄</p>
+                      <div className="mt-1 grid grid-cols-7 text-center text-[3px] sm:text-[5px] md:text-[7px] font-semibold text-slate-500">
+                        {['M','T','W','T','F','S','S'].map((d,i)=><span key={i}>{d}</span>)}
+                      </div>
+                      <div className="mt-0.5 grid grid-cols-7 gap-y-0.5 text-center text-[4px] sm:text-[6px] md:text-[8px] font-medium">
+                        {Array.from({length:35}).map((_,i)=>{
+                          const day=i-2; const isSel=day===15;
+                          return <span key={i} className={`mx-auto flex h-2 w-2 sm:h-3 sm:w-3 md:h-4 md:w-4 items-center justify-center rounded-full ${isSel?'bg-violet-600 text-white':''}`}>{day>0&&day<=31?day:''}</span>;
+                        })}
+                      </div>
+                      <p className="mt-1.5 text-[3px] sm:text-[5px] md:text-[7px] font-bold text-slate-500 tracking-wider">THU, MAY 15</p>
+                      <div className="mt-0.5 space-y-0.5 sm:space-y-1">
+                        {[['bg-violet-500','Design review'],['bg-orange-400','Write marketing plan'],['bg-emerald-500','Product demo'],['bg-pink-400','Read 20 pages']].map(([c,t])=>(
+                          <div key={t} className="flex items-center gap-1">
+                            <span className={`h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full ${c}`} />
+                            <span className="text-[4px] sm:text-[6px] md:text-[8px] font-semibold">{t}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Sticky note */}
+              <div className="absolute -bottom-2 -left-1 sm:-bottom-4 sm:-left-3 md:-bottom-6 md:-left-6 w-[35%] -rotate-[8deg] rounded-[3px] bg-[#fff3b0] p-1.5 sm:p-2.5 md:p-3.5 shadow-[0_10px_25px_-10px_rgba(0,0,0,0.4)]" style={{fontFamily:'"Caveat","Comic Sans MS",cursive'}}>
+                <p className="text-[6px] sm:text-[10px] md:text-[13px] font-bold text-slate-800 border-b border-slate-400/40 pb-0.5 mb-1">Project Tasks</p>
+                <ul className="space-y-[2px] sm:space-y-1 text-[5px] sm:text-[9px] md:text-[12px] text-slate-800">
+                  {[['Research users',true],['Define MVP',true],['Create wireframes',false],['User testing',false],['Launch 🚀',false]].map(([t,done])=>(
+                    <li key={t as string} className="flex items-center gap-1">
+                      <span className={`inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 md:h-2.5 md:w-2.5 border border-slate-600 rounded-[1px] ${done?'bg-slate-700':''}`} />
+                      <span>{t as string}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
             {/* Right: copy */}
-            <div className="text-center md:order-2 md:text-left">
-              <h1 className="mb-4 text-[34px] font-extrabold leading-[1.1] tracking-tight text-slate-900 sm:mb-5 sm:text-[44px] md:text-[56px]">
+            <div className="text-left">
+              <h1 className="mb-2 text-[16px] font-extrabold leading-[1.05] tracking-tight text-slate-900 sm:mb-4 sm:text-[32px] md:text-[52px]">
                 <span className="block">Capture every idea,</span>
                 <span className="block">plan every day</span>
               </h1>
-              <p className="mx-auto mb-6 max-w-xl text-[15px] leading-relaxed text-slate-600 sm:mb-7 sm:text-lg md:mx-0">
+              <p className="mb-3 max-w-xl text-[10px] leading-snug text-slate-600 sm:mb-6 sm:text-base md:text-lg">
                 Rich notes, tasks, calendar and habits — synced across all your devices.
               </p>
 
-              <ul className="mx-auto mb-7 flex max-w-md flex-col gap-3 text-left sm:mb-8 sm:gap-3.5 md:mx-0">
-                {[
-                  'Beautiful note editor',
-                  'Smart task priorities',
-                  'Offline-first sync',
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-3">
-                    <span className="inline-flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
-                      <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={3} />
+              <ul className="mb-3 flex flex-col gap-1.5 sm:mb-6 sm:gap-3">
+                {['Beautiful note editor','Smart task priorities','Offline-first sync'].map((item) => (
+                  <li key={item} className="flex items-center gap-1.5 sm:gap-3">
+                    <span className="inline-flex h-3.5 w-3.5 sm:h-6 sm:w-6 md:h-7 md:w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
+                      <Check className="h-2 w-2 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" strokeWidth={3} />
                     </span>
-                    <span className="text-[15px] sm:text-[17px] font-semibold leading-snug text-slate-900">{item}</span>
+                    <span className="text-[10px] sm:text-[15px] md:text-[17px] font-semibold leading-snug text-slate-900">{item}</span>
                   </li>
                 ))}
               </ul>
 
-              <div className="mx-auto flex max-w-md flex-col gap-4 md:mx-0">
-                <div className="grid w-full grid-cols-2 gap-2.5 sm:gap-3">
-
-                  <a
-                    href="https://apps.apple.com/us/app/flowist-ai-note-taker/id6772996510"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-black px-3 text-white transition-transform active:translate-y-0.5"
-                    aria-label="Download Flowist on the App Store"
-                  >
-                    <svg viewBox="0 0 384 512" className="h-7 w-7 fill-current shrink-0" aria-hidden="true">
-                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zM256.5 105.7c30.1-35.7 27.4-68.2 26.5-79.9-26.6 1.5-57.4 18.1-74.9 38.5-19.3 21.9-30.6 49-28.2 78.8 28.7 2.2 54.9-12.5 76.6-37.4z"/>
-                    </svg>
-                    <div className="flex flex-col items-start leading-tight">
-                      <span className="text-[10px] font-medium opacity-90">Download on the</span>
-                      <span className="text-[17px] font-semibold tracking-tight">App Store</span>
-                    </div>
-                  </a>
-                  <a
-                    href="https://play.google.com/store/apps/details?id=nota.npd.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-black px-3 text-white transition-transform active:translate-y-0.5"
-                    aria-label="Get it on Google Play"
-                  >
-                    <svg viewBox="0 0 512 512" className="h-7 w-7 shrink-0" aria-hidden="true">
-                      <path fill="#00d7fe" d="M99.6 14.4C77.7 21.5 64 41.6 64 67.7v376.6c0 26.1 13.7 46.2 35.6 53.3l217.4-251.8L99.6 14.4z"/>
-                      <path fill="#ffce00" d="M396.7 314.2l-79.7-58.4 70.9-82.1 105.4 60.7c19.7 11.4 19.7 39.8 0 51.2l-96.6 28.6z"/>
-                      <path fill="#ff3a44" d="M396.7 314.2l-79.7-58.4-217.4 242.6c8.7 2.8 18.8 1.9 28.6-3.7l268.5-180.5z"/>
-                      <path fill="#48ff48" d="M99.6 14.4c-9.8-5.6-19.9-6.5-28.6-3.7l245.9 244.7 79.7-82.1L99.6 14.4z"/>
-                    </svg>
-                    <div className="flex flex-col items-start leading-tight">
-                      <span className="text-[10px] font-medium opacity-90">GET IT ON</span>
-                      <span className="text-[17px] font-semibold tracking-tight">Google Play</span>
-                    </div>
-                  </a>
-                </div>
+              <div className="flex flex-col gap-1.5 sm:flex-row sm:gap-3">
+                <a
+                  href="https://apps.apple.com/us/app/flowist-ai-note-taker/id6772996510"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-8 sm:h-[54px] items-center justify-center gap-1.5 sm:gap-2 rounded-md sm:rounded-xl bg-black px-2 sm:px-3 text-white transition-transform active:translate-y-0.5"
+                  aria-label="Download Flowist on the App Store"
+                >
+                  <svg viewBox="0 0 384 512" className="h-3.5 w-3.5 sm:h-7 sm:w-7 fill-current shrink-0" aria-hidden="true">
+                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zM256.5 105.7c30.1-35.7 27.4-68.2 26.5-79.9-26.6 1.5-57.4 18.1-74.9 38.5-19.3 21.9-30.6 49-28.2 78.8 28.7 2.2 54.9-12.5 76.6-37.4z"/>
+                  </svg>
+                  <div className="flex flex-col items-start leading-tight">
+                    <span className="text-[6px] sm:text-[10px] font-medium opacity-90">Download on the</span>
+                    <span className="text-[10px] sm:text-[17px] font-semibold tracking-tight">App Store</span>
+                  </div>
+                </a>
+                <a
+                  href="https://play.google.com/store/apps/details?id=nota.npd.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-8 sm:h-[54px] items-center justify-center gap-1.5 sm:gap-2 rounded-md sm:rounded-xl bg-black px-2 sm:px-3 text-white transition-transform active:translate-y-0.5"
+                  aria-label="Get it on Google Play"
+                >
+                  <svg viewBox="0 0 512 512" className="h-3.5 w-3.5 sm:h-7 sm:w-7 shrink-0" aria-hidden="true">
+                    <path fill="#00d7fe" d="M99.6 14.4C77.7 21.5 64 41.6 64 67.7v376.6c0 26.1 13.7 46.2 35.6 53.3l217.4-251.8L99.6 14.4z"/>
+                    <path fill="#ffce00" d="M396.7 314.2l-79.7-58.4 70.9-82.1 105.4 60.7c19.7 11.4 19.7 39.8 0 51.2l-96.6 28.6z"/>
+                    <path fill="#ff3a44" d="M396.7 314.2l-79.7-58.4-217.4 242.6c8.7 2.8 18.8 1.9 28.6-3.7l268.5-180.5z"/>
+                    <path fill="#48ff48" d="M99.6 14.4c-9.8-5.6-19.9-6.5-28.6-3.7l245.9 244.7 79.7-82.1L99.6 14.4z"/>
+                  </svg>
+                  <div className="flex flex-col items-start leading-tight">
+                    <span className="text-[6px] sm:text-[10px] font-medium opacity-90">GET IT ON</span>
+                    <span className="text-[10px] sm:text-[17px] font-semibold tracking-tight">Google Play</span>
+                  </div>
+                </a>
               </div>
             </div>
           </div>
