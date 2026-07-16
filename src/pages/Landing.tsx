@@ -507,18 +507,18 @@ export default function Landing() {
               <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[#3c78f0]/15 blur-3xl" />
               <div className="relative mx-auto aspect-[5/5] w-full">
                 <img
-                  src={scanTodoIphone.url}
-                  alt="Scan a handwritten to-do list with Flowist"
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute left-[6%] top-4 w-[58%] -rotate-[10deg] drop-shadow-[0_25px_40px_rgba(30,60,140,0.3)]"
-                />
-                <img
                   src={tasksHomeIphone.url}
                   alt="Extracted tasks in the Flowist home dashboard"
                   loading="lazy"
                   decoding="async"
-                  className="absolute right-[6%] top-0 w-[60%] rotate-[8deg] drop-shadow-[0_30px_50px_rgba(30,60,140,0.4)]"
+                  className="absolute right-[6%] top-0 z-10 w-[60%] rotate-[8deg] drop-shadow-[0_30px_50px_rgba(30,60,140,0.4)]"
+                />
+                <img
+                  src={scanTodoIphone.url}
+                  alt="Scan a handwritten to-do list with Flowist"
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute left-[6%] top-4 z-20 w-[58%] -rotate-[10deg] drop-shadow-[0_25px_40px_rgba(30,60,140,0.3)]"
                 />
               </div>
             </div>
