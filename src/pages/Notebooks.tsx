@@ -579,7 +579,7 @@ const VirtualNotebookGrid = ({
                     onPointerUp={cancelPress}
                     onPointerLeave={cancelPress}
                     onPointerCancel={cancelPress}
-                    className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform select-none touch-none"
+                    className="group flex flex-col items-center gap-1.5 text-center active:scale-[0.94] transition-transform select-none touch-pan-y"
                   >
                     <div className="relative w-[90%] aspect-[3/4] pb-[5%]">
                       <div className="relative w-full h-full">
