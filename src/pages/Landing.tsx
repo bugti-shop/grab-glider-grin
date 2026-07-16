@@ -437,15 +437,16 @@ export default function Landing() {
 
 
         {/* What does Flowist include? */}
-        <section className="bg-white py-14 sm:py-20">
+        <section className="bg-white pt-14 pb-14 sm:pt-20 sm:pb-20">
           <div className="mx-auto max-w-6xl">
-            <div className="mb-8 px-5 text-center sm:mb-12 sm:px-6">
+            <div className="mb-2 px-5 text-center sm:mb-3 sm:px-6">
               <h2 className="text-[28px] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[28px] whitespace-nowrap">
                 What does Flowist include?
               </h2>
 
 
             </div>
+
             <IncludeCarousel
               accent={BLUE}
               autoplay={false}
