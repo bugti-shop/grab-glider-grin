@@ -28,6 +28,12 @@ import landingCountdownImg from '@/assets/landing-countdown.jpg';
 import landingSyncDevicesImg from '@/assets/landing-sync-devices.webp';
 import heroTasksIphone from '@/assets/hero-tasks-iphone.png';
 import heroNotesIphone from '@/assets/hero-notes-iphone.png';
+import IncludeCarousel from '@/components/landing/IncludeCarousel';
+import includeNotesImg from '@/assets/flowist-include-notes.png.asset.json';
+import includeTasksImg from '@/assets/flowist-include-tasks.png.asset.json';
+import includeNotebooksImg from '@/assets/flowist-include-notebooks.png.asset.json';
+import includeHabitsImg from '@/assets/flowist-include-habits.png.asset.json';
+import includeMatrixImg from '@/assets/flowist-include-matrix.png.asset.json';
 
 const BLUE = '#3c78f0';
 const BLUE_DARK = '#2b5dbf';
