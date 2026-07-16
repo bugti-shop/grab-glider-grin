@@ -142,7 +142,7 @@ export const useTourBootstrap = () => {
         setTimeout(() => { watchdogPending = false; }, 800);
       }
     };
-    const activityHandler = () => { if (!isInAppBrowser) kickChainIfPending(); };
+    const activityHandler = () => { if (!skipAutoTours) kickChainIfPending(); };
     window.addEventListener('pointerdown', activityHandler, { capture: true });
     window.addEventListener('keydown', activityHandler, { capture: true });
 
