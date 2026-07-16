@@ -546,13 +546,14 @@ export const CameraScannerScreen = ({
                 className="absolute left-0 right-0 h-[2px] rounded-full"
                 style={{
                   background:
-                    'linear-gradient(90deg, transparent, hsl(var(--primary) / 0.9), transparent)',
-                  boxShadow: '0 0 24px 4px hsl(var(--primary) / 0.6)',
+                    'linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent)',
+                  boxShadow: '0 0 24px 4px rgba(255,255,255,0.55)',
                   animation: 'scanner-sweep 2.4s ease-in-out infinite',
                 }}
               />
             </div>
           )}
+
 
           {/* Hint / status */}
           <div className="absolute -bottom-10 left-0 right-0 text-center text-xs text-white/80">
