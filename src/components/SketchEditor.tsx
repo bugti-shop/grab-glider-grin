@@ -55,7 +55,7 @@ import {
 import { WASHI_PATTERNS, washiPatternCache, drawTornEdge, drawWashiTape } from './sketch';
 import type { WashiTapePattern } from './sketch';
 import { BrushCustomizationPanel } from './sketch/BrushCustomizationPanel';
-import { SKETCH_TEMPLATES, SKETCH_STAMPS, type SketchTemplate, type SketchStamp } from './sketch/templates';
+import { SKETCH_TEMPLATES, SKETCH_STAMPS, SHOWCASE_TEMPLATE, type SketchTemplate, type SketchStamp } from './sketch/templates';
 import { LayoutTemplate } from 'lucide-react';
 
 // --- Built-in stickers (not extracted to modules) ---
