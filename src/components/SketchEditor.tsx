@@ -8601,6 +8601,51 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
           </PopoverContent>
         </Popover>
 
+        {/* Templates & stamps — one-tap starters */}
+        <Popover open={openToolbarPopover === 'templates'} onOpenChange={(o) => setOpenToolbarPopover(o ? 'templates' : null)}>
+          <PopoverTrigger asChild>
+            <button
+              aria-label="Templates"
+              className="h-9 w-9 flex-shrink-0 rounded-full flex items-center justify-center transition-all duration-200 text-foreground hover:bg-muted/80 hover:text-foreground active:scale-95"
+            >
+              <LayoutTemplate className="h-[18px] w-[18px]" strokeWidth={2} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-3 bg-card" align="center" side="top">
+            <p className="text-[11px] font-semibold text-foreground mb-1">Templates</p>
+            <p className="text-[10px] text-muted-foreground mb-2">Insert a ready-made layout, then tweak.</p>
+            <div className="grid grid-cols-1 gap-1.5 mb-3">
+              {SKETCH_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  onClick={() => { applyTemplate(tpl); setOpenToolbarPopover(null); }}
+                  className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted/60 active:scale-[0.98] transition"
+                >
+                  <span className="text-lg leading-none">{tpl.emoji}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[12px] font-medium text-foreground truncate">{tpl.label}</span>
+                    <span className="block text-[10px] text-muted-foreground truncate">{tpl.description}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] font-semibold text-foreground mb-1.5">Stamps</p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {SKETCH_STAMPS.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => { applyTemplate(s); setOpenToolbarPopover(null); }}
+                  className="flex flex-col items-center gap-0.5 rounded-md border border-border px-1 py-1.5 hover:bg-muted/60 active:scale-[0.98] transition"
+                >
+                  <span className="text-base leading-none">{s.emoji}</span>
+                  <span className="text-[9px] text-muted-foreground text-center leading-tight">{s.label}</span>
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+
         {/* Stroke width */}
         <Popover open={openToolbarPopover === 'stroke'} onOpenChange={(o) => setOpenToolbarPopover(o ? 'stroke' : null)}>
           <PopoverTrigger asChild>
