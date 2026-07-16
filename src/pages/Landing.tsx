@@ -307,22 +307,66 @@ export default function Landing() {
       </header>
 
       <main id="top">
-        {/* Hero */}
-        <section id="about" className="relative overflow-hidden scroll-mt-20">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-[#eaf1ff] via-white to-white" />
-          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pt-10 pb-8 sm:px-6 sm:pt-20 sm:pb-16 md:grid-cols-2">
-            <div className="text-center md:text-left">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm">
-                <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: BLUE }} />
-                Now on Web, Android & iOS
+        {/* Hero — matches uploaded reference: two phones on the left, headline + checks + store buttons on the right */}
+        <section id="about" className="relative overflow-hidden scroll-mt-20 bg-[#f7f4ec]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-[#f2ede1] via-[#f7f4ec] to-[#f7f4ec]" />
+          <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 pt-10 pb-12 sm:px-6 sm:pt-16 sm:pb-20 md:grid-cols-2 md:gap-14">
+            {/* Left: phones */}
+            <div className="relative mx-auto w-full max-w-[520px] md:order-1">
+              <div className="pointer-events-none absolute -inset-8 rounded-[48px] bg-black/5 blur-3xl" />
+              <div className="relative flex items-end justify-center gap-3 sm:gap-5">
+                {/* Phone 1 — notes */}
+                <div className="relative w-[46%] -rotate-[6deg] translate-y-2 rounded-[36px] border border-black/10 bg-black p-1.5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.35)]">
+                  <div className="relative overflow-hidden rounded-[30px] bg-white">
+                    <div className="absolute left-1/2 top-1.5 z-10 h-4 w-16 -translate-x-1/2 rounded-full bg-black" />
+                    <img
+                      src={regularNoteImage}
+                      alt="Flowist beautiful note editor"
+                      loading="eager"
+                      className="block h-auto w-full"
+                    />
+                  </div>
+                </div>
+                {/* Phone 2 — calendar */}
+                <div className="relative w-[46%] rotate-[3deg] rounded-[36px] border border-black/10 bg-black p-1.5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.35)]">
+                  <div className="relative overflow-hidden rounded-[30px] bg-white">
+                    <div className="absolute left-1/2 top-1.5 z-10 h-4 w-16 -translate-x-1/2 rounded-full bg-black" />
+                    <img
+                      src={calendarViewImage}
+                      alt="Flowist calendar with tasks and habits"
+                      loading="eager"
+                      className="block h-auto w-full"
+                    />
+                  </div>
+                </div>
               </div>
-              <h1 className="mb-5 text-[36px] font-extrabold leading-[1.08] tracking-tight text-slate-900 sm:text-[54px]">
-                Organize your day,<br />
-                <span style={{ color: BLUE }}>achieve more.</span>
+            </div>
+
+            {/* Right: copy */}
+            <div className="text-center md:order-2 md:text-left">
+              <h1 className="mb-5 text-[36px] font-extrabold leading-[1.05] tracking-tight text-slate-900 sm:text-[56px]">
+                Capture every idea,<br />
+                plan every day
               </h1>
-              <p className="mx-auto mb-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg md:mx-0">
-                One calm app to plan, capture and follow through, without the noise.
+              <p className="mx-auto mb-7 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg md:mx-0">
+                Rich notes, tasks, calendar and habits — synced across all your devices.
               </p>
+
+              <ul className="mx-auto mb-8 flex max-w-md flex-col gap-3.5 text-left md:mx-0">
+                {[
+                  'Beautiful note editor',
+                  'Smart task priorities',
+                  'Offline-first sync',
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-3">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
+                      <Check className="h-4 w-4" strokeWidth={3} />
+                    </span>
+                    <span className="text-[17px] font-semibold text-slate-900">{item}</span>
+                  </li>
+                ))}
+              </ul>
+
               <div className="mx-auto flex max-w-md flex-col gap-4 md:mx-0">
                 <button
                   onClick={handleGetStarted}
@@ -331,12 +375,12 @@ export default function Landing() {
                 >
                   Get Flowist Free <ArrowRight className="h-5 w-5" />
                 </button>
-                <div className="grid w-full grid-cols-2 gap-2">
+                <div className="grid w-full grid-cols-2 gap-3">
                   <a
                     href="https://apps.apple.com/us/app/flowist-ai-note-taker/id6772996510"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-md bg-black px-3 text-white transition-transform active:translate-y-0.5"
+                    className="inline-flex h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-black px-3 text-white transition-transform active:translate-y-0.5"
                     aria-label="Download Flowist on the App Store"
                   >
                     <svg viewBox="0 0 384 512" className="h-7 w-7 fill-current shrink-0" aria-hidden="true">
@@ -351,7 +395,7 @@ export default function Landing() {
                     href="https://play.google.com/store/apps/details?id=nota.npd.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-md bg-black px-3 text-white transition-transform active:translate-y-0.5"
+                    className="inline-flex h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-black px-3 text-white transition-transform active:translate-y-0.5"
                     aria-label="Get it on Google Play"
                   >
                     <svg viewBox="0 0 512 512" className="h-7 w-7 shrink-0" aria-hidden="true">
@@ -367,20 +411,6 @@ export default function Landing() {
                   </a>
                 </div>
               </div>
-              
-            </div>
-
-            {/* Hero showcase image */}
-            <div className="relative mx-auto w-full max-w-xl md:max-w-none">
-              <div className="pointer-events-none absolute -inset-6 rounded-[40px] bg-[#3c78f0]/10 blur-3xl" />
-              <img
-                src={landingHeroAsset.url}
-                alt="Flowist notes, tasks, calendar and habits on iPhone"
-                width={1920}
-                height={1024}
-                loading="eager"
-                className="relative block h-auto w-full object-contain"
-              />
             </div>
           </div>
         </section>
