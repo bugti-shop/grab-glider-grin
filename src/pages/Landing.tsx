@@ -39,6 +39,8 @@ import includeMarkdownImg from '@/assets/flowist-include-markdown.png.asset.json
 import includeSlashImg from '@/assets/flowist-include-slash.png.asset.json';
 import includeWebClipperImg from '@/assets/flowist-include-webclipper.png.asset.json';
 import includeInlineCalcImg from '@/assets/flowist-include-inline-calc.png.asset.json';
+import scanTodoIphone from '@/assets/scan-todolist-iphone.png.asset.json';
+import tasksHomeIphone from '@/assets/tasks-home-iphone.png.asset.json';
 
 const BLUE = '#3c78f0';
 const BLUE_DARK = '#2b5dbf';
@@ -463,6 +465,63 @@ export default function Landing() {
                 { image: includeInlineCalcImg.url, alt: 'Inline calculations and unit conversions', title: 'Inline math & unit conversions', desc: 'Do calculations, unit and currency conversions right inside your notes, no calculator needed.' },
               ]}
             />
+          </div>
+        </section>
+
+        {/* Snap a page, get a list — tilted stacked mockups */}
+        <section className="bg-white pt-6 pb-16 sm:pt-10 sm:pb-24">
+          <div className="mx-auto max-w-6xl px-5 sm:px-6">
+            <div className="mb-8 text-center sm:mb-12">
+              <h2 className="text-[26px] font-bold leading-[1.15] tracking-tight text-slate-900 sm:text-[34px]">
+                Snap a page, get a task list.
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-slate-600 sm:text-[16px]">
+                Point your camera at any handwritten to-do list and Flowist turns it into clean, tappable tasks in seconds.
+              </p>
+            </div>
+
+            {/* Desktop: stacked tilted iPhones */}
+            <div className="relative mx-auto hidden w-full max-w-xl md:block">
+              <div className="pointer-events-none absolute -inset-10 rounded-[48px] bg-gradient-to-br from-[#3c78f0]/25 via-[#8ab4ff]/15 to-transparent blur-3xl" />
+              <div className="pointer-events-none absolute right-0 top-8 h-64 w-64 rounded-full bg-[#3c78f0]/20 blur-[90px]" />
+              <div className="relative aspect-[5/6] w-full">
+                <img
+                  src={scanTodoIphone.url}
+                  alt="Scan a handwritten to-do list with Flowist"
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute left-0 top-6 w-[62%] -rotate-[10deg] drop-shadow-[0_40px_60px_rgba(30,60,140,0.35)] transition-transform duration-700 hover:-rotate-[8deg]"
+                />
+                <img
+                  src={tasksHomeIphone.url}
+                  alt="Extracted tasks in the Flowist home dashboard"
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute right-0 top-0 w-[64%] rotate-[8deg] drop-shadow-[0_50px_70px_rgba(30,60,140,0.45)] transition-transform duration-700 hover:rotate-[6deg]"
+                />
+              </div>
+            </div>
+
+            {/* Mobile: same stacked tilted style */}
+            <div className="relative mx-auto block w-full max-w-sm md:hidden">
+              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[#3c78f0]/15 blur-3xl" />
+              <div className="relative mx-auto aspect-[5/5] w-full">
+                <img
+                  src={scanTodoIphone.url}
+                  alt="Scan a handwritten to-do list with Flowist"
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute left-[6%] top-4 w-[58%] -rotate-[10deg] drop-shadow-[0_25px_40px_rgba(30,60,140,0.3)]"
+                />
+                <img
+                  src={tasksHomeIphone.url}
+                  alt="Extracted tasks in the Flowist home dashboard"
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute right-[6%] top-0 w-[60%] rotate-[8deg] drop-shadow-[0_30px_50px_rgba(30,60,140,0.4)]"
+                />
+              </div>
+            </div>
           </div>
         </section>
 
