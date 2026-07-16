@@ -275,7 +275,7 @@ export default function Landing() {
                   })}
 
                   <a
-                    href="#faq"
+                    href="#pricing"
                     onClick={() => setMenuOpen(false)}
                     className="mt-1 block rounded-xl px-5 py-4 text-lg font-semibold text-slate-900 hover:bg-slate-50"
                   >
@@ -540,7 +540,90 @@ export default function Landing() {
         </section>
 
 
+        {/* Pricing */}
+        <section id="pricing" className="bg-white py-20 sm:py-28">
+          <div className="mx-auto max-w-6xl px-5 sm:px-6">
+            <div className="mb-12 text-center">
+              <p className="mb-3 text-sm font-bold uppercase tracking-wider" style={{ color: BLUE }}>Pricing</p>
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+                Simple pricing. Cancel anytime.
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-[15px] text-slate-600">
+                One Pro plan unlocks everything, tasks, notes, sketches, habits and every AI feature across web, iOS and Android.
+              </p>
+            </div>
 
+            <div className="grid gap-5 sm:gap-6 md:grid-cols-3">
+              {[
+                { plan: 'Weekly', price: '$1.99', period: '/week', sub: 'Try it out short-term', badge: null as string | null, highlight: false, save: null as string | null },
+                { plan: 'Yearly', price: '$39.99', period: '/year', sub: 'Just $3.33/month, billed yearly', badge: 'BEST VALUE', highlight: true, save: 'Save 17%' },
+                { plan: 'Monthly', price: '$3.99', period: '/month', sub: 'Flexible month-to-month', badge: null as string | null, highlight: false, save: null as string | null },
+              ].map((p) => (
+                <div
+                  key={p.plan}
+                  className={`relative flex flex-col rounded-2xl border p-6 sm:p-7 transition-transform ${
+                    p.highlight
+                      ? 'border-transparent bg-slate-900 text-white shadow-2xl md:-translate-y-3 md:scale-[1.03]'
+                      : 'border-slate-200 bg-white text-slate-900'
+                  }`}
+                >
+                  {p.badge && (
+                    <span
+                      className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-bold tracking-wide text-white"
+                      style={{ backgroundColor: BLUE }}
+                    >
+                      {p.badge}
+                    </span>
+                  )}
+                  <div className="mb-1 flex items-center justify-between">
+                    <h3 className={`text-lg font-bold ${p.highlight ? 'text-white' : 'text-slate-900'}`}>{p.plan}</h3>
+                    {p.save && (
+                      <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white">
+                        {p.save}
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-[13px] ${p.highlight ? 'text-slate-300' : 'text-slate-500'}`}>{p.sub}</p>
+                  <div className="mt-5 flex items-baseline gap-1">
+                    <span className={`text-4xl font-extrabold tracking-tight ${p.highlight ? 'text-white' : 'text-slate-900'}`}>
+                      {p.price}
+                    </span>
+                    <span className={`text-sm font-medium ${p.highlight ? 'text-slate-300' : 'text-slate-500'}`}>{p.period}</span>
+                  </div>
+
+                  <ul className={`mt-6 space-y-2.5 text-[14px] ${p.highlight ? 'text-slate-200' : 'text-slate-700'}`}>
+                    {[
+                      'Unlimited tasks, notes & sketches',
+                      'All AI features (scan, extract, ask)',
+                      'Habit tracking & Eisenhower Matrix',
+                      'Web Clipper & unlimited notebooks',
+                      'Sync across web, iOS & Android',
+                    ].map((f) => (
+                      <li key={f} className="flex items-start gap-2">
+                        <Check className={`mt-0.5 h-4 w-4 shrink-0 ${p.highlight ? 'text-white' : ''}`} style={p.highlight ? {} : { color: BLUE }} />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    onClick={handleGetStarted}
+                    className={`mt-7 w-full rounded-xl px-5 py-3 text-sm font-bold transition-transform hover:scale-[1.02] ${
+                      p.highlight ? 'bg-white text-slate-900' : 'text-white'
+                    }`}
+                    style={p.highlight ? {} : { backgroundColor: BLUE }}
+                  >
+                    Get Started
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-8 text-center text-[13px] text-slate-500">
+              Prices in USD. Taxes may apply. Cancel anytime from your account.
+            </p>
+          </div>
+        </section>
 
         {/* FAQ */}
         <section id="faq" className="bg-slate-50 py-20 sm:py-28">
