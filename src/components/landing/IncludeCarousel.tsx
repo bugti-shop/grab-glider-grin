@@ -109,15 +109,17 @@ export default function IncludeCarousel({
           }}
 
         >
-          {items.map((it) => (
+          {items.map((it, i) => (
             <div key={it.image} className="flex w-full shrink-0 items-end justify-center">
               <img
                 src={it.image}
                 alt={it.alt}
                 draggable={false}
-                loading="lazy"
+                loading="eager"
+                decoding="async"
+                fetchPriority={i === 0 ? 'high' : 'low'}
                 className="pointer-events-none h-[640px] w-auto object-contain sm:h-[820px]"
-                style={{ background: 'transparent' }}
+                style={{ background: 'transparent', contentVisibility: 'auto' }}
               />
             </div>
           ))}
