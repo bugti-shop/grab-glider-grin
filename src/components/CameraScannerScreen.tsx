@@ -320,7 +320,7 @@ export const CameraScannerScreen = ({
         toast.error('Could not capture frame');
         return;
       }
-      const raw = canvas.toDataURL('image/jpeg', 0.92);
+      const raw = canvas.toDataURL('image/jpeg', 0.97);
       const compressed = await compressImage(raw, {
         maxWidth: 1400,
         maxHeight: 1400,
