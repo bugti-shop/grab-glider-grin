@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 export interface IncludeItem {
   image: string;
@@ -14,19 +14,41 @@ interface Props {
 
 export default function IncludeCarousel({ items, accent = '#0f172a' }: Props) {
   const [active, setActive] = useState(0);
+  const startX = useRef<number | null>(null);
   const item = items[active];
   if (!item) return null;
 
+  const go = (dir: 1 | -1) => {
+    setActive((a) => Math.min(items.length - 1, Math.max(0, a + dir)));
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    startX.current = e.clientX;
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (startX.current == null) return;
+    const dx = e.clientX - startX.current;
+    startX.current = null;
+    if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+  };
+
   return (
-    <div className="w-full">
-      <div className="flex flex-col items-center px-5 sm:px-8">
+    <div className="w-full select-none">
+      <div
+        className="flex flex-col items-center px-5 sm:px-8"
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => (startX.current = null)}
+        style={{ touchAction: 'pan-y' }}
+      >
         {/* Image only — no background, no card */}
-        <div className="flex w-full items-end justify-center" style={{ minHeight: 380 }}>
+        <div className="flex w-full items-end justify-center" style={{ minHeight: 460 }}>
           <img
             key={item.image}
             src={item.image}
             alt={item.alt}
-            className="h-[360px] w-auto object-contain sm:h-[440px] animate-in fade-in duration-300"
+            draggable={false}
+            className="h-[440px] w-auto object-contain sm:h-[560px] animate-in fade-in duration-300"
             style={{ background: 'transparent' }}
           />
         </div>
