@@ -37,6 +37,15 @@ export const useTourBootstrap = () => {
     const ua = navigator.userAgent || '';
     const isInAppBrowser =
       /(TikTok|musical_ly|BytedanceWebview|Instagram|FBAN|FBAV|FB_IAB|Line\/|MicroMessenger|Snapchat|Pinterest|Twitter|LinkedInApp)/i.test(ua);
+    // User request: hide auto in-app tooltip tutorial on web for now.
+    // Only run auto-tours on native platforms.
+    let isNativePlatform = false;
+    try {
+      // Lazy check without importing at top-level to avoid SSR issues.
+      // @ts-ignore
+      isNativePlatform = !!(window as any).Capacitor?.isNativePlatform?.();
+    } catch {}
+    const skipAutoTours = isInAppBrowser || !isNativePlatform;
 
     // Auto-start compulsory onboarding on ALL platforms (web + native).
     // User explicitly asked to restore the tutorial on the web.
