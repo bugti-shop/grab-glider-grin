@@ -106,7 +106,7 @@ export default function IncludeCarousel({
           style={{
           transform: `translate3d(calc(${-active * 100}% + ${dragX}px), 0, 0)`,
             transition,
-            minHeight: 560,
+            minHeight: 680,
           }}
         >
           {items.map((it) => (
