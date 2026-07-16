@@ -304,11 +304,11 @@ export default function Landing() {
         {/* Hero */}
         <section id="about" className="relative overflow-hidden scroll-mt-20 bg-[#f7f4ec]">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-[#f2ede1] via-[#f7f4ec] to-[#f7f4ec]" />
-          <div className="relative mx-auto grid max-w-6xl grid-cols-2 items-center gap-3 px-2 pt-5 pb-8 sm:gap-8 sm:px-6 sm:pt-14 sm:pb-16 md:gap-14 md:pt-16 md:pb-20">
+          <div className="relative mx-auto grid max-w-6xl grid-cols-[1.15fr_1fr] items-center gap-2 px-2 pt-5 pb-8 sm:grid-cols-2 sm:gap-8 sm:px-6 sm:pt-14 sm:pb-16 md:gap-14 md:pt-16 md:pb-20">
             {/* Left: built mockups + sticky note */}
             <div className="relative">
               <div className="pointer-events-none absolute -inset-4 sm:-inset-8 rounded-[48px] bg-black/5 blur-3xl" />
-              <div className="relative flex items-end justify-center gap-[6%]">
+              <div className="relative flex items-end justify-center -gap-[2%] sm:gap-[6%]" style={{ gap: '-4%' }}>
                 {/* Phone 1 — Notes editor */}
                 <div className="relative w-[52%] -rotate-[6deg] translate-y-2 rounded-[18px] sm:rounded-[28px] md:rounded-[36px] bg-black p-[3px] sm:p-[5px] md:p-[7px] shadow-[0_20px_60px_-20px_rgba(0,0,0,0.45)]">
                   <div className="relative aspect-[9/19.5] overflow-hidden rounded-[15px] sm:rounded-[24px] md:rounded-[30px] bg-white">
