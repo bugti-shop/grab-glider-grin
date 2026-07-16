@@ -35,14 +35,14 @@ const hasActiveProAccess = async (admin: any, userId: string, userEmail: string)
   if (identifiers.length) {
     const { data: ents } = await admin
       .from("user_entitlements")
-      .select("is_active, expires_at, grace_period_expires_at, in_billing_retry")
+      .select("is_active, expires_at, grace_period_expires_at")
       .in("app_user_id", identifiers);
 
     const hasEntitlement = (ents || []).some((e: any) => {
       if (!e?.is_active) return false;
       const exp = e.expires_at ? new Date(e.expires_at).getTime() : Infinity;
       const grace = e.grace_period_expires_at ? new Date(e.grace_period_expires_at).getTime() : 0;
-      return exp > nowMs || grace > nowMs || e.in_billing_retry;
+      return exp > nowMs || grace > nowMs;
     });
     if (hasEntitlement) return true;
   }
