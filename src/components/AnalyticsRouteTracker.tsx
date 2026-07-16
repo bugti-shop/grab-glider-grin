@@ -60,12 +60,11 @@ const postDirectPageview = (payload: Record<string, unknown>) => {
     timestamp: new Date().toISOString(),
     action: "page_hit",
     version: "1",
-    // Lovable analytics de-dupes the page Visitors list by session_id. The
-    // built-in script keeps the same cookie for 30 minutes, so a same-browser
-    // close/reopen can look like "no new page visit". Use a per-page-load id
-    // for our SPA route pings so every real app open is counted while keeping
-    // all route pings in that open tied together for duration/heartbeat.
-    session_id: getPageLoadSessionId(),
+    // Lovable analytics de-dupes visitors by session_id. To ensure every
+    // page visit (even from the same browser or multiple users sharing a
+    // device) is counted as a distinct visitor on that page, mint a brand
+    // new session_id per route ping.
+    session_id: `flowist-${Date.now()}-${randomId()}`,
     payload: JSON.stringify(payload),
   });
 
