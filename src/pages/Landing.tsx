@@ -324,10 +324,11 @@ export default function Landing() {
                 <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: BLUE }} />
                 Now on Web, Android & iOS
               </div>
-              <h1 className="mb-5 text-[36px] font-extrabold leading-[1.08] tracking-tight text-slate-900 sm:text-[54px]">
+              <h1 className="mb-5 text-[28px] font-semibold leading-[1.15] tracking-tight text-slate-800 sm:text-[40px]">
                 Notes, tasks, focus &amp; habits<br />
                 <span style={{ color: BLUE }}>one calm app.</span>
               </h1>
+
               <p className="mx-auto mb-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg md:mx-0">
                 One calm app to plan, capture and follow through, without the noise.
               </p>
@@ -434,9 +435,10 @@ export default function Landing() {
         <section className="bg-white py-14 sm:py-20">
           <div className="mx-auto max-w-6xl">
             <div className="mb-8 px-5 text-center sm:mb-12 sm:px-6">
-              <h2 className="text-[22px] font-semibold leading-[1.15] tracking-tight text-slate-900 sm:text-[30px]">
+              <h2 className="text-[28px] font-semibold leading-[1.15] tracking-tight text-slate-900 sm:text-[40px]">
                 What does Flowist include?
               </h2>
+
 
             </div>
             <IncludeCarousel
