@@ -217,7 +217,15 @@ export const CameraScannerScreen = ({
           throw new Error('Camera API not available');
         }
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 3840 },
+            height: { ideal: 2160 },
+            // @ts-ignore — non-standard but widely supported hints
+            frameRate: { ideal: 30 },
+            // @ts-ignore
+            resizeMode: 'none',
+          } as MediaTrackConstraints,
           audio: false,
         });
         if (cancelled) {
@@ -235,6 +243,14 @@ export const CameraScannerScreen = ({
           const track = stream.getVideoTracks()[0];
           const caps = (track.getCapabilities?.() as any) || {};
           if (caps.torch) setTorchSupported(true);
+          // Apply best-available imaging constraints for crisp scans on any phone
+          const advanced: any[] = [];
+          if (Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) advanced.push({ focusMode: 'continuous' });
+          if (Array.isArray(caps.exposureMode) && caps.exposureMode.includes('continuous')) advanced.push({ exposureMode: 'continuous' });
+          if (Array.isArray(caps.whiteBalanceMode) && caps.whiteBalanceMode.includes('continuous')) advanced.push({ whiteBalanceMode: 'continuous' });
+          if (advanced.length) {
+            try { await track.applyConstraints({ advanced } as any); } catch { /* ignore */ }
+          }
         } catch { /* ignore */ }
         setReady(true);
       } catch (e: any) {
