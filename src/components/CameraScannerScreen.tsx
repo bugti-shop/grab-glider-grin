@@ -697,9 +697,10 @@ export const CameraScannerScreen = ({
           100% { transform: translateY(0%); opacity: 0; }
         }
         @keyframes scanner-corner-pulse {
-          0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 4px hsl(var(--primary) / 0.7)); }
-          50% { opacity: 1; filter: drop-shadow(0 0 14px hsl(var(--primary) / 0.95)); }
+          0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 4px rgba(255,255,255,0.7)); }
+          50% { opacity: 1; filter: drop-shadow(0 0 14px rgba(255,255,255,0.95)); }
         }
+
       `}</style>
 
       {/* Parent-controlled status overlay (uploading / processing) */}
