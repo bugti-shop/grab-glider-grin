@@ -45,15 +45,30 @@ const getProxyUrl = () => {
   return script?.getAttribute("data-proxy-url") || "/~api/analytics";
 };
 
-const getPageviewPayload = (): Record<string, unknown> => ({
-  "user-agent": window.navigator.userAgent,
-  locale: window.navigator.languages?.[0] || window.navigator.language || "en",
-  referrer: document.referrer,
-  pathname: window.location.pathname,
-  href: window.location.href,
-  visit_id: getPageLoadSessionId(),
-  event_id: randomId(),
-});
+const normalizePath = (path: string) => {
+  return path
+    // UUIDs → :id
+    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "/:id")
+    // long hex/alnum ids (>=16 chars) → :id
+    .replace(/\/[A-Za-z0-9_-]{16,}/g, "/:id")
+    // pure numeric segments → :n
+    .replace(/\/\d+(?=\/|$)/g, "/:n");
+};
+
+const getPageviewPayload = (): Record<string, unknown> => {
+  const rawPath = window.location.pathname;
+  const pathname = normalizePath(rawPath);
+  return {
+    "user-agent": window.navigator.userAgent,
+    locale: window.navigator.languages?.[0] || window.navigator.language || "en",
+    referrer: document.referrer,
+    pathname,
+    href: window.location.origin + pathname + window.location.search,
+    title: document.title,
+    visit_id: getPageLoadSessionId(),
+    event_id: randomId(),
+  };
+};
 
 const postDirectPageview = (payload: Record<string, unknown>) => {
   const body = JSON.stringify({
