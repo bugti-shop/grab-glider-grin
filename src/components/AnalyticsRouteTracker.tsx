@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 type LovableAnalyticsWindow = Window & {
   Tinybird?: {
@@ -129,6 +130,37 @@ const trackPageview = (attempt = 0) => {
   postDirectPageview(payload);
 };
 
+const detectDevice = (): string => {
+  const ua = navigator.userAgent.toLowerCase();
+  if (/ipad|tablet|kindle|silk/i.test(ua)) return "tablet";
+  if (/mobile|iphone|android/i.test(ua)) return "mobile";
+  return "desktop";
+};
+
+const detectSource = (referrer: string): string => {
+  if (!referrer) return "Direct";
+  try {
+    const host = new URL(referrer).hostname.replace(/^www\./, "");
+    if (host === window.location.hostname) return "Direct";
+    return host;
+  } catch {
+    return "Direct";
+  }
+};
+
+const logToOwnAnalytics = async (path: string) => {
+  try {
+    await supabase.from("page_events").insert({
+      session_id: getSessionId(),
+      path,
+      referrer: document.referrer || null,
+      source: detectSource(document.referrer),
+      user_agent: navigator.userAgent,
+      device: detectDevice(),
+    });
+  } catch {}
+};
+
 /**
  * SPA pageview tracker. Fires ONCE per real route change with a stable
  * session id so a single browser visit isn't multiplied into dozens of hits.
@@ -143,9 +175,11 @@ export const AnalyticsRouteTracker = () => {
     if (lastPath.current === path) return;
     lastPath.current = path;
     trackPageview();
+    void logToOwnAnalytics(normalizePath(location.pathname));
   }, [location.pathname, location.search]);
 
   return null;
 };
 
 export default AnalyticsRouteTracker;
+
