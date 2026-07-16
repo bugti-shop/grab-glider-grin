@@ -570,68 +570,122 @@ export default function Landing() {
               </p>
             </div>
 
-            <div className="grid gap-5 sm:gap-6 md:grid-cols-3">
+            <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
               {[
-                { plan: 'Weekly', price: '$1.99', period: '/week', sub: 'Try it out short-term', badge: null as string | null, highlight: false, save: null as string | null },
-                { plan: 'Yearly', price: '$39.99', period: '/year', sub: 'Just $3.33/month, billed yearly', badge: 'BEST VALUE', highlight: true, save: 'Save 17%' },
-                { plan: 'Monthly', price: '$3.99', period: '/month', sub: 'Flexible month-to-month', badge: null as string | null, highlight: false, save: null as string | null },
-              ].map((p) => (
+                {
+                  plan: 'Free',
+                  price: '$0',
+                  period: 'Free\nforever',
+                  sub: 'For individuals looking to have a basic limited notes tool.',
+                  trial: null as string | null,
+                  highlight: false,
+                  featuresHeader: null as string | null,
+                  features: [
+                    'Up to 3 notebooks',
+                    'Basic task lists',
+                    'Note taking tools',
+                    'Export without watermark',
+                  ],
+                },
+                {
+                  plan: 'Weekly',
+                  price: '$1.99',
+                  period: '/weekly',
+                  sub: 'Try Flowist Pro short-term with full access.',
+                  trial: null,
+                  highlight: false,
+                  featuresHeader: 'Everything in Free, plus',
+                  features: [
+                    'Unlimited tasks & notes',
+                    'All AI features',
+                    'Habit tracking',
+                    'Eisenhower Matrix',
+                    'Web Clipper',
+                  ],
+                },
+                {
+                  plan: 'Monthly',
+                  price: '$3.99',
+                  period: '/monthly',
+                  sub: 'Flexible month-to-month billing, cancel anytime.',
+                  trial: null,
+                  highlight: false,
+                  featuresHeader: 'Everything in Weekly, plus',
+                  features: [
+                    'Priority sync',
+                    'Unlimited notebooks',
+                    'Advanced sketch editor',
+                    'Cross-device sync',
+                    'Premium templates',
+                  ],
+                },
+                {
+                  plan: 'Yearly',
+                  price: '$39.99',
+                  period: '/yearly',
+                  sub: 'Best value, just $3.33/month billed yearly.',
+                  trial: null,
+                  highlight: true,
+                  badge: 'Most popular',
+                  featuresHeader: 'Everything in Monthly, plus',
+                  features: [
+                    'Save 17% vs monthly',
+                    'Priority support',
+                    'Early access to features',
+                    'Cloud backup',
+                    'All future Pro features',
+                  ],
+                },
+              ].map((p: any) => (
                 <div
                   key={p.plan}
-                  className={`relative flex flex-col rounded-2xl border p-6 sm:p-7 transition-transform ${
-                    p.highlight
-                      ? 'border-transparent bg-slate-900 text-white shadow-2xl md:-translate-y-3 md:scale-[1.03]'
-                      : 'border-slate-200 bg-white text-slate-900'
+                  className={`relative flex flex-col rounded-2xl border bg-white p-6 sm:p-7 ${
+                    p.highlight ? 'border-2 border-slate-900' : 'border-slate-200'
                   }`}
                 >
-                  {p.badge && (
-                    <span
-                      className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-bold tracking-wide text-white"
-                      style={{ backgroundColor: BLUE }}
-                    >
-                      {p.badge}
-                    </span>
-                  )}
-                  <div className="mb-1 flex items-center justify-between">
-                    <h3 className={`text-lg font-bold ${p.highlight ? 'text-white' : 'text-slate-900'}`}>{p.plan}</h3>
-                    {p.save && (
-                      <span className="rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-semibold text-white">
-                        {p.save}
+                  <div className="mb-4 flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-slate-900">{p.plan}</h3>
+                    {p.badge && (
+                      <span className="rounded-md bg-yellow-300 px-2 py-0.5 text-[11px] font-semibold text-slate-900">
+                        {p.badge}
                       </span>
                     )}
                   </div>
-                  <p className={`text-[13px] ${p.highlight ? 'text-slate-300' : 'text-slate-500'}`}>{p.sub}</p>
-                  <div className="mt-5 flex items-baseline gap-1">
-                    <span className={`text-4xl font-extrabold tracking-tight ${p.highlight ? 'text-white' : 'text-slate-900'}`}>
-                      {p.price}
+
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-4xl font-extrabold tracking-tight text-slate-900">{p.price}</span>
+                    <span className="mt-1.5 whitespace-pre-line text-xs font-medium leading-tight text-slate-500">
+                      {p.period}
                     </span>
-                    <span className={`text-sm font-medium ${p.highlight ? 'text-slate-300' : 'text-slate-500'}`}>{p.period}</span>
                   </div>
 
-                  <ul className={`mt-6 space-y-2.5 text-[14px] ${p.highlight ? 'text-slate-200' : 'text-slate-700'}`}>
-                    {[
-                      'Unlimited tasks, notes & sketches',
-                      'All AI features (scan, extract, ask)',
-                      'Habit tracking & Eisenhower Matrix',
-                      'Web Clipper & unlimited notebooks',
-                      'Sync across web, iOS & Android',
-                    ].map((f) => (
-                      <li key={f} className="flex items-start gap-2">
-                        <Check className={`mt-0.5 h-4 w-4 shrink-0 ${p.highlight ? 'text-white' : ''}`} style={p.highlight ? {} : { color: BLUE }} />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="mt-4 min-h-[48px] text-[13px] leading-relaxed text-slate-500">{p.sub}</p>
 
                   <button
                     onClick={handleGetStarted}
-                    className={`mt-7 w-full rounded-xl px-5 py-3 text-sm font-bold transition-transform hover:scale-[1.02] ${
-                      p.highlight ? 'bg-white text-slate-900' : 'text-white'
+                    className={`mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02] ${
+                      p.highlight
+                        ? 'bg-slate-900 text-white'
+                        : 'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50'
                     }`}
-                    style={p.highlight ? {} : { backgroundColor: BLUE }}
                   >
-                    Get Started
+                    Start Free <span aria-hidden>›</span>
                   </button>
+
+                  {p.trial && (
+                    <p className="mt-2 text-center text-[12px] text-slate-500">{p.trial}</p>
+                  )}
+
+                  <div className="my-5 h-px bg-slate-100" />
+
+                  <ul className="space-y-2 text-[13.5px] text-slate-700">
+                    {p.featuresHeader && (
+                      <li className="font-semibold text-slate-900">{p.featuresHeader}</li>
+                    )}
+                    {p.features.map((f: string) => (
+                      <li key={f}>{f}</li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
