@@ -28,9 +28,14 @@ import landingCountdownImg from '@/assets/landing-countdown.jpg';
 import landingSyncDevicesImg from '@/assets/landing-sync-devices.webp';
 import heroTasksIphone from '@/assets/hero-tasks-iphone.png';
 import heroNotesIphone from '@/assets/hero-notes-iphone.png';
-import howCaptureAsset from '@/assets/how-capture.png.asset.json';
-import howOrganizeAsset from '@/assets/how-organize.png.asset.json';
-import howFocusAsset from '@/assets/how-focus.png.asset.json';
+import howCapture1 from '@/assets/how-capture-1.png.asset.json';
+import howCapture2 from '@/assets/how-capture-2.png.asset.json';
+import howCapture3 from '@/assets/how-capture-3.png.asset.json';
+import howOrganize1 from '@/assets/how-organize-1.png.asset.json';
+import howOrganize2 from '@/assets/how-organize-2.png.asset.json';
+import howFocus1 from '@/assets/how-focus-1.png.asset.json';
+import howFocus2 from '@/assets/how-focus-2.png.asset.json';
+import { MockupCarousel } from '@/components/landing/MockupCarousel';
 
 const BLUE = '#3c78f0';
 const BLUE_DARK = '#2b5dbf';
@@ -448,24 +453,31 @@ export default function Landing() {
                   step: '01',
                   title: 'Capture',
                   desc: 'Notes, tasks, sketches, web clips — dump everything in one tap, before it slips away.',
-                  img: howCaptureAsset.url,
-                  alt: 'Capture notes on Flowist',
+                  slides: [
+                    { src: howCapture1.url, alt: 'Notes dashboard on Flowist' },
+                    { src: howCapture2.url, alt: 'Web Clipper saving an article' },
+                    { src: howCapture3.url, alt: 'Notebooks on Flowist' },
+                  ],
                   tilt: '-rotate-[6deg] hover:-rotate-[4deg]',
                 },
                 {
                   step: '02',
                   title: 'Organize',
                   desc: 'Folders, tags, priorities & natural language. Your brain, sorted the way you think.',
-                  img: howOrganizeAsset.url,
-                  alt: 'Organize tasks in folders',
+                  slides: [
+                    { src: howOrganize1.url, alt: 'Task dashboard with folders' },
+                    { src: howOrganize2.url, alt: 'Task list view' },
+                  ],
                   tilt: 'rotate-[3deg] hover:rotate-[1deg]',
                 },
                 {
                   step: '03',
                   title: 'Focus',
-                  desc: "Eisenhower Matrix + Pomodoro surface today's real priorities. Do less, finish more.",
-                  img: howFocusAsset.url,
-                  alt: 'Focus with Eisenhower Matrix',
+                  desc: "Eisenhower Matrix + habits surface today's real priorities. Do less, finish more.",
+                  slides: [
+                    { src: howFocus1.url, alt: 'Eisenhower Matrix' },
+                    { src: howFocus2.url, alt: 'Habit tracker' },
+                  ],
                   tilt: 'rotate-[7deg] hover:rotate-[5deg]',
                 },
               ].map((s, i) => (
@@ -473,21 +485,7 @@ export default function Landing() {
                   key={s.step}
                   className="relative flex flex-col items-center"
                 >
-                  <div className="relative flex h-[360px] w-full items-center justify-center sm:h-[420px]">
-                    {/* Blue ambient glow behind mockup, matching hero */}
-                    <div
-                      className="pointer-events-none absolute left-1/2 top-1/2 h-[70%] w-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#3c78f0]/25 blur-[70px]"
-                      aria-hidden
-                    />
-                    <img
-                      src={s.img}
-                      alt={s.alt}
-                      loading="lazy"
-                      decoding="async"
-                      className={`relative h-full w-auto object-contain drop-shadow-[0_50px_70px_rgba(30,60,140,0.45)] transition-transform duration-700 ${s.tilt}`}
-                      style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
-                    />
-                  </div>
+                  <MockupCarousel slides={s.slides} tilt={s.tilt} accent={BLUE} />
 
                   <div className="mt-4 flex items-center gap-2">
                     <span
