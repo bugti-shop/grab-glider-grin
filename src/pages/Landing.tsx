@@ -28,14 +28,6 @@ import landingCountdownImg from '@/assets/landing-countdown.jpg';
 import landingSyncDevicesImg from '@/assets/landing-sync-devices.webp';
 import heroTasksIphone from '@/assets/hero-tasks-iphone.png';
 import heroNotesIphone from '@/assets/hero-notes-iphone.png';
-import howCapture1 from '@/assets/how-capture-1.png.asset.json';
-import howCapture2 from '@/assets/how-capture-2.png.asset.json';
-import howCapture3 from '@/assets/how-capture-3.png.asset.json';
-import howOrganize1 from '@/assets/how-organize-1.png.asset.json';
-import howOrganize2 from '@/assets/how-organize-2.png.asset.json';
-import howFocus1 from '@/assets/how-focus-1.png.asset.json';
-import howFocus2 from '@/assets/how-focus-2.png.asset.json';
-import { MockupCarousel } from '@/components/landing/MockupCarousel';
 
 const BLUE = '#3c78f0';
 const BLUE_DARK = '#2b5dbf';
