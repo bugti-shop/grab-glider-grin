@@ -37,11 +37,20 @@ export const useTourBootstrap = () => {
     const ua = navigator.userAgent || '';
     const isInAppBrowser =
       /(TikTok|musical_ly|BytedanceWebview|Instagram|FBAN|FBAV|FB_IAB|Line\/|MicroMessenger|Snapchat|Pinterest|Twitter|LinkedInApp)/i.test(ua);
+    // User request: hide auto in-app tooltip tutorial on web for now.
+    // Only run auto-tours on native platforms.
+    let isNativePlatform = false;
+    try {
+      // Lazy check without importing at top-level to avoid SSR issues.
+      // @ts-ignore
+      isNativePlatform = !!(window as any).Capacitor?.isNativePlatform?.();
+    } catch {}
+    const skipAutoTours = isInAppBrowser || !isNativePlatform;
 
     // Auto-start compulsory onboarding on ALL platforms (web + native).
     // User explicitly asked to restore the tutorial on the web.
     (async () => {
-      if (isInAppBrowser) return;
+      if (skipAutoTours) return;
       try {
         const { getSetting, setSetting } = await import('@/utils/settingsStorage');
         const KEY = 'feature-guide-first-launch-shown-v5';
@@ -133,7 +142,7 @@ export const useTourBootstrap = () => {
         setTimeout(() => { watchdogPending = false; }, 800);
       }
     };
-    const activityHandler = () => { if (!isInAppBrowser) kickChainIfPending(); };
+    const activityHandler = () => { if (!skipAutoTours) kickChainIfPending(); };
     window.addEventListener('pointerdown', activityHandler, { capture: true });
     window.addEventListener('keydown', activityHandler, { capture: true });
 
