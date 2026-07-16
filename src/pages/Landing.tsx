@@ -275,7 +275,7 @@ export default function Landing() {
                   })}
 
                   <a
-                    href="#faq"
+                    href="#pricing"
                     onClick={() => setMenuOpen(false)}
                     className="mt-1 block rounded-xl px-5 py-4 text-lg font-semibold text-slate-900 hover:bg-slate-50"
                   >
