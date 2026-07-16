@@ -14,9 +14,9 @@ interface Props {
 
 export default function IncludeCarousel({ items, accent = '#0f172a' }: Props) {
   const [active, setActive] = useState(0);
+  const [dragX, setDragX] = useState(0);
   const startX = useRef<number | null>(null);
-  const item = items[active];
-  if (!item) return null;
+  const trackRef = useRef<HTMLDivElement>(null);
 
   const go = (dir: 1 | -1) => {
     setActive((a) => Math.min(items.length - 1, Math.max(0, a + dir)));
@@ -24,42 +24,66 @@ export default function IncludeCarousel({ items, accent = '#0f172a' }: Props) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     startX.current = e.clientX;
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (startX.current == null) return;
+    setDragX(e.clientX - startX.current);
   };
   const onPointerUp = (e: React.PointerEvent) => {
     if (startX.current == null) return;
     const dx = e.clientX - startX.current;
     startX.current = null;
-    if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+    setDragX(0);
+    const threshold = (trackRef.current?.offsetWidth || 300) * 0.15;
+    if (Math.abs(dx) > threshold) go(dx < 0 ? 1 : -1);
   };
 
   return (
     <div className="w-full select-none">
       <div
-        className="flex flex-col items-center px-5 sm:px-8"
+        ref={trackRef}
+        className="relative overflow-hidden px-5 sm:px-8"
         onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={() => (startX.current = null)}
-        style={{ touchAction: 'pan-y' }}
+        onPointerCancel={() => { startX.current = null; setDragX(0); }}
+        style={{ touchAction: 'pan-y', cursor: startX.current != null ? 'grabbing' : 'grab' }}
       >
-        {/* Image only — no background, no card */}
-        <div className="flex w-full items-end justify-center" style={{ minHeight: 460 }}>
-          <img
-            key={item.image}
-            src={item.image}
-            alt={item.alt}
-            draggable={false}
-            className="h-[440px] w-auto object-contain sm:h-[560px] animate-in fade-in duration-300"
-            style={{ background: 'transparent' }}
-          />
+        {/* Horizontal track: all images side-by-side, translated by active + drag */}
+        <div
+          className="flex items-end"
+          style={{
+            transform: `translate3d(calc(${-active * 100}% + ${dragX}px), 0, 0)`,
+            transition: startX.current != null ? 'none' : 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)',
+            minHeight: 460,
+          }}
+        >
+          {items.map((it) => (
+            <div key={it.image} className="flex w-full shrink-0 items-end justify-center">
+              <img
+                src={it.image}
+                alt={it.alt}
+                draggable={false}
+                className="h-[440px] w-auto object-contain sm:h-[560px] pointer-events-none"
+                style={{ background: 'transparent' }}
+              />
+            </div>
+          ))}
         </div>
+      </div>
 
-        {/* Small text-only card below */}
-        <div className="mt-6 w-full max-w-md rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-[0_8px_30px_-12px_rgba(15,23,42,0.15)]">
+      {/* Text card below — swaps to active */}
+      <div className="mt-6 flex justify-center px-5 sm:px-8">
+        <div
+          key={active}
+          className="w-full max-w-md rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-[0_8px_30px_-12px_rgba(15,23,42,0.15)] animate-in fade-in duration-300"
+        >
           <h3 className="mb-1.5 text-[18px] font-extrabold tracking-tight text-slate-900 sm:text-[20px]">
-            {item.title}
+            {items[active].title}
           </h3>
           <p className="text-[13.5px] leading-relaxed text-slate-600 sm:text-[14.5px]">
-            {item.desc}
+            {items[active].desc}
           </p>
         </div>
       </div>
