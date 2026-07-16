@@ -25,6 +25,7 @@ import landingHabitsImg from '@/assets/landing-habits.jpg';
 import landingHabitsImg2 from '@/assets/landing-habits-2.jpg';
 import landingCountdownImg from '@/assets/landing-countdown.jpg';
 import landingSyncDevicesImg from '@/assets/landing-sync-devices.webp';
+import landingHeroAsset from '@/assets/landing/landing-hero.jpg.asset.json';
 
 const BLUE = '#3c78f0';
 const BLUE_DARK = '#2b5dbf';
@@ -369,10 +370,17 @@ export default function Landing() {
               
             </div>
 
-            {/* Hero side decoration (replaces inline cards) */}
-            <div className="relative mx-auto hidden w-full max-w-md md:block">
-              <div className="absolute -inset-6 rounded-[40px] bg-[#3c78f0]/10 blur-3xl" />
-              <div className="relative aspect-[4/5] w-full rounded-[32px] border border-slate-200 bg-gradient-to-br from-[#eaf1ff] to-white shadow-[0_30px_80px_-30px_rgba(60,120,240,0.45)]" />
+            {/* Hero showcase image */}
+            <div className="relative mx-auto w-full max-w-xl md:max-w-none">
+              <div className="pointer-events-none absolute -inset-6 rounded-[40px] bg-[#3c78f0]/10 blur-3xl" />
+              <img
+                src={landingHeroAsset.url}
+                alt="Flowist notes, tasks, calendar and habits on iPhone"
+                width={1920}
+                height={1024}
+                loading="eager"
+                className="relative block h-auto w-full object-contain"
+              />
             </div>
           </div>
         </section>
