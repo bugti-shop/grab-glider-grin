@@ -329,8 +329,8 @@ export default function Landing() {
                 <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: BLUE }} />
                 Now on Web, Android & iOS
               </div>
-              <h1 className="mb-5 text-[28px] font-semibold leading-[1.15] tracking-tight text-slate-800 sm:text-[40px]">
-                Notes, tasks, focus &amp; habits<br />
+              <h1 className="mb-5 text-[22px] font-semibold leading-[1.15] tracking-tight text-slate-800 sm:text-[36px] whitespace-nowrap">
+                Notes, tasks, focus &amp; habits{' '}
                 <span style={{ color: BLUE }}>one calm app.</span>
               </h1>
 
