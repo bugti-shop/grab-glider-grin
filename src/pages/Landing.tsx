@@ -318,7 +318,7 @@ export default function Landing() {
                 Now on Web, Android & iOS
               </div>
               <h1 className="mb-5 text-[36px] font-extrabold leading-[1.08] tracking-tight text-slate-900 sm:text-[54px]">
-                Tasks, notes, sketches &amp; habits,<br />
+                Notes, tasks, focus &amp; habits<br />
                 <span style={{ color: BLUE }}>one calm app.</span>
               </h1>
               <p className="mx-auto mb-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg md:mx-0">
