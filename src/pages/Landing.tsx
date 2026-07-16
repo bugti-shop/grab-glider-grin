@@ -106,19 +106,16 @@ export default function Landing() {
 
   const menuGroups: { label: string; items: { label: string; href: string }[] }[] = [
     {
-      label: 'Made For',
+      label: 'Product',
       items: [
-        { label: 'Task Management', href: '#features' },
-        { label: 'Note Taking', href: '#features' },
-        { label: 'Sketching', href: '#features' },
-        { label: 'Habit Forming', href: '#features' },
-        { label: 'Daily Planning', href: '#features' },
+        { label: 'Features', href: '#features' },
+        { label: 'About', href: '#about' },
+        { label: 'FAQ', href: '#faq' },
       ],
     },
     {
-      label: 'Resources',
+      label: 'Legal',
       items: [
-        { label: 'FAQ', href: '#faq' },
         { label: 'Privacy', href: '/privacy-policy' },
         { label: 'Terms', href: '/terms-and-conditions' },
       ],
