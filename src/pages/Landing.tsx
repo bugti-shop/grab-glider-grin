@@ -344,15 +344,8 @@ export default function Landing() {
               </ul>
 
               <div className="mx-auto flex max-w-md flex-col gap-4 md:mx-0">
-
-                <button
-                  onClick={handleGetStarted}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-8 py-3 text-base font-bold text-white transition-transform active:translate-y-1"
-                  style={{ backgroundColor: BLUE, boxShadow: `0 5px 0 0 ${BLUE_DARK}` }}
-                >
-                  Get Flowist Free <ArrowRight className="h-5 w-5" />
-                </button>
                 <div className="grid w-full grid-cols-2 gap-3">
+
                   <a
                     href="https://apps.apple.com/us/app/flowist-ai-note-taker/id6772996510"
                     target="_blank"
