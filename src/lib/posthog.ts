@@ -29,6 +29,8 @@ export const initPostHog = () => {
       capture_pageview: true,
       capture_pageleave: true,
       autocapture: true,
+      rageclick: true,
+      persistence: "localStorage+cookie",
       session_recording: {
         maskAllInputs: true,
       },
