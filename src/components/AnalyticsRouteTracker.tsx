@@ -7,6 +7,8 @@ type LovableAnalyticsWindow = Window & {
   };
 };
 
+let pageLoadSessionId: string | null = null;
+
 const isAnalyticsHost = () => {
   const host = window.location.hostname;
   return !(
@@ -27,13 +29,15 @@ const randomId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-const getSessionId = () => {
-  const existing = readCookie("session-id");
-  if (existing) return existing;
+const getPageLoadSessionId = () => {
+  if (!pageLoadSessionId) {
+    pageLoadSessionId = `flowist-${Date.now()}-${randomId()}`;
+  }
+  return pageLoadSessionId;
+};
 
-  const id = randomId();
-  document.cookie = `session-id=${encodeURIComponent(id)}; Max-Age=1800; path=/; secure; SameSite=Lax`;
-  return id;
+const resetPageLoadSessionId = () => {
+  pageLoadSessionId = `flowist-${Date.now()}-${randomId()}`;
 };
 
 const getProxyUrl = () => {
@@ -47,14 +51,21 @@ const getPageviewPayload = (): Record<string, unknown> => ({
   referrer: document.referrer,
   pathname: window.location.pathname,
   href: window.location.href,
+  visit_id: getPageLoadSessionId(),
+  event_id: randomId(),
 });
 
-const postFallbackPageview = (payload: Record<string, unknown>) => {
+const postDirectPageview = (payload: Record<string, unknown>) => {
   const body = JSON.stringify({
     timestamp: new Date().toISOString(),
     action: "page_hit",
     version: "1",
-    session_id: getSessionId(),
+    // Lovable analytics de-dupes the page Visitors list by session_id. The
+    // built-in script keeps the same cookie for 30 minutes, so a same-browser
+    // close/reopen can look like "no new page visit". Use a per-page-load id
+    // for our SPA route pings so every real app open is counted while keeping
+    // all route pings in that open tied together for duration/heartbeat.
+    session_id: getPageLoadSessionId(),
     payload: JSON.stringify(payload),
   });
 
@@ -80,6 +91,11 @@ const trackPageview = (attempt = 0) => {
   const payload = getPageviewPayload();
   const w = window as LovableAnalyticsWindow;
 
+  // Always send a direct route ping. The injected analytics script also hooks
+  // pushState, but it uses a long-lived browser cookie and can hide repeat
+  // same-browser visits in the page-level Visitors table.
+  postDirectPageview(payload);
+
   try {
     if (typeof w.Tinybird?.trackEvent === "function") {
       w.Tinybird.trackEvent("page_hit", payload);
@@ -92,7 +108,7 @@ const trackPageview = (attempt = 0) => {
     return;
   }
 
-  postFallbackPageview(payload);
+  postDirectPageview(payload);
 };
 
 /**
@@ -112,12 +128,10 @@ export const AnalyticsRouteTracker = () => {
     if (lastPath.current === path) return;
     lastPath.current = path;
 
-    if (!hasMounted.current) {
-      hasMounted.current = true;
-      return;
-    }
+    hasMounted.current = true;
 
-    // Fire immediately so TikTok in-app browser flickers/quick-exits still count.
+    // Fire immediately so repeat browser opens and TikTok in-app browser
+    // flickers/quick-exits still count on the active route.
     trackPageview();
   }, [location.pathname, location.search, location.hash]);
 
@@ -126,17 +140,36 @@ export const AnalyticsRouteTracker = () => {
   useEffect(() => {
     if (!isAnalyticsHost()) return;
 
+    let hiddenAt = 0;
+
     const ping = () => {
       try { trackPageview(); } catch {}
     };
     const onVisibility = () => {
-      if (document.visibilityState === "hidden") ping();
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+        ping();
+        return;
+      }
+
+      if (document.visibilityState === "visible" && hiddenAt && Date.now() - hiddenAt > 5000) {
+        resetPageLoadSessionId();
+        ping();
+      }
+    };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        resetPageLoadSessionId();
+        ping();
+      }
     };
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", onPageShow);
     window.addEventListener("pagehide", ping);
     window.addEventListener("beforeunload", ping);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", onPageShow);
       window.removeEventListener("pagehide", ping);
       window.removeEventListener("beforeunload", ping);
     };
