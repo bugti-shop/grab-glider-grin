@@ -1291,3 +1291,7 @@ iframe.webclip-iframe {
     max-height: none !important;
   }
 }
+
+/* Hide scrollbars for horizontal mockup carousels */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
