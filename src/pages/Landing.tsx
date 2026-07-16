@@ -493,14 +493,22 @@ export default function Landing() {
                   </p>
                   <div className="relative mt-4 aspect-[4/3] overflow-hidden rounded-lg bg-slate-50">
                     {(c.label === 'To-Do List' || c.label === 'Habit Tracker') ? (
-                      <div className="absolute inset-0 flex items-center justify-center">
+                      <div
+                        className="absolute inset-0 flex items-center justify-center"
+                        style={{ padding: 'clamp(8px, 4%, 20px)' }}
+                      >
                         <img
                           src={c.img}
                           alt={c.alt}
                           loading="lazy"
                           width={1024}
                           height={768}
-                          className="max-h-none h-[125%] sm:h-[135%] w-auto object-contain -rotate-[8deg] drop-shadow-xl"
+                          className="max-h-full w-auto object-contain drop-shadow-xl"
+                          style={{
+                            height: 'clamp(90%, 92%, 98%)',
+                            transform: 'rotate(clamp(-8deg, -6deg, -4deg))',
+                            transformOrigin: 'center center',
+                          }}
                         />
                       </div>
                     ) : (
