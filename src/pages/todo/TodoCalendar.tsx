@@ -1527,7 +1527,7 @@ const TodoCalendar = () => {
         <DropdownMenuTrigger asChild>
           <Button 
             size="lg"
-            className="fixed right-6 h-14 w-14 rounded-full shadow-lg z-30"
+            className="fixed right-6 h-14 w-14 rounded-full shadow-lg z-30 bg-black text-white hover:bg-black/90"
             style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
           >
             <Plus className="h-6 w-6" />
