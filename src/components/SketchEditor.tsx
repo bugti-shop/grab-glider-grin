@@ -8614,6 +8614,16 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
           <PopoverContent className="w-72 p-3 bg-card" align="center" side="top">
             <p className="text-[11px] font-semibold text-foreground mb-1">Templates</p>
             <p className="text-[10px] text-muted-foreground mb-2">Insert a ready-made layout, then tweak.</p>
+            <button
+              onClick={() => { applyTemplate(SHOWCASE_TEMPLATE); setOpenToolbarPopover(null); }}
+              className="w-full mb-2 flex items-center gap-2 rounded-md px-2.5 py-2 text-left bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:opacity-95 active:scale-[0.98] transition"
+            >
+              <span className="text-lg leading-none">{SHOWCASE_TEMPLATE.emoji}</span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[12px] font-semibold truncate">{SHOWCASE_TEMPLATE.label}</span>
+                <span className="block text-[10px] opacity-90 truncate">{SHOWCASE_TEMPLATE.description}</span>
+              </span>
+            </button>
             <div className="grid grid-cols-1 gap-1.5 mb-3">
               {SKETCH_TEMPLATES.map((tpl) => (
                 <button
