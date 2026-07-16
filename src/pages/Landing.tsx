@@ -450,29 +450,6 @@ export default function Landing() {
                   desc: 'Notes, tasks, sketches, web clips — dump everything in one tap, before it slips away.',
                   img: howCaptureAsset.url,
                   alt: 'Capture notes on Flowist',
-                },
-                {
-                  step: '02',
-                  title: 'Organize',
-                  desc: 'Folders, tags, priorities & natural language. Your brain, sorted the way you think.',
-                  img: howOrganizeAsset.url,
-                  alt: 'Organize tasks in folders',
-                },
-                {
-                  step: '03',
-                  title: 'Focus',
-                  desc: 'Eisenhower Matrix + Pomodoro surface today\'s real priorities. Do less, finish more.',
-                  img: howFocusAsset.url,
-                  alt: 'Focus with Eisenhower Matrix',
-                },
-              ].map((s, i) => (
-              {[
-                {
-                  step: '01',
-                  title: 'Capture',
-                  desc: 'Notes, tasks, sketches, web clips — dump everything in one tap, before it slips away.',
-                  img: howCaptureAsset.url,
-                  alt: 'Capture notes on Flowist',
                   tilt: '-rotate-[6deg] hover:-rotate-[4deg]',
                 },
                 {
