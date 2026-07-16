@@ -23,6 +23,7 @@ import landingCalendarImg from '@/assets/landing-calendar.jpg';
 import landingPomodoroImg from '@/assets/landing-pomodoro.jpg';
 import landingHabitsImg from '@/assets/landing-habits.jpg';
 import landingHabitsImg2 from '@/assets/landing-habits-2.jpg';
+import landingHabitsIphone from '@/assets/landing-habits-iphone.png';
 import landingCountdownImg from '@/assets/landing-countdown.jpg';
 import landingSyncDevicesImg from '@/assets/landing-sync-devices.webp';
 import heroTasksIphone from '@/assets/hero-tasks-iphone.png';
@@ -466,8 +467,8 @@ export default function Landing() {
                   label: 'Habit Tracker',
                   title: 'Develop and maintain good habits',
                   desc: 'A rich habit library, flexible tracking options, and insightful statistics help you build good habits effortlessly and lead a fulfilling life.',
-                  img: landingHabitsImg2,
-                  alt: 'Habit streak chart',
+                  img: landingHabitsIphone,
+                  alt: 'Habit tracker app screen',
                 },
                 {
                   label: 'Countdown',
@@ -491,14 +492,25 @@ export default function Landing() {
                     {c.desc}
                   </p>
                   <div className="mt-4 aspect-[4/3] overflow-hidden rounded-lg bg-slate-50 flex items-center justify-center">
-                    <img
-                      src={c.img}
-                      alt={c.alt}
-                      loading="lazy"
-                      width={1024}
-                      height={768}
-                      className={c.label === 'To-Do List' ? 'h-full w-auto object-contain' : 'h-full w-full object-cover'}
-                    />
+                    {(c.label === 'To-Do List' || c.label === 'Habit Tracker') ? (
+                      <img
+                        src={c.img}
+                        alt={c.alt}
+                        loading="lazy"
+                        width={1024}
+                        height={768}
+                        className="h-[140%] w-auto object-contain -rotate-[8deg] drop-shadow-xl"
+                      />
+                    ) : (
+                      <img
+                        src={c.img}
+                        alt={c.alt}
+                        loading="lazy"
+                        width={1024}
+                        height={768}
+                        className="h-full w-full object-cover"
+                      />
+                    )}
                   </div>
                 </article>
               ))}
