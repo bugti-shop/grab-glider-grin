@@ -28,6 +28,9 @@ import landingCountdownImg from '@/assets/landing-countdown.jpg';
 import landingSyncDevicesImg from '@/assets/landing-sync-devices.webp';
 import heroTasksIphone from '@/assets/hero-tasks-iphone.png';
 import heroNotesIphone from '@/assets/hero-notes-iphone.png';
+import howCaptureAsset from '@/assets/how-capture.png.asset.json';
+import howOrganizeAsset from '@/assets/how-organize.png.asset.json';
+import howFocusAsset from '@/assets/how-focus.png.asset.json';
 
 const BLUE = '#3c78f0';
 const BLUE_DARK = '#2b5dbf';
