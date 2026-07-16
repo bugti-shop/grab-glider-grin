@@ -503,11 +503,17 @@ export default function Landing() {
                           loading="lazy"
                           width={1024}
                           height={768}
+                          decoding="async"
                           className="max-h-full w-auto object-contain drop-shadow-xl"
                           style={{
                             height: 'clamp(90%, 92%, 98%)',
-                            transform: 'rotate(clamp(-8deg, -6deg, -4deg))',
-                            transformOrigin: 'center center',
+                            aspectRatio: '9 / 19.5',
+                            objectFit: 'contain',
+                            transform: 'rotate(clamp(-8deg, -6deg, -4deg)) translateZ(0)',
+                            transformOrigin: '50% 50%',
+                            willChange: 'transform',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden',
                           }}
                         />
                       </div>
