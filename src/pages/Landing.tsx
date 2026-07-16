@@ -467,11 +467,6 @@ export default function Landing() {
                 },
               ].map((s, i) => (
               {[
-                { tilt: '-rotate-[6deg] hover:-rotate-[4deg]' },
-                { tilt: 'rotate-[3deg] hover:rotate-[1deg]' },
-                { tilt: 'rotate-[7deg] hover:rotate-[5deg]' },
-              ].map(() => null) && null}
-              {[
                 {
                   step: '01',
                   title: 'Capture',
