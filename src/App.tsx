@@ -64,6 +64,7 @@ const preloadNotesDashboardPage = () => import("./pages/Index");
 const Today = lazy(preloadTodayPage);
 
 const Index = lazy(preloadNotesDashboardPage);
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 // Skip preloading the Today page chunk when we're cold-booting the /quick-add
 // overlay — the widget flow never navigates there and every extra chunk fetch
 // pushes the sheet's first paint back.
