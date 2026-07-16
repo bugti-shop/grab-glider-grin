@@ -452,7 +452,10 @@ const Notebooks = () => {
         className="fixed left-4 right-4 z-50 h-12 text-base font-semibold md:hidden"
         style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
         size="lg"
-        onClick={() => setAddOpen(true)}
+        onClick={() => {
+          if (!requireCapacity('noteFolders', folders.length)) return;
+          setAddOpen(true);
+        }}
       >
         <Plus className="h-5 w-5" />
         Add Notebook
