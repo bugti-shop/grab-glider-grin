@@ -136,7 +136,7 @@ export default function Landing() {
     {
       label: 'Sketch Editor',
       title: 'Sketch your ideas freely',
-      desc: 'A powerful infinite canvas with shapes, layers and templates — capture thoughts visually, the way your mind actually works.',
+      desc: 'A powerful infinite canvas with shapes, layers and templates, capture thoughts visually, the way your mind actually works.',
       icon: Sparkles,
       gradient: 'from-[#fff4ea] to-[#fffaf3]',
       image: sketchEditorImage,
@@ -145,7 +145,7 @@ export default function Landing() {
     {
       label: 'Regular Notes',
       title: 'Capture thoughts in a clean editor',
-      desc: 'A distraction-free notes editor with rich formatting, tags and folders — perfect for journaling, ideas and quick captures.',
+      desc: 'A distraction-free notes editor with rich formatting, tags and folders, perfect for journaling, ideas and quick captures.',
       icon: StickyNote,
       gradient: 'from-[#eafff1] to-[#f4fff8]',
       image: regularNoteImage,
@@ -154,7 +154,7 @@ export default function Landing() {
     {
       label: 'Lined Notes',
       title: 'Write neatly on ruled paper',
-      desc: 'Classic ruled paper with a modern feel — handwrite or type with perfect alignment for a calm, focused writing experience.',
+      desc: 'Classic ruled paper with a modern feel, handwrite or type with perfect alignment for a calm, focused writing experience.',
       icon: Calendar,
       gradient: 'from-[#fdeaff] to-[#fbf3ff]',
       image: linedNoteImage,
@@ -176,8 +176,8 @@ export default function Landing() {
   ];
 
   const suiteFeatures = [
-    { title: 'Reminder', desc: 'Notifications keep ringing until you complete the task — nothing slips by.', icon: BellRing },
-    { title: 'Repeat', desc: 'Flexible recurring rules — daily, weekly, monthly or fully custom schedules.', icon: RefreshCw },
+    { title: 'Reminder', desc: 'Notifications keep ringing until you complete the task, nothing slips by.', icon: BellRing },
+    { title: 'Repeat', desc: 'Flexible recurring rules, daily, weekly, monthly or fully custom schedules.', icon: RefreshCw },
     { title: 'NLP', desc: 'Type naturally and Flowist auto-detects dates, times and reminder cues.', icon: Brain },
     { title: 'Filter', desc: 'Build smart filters like “high-priority this week” to focus on what matters.', icon: FilterIcon },
     { title: 'Progress', desc: 'Track focus time, streaks and habit logs to see your real momentum daily.', icon: BarChart3 },
@@ -187,7 +187,7 @@ export default function Landing() {
   ];
 
   const faqs = [
-    { q: 'Is Flowist free?', a: 'Yes — start free. Upgrade anytime for unlimited everything from $1.49/week.' },
+    { q: 'Is Flowist free?', a: 'Yes, start free. Upgrade anytime for unlimited everything from $1.49/week.' },
     { q: 'Does it work offline?', a: 'Fully. Your tasks and notes are saved on your device and sync when you’re back online.' },
     { q: 'Can I switch devices?', a: 'Yes. Sign in and your tasks, notes and habits follow you across web, Android and iOS.' },
     { q: 'Is my data private?', a: 'Always. You own your data. Export or back it up to Google Drive anytime.' },
@@ -384,14 +384,14 @@ export default function Landing() {
               
             </div>
 
-            {/* Hero mockups — stacked, tilted iPhones (Notion/Linear style) */}
+            {/* Hero mockups, stacked, tilted iPhones (Notion/Linear style) */}
             <div className="relative mx-auto hidden w-full max-w-md md:block">
               {/* Ambient glow */}
               <div className="pointer-events-none absolute -inset-10 rounded-[48px] bg-gradient-to-br from-[#3c78f0]/25 via-[#8ab4ff]/15 to-transparent blur-3xl" />
               <div className="pointer-events-none absolute right-0 top-8 h-64 w-64 rounded-full bg-[#3c78f0]/20 blur-[90px]" />
 
               <div className="relative aspect-[5/6] w-full">
-                {/* Back phone — Notes, tilted left */}
+                {/* Back phone, Notes, tilted left */}
                 <img
                   src={heroNotesIphone}
                   alt="Flowist notes dashboard on iPhone"
@@ -399,7 +399,7 @@ export default function Landing() {
                   decoding="async"
                   className="absolute left-0 top-6 w-[62%] -rotate-[10deg] drop-shadow-[0_40px_60px_rgba(30,60,140,0.35)] transition-transform duration-700 hover:-rotate-[8deg]"
                 />
-                {/* Front phone — Tasks, tilted right, overlapping */}
+                {/* Front phone, Tasks, tilted right, overlapping */}
                 <img
                   src={heroTasksIphone}
                   alt="Flowist task list on iPhone"
@@ -410,7 +410,7 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Mobile hero mockups — single tilted stack */}
+            {/* Mobile hero mockups, single tilted stack */}
             <div className="relative mx-auto -mt-2 mb-2 block w-full max-w-sm md:hidden">
               <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[#3c78f0]/15 blur-3xl" />
               <div className="relative mx-auto aspect-[5/5] w-full">
@@ -450,16 +450,16 @@ export default function Landing() {
               accent={BLUE}
               autoplay={false}
               items={[
-                { image: includeNotesImg.url, alt: 'Flowist notes dashboard', title: 'Beautiful notes, your way', desc: 'Sticky, lined, regular and code notes — organize thoughts in folders with a clean, distraction-free editor.' },
+                { image: includeNotesImg.url, alt: 'Flowist notes dashboard', title: 'Beautiful notes, your way', desc: 'Sticky, lined, regular and code notes, organize thoughts in folders with a clean, distraction-free editor.' },
                 { image: includeTasksImg.url, alt: 'Flowist task list', title: 'Tasks that actually get done', desc: 'Folders, priorities and quick add. Plan your day and knock things off with a satisfying, focused flow.' },
-                { image: includeNotebooksImg.url, alt: 'Flowist notebooks grid', title: 'Notebooks for every part of life', desc: 'Group notes into colorful notebooks — Recipes, Journal, Ideas, Travel and anything else you dream up.' },
-                { image: includeHabitsImg.url, alt: 'Flowist habit tracker', title: 'Build habits that stick', desc: 'Track daily habits with a beautiful week strip, streaks and totals — small wins, every single day.' },
+                { image: includeNotebooksImg.url, alt: 'Flowist notebooks grid', title: 'Notebooks for every part of life', desc: 'Group notes into colorful notebooks, Recipes, Journal, Ideas, Travel and anything else you dream up.' },
+                { image: includeHabitsImg.url, alt: 'Flowist habit tracker', title: 'Build habits that stick', desc: 'Track daily habits with a beautiful week strip, streaks and totals, small wins, every single day.' },
                 { image: includeMatrixImg.url, alt: 'Flowist Eisenhower Matrix', title: 'Prioritize what truly matters', desc: 'The Eisenhower Matrix sorts tasks by urgency and importance so you always work on what moves the needle.' },
-                { image: includeBasicBlocksImg.url, alt: 'Basic blocks picker', title: 'Rich block editor', desc: 'Text, headings, quotes, callouts and more — insert any block in a tap with the basic blocks picker.' },
-                { image: includeMarkdownImg.url, alt: 'Markdown shortcuts', title: 'Markdown shortcuts built-in', desc: 'Type # for headings, * for bold, ~~ for strikethrough — write fast with familiar Markdown syntax.' },
-                { image: includeSlashImg.url, alt: 'Slash command menu', title: 'Slash commands for everything', desc: 'Lists, tables, code blocks and multi-column layouts — just type / to insert any block instantly.' },
-                { image: includeWebClipperImg.url, alt: 'Web Clipper article', title: 'Web Clipper, offline-ready', desc: 'Save any article from the web into your notes — clean, readable and available offline.' },
-                { image: includeInlineCalcImg.url, alt: 'Inline calculations and unit conversions', title: 'Inline math & unit conversions', desc: 'Do calculations, unit and currency conversions right inside your notes — no calculator needed.' },
+                { image: includeBasicBlocksImg.url, alt: 'Basic blocks picker', title: 'Rich block editor', desc: 'Text, headings, quotes, callouts and more, insert any block in a tap with the basic blocks picker.' },
+                { image: includeMarkdownImg.url, alt: 'Markdown shortcuts', title: 'Markdown shortcuts built-in', desc: 'Type # for headings, * for bold, ~~ for strikethrough, write fast with familiar Markdown syntax.' },
+                { image: includeSlashImg.url, alt: 'Slash command menu', title: 'Slash commands for everything', desc: 'Lists, tables, code blocks and multi-column layouts, just type / to insert any block instantly.' },
+                { image: includeWebClipperImg.url, alt: 'Web Clipper article', title: 'Web Clipper, offline-ready', desc: 'Save any article from the web into your notes, clean, readable and available offline.' },
+                { image: includeInlineCalcImg.url, alt: 'Inline calculations and unit conversions', title: 'Inline math & unit conversions', desc: 'Do calculations, unit and currency conversions right inside your notes, no calculator needed.' },
               ]}
             />
           </div>
