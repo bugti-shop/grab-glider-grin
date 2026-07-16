@@ -311,34 +311,17 @@ export default function Landing() {
         <section id="about" className="relative overflow-hidden scroll-mt-20 bg-[#f7f4ec]">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-[#f2ede1] via-[#f7f4ec] to-[#f7f4ec]" />
           <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 pt-10 pb-12 sm:px-6 sm:pt-16 sm:pb-20 md:grid-cols-2 md:gap-14">
-            {/* Left: phones */}
-            <div className="relative mx-auto w-full max-w-[520px] md:order-1">
+            {/* Left: phones (exact reference visual) */}
+            <div className="relative mx-auto w-full max-w-[560px] md:order-1">
               <div className="pointer-events-none absolute -inset-8 rounded-[48px] bg-black/5 blur-3xl" />
-              <div className="relative flex items-end justify-center gap-3 sm:gap-5">
-                {/* Phone 1 — notes */}
-                <div className="relative w-[46%] -rotate-[6deg] translate-y-2 rounded-[36px] border border-black/10 bg-black p-1.5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.35)]">
-                  <div className="relative overflow-hidden rounded-[30px] bg-white">
-                    <div className="absolute left-1/2 top-1.5 z-10 h-4 w-16 -translate-x-1/2 rounded-full bg-black" />
-                    <img
-                      src={regularNoteImage}
-                      alt="Flowist beautiful note editor"
-                      loading="eager"
-                      className="block h-auto w-full"
-                    />
-                  </div>
-                </div>
-                {/* Phone 2 — calendar */}
-                <div className="relative w-[46%] rotate-[3deg] rounded-[36px] border border-black/10 bg-black p-1.5 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.35)]">
-                  <div className="relative overflow-hidden rounded-[30px] bg-white">
-                    <div className="absolute left-1/2 top-1.5 z-10 h-4 w-16 -translate-x-1/2 rounded-full bg-black" />
-                    <img
-                      src={calendarViewImage}
-                      alt="Flowist calendar with tasks and habits"
-                      loading="eager"
-                      className="block h-auto w-full"
-                    />
-                  </div>
-                </div>
+              <div className="relative aspect-square w-full overflow-hidden">
+                <img
+                  src={landingHeroAsset.url}
+                  alt="Flowist notes and calendar on iPhone"
+                  loading="eager"
+                  className="absolute inset-0 h-full w-full object-cover object-left"
+                  style={{ objectPosition: '15% center', transform: 'scale(1.55)', transformOrigin: '18% center' }}
+                />
               </div>
             </div>
 
