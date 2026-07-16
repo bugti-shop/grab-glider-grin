@@ -304,7 +304,7 @@ export default function Landing() {
         {/* Hero */}
         <section id="about" className="relative overflow-hidden scroll-mt-20 bg-[#f7f4ec]">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-[#f2ede1] via-[#f7f4ec] to-[#f7f4ec]" />
-          <div className="relative mx-auto grid max-w-6xl grid-cols-2 items-center gap-4 px-3 pt-6 pb-10 sm:gap-8 sm:px-6 sm:pt-14 sm:pb-16 md:gap-14 md:pt-16 md:pb-20">
+          <div className="relative mx-auto grid max-w-6xl grid-cols-2 items-center gap-3 px-2 pt-5 pb-8 sm:gap-8 sm:px-6 sm:pt-14 sm:pb-16 md:gap-14 md:pt-16 md:pb-20">
             {/* Left: built mockups + sticky note */}
             <div className="relative">
               <div className="pointer-events-none absolute -inset-4 sm:-inset-8 rounded-[48px] bg-black/5 blur-3xl" />
@@ -378,57 +378,57 @@ export default function Landing() {
 
             {/* Right: copy */}
             <div className="text-left">
-              <h1 className="mb-2 text-[16px] font-extrabold leading-[1.05] tracking-tight text-slate-900 sm:mb-4 sm:text-[32px] md:text-[52px]">
+              <h1 className="mb-2 text-[22px] font-extrabold leading-[1.05] tracking-tight text-slate-900 sm:mb-4 sm:text-[32px] md:text-[52px]">
                 <span className="block">Capture every idea,</span>
                 <span className="block">plan every day</span>
               </h1>
-              <p className="mb-3 max-w-xl text-[10px] leading-snug text-slate-600 sm:mb-6 sm:text-base md:text-lg">
+              <p className="mb-3 max-w-xl text-[12px] leading-snug text-slate-600 sm:mb-6 sm:text-base md:text-lg">
                 Rich notes, tasks, calendar and habits — synced across all your devices.
               </p>
 
               <ul className="mb-3 flex flex-col gap-1.5 sm:mb-6 sm:gap-3">
                 {['Beautiful note editor','Smart task priorities','Offline-first sync'].map((item) => (
                   <li key={item} className="flex items-center gap-1.5 sm:gap-3">
-                    <span className="inline-flex h-3.5 w-3.5 sm:h-6 sm:w-6 md:h-7 md:w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
-                      <Check className="h-2 w-2 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" strokeWidth={3} />
+                    <span className="inline-flex h-4 w-4 sm:h-6 sm:w-6 md:h-7 md:w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
+                      <Check className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" strokeWidth={3} />
                     </span>
-                    <span className="text-[10px] sm:text-[15px] md:text-[17px] font-semibold leading-snug text-slate-900">{item}</span>
+                    <span className="text-[12px] sm:text-[15px] md:text-[17px] font-semibold leading-snug text-slate-900">{item}</span>
                   </li>
                 ))}
               </ul>
 
-              <div className="flex flex-col gap-1.5 sm:flex-row sm:gap-3">
+              <div className="flex flex-row gap-1.5 sm:gap-3">
                 <a
                   href="https://apps.apple.com/us/app/flowist-ai-note-taker/id6772996510"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-8 sm:h-[54px] items-center justify-center gap-1.5 sm:gap-2 rounded-md sm:rounded-xl bg-black px-2 sm:px-3 text-white transition-transform active:translate-y-0.5"
+                  className="inline-flex h-10 sm:h-[54px] flex-1 sm:flex-initial items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl bg-black px-2 sm:px-3 text-white transition-transform active:translate-y-0.5"
                   aria-label="Download Flowist on the App Store"
                 >
-                  <svg viewBox="0 0 384 512" className="h-3.5 w-3.5 sm:h-7 sm:w-7 fill-current shrink-0" aria-hidden="true">
+                  <svg viewBox="0 0 384 512" className="h-4 w-4 sm:h-7 sm:w-7 fill-current shrink-0" aria-hidden="true">
                     <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zM256.5 105.7c30.1-35.7 27.4-68.2 26.5-79.9-26.6 1.5-57.4 18.1-74.9 38.5-19.3 21.9-30.6 49-28.2 78.8 28.7 2.2 54.9-12.5 76.6-37.4z"/>
                   </svg>
                   <div className="flex flex-col items-start leading-tight">
-                    <span className="text-[6px] sm:text-[10px] font-medium opacity-90">Download on the</span>
-                    <span className="text-[10px] sm:text-[17px] font-semibold tracking-tight">App Store</span>
+                    <span className="text-[7px] sm:text-[10px] font-medium opacity-90">Download on the</span>
+                    <span className="text-[11px] sm:text-[17px] font-semibold tracking-tight">App Store</span>
                   </div>
                 </a>
                 <a
                   href="https://play.google.com/store/apps/details?id=nota.npd.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-8 sm:h-[54px] items-center justify-center gap-1.5 sm:gap-2 rounded-md sm:rounded-xl bg-black px-2 sm:px-3 text-white transition-transform active:translate-y-0.5"
+                  className="inline-flex h-10 sm:h-[54px] flex-1 sm:flex-initial items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl bg-black px-2 sm:px-3 text-white transition-transform active:translate-y-0.5"
                   aria-label="Get it on Google Play"
                 >
-                  <svg viewBox="0 0 512 512" className="h-3.5 w-3.5 sm:h-7 sm:w-7 shrink-0" aria-hidden="true">
+                  <svg viewBox="0 0 512 512" className="h-4 w-4 sm:h-7 sm:w-7 shrink-0" aria-hidden="true">
                     <path fill="#00d7fe" d="M99.6 14.4C77.7 21.5 64 41.6 64 67.7v376.6c0 26.1 13.7 46.2 35.6 53.3l217.4-251.8L99.6 14.4z"/>
                     <path fill="#ffce00" d="M396.7 314.2l-79.7-58.4 70.9-82.1 105.4 60.7c19.7 11.4 19.7 39.8 0 51.2l-96.6 28.6z"/>
                     <path fill="#ff3a44" d="M396.7 314.2l-79.7-58.4-217.4 242.6c8.7 2.8 18.8 1.9 28.6-3.7l268.5-180.5z"/>
                     <path fill="#48ff48" d="M99.6 14.4c-9.8-5.6-19.9-6.5-28.6-3.7l245.9 244.7 79.7-82.1L99.6 14.4z"/>
                   </svg>
                   <div className="flex flex-col items-start leading-tight">
-                    <span className="text-[6px] sm:text-[10px] font-medium opacity-90">GET IT ON</span>
-                    <span className="text-[10px] sm:text-[17px] font-semibold tracking-tight">Google Play</span>
+                    <span className="text-[7px] sm:text-[10px] font-medium opacity-90">GET IT ON</span>
+                    <span className="text-[11px] sm:text-[17px] font-semibold tracking-tight">Google Play</span>
                   </div>
                 </a>
               </div>
