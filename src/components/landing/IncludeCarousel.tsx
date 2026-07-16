@@ -104,9 +104,9 @@ export default function IncludeCarousel({
         <div
           className="flex items-end will-change-transform"
           style={{
-            transform: `translate3d(calc(${-active * 100}% + ${dragX}px), 0, 0)`,
+          transform: `translate3d(calc(${-active * 100}% + ${dragX}px), 0, 0)`,
             transition,
-            minHeight: 460,
+            minHeight: 560,
           }}
         >
           {items.map((it) => (
@@ -116,7 +116,7 @@ export default function IncludeCarousel({
                 alt={it.alt}
                 draggable={false}
                 loading="lazy"
-                className="pointer-events-none h-[440px] w-auto object-contain sm:h-[560px]"
+                className="pointer-events-none h-[540px] w-auto object-contain sm:h-[680px]"
                 style={{ background: 'transparent' }}
               />
             </div>
