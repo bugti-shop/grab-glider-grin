@@ -304,17 +304,18 @@ export default function Landing() {
         {/* Hero */}
         <section id="about" className="relative overflow-hidden scroll-mt-20 bg-[#f7f4ec]">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-[#f2ede1] via-[#f7f4ec] to-[#f7f4ec]" />
-          <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-5 pt-8 pb-12 sm:px-6 sm:pt-16 sm:pb-20 md:grid-cols-2 md:gap-14">
+          <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-10 px-5 pt-6 pb-12 sm:px-6 sm:pt-16 sm:pb-20 md:grid md:grid-cols-2 md:gap-14">
             {/* Left: phones (full mockups, not cropped) */}
 
-            <div className="relative mx-auto w-full max-w-[560px] md:order-1">
-              <div className="pointer-events-none absolute -inset-8 rounded-[48px] bg-black/5 blur-3xl" />
+            <div className="relative mx-auto w-full max-w-[520px] sm:max-w-[560px] md:order-1 md:max-w-[560px]">
+              <div className="pointer-events-none absolute -inset-6 sm:-inset-8 rounded-[48px] bg-black/5 blur-3xl" />
               <img
                 src={landingHeroAsset.url}
                 alt="Flowist notes and calendar on iPhone"
                 loading="eager"
-                className="relative w-full h-auto object-contain"
-                style={{ maxHeight: '640px' }}
+                width={1200}
+                height={900}
+                className="relative block w-full h-auto object-contain mx-auto"
               />
             </div>
 
