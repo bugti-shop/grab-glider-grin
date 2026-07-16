@@ -683,9 +683,6 @@ export const CameraScannerScreen = ({
             )}
           </button>
 
-          <div className="absolute right-0 bottom-1 h-11 px-3 rounded-xl bg-white/10 backdrop-blur-xl border border-white/15 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/90">
-            {activeModeLabel}
-          </div>
         </div>
       </div>
       )}
