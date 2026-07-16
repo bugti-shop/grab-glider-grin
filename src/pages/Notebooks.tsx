@@ -5,6 +5,7 @@ import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import { Folder as FolderType } from '@/types/note';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { useNotes } from '@/contexts/NotesContext';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
