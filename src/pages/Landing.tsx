@@ -298,7 +298,15 @@ export default function Landing() {
             </Sheet>
           </div>
         </div>
+      </header>
+
+      <main id="top">
+        {/* Hero */}
+        <section id="about" className="relative overflow-hidden scroll-mt-20 bg-[#f7f4ec]">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-[#f2ede1] via-[#f7f4ec] to-[#f7f4ec]" />
+          <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-5 pt-8 pb-12 sm:px-6 sm:pt-16 sm:pb-20 md:grid-cols-2 md:gap-14">
             {/* Left: phones (full mockups, not cropped) */}
+
             <div className="relative mx-auto w-full max-w-[560px] md:order-1">
               <div className="pointer-events-none absolute -inset-8 rounded-[48px] bg-black/5 blur-3xl" />
               <img
