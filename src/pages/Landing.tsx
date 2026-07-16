@@ -440,7 +440,7 @@ export default function Landing() {
         <section className="bg-white py-14 sm:py-20">
           <div className="mx-auto max-w-6xl">
             <div className="mb-8 px-5 text-center sm:mb-12 sm:px-6">
-              <h2 className="text-[20px] font-semibold leading-[1.15] tracking-tight text-slate-900 sm:text-[32px] whitespace-nowrap">
+              <h2 className="text-[32px] font-extralight leading-[1.15] tracking-tight text-slate-900 sm:text-[32px] whitespace-nowrap">
                 What does Flowist include?
               </h2>
 
