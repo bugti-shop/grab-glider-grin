@@ -485,6 +485,7 @@ const AppRoutes = () => {
       <AuthDeepLinkBridge />
       <NavigationBackProvider>
         <NavigationLoader />
+        <AnalyticsRouteTracker />
         <DashboardTracker />
         <TourNavigationListener />
         <TourBootstrap />
