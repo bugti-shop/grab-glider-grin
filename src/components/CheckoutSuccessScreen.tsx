@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import posthog from 'posthog-js';
 import { m as motion } from 'framer-motion';
 import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import appLogo from '@/assets/app-logo.webp';
@@ -19,6 +20,13 @@ export function CheckoutSuccessScreen({ isVerified, isFailed }: CheckoutSuccessS
     }, 500);
     return () => clearInterval(interval);
   }, [isVerified, isFailed]);
+
+  // Track web checkout success
+  useEffect(() => {
+    if (isVerified) {
+      posthog.capture('subscription_purchased', { platform: 'web' });
+    }
+  }, [isVerified]);
 
   // Auto-dismiss failed screen after 5 seconds
   useEffect(() => {

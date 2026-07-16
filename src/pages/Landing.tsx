@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import posthog from 'posthog-js';
 import { useNavigate } from 'react-router-dom';
 import { Menu, Check, Calendar, StickyNote, Sparkles, Repeat, RefreshCw, ArrowRight, ChevronDown, X, Pencil, AlignLeft, Code2, Brain, LayoutGrid, Flag, Layers, BellRing, Filter as FilterIcon, BarChart3, Lock, Moon, Clock } from 'lucide-react';
 import { AppLogo } from '@/components/AppLogo';
@@ -77,6 +78,7 @@ export default function Landing() {
   };
 
   const handleGetStarted = async () => {
+    posthog.capture('landing_cta_clicked');
     const preload = import('@/components/OnboardingFlow').catch(() => {});
     await setSetting('onboarding_completed', false);
     try {

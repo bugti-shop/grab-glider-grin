@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import i18n from '@/i18n';
+import posthog from 'posthog-js';
 
 interface Props {
   children: ReactNode;
@@ -60,6 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    posthog.captureException(error, { extra: { componentStack: (errorInfo?.componentStack || '').slice(0, 500) } });
     try {
       // Persist last error so we can inspect it on next reload
       sessionStorage.setItem(

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
+import posthog from 'posthog-js';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 
 import { format } from 'date-fns';
@@ -267,6 +268,9 @@ const HabitNew = () => {
       updatedAt: now,
     };
     await saveHabit(habit);
+    if (!editingExisting) {
+      posthog.capture('habit_created', { frequency: habit.frequencyType, difficulty: habit.difficulty });
+    }
     if (habit.reminders && habit.reminders.length > 0) {
       await scheduleHabitReminder(habit);
     }

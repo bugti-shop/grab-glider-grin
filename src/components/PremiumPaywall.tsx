@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import posthog from 'posthog-js';
 import { useNavigate, useInRouterContext } from 'react-router-dom';
 
 // Safe navigate — falls back to window.location when the paywall renders
@@ -50,6 +51,12 @@ function usePaywallLogic() {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [adminError, setAdminError] = useState('');
+
+  useEffect(() => {
+    if (showPaywall) {
+      posthog.capture('paywall_viewed', { feature: paywallFeature ?? null });
+    }
+  }, [showPaywall, paywallFeature]);
 
   const PLANS = useMemo(() => {
     const allPackages: PurchasesPackage[] = [];
@@ -147,6 +154,7 @@ function usePaywallLogic() {
       if (isNative && (planType === 'weekly' || planType === 'monthly' || planType === 'yearly')) {
         const success = await purchase(planType);
         if (success) {
+          posthog.capture('subscription_purchased', { plan: planType, platform: 'native' });
           try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}
           closePaywall();
         } else {
@@ -194,6 +202,7 @@ function usePaywallLogic() {
       if (Capacitor.isNativePlatform()) {
         const success = await restorePurchases();
         if (success) {
+          posthog.capture('subscription_restored', { platform: 'native' });
           closePaywall();
         } else {
           setAdminError(t('onboarding.paywall.noActivePurchases'));
@@ -223,6 +232,7 @@ function usePaywallLogic() {
         });
 
         if (data?.subscribed) {
+          posthog.capture('subscription_restored', { platform: 'web', plan: data.plan_type ?? null });
           // Mark as subscribed locally
           try { localStorage.setItem('flowist_stripe_subscribed', 'true'); } catch {}
           try { localStorage.setItem('flowist_trial_used', 'true'); } catch {}

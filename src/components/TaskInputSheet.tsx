@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import posthog from 'posthog-js';
 import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
 import { TodoItem, Priority, RepeatType, Folder, VoiceRecording, LocationReminder, TaskAttachment } from '@/types/note';
@@ -525,6 +526,12 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
     // onClose() triggered by focus/keyboard/re-render is ignored and the
     // sheet stays open for the user's next task.
     justAddedAtRef.current = Date.now();
+    posthog.capture('task_created', {
+      has_due_date: !!mainTask.dueDate,
+      has_reminder: !!mainTask.reminderTime,
+      priority: mainTask.priority ?? 'none',
+      has_repeat: mainTask.repeatType !== 'none',
+    });
     onAddTask(mainTask);
 
     

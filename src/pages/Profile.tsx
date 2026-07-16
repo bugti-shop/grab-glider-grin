@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import posthog from 'posthog-js';
 import { RefreshCw, CloudDownload } from 'lucide-react';
 import { useGoogleDriveSync } from '@/hooks/useGoogleDriveSync';
 import { useRevenueCat } from '@/contexts/RevenueCatContext';
@@ -104,6 +105,10 @@ export default function Profile() {
 
     try {
       const googleUser = await signInWithTimeout;
+      posthog.capture('user_signed_in', { method: 'google' });
+      if (googleUser?.uid) {
+        posthog.identify(googleUser.uid, { email: googleUser.email, name: googleUser.name });
+      }
       toast({ title: t('profile.signInSuccess', 'Signed in successfully'), description: t('profile.signInSuccessCloud', 'Your account is connected for real-time sync.') });
       // Run RevenueCat init in background — don't block the UI
       (async () => {
@@ -126,6 +131,7 @@ export default function Profile() {
   };
 
   const handleSignOut = async () => {
+    posthog.reset();
     await signOut();
     try {
       const { signOutEmail } = await import('@/utils/emailAuth');

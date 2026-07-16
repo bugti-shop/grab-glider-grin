@@ -1,4 +1,5 @@
 import React, { useEffect, useState, lazy, Suspense, startTransition, useRef, useCallback } from "react";
+import posthog from "posthog-js";
 import { LazyMotion, domAnimation } from "framer-motion";
 import { useKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import { Toaster } from "@/components/ui/toaster";
@@ -683,6 +684,7 @@ const AppContent = () => {
       if (session?.user) {
         try { localStorage.setItem('flowist_user_engaged', 'true'); } catch {}
         setShowLanding(false);
+        posthog.identify(session.user.id, { email: session.user.email });
       }
     });
     return () => sub.subscription.unsubscribe();

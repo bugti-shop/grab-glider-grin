@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import posthog from 'posthog-js';
 import { genId } from '@/utils/genId';
 import { sanitizeHtml, sanitizeClippedArticle, normalizeWebClipHtmlForFastOffline } from '@/lib/sanitize';
 import { supabase } from '@/integrations/supabase/client';
@@ -769,6 +770,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       }
 
       // Save version history (only on "full" save)
+      if (!note) {
+        posthog.capture('note_created', { type: savedNote.type ?? 'regular' });
+      }
       saveNoteVersion(savedNote, note ? 'edit' : 'create');
 
       // Update semantic search embeddings (debounced per note)

@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import posthog from 'posthog-js';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -78,6 +79,7 @@ export const FeedbackDialog = ({ open, onOpenChange }: FeedbackDialogProps) => {
         app_version: '1.0.0',
       });
       if (error) throw error;
+      posthog.capture('feedback_submitted', { category });
       toast.success('Thanks! Your feedback is in 🙌');
       reset();
       onOpenChange(false);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import posthog from 'posthog-js';
 import { X, Loader2, Mail, ArrowLeft, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -64,6 +65,8 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
     setLoading(true);
     try {
       const u = await signInWithEmailPassword(email.trim(), password);
+      posthog.capture('user_signed_in', { method: 'email' });
+      posthog.identify(u.uid, { email: u.email, name: u.name });
       toast({ title: t('emailAuth.signedIn', 'Signed in') });
       onSignedIn?.(u);
       close();
@@ -115,6 +118,7 @@ export function EmailAuthSheet({ open, onClose, onSignedIn }: Props) {
     setLoading(true);
     try {
       await startEmailSignup(email.trim(), password, name.trim() || undefined);
+      posthog.capture('user_signed_up', { method: 'email' });
       toast({
         title: t('emailAuth.linkSent', 'Verification email sent'),
         description: t('emailAuth.linkSentDesc', 'Check your inbox and click the link to verify your email.'),
