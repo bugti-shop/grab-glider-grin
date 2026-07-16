@@ -513,35 +513,8 @@ export const CameraScannerScreen = ({
               {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
             </button>
           )}
-          {mode === 'note' && (
-            <button
-              onClick={() => {
-                if (!requirePro('batch')) return;
-                setHandwritingOn((v) => {
-                  const next = !v;
-                  toast(
-                    next
-                      ? '✍️ Handwriting mode on · uses stronger AI for cursive & notes'
-                      : 'Handwriting mode off',
-                    { duration: 1300 },
-                  );
-                  return next;
-                });
-              }}
-              className={cn(
-                'h-10 px-3 rounded-full backdrop-blur-xl border flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition',
-                handwritingOn
-                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_6px_18px_hsl(var(--primary)/0.35)]'
-                  : 'bg-white/10 border-white/15 text-white',
-              )}
-              aria-label="Toggle handwriting recognition"
-              aria-pressed={handwritingOn}
-            >
-              <PenLine className="h-4 w-4" />
-              Handwriting
-              {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
-            </button>
-          )}
+
+
           <button
             onClick={toggleTorch}
             disabled={!torchSupported}
@@ -573,13 +546,14 @@ export const CameraScannerScreen = ({
                 className="absolute left-0 right-0 h-[2px] rounded-full"
                 style={{
                   background:
-                    'linear-gradient(90deg, transparent, hsl(var(--primary) / 0.9), transparent)',
-                  boxShadow: '0 0 24px 4px hsl(var(--primary) / 0.6)',
+                    'linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent)',
+                  boxShadow: '0 0 24px 4px rgba(255,255,255,0.55)',
                   animation: 'scanner-sweep 2.4s ease-in-out infinite',
                 }}
               />
             </div>
           )}
+
 
           {/* Hint / status */}
           <div className="absolute -bottom-10 left-0 right-0 text-center text-xs text-white/80">
@@ -589,11 +563,9 @@ export const CameraScannerScreen = ({
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Starting camera…
               </span>
-            ) : (
-
-              <span>Point at a sticky note or handwritten page · {activeModeLabel}</span>
-            )}
+            ) : null}
           </div>
+
 
         </div>
       </div>
@@ -664,29 +636,8 @@ export const CameraScannerScreen = ({
             {tapTrace}
           </div>
         )}
-        <ChipStrip>
 
-          {MODES.filter((m) => m.id !== 'gallery').map(({ id, label, icon: Icon }) => {
-            const active = mode === id;
-            const locked = false;
-            return (
-              <ChipButton
-                key={id}
-                active={active}
-                onSelect={() => {
-                  selectScannerMode(id, label, locked);
-                }}
-                data-scanner-mode={id}
-                data-scanner-label={label}
-                data-scanner-locked={locked ? 'true' : 'false'}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-                {locked && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
-              </ChipButton>
-            );
-          })}
-        </ChipStrip>
+
 
         {/* Shutter row — CamScanner-style: big centered shutter, tucked gallery, mode badge */}
         <div className="relative flex items-center justify-center h-[96px]">
@@ -732,9 +683,6 @@ export const CameraScannerScreen = ({
             )}
           </button>
 
-          <div className="absolute right-0 bottom-1 h-11 px-3 rounded-xl bg-white/10 backdrop-blur-xl border border-white/15 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/90">
-            {activeModeLabel}
-          </div>
         </div>
       </div>
       )}
@@ -749,9 +697,10 @@ export const CameraScannerScreen = ({
           100% { transform: translateY(0%); opacity: 0; }
         }
         @keyframes scanner-corner-pulse {
-          0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 4px hsl(var(--primary) / 0.7)); }
-          50% { opacity: 1; filter: drop-shadow(0 0 14px hsl(var(--primary) / 0.95)); }
+          0%, 100% { opacity: 0.9; filter: drop-shadow(0 0 4px rgba(255,255,255,0.7)); }
+          50% { opacity: 1; filter: drop-shadow(0 0 14px rgba(255,255,255,0.95)); }
         }
+
       `}</style>
 
       {/* Parent-controlled status overlay (uploading / processing) */}
@@ -792,7 +741,7 @@ const CornerBracket = ({
   className?: string;
   corner: 'tl' | 'tr' | 'bl' | 'br';
 }) => {
-  const base = 'absolute w-10 h-10 border-primary';
+  const base = 'absolute w-10 h-10 border-white';
   const sides: Record<typeof corner, string> = {
     tl: 'border-t-[3px] border-l-[3px] rounded-tl-2xl',
     tr: 'border-t-[3px] border-r-[3px] rounded-tr-2xl',
