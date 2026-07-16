@@ -220,7 +220,7 @@ const Notebooks = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-40">
       {/* Header */}
       <header
         className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b"
