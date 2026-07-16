@@ -499,6 +499,7 @@ const AppRoutes = () => {
           <div className="md:pl-[var(--desktop-sidebar-width,0px)] transition-[padding] duration-200">
           <Routes>
             <Route path="/" element={<RootRedirect />} />
+            <Route path="/landing" element={<Landing />} />
             <Route path="/notesdashboard" element={<Index />} />
             <Route path="/notes" element={<Notes />} />
             <Route path="/notebooks" element={<Notebooks />} />
