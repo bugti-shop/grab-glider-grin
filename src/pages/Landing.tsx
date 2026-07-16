@@ -195,13 +195,7 @@ export default function Landing() {
           </a>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleGetStarted}
-              className="rounded-lg px-4 py-2 text-sm font-bold text-white transition-transform active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-[15px]"
-              style={{ backgroundColor: BLUE }}
-            >
-              Get Flowist Free
-            </button>
+
 
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
