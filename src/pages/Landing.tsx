@@ -511,7 +511,6 @@ export default function Landing() {
                   )}
                 </li>
               ))}
-              ))}
             </ol>
           </div>
         </section>
