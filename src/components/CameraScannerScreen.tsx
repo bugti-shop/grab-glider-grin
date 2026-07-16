@@ -740,7 +740,7 @@ const CornerBracket = ({
   className?: string;
   corner: 'tl' | 'tr' | 'bl' | 'br';
 }) => {
-  const base = 'absolute w-10 h-10 border-primary';
+  const base = 'absolute w-10 h-10 border-white';
   const sides: Record<typeof corner, string> = {
     tl: 'border-t-[3px] border-l-[3px] rounded-tl-2xl',
     tr: 'border-t-[3px] border-r-[3px] rounded-tr-2xl',
