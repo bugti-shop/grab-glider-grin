@@ -491,16 +491,18 @@ export default function Landing() {
                   <p className="mt-2 text-[12.5px] leading-relaxed text-slate-600 sm:text-[13.5px]">
                     {c.desc}
                   </p>
-                  <div className="mt-4 aspect-[4/3] overflow-hidden rounded-lg bg-slate-50 flex items-center justify-center">
+                  <div className="relative mt-4 aspect-[4/3] overflow-hidden rounded-lg bg-slate-50">
                     {(c.label === 'To-Do List' || c.label === 'Habit Tracker') ? (
-                      <img
-                        src={c.img}
-                        alt={c.alt}
-                        loading="lazy"
-                        width={1024}
-                        height={768}
-                        className="h-[140%] w-auto object-contain -rotate-[8deg] drop-shadow-xl"
-                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <img
+                          src={c.img}
+                          alt={c.alt}
+                          loading="lazy"
+                          width={1024}
+                          height={768}
+                          className="max-h-none h-[125%] sm:h-[135%] w-auto object-contain -rotate-[8deg] drop-shadow-xl"
+                        />
+                      </div>
                     ) : (
                       <img
                         src={c.img}
@@ -508,7 +510,7 @@ export default function Landing() {
                         loading="lazy"
                         width={1024}
                         height={768}
-                        className="h-full w-full object-cover"
+                        className="absolute inset-0 h-full w-full object-cover"
                       />
                     )}
                   </div>
