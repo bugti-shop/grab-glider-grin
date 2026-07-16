@@ -513,35 +513,8 @@ export const CameraScannerScreen = ({
               {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
             </button>
           )}
-          {mode === 'note' && (
-            <button
-              onClick={() => {
-                if (!requirePro('batch')) return;
-                setHandwritingOn((v) => {
-                  const next = !v;
-                  toast(
-                    next
-                      ? '✍️ Handwriting mode on · uses stronger AI for cursive & notes'
-                      : 'Handwriting mode off',
-                    { duration: 1300 },
-                  );
-                  return next;
-                });
-              }}
-              className={cn(
-                'h-10 px-3 rounded-full backdrop-blur-xl border flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition',
-                handwritingOn
-                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_6px_18px_hsl(var(--primary)/0.35)]'
-                  : 'bg-white/10 border-white/15 text-white',
-              )}
-              aria-label="Toggle handwriting recognition"
-              aria-pressed={handwritingOn}
-            >
-              <PenLine className="h-4 w-4" />
-              Handwriting
-              {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
-            </button>
-          )}
+
+
           <button
             onClick={toggleTorch}
             disabled={!torchSupported}
