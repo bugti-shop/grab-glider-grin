@@ -4,10 +4,10 @@ import { Menu, Check, Calendar, StickyNote, Sparkles, Repeat, RefreshCw, ArrowRi
 import { AppLogo } from '@/components/AppLogo';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { setSetting } from '@/utils/settingsStorage';
-import socialX from '@/assets/social-x.png';
-import socialReddit from '@/assets/social-reddit.png';
-import socialYoutube from '@/assets/social-youtube.png';
-import socialInstagram from '@/assets/social-instagram.png';
+import socialX from '@/assets/social-x.webp';
+import socialReddit from '@/assets/social-reddit.webp';
+import socialYoutube from '@/assets/social-youtube.webp';
+import socialInstagram from '@/assets/social-instagram.webp';
 import todoDashboardImage from '@/assets/flowist-todo-dashboard.webp';
 import sketchEditorImage from '@/assets/flowist-sketch-editor.webp';
 import linedNoteImage from '@/assets/flowist-lined-note.webp';
@@ -17,17 +17,17 @@ import codeEditorImage from '@/assets/flowist-code-editor.webp';
 import taskNlpImage from '@/assets/flowist-task-nlp.webp';
 import calendarViewImage from '@/assets/flowist-calendar-view.webp';
 import flatLayoutImage from '@/assets/flowist-flat-layout.webp';
-import landingTodoImg from '@/assets/landing-todo-iphone.png';
+import landingTodoImg from '@/assets/landing-todo-iphone.webp';
 import landingTodoImg2 from '@/assets/landing-todo-2.jpg';
 import landingCalendarImg from '@/assets/landing-calendar.jpg';
 import landingPomodoroImg from '@/assets/landing-pomodoro.jpg';
 import landingHabitsImg from '@/assets/landing-habits.jpg';
 import landingHabitsImg2 from '@/assets/landing-habits-2.jpg';
-import landingHabitsIphone from '@/assets/landing-habits-iphone.png';
+import landingHabitsIphone from '@/assets/landing-habits-iphone.webp';
 import landingCountdownImg from '@/assets/landing-countdown.jpg';
 import landingSyncDevicesImg from '@/assets/landing-sync-devices.webp';
-import heroTasksIphone from '@/assets/hero-tasks-iphone.png';
-import heroNotesIphone from '@/assets/hero-notes-iphone.png';
+import heroTasksIphone from '@/assets/hero-tasks-iphone.webp';
+import heroNotesIphone from '@/assets/hero-notes-iphone.webp';
 import IncludeCarousel from '@/components/landing/IncludeCarousel';
 import includeNotesImg from '@/assets/flowist-include-notes.png.asset.json';
 import includeTasksImg from '@/assets/flowist-include-tasks.png.asset.json';
@@ -288,13 +288,6 @@ export default function Landing() {
                     );
                   })}
 
-                  <a
-                    href="#pricing"
-                    onClick={() => setMenuOpen(false)}
-                    className="mt-1 block rounded-xl px-5 py-4 text-lg font-semibold text-slate-900 hover:bg-slate-50"
-                  >
-                    Pricing
-                  </a>
                 </div>
 
                 {/* Bottom buttons */}
@@ -556,145 +549,6 @@ export default function Landing() {
           </div>
         </section>
 
-
-        {/* Pricing */}
-        <section id="pricing" className="bg-white py-20 sm:py-28">
-          <div className="mx-auto max-w-6xl px-5 sm:px-6">
-            <div className="mb-12 text-center">
-              <p className="mb-3 text-sm font-bold uppercase tracking-wider" style={{ color: BLUE }}>Pricing</p>
-              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-                Simple pricing. Cancel anytime.
-              </h2>
-              <p className="mx-auto mt-3 max-w-xl text-[15px] text-slate-600">
-                One Pro plan unlocks everything, tasks, notes, sketches, habits and every AI feature across web, iOS and Android.
-              </p>
-            </div>
-
-            <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {[
-                {
-                  plan: 'Free',
-                  price: '$0',
-                  period: 'Free\nforever',
-                  sub: 'For individuals looking to have a basic limited notes tool.',
-                  trial: null as string | null,
-                  highlight: false,
-                  featuresHeader: null as string | null,
-                  features: [
-                    'Up to 3 notebooks',
-                    'Basic task lists',
-                    'Note taking tools',
-                    'Export without watermark',
-                  ],
-                },
-                {
-                  plan: 'Weekly',
-                  price: '$1.99',
-                  period: '/weekly',
-                  sub: 'Try Flowist Pro short-term with full access.',
-                  trial: null,
-                  highlight: false,
-                  featuresHeader: 'Everything in Free, plus',
-                  features: [
-                    'Unlimited tasks & notes',
-                    'All AI features',
-                    'Habit tracking',
-                    'Eisenhower Matrix',
-                    'Web Clipper',
-                  ],
-                },
-                {
-                  plan: 'Monthly',
-                  price: '$3.99',
-                  period: '/monthly',
-                  sub: 'Flexible month-to-month billing, cancel anytime.',
-                  trial: null,
-                  highlight: false,
-                  featuresHeader: 'Everything in Weekly, plus',
-                  features: [
-                    'Priority sync',
-                    'Unlimited notebooks',
-                    'Advanced sketch editor',
-                    'Cross-device sync',
-                    'Premium templates',
-                  ],
-                },
-                {
-                  plan: 'Yearly',
-                  price: '$39.99',
-                  period: '/yearly',
-                  sub: 'Best value, just $3.33/month billed yearly.',
-                  trial: null,
-                  highlight: true,
-                  badge: 'Most popular',
-                  featuresHeader: 'Everything in Monthly, plus',
-                  features: [
-                    'Save 17% vs monthly',
-                    'Priority support',
-                    'Early access to features',
-                    'Cloud backup',
-                    'All future Pro features',
-                  ],
-                },
-              ].map((p: any) => (
-                <div
-                  key={p.plan}
-                  className={`relative flex flex-col rounded-2xl border bg-white p-6 sm:p-7 ${
-                    p.highlight ? 'border-2 border-slate-900' : 'border-slate-200'
-                  }`}
-                >
-                  <div className="mb-4 flex items-center gap-2">
-                    <h3 className="text-lg font-bold text-slate-900">{p.plan}</h3>
-                    {p.badge && (
-                      <span className="rounded-md bg-yellow-300 px-2 py-0.5 text-[11px] font-semibold text-slate-900">
-                        {p.badge}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-start gap-1.5">
-                    <span className="text-4xl font-extrabold tracking-tight text-slate-900">{p.price}</span>
-                    <span className="mt-1.5 whitespace-pre-line text-xs font-medium leading-tight text-slate-500">
-                      {p.period}
-                    </span>
-                  </div>
-
-                  <p className="mt-4 min-h-[48px] text-[13px] leading-relaxed text-slate-500">{p.sub}</p>
-
-                  <button
-                    onClick={handleGetStarted}
-                    className={`mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-semibold transition-transform hover:scale-[1.02] ${
-                      p.highlight
-                        ? 'bg-slate-900 text-white'
-                        : 'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    Start Free <span aria-hidden>›</span>
-                  </button>
-
-                  {p.trial && (
-                    <p className="mt-2 text-center text-[12px] text-slate-500">{p.trial}</p>
-                  )}
-
-                  <div className="my-5 h-px bg-slate-100" />
-
-                  <ul className="space-y-2 text-[13.5px] text-slate-700">
-                    {p.featuresHeader && (
-                      <li className="font-semibold text-slate-900">{p.featuresHeader}</li>
-                    )}
-                    {p.features.map((f: string) => (
-                      <li key={f}>{f}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            <p className="mt-8 text-center text-[13px] text-slate-500">
-              Prices in USD. Taxes may apply. Cancel anytime from your account.
-            </p>
-          </div>
-        </section>
 
         {/* FAQ */}
         <section id="faq" className="bg-slate-50 py-20 sm:py-28">
