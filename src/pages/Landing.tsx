@@ -17,7 +17,7 @@ import codeEditorImage from '@/assets/flowist-code-editor.webp';
 import taskNlpImage from '@/assets/flowist-task-nlp.webp';
 import calendarViewImage from '@/assets/flowist-calendar-view.webp';
 import flatLayoutImage from '@/assets/flowist-flat-layout.webp';
-import landingTodoImg from '@/assets/landing-todo.jpg';
+import landingTodoImg from '@/assets/landing-todo-iphone.png';
 import landingTodoImg2 from '@/assets/landing-todo-2.jpg';
 import landingCalendarImg from '@/assets/landing-calendar.jpg';
 import landingPomodoroImg from '@/assets/landing-pomodoro.jpg';
@@ -490,14 +490,14 @@ export default function Landing() {
                   <p className="mt-2 text-[12.5px] leading-relaxed text-slate-600 sm:text-[13.5px]">
                     {c.desc}
                   </p>
-                  <div className="mt-4 aspect-[4/3] overflow-hidden rounded-lg bg-slate-50">
+                  <div className="mt-4 aspect-[4/3] overflow-hidden rounded-lg bg-slate-50 flex items-center justify-center">
                     <img
                       src={c.img}
                       alt={c.alt}
                       loading="lazy"
                       width={1024}
                       height={768}
-                      className="h-full w-full object-cover"
+                      className={c.label === 'To-Do List' ? 'h-full w-auto object-contain' : 'h-full w-full object-cover'}
                     />
                   </div>
                 </article>
