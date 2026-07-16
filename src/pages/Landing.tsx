@@ -440,7 +440,7 @@ export default function Landing() {
         <section className="bg-white py-14 sm:py-20">
           <div className="mx-auto max-w-6xl">
             <div className="mb-8 px-5 text-center sm:mb-12 sm:px-6">
-              <h2 className="text-[28px] font-semibold leading-[1.15] tracking-tight text-slate-900 sm:text-[40px]">
+              <h2 className="text-[20px] font-semibold leading-[1.15] tracking-tight text-slate-900 sm:text-[32px] whitespace-nowrap">
                 What does Flowist include?
               </h2>
 
@@ -448,12 +448,18 @@ export default function Landing() {
             </div>
             <IncludeCarousel
               accent={BLUE}
+              autoplay={false}
               items={[
                 { image: includeNotesImg.url, alt: 'Flowist notes dashboard', title: 'Beautiful notes, your way', desc: 'Sticky, lined, regular and code notes — organize thoughts in folders with a clean, distraction-free editor.' },
                 { image: includeTasksImg.url, alt: 'Flowist task list', title: 'Tasks that actually get done', desc: 'Folders, priorities and quick add. Plan your day and knock things off with a satisfying, focused flow.' },
                 { image: includeNotebooksImg.url, alt: 'Flowist notebooks grid', title: 'Notebooks for every part of life', desc: 'Group notes into colorful notebooks — Recipes, Journal, Ideas, Travel and anything else you dream up.' },
                 { image: includeHabitsImg.url, alt: 'Flowist habit tracker', title: 'Build habits that stick', desc: 'Track daily habits with a beautiful week strip, streaks and totals — small wins, every single day.' },
                 { image: includeMatrixImg.url, alt: 'Flowist Eisenhower Matrix', title: 'Prioritize what truly matters', desc: 'The Eisenhower Matrix sorts tasks by urgency and importance so you always work on what moves the needle.' },
+                { image: includeBasicBlocksImg.url, alt: 'Basic blocks picker', title: 'Rich block editor', desc: 'Text, headings, quotes, callouts and more — insert any block in a tap with the basic blocks picker.' },
+                { image: includeMarkdownImg.url, alt: 'Markdown shortcuts', title: 'Markdown shortcuts built-in', desc: 'Type # for headings, * for bold, ~~ for strikethrough — write fast with familiar Markdown syntax.' },
+                { image: includeSlashImg.url, alt: 'Slash command menu', title: 'Slash commands for everything', desc: 'Lists, tables, code blocks and multi-column layouts — just type / to insert any block instantly.' },
+                { image: includeWebClipperImg.url, alt: 'Web Clipper article', title: 'Web Clipper, offline-ready', desc: 'Save any article from the web into your notes — clean, readable and available offline.' },
+                { image: includeInlineCalcImg.url, alt: 'Inline calculations and unit conversions', title: 'Inline math & unit conversions', desc: 'Do calculations, unit and currency conversions right inside your notes — no calculator needed.' },
               ]}
             />
           </div>
