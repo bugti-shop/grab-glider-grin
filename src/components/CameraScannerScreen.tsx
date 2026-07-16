@@ -563,11 +563,9 @@ export const CameraScannerScreen = ({
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Starting camera…
               </span>
-            ) : (
-
-              <span>Point at a sticky note or handwritten page · {activeModeLabel}</span>
-            )}
+            ) : null}
           </div>
+
 
         </div>
       </div>
