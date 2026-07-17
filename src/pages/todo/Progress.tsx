@@ -162,7 +162,7 @@ const Progress = () => {
 
   return (
     <TodoLayout title={t('nav.progress', 'Progress')}>
-      <div className="container mx-auto px-2 sm:px-3 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-4xl">
+      <div className="container mx-auto px-1.5 sm:px-3 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-4xl">
         
         {/* Blue Streak Hero Card */}
         <SafeComponent fallback={null}>
@@ -187,7 +187,7 @@ const Progress = () => {
 
         {/* Week Strip Card */}
         <SafeComponent fallback={null}>
-          <div className="bg-card rounded-2xl px-3 sm:px-5 py-6 sm:py-7 border shadow-sm">
+          <div className="bg-card rounded-2xl px-3 sm:px-5 py-6 sm:py-7 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
             <div className="flex justify-between items-start gap-1.5 sm:gap-3">
               {weekData.map((day) => {
                 const dayDate = new Date(day.date);
@@ -237,7 +237,7 @@ const Progress = () => {
         {/* Stats Grid 2x2 — icon top-left, label above small number */}
         <SafeComponent fallback={null}>
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
+            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
               <div className="flex items-start gap-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <CheckSquare className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-primary" />
@@ -249,7 +249,7 @@ const Progress = () => {
               </div>
             </div>
 
-            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
+            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
               <div className="flex items-start gap-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-success/15 flex items-center justify-center flex-shrink-0">
                   <Clock className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-success" />
@@ -261,7 +261,7 @@ const Progress = () => {
               </div>
             </div>
 
-            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
+            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
               <div className="flex items-start gap-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
                   <FileText className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-purple-500" />
@@ -273,7 +273,7 @@ const Progress = () => {
               </div>
             </div>
 
-            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
+            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
               <div className="flex items-start gap-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                   <Sprout className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-amber-600" />
