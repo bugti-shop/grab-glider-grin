@@ -92,6 +92,13 @@ export const TextTaskExtractorSheet = ({
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [hasRun, setHasRun] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Double-click / concurrent-request guard. `inFlightRef` is set synchronously
+  // on tap so a rapid second tap can't slip through before React re-renders
+  // the disabled button. `abortRef` cancels the current fetch if the sheet
+  // closes or a legitimate retry needs to supersede it.
+  const inFlightRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const lastTapAtRef = useRef(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -101,10 +108,20 @@ export const TextTaskExtractorSheet = ({
     } else {
       setMode('text'); setText(''); setPdfName(null); setPdfText('');
       setIsParsingPdf(false); setIsExtracting(false); setItems([]); setHasRun(false);
+      // Cancel any in-flight extraction and reset guards when the sheet closes.
+      if (abortRef.current) { try { abortRef.current.abort(); } catch {} abortRef.current = null; }
+      inFlightRef.current = false;
       releaseAllAiLocks();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  // Cancel on unmount too.
+  useEffect(() => () => {
+    if (abortRef.current) { try { abortRef.current.abort(); } catch {} }
+    inFlightRef.current = false;
+  }, []);
+
 
   const handlePdfUpload = async (file: File) => {
     if (!file) return;
@@ -135,6 +152,23 @@ export const TextTaskExtractorSheet = ({
   };
 
   const runExtraction = async () => {
+    // Synchronous double-tap guard — runs BEFORE any await so a burst of
+    // taps within the same event loop tick cannot start two extractions.
+    const now = Date.now();
+    if (now - lastTapAtRef.current < 600) return;
+    lastTapAtRef.current = now;
+    if (inFlightRef.current) {
+      toast.info(t('textExtract.alreadyRunning', 'AI is already extracting — please wait…'));
+      return;
+    }
+    inFlightRef.current = true;
+
+    // Abort any prior in-flight request (defensive; inFlightRef should have
+    // caught it, but this makes cancellation deterministic).
+    if (abortRef.current) { try { abortRef.current.abort(); } catch {} }
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     // Show immediate feedback BEFORE any async guard — users complained the
     // button felt dead on Android because auth/lock checks awaited silently.
     setIsExtracting(true);
@@ -142,6 +176,7 @@ export const TextTaskExtractorSheet = ({
     setItems([]);
     const loadingToastId = `ai-extract-${Date.now()}`;
     toast.loading(t('textExtract.extracting', 'Extracting tasks…'), { id: loadingToastId });
+
 
     let release: (() => void) | null = null;
     try {
@@ -191,9 +226,14 @@ export const TextTaskExtractorSheet = ({
           languageName: 'auto',
         },
         timeout: AI_TIMEOUT_MS,
+        signal: controller.signal,
       } as any);
+      // If a newer request superseded this one (controller aborted while we
+      // were awaiting), drop the result silently — a fresh handler owns state.
+      if (controller.signal.aborted || abortRef.current !== controller) return;
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
+
       const raw: ExtractedTask[] = Array.isArray((data as any)?.tasks) ? (data as any).tasks : [];
       const review: ReviewItem[] = raw
         .filter((tk) => tk && typeof tk.title === 'string' && tk.title.trim().length > 0)
@@ -225,6 +265,11 @@ export const TextTaskExtractorSheet = ({
         toast.success(t('textExtract.detectedCount', '{{count}} tasks detected', { count: review.length }));
       }
     } catch (e: any) {
+      // Silently swallow aborts triggered by sheet close or supersede.
+      if (controller.signal.aborted || e?.name === 'AbortError') {
+        toast.dismiss(loadingToastId);
+        return;
+      }
       console.error('[text extract]', e);
       toast.dismiss(loadingToastId);
       const msg = String(e?.message || '');
@@ -233,7 +278,7 @@ export const TextTaskExtractorSheet = ({
         requireFeature('ai_dictation');
       } else if (msg.includes('429')) {
         toast.error(t('tasks.aiRateLimit', 'AI is busy, try again shortly'));
-      } else if (msg.includes('AbortError') || msg.includes('timeout')) {
+      } else if (msg.includes('timeout')) {
         toast.error(t('textExtract.timeout', 'AI took too long. Try shorter text.'));
       } else {
         toast.error(t('textExtract.failed', 'Could not extract tasks from this text'));
@@ -241,8 +286,11 @@ export const TextTaskExtractorSheet = ({
     } finally {
       setIsExtracting(false);
       if (release) release();
+      inFlightRef.current = false;
+      if (abortRef.current === controller) abortRef.current = null;
     }
   };
+
 
 
   const toggle = (uid: string) =>
