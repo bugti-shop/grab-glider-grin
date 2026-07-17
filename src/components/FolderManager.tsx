@@ -542,7 +542,7 @@ export const FolderManager = ({
         </DialogContent>
       </Dialog>
 
-      <div className="flex gap-1.5 xs:gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-1.5 xs:gap-2 overflow-x-auto overflow-y-visible pt-2 pb-2 scrollbar-hide">
 
 
         {folders.map((folder) => (
@@ -598,7 +598,7 @@ export const FolderManager = ({
                 className="flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all active:scale-95 text-white"
                 style={{
                   backgroundColor: folder.color,
-                  boxShadow: selectedFolderId === folder.id ? '0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5)' : undefined,
+                  boxShadow: selectedFolderId === folder.id ? 'inset 0 0 0 2px hsl(var(--background)), inset 0 0 0 4px hsl(var(--primary) / 0.6)' : undefined,
                 }}
               >
                 <FolderIcon className="w-4 h-4" />
