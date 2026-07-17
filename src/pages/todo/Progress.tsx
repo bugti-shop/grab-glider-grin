@@ -188,21 +188,21 @@ const Progress = () => {
         {/* Week Strip Card */}
         <SafeComponent fallback={null}>
           <div className="bg-card rounded-2xl px-3 sm:px-5 py-6 sm:py-7 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
-            <div className="flex justify-between items-start gap-1.5 sm:gap-3">
+            <div className="flex justify-between items-start gap-2.5 sm:gap-3">
               {weekData.map((day) => {
                 const dayDate = new Date(day.date);
                 const dateNum = dayDate.getDate();
                 return (
-                  <div key={day.date} className="flex flex-col items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+                  <div key={day.date} className="flex flex-col items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
                     <span className={cn(
-                      "text-[13px] sm:text-sm font-medium",
+                      "text-[12px] sm:text-[13px] font-medium",
                       day.isToday ? "text-primary" : "text-muted-foreground"
                     )}>
                       {day.day}
                     </span>
                     <div
                       className={cn(
-                        "w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 transition-all",
+                        "w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all",
                         day.completed
                           ? "bg-primary border-primary text-primary-foreground"
                           : day.isToday
@@ -210,7 +210,7 @@ const Progress = () => {
                             : "border-muted bg-muted/40"
                       )}
                     >
-                      {day.completed && <Check className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={3} />}
+                      {day.completed && <Check className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={3} />}
                     </div>
                     <span className={cn(
                       "text-[13px] sm:text-sm font-medium",
