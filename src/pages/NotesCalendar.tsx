@@ -8,7 +8,7 @@ import { NotesCalendarYearHeatmap } from '@/components/notes/NotesCalendarYearHe
 import { NotesCalendarDarkHero } from '@/components/notes/NotesCalendarDarkHero';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3 } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3, Moon } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
