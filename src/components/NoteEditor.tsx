@@ -2567,7 +2567,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
               disabled={showScanNote}
               onClick={() => {
                 if (showScanNote) return;
-                if (!requireFeature('ai_dictation')) return;
+                // AI GUARD: never block on subscription; sign-in + daily cap only.
                 setShowScanNote(true);
               }}
               className="group relative h-14 pl-4 pr-5 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center gap-2 hover:scale-105 active:scale-95 transition-transform ring-2 ring-primary/20 disabled:opacity-60 disabled:cursor-wait"
