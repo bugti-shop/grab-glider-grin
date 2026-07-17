@@ -60,7 +60,7 @@ import 'katex/dist/katex.min.css';
 import { ErrorBoundary } from './ErrorBoundary';
 import { PdfExportSuccessDialog } from './PdfExportSuccessDialog';
 import { PdfExportOptionsSheet, PdfExportSettings } from './PdfExportOptionsSheet';
-import { ArrowLeft, ChevronLeft, Folder as FolderIcon, Plus, CalendarIcon, History, FileDown, Link2, ChevronDown, FileText, BookOpen, BarChart3, MoreVertical, MoreHorizontal, Mic, Share2, Share, Search, Image, Table, Minus, SeparatorHorizontal, MessageSquare, FileSymlink, FileType, Bell, Clock, Repeat, Trash2, Mail, Phone, LinkIcon, Copy, Replace, Palette, Hash, Crown, ListFilter, CaseLower, Tag as TagIcon, Camera, Sparkles, Globe, Keyboard, MapPin } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, Folder as FolderIcon, Plus, CalendarIcon, History, FileDown, Link2, ChevronDown, FileText, BookOpen, BarChart3, MoreVertical, MoreHorizontal, Mic, Share2, Share, Search, Image, Table, Minus, SeparatorHorizontal, MessageSquare, FileSymlink, FileType, Bell, Clock, Repeat, Trash2, Mail, Phone, LinkIcon, Copy, Replace, Palette, Hash, Crown, ListFilter, CaseLower, Tag as TagIcon, Camera, Sparkles, Globe, Keyboard, MapPin, Undo2, Redo2, TagIcon as TagPlusIcon, NotebookText } from 'lucide-react';
 import { exportNoteToPdf, getPageBreakCount, PdfExportResult } from '@/utils/exportToPdf';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
