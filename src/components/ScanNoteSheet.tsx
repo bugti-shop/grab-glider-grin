@@ -1,3 +1,4 @@
+import { useAiFeatureGuard } from '@/utils/aiFeatureGuard';
 /**
  * ScanNoteSheet — Upload a page photo from gallery, OCR + structure it via AI vision,
  * preview as formatted HTML, and insert into the current note.
@@ -41,9 +42,8 @@ interface ObjectCountItem {
 export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const { t, i18n } = useTranslation();
   const { requireFeature } = useSubscription();
-  // AI GUARD: AI features must never break due to subscription/trial state.
-  // Sign-in + the daily-usage cap in aiUsageLimits.ts are the ONLY gates.
-  const hasPaidAi = true;
+  // AI GUARD — locked. See src/utils/aiFeatureGuard.ts. Do not couple to billing.
+  const { hasPaidAi } = useAiFeatureGuard();
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [html, setHtml] = useState('');
