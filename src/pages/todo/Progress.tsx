@@ -312,53 +312,58 @@ const Progress = () => {
           </div>
         </SafeComponent>
 
-        {/* Completed Tasks Last 30 Days - Line Chart */}
+        {/* Completed Tasks Last 30 Days - Line Chart (reference-matched) */}
         <SafeComponent fallback={null}>
-          <div className="bg-card rounded-2xl p-4 sm:p-5 border shadow-sm">
-            <h3 className="text-sm sm:text-base font-semibold text-foreground mb-4">
+          <div className="bg-white dark:bg-card rounded-2xl p-5 border border-[#E5E7EB] dark:border-border shadow-sm">
+            <h3 className="text-[15px] font-semibold text-[#111827] dark:text-foreground mb-5 leading-tight">
               {t('streak.completedLast30', 'Completed Tasks (Last 30 Days)')}
             </h3>
-            <div className="w-full h-56 sm:h-64">
+            <div className="w-full h-60 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 8, right: 12, left: -12, bottom: 0 }}>
-                  <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
+                <LineChart data={chartData} margin={{ top: 10, right: 16, left: -8, bottom: 4 }}>
+                  <CartesianGrid stroke="#E5E7EB" strokeDasharray="4 4" vertical={false} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fontSize: 11, fill: '#6B7280' }}
                     tickLine={false}
-                    axisLine={{ stroke: 'hsl(var(--border))' }}
+                    axisLine={{ stroke: '#E5E7EB' }}
+                    tickMargin={8}
                     interval={Math.max(0, Math.floor(chartData.length / 5) - 1)}
                   />
                   <YAxis
-                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fontSize: 11, fill: '#6B7280' }}
                     tickLine={false}
                     axisLine={false}
-                    width={32}
+                    width={28}
                     allowDecimals={false}
+                    tickMargin={4}
                   />
                   <Tooltip
+                    cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '3 3' }}
                     contentStyle={{
-                      background: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
+                      background: '#FFFFFF',
+                      border: '1px solid #E5E7EB',
                       borderRadius: 8,
                       fontSize: 12,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                     }}
-                    labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+                    labelStyle={{ color: '#6B7280', fontWeight: 500 }}
                     formatter={(v: number) => [v, t('streak.tasks', 'tasks')]}
                   />
                   <Line
                     type="monotone"
                     dataKey="value"
                     stroke="#3B82F6"
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: '#3B82F6', stroke: '#3B82F6' }}
-                    activeDot={{ r: 5, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }}
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: '#3B82F6', stroke: '#3B82F6', strokeWidth: 0 }}
+                    activeDot={{ r: 5, fill: '#3B82F6', stroke: '#FFFFFF', strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
         </SafeComponent>
+
 
         {/* Streak Consistency Certificate - always visible */}
         <SafeComponent fallback={null}>
