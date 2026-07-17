@@ -371,8 +371,17 @@ const Progress = () => {
           </div>
         </SafeComponent>
 
+        {/* Streak Consistency Certificate - always visible */}
+        <SafeComponent fallback={null}>
+          <div className="-mx-3 sm:mx-0">
+            <StreakConsistencyCertificate
+              currentStreak={data?.currentStreak || 0}
+              totalCompletions={lifetimeCompleted}
+              longestStreak={data?.longestStreak || 0}
+            />
           </div>
         </SafeComponent>
+
 
         {/* Milestones */}
         <SafeComponent fallback={null}>
