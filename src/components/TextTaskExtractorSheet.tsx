@@ -238,20 +238,30 @@ export const TextTaskExtractorSheet = ({
   const handleAddAll = () => {
     const selected = items.filter((i) => i.selected && i.title.trim());
     if (!selected.length) { toast.error(t('textExtract.nothingSelected', 'Nothing selected to add')); return; }
-    const newTasks: Array<Omit<TodoItem, 'id' | 'completed'>> = selected.map((it) => ({
-      text: it.title.trim(),
-      description: it.description || undefined,
-      priority: it.priority,
-      dueDate: it.dueDateIso ? new Date(it.dueDateIso) : undefined,
-      reminderTime: it.reminderIso ? new Date(it.reminderIso) : undefined,
-      repeatType: it.repeatType,
-      repeatDays: it.repeatDays?.length ? it.repeatDays : undefined,
-      tags: it.tags?.length ? it.tags : undefined,
-      location: it.location || undefined,
-      isUrgent: it.isUrgent || undefined,
-      folderId: it.folderId || currentFolderId || undefined,
-      sectionId: it.sectionId || currentSectionId || undefined,
-    }));
+    const newTasks: Array<Omit<TodoItem, 'id' | 'completed'>> = selected.map((it) => {
+      let resolvedFolderId = it.folderId || null;
+      if (!resolvedFolderId && it.folderName && onEnsureFolder) {
+        resolvedFolderId = onEnsureFolder(it.folderName);
+      }
+      let resolvedSectionId = it.sectionId || null;
+      if (!resolvedSectionId && it.sectionName && onEnsureSection) {
+        resolvedSectionId = onEnsureSection(it.sectionName, resolvedFolderId);
+      }
+      return {
+        text: it.title.trim(),
+        description: it.description || undefined,
+        priority: it.priority,
+        dueDate: it.dueDateIso ? new Date(it.dueDateIso) : undefined,
+        reminderTime: it.reminderIso ? new Date(it.reminderIso) : undefined,
+        repeatType: it.repeatType,
+        repeatDays: it.repeatDays?.length ? it.repeatDays : undefined,
+        tags: it.tags?.length ? it.tags : undefined,
+        location: it.location || undefined,
+        isUrgent: it.isUrgent || undefined,
+        folderId: resolvedFolderId || currentFolderId || undefined,
+        sectionId: resolvedSectionId || currentSectionId || undefined,
+      };
+    });
     onAddTasks(newTasks);
     toast.success(t('textExtract.added', '{{count}} tasks added', { count: newTasks.length }));
     onClose();
