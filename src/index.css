@@ -605,20 +605,29 @@ table th[contenteditable="true"]:hover {
     width: var(--header-icon-size) !important;
     height: var(--header-icon-size) !important;
   }
-  /* Prominent back button — visually anchors the header */
+  /* Back button — slimmer chevron, but tap target stays comfortable (>=44px via header-icon-btn) */
   .app-header-back {
-    width: calc(var(--header-icon-btn) + 2px) !important;
-    height: calc(var(--header-icon-btn) + 2px) !important;
+    width: var(--header-icon-btn) !important;
+    height: var(--header-icon-btn) !important;
+    padding: 6px !important;
   }
   .app-header-back > svg,
   .app-header-back > .lucide {
-    width: calc(var(--header-icon-size) + 4px) !important;
-    height: calc(var(--header-icon-size) + 4px) !important;
+    width: calc(var(--header-icon-size) + 1px) !important;
+    height: calc(var(--header-icon-size) + 1px) !important;
   }
-  /* Share icon: slightly shorter height than default header icons */
+  /* Share icon: trim height and vertically align with header title baseline */
+  .app-header-share {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
   .app-header-share > svg,
   .app-header-share > .lucide {
-    height: calc(var(--header-icon-size) - 3px) !important;
+    height: calc(var(--header-icon-size) - 5px) !important;
+    width: calc(var(--header-icon-size) - 1px) !important;
+    display: block;
+    vertical-align: middle;
   }
   .app-header-title {
     font-size: var(--header-title-size);
