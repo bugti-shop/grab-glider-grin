@@ -1435,16 +1435,16 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           className="app-header"
           style={{ backgroundColor: getEditorBackgroundColor(), borderColor: 'rgba(0,0,0,0.1)' }}
         >
-          <div className="flex items-center gap-0.5">
-            <Button variant="ghost" size="icon" onClick={handleClose} className={cn("app-header-btn app-header-back -ml-1", noteType === 'sticky' && "text-black hover:text-black")}>
+          <div className="flex items-center -ml-1">
+            <Button variant="ghost" size="icon" onClick={handleClose} className={cn("app-header-btn app-header-back", noteType === 'sticky' && "text-black hover:text-black")}>
               <ChevronLeft strokeWidth={2.25} />
             </Button>
-            {/* Undo / Redo — grouped with back */}
+            {/* Undo / Redo — grouped tight with back */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => { editorRef.current?.focus(); document.execCommand('undo'); }}
-              className={cn("app-header-btn", noteType === 'sticky' && "text-black hover:text-black")}
+              className={cn("app-header-btn -ml-2", noteType === 'sticky' && "text-black hover:text-black")}
               aria-label="Undo"
             >
               <Undo2 strokeWidth={1.75} />
@@ -1453,7 +1453,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
               variant="ghost"
               size="icon"
               onClick={() => { editorRef.current?.focus(); document.execCommand('redo'); }}
-              className={cn("app-header-btn", noteType === 'sticky' && "text-black hover:text-black")}
+              className={cn("app-header-btn -ml-2", noteType === 'sticky' && "text-black hover:text-black")}
               aria-label="Redo"
             >
               <Redo2 strokeWidth={1.75} />
