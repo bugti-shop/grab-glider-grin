@@ -38,7 +38,9 @@ interface ExtractedTask {
   priority: Priority;
   isUrgent?: boolean;
   folderId: string | null;
+  folderName?: string | null;
   sectionId: string | null;
+  sectionName?: string | null;
   repeatType: RepeatType;
   repeatDays?: number[];
   tags?: string[];
@@ -58,6 +60,10 @@ interface Props {
   sections: TaskSection[];
   currentFolderId?: string | null;
   currentSectionId?: string | null;
+  /** Resolve an AI-proposed folder name → id (creating one if needed). */
+  onEnsureFolder?: (name: string) => string | null;
+  /** Resolve an AI-proposed section name → id (creating one if needed). */
+  onEnsureSection?: (name: string, folderId?: string | null) => string | null;
   /** Pre-fill the input text (e.g. when opened from a note). */
   initialText?: string;
   /** Pre-select the source mode. */
@@ -68,6 +74,7 @@ interface Props {
 
 export const TextTaskExtractorSheet = ({
   isOpen, onClose, onAddTasks, folders, sections, currentFolderId, currentSectionId,
+  onEnsureFolder, onEnsureSection,
   initialText, initialMode, titleOverride,
 }: Props) => {
   const { t, i18n } = useTranslation();
