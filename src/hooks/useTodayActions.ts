@@ -241,6 +241,48 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     setFolders(prev => [...prev, newFolder]);
   }, [folders.length, requireCapacity, setFolders]);
 
+  /**
+   * Find a folder by (case-insensitive) name or create a new one on the fly.
+   * Used by AI task extractors so folders proposed by the AI auto-materialize.
+   * Returns the resolved folder id, or null if creation was blocked by caps.
+   */
+  const ensureFolderByName = useCallback((rawName: string): string | null => {
+    const name = (rawName || '').trim();
+    if (!name) return null;
+    const existing = folders.find(f => (f.name || '').trim().toLowerCase() === name.toLowerCase());
+    if (existing) return existing.id;
+    if (!requireCapacity('taskFolders', folders.length)) return null;
+    const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+    const color = palette[folders.length % palette.length];
+    const id = genId();
+    const now = new Date();
+    const newFolder: Folder = { id, name, color, isDefault: false, createdAt: now, updatedAt: now } as Folder;
+    setFolders(prev => [...prev, newFolder]);
+    return id;
+  }, [folders, requireCapacity, setFolders]);
+
+  /**
+   * Find a section by (case-insensitive) name (optionally within a folder) or
+   * create a new one. Used by AI extractors.
+   */
+  const ensureSectionByName = useCallback((rawName: string, folderId?: string | null): string | null => {
+    const name = (rawName || '').trim();
+    if (!name) return null;
+    const scoped = sections.filter(s => (s.folderId || null) === (folderId || null));
+    const existing = scoped.find(s => (s.name || '').trim().toLowerCase() === name.toLowerCase())
+      || sections.find(s => (s.name || '').trim().toLowerCase() === name.toLowerCase());
+    if (existing) return existing.id;
+    if (!requireCapacity('sectionsPerFolder', scoped.length)) return null;
+    const id = genId();
+    const maxOrder = Math.max(0, ...sections.map(s => s.order || 0));
+    const newSection: TaskSection = {
+      id, name, color: '#3b82f6', isCollapsed: false, order: maxOrder + 1,
+      folderId: folderId || undefined, updatedAt: new Date(),
+    } as TaskSection;
+    setSections(prev => [...prev, newSection]);
+    return id;
+  }, [sections, requireCapacity, setSections]);
+
   const handleEditFolder = useCallback((folderId: string, name: string, color: string, icon?: string, parentId?: string) => {
     const target = folders.find(f => f.id === folderId);
     if (target?.isDefault) {
