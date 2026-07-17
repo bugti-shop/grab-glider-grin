@@ -4,8 +4,68 @@
 //   then drives step-by-step with Flowist-branded popovers.
 // - Skip / Next / "Don't show again" all persist via TourStateStore.
 
-import { driver, type Driver, type DriveStep } from 'driver.js';
+import { driver, type Driver, type DriveStep, type Config as DriverConfig } from 'driver.js';
 import 'driver.js/dist/driver.css';
+
+/**
+ * GLOBAL DRIVER.JS SINGLETON MUTEX
+ * --------------------------------
+ * driver.js mounts its overlay/popover directly to <body>. If two instances
+ * are alive at the same time — even briefly — their overlays stack, event
+ * handlers double-fire, and on low-memory Android WebViews the second mount
+ * OOM-crashes the app (root cause of the first-install crash reported on
+ * Android). This module-level mutex guarantees that only ONE driver.js
+ * instance can exist in the DOM at any time, across every tour, tooltip,
+ * and code path that touches driver.js.
+ *
+ * Every driver() call in this file MUST go through `mountSingletonDriver()`.
+ * Do not import `driver` from 'driver.js' anywhere else in the app; route
+ * through TourManager so this invariant holds.
+ */
+let __activeDriverInstance: Driver | null = null;
+
+function sweepStaleDriverDom() {
+  if (typeof document === 'undefined') return;
+  try {
+    document.querySelectorAll('.driver-popover, .driver-overlay, .driver-active-element')
+      .forEach((n) => { try { n.remove(); } catch {} });
+    document.body.classList.remove('driver-active', 'driver-fade');
+  } catch {}
+}
+
+function mountSingletonDriver(config: DriverConfig): Driver {
+  // Tear down any previously-live instance BEFORE constructing a new one.
+  if (__activeDriverInstance) {
+    try { __activeDriverInstance.destroy(); } catch {}
+    __activeDriverInstance = null;
+  }
+  // Belt-and-braces: kill any orphaned DOM from a prior instance whose
+  // destroy() was never called (e.g. route unmounted the host component).
+  sweepStaleDriverDom();
+
+  const userOnDestroyed = config.onDestroyed;
+  const wrapped: DriverConfig = {
+    ...config,
+    onDestroyed: async (element, step, options) => {
+      // Clear the singleton ref FIRST so any onDestroyed side-effects
+      // (which may synchronously start a new tour) can mount freely.
+      if (__activeDriverInstance === instance) __activeDriverInstance = null;
+      if (userOnDestroyed) {
+        try { await userOnDestroyed(element, step, options); } catch {}
+      }
+      // Final sweep for any DOM the destroy call may have missed.
+      sweepStaleDriverDom();
+    },
+  };
+  const instance = driver(wrapped);
+  __activeDriverInstance = instance;
+  return instance;
+}
+
+export function __getActiveDriverInstance(): Driver | null {
+  return __activeDriverInstance;
+}
+
 
 import { getTour, nextOnboardingTourId, previousOnboardingTourId, type FeatureTour, type FeatureTourStep } from './tourRegistry';
 import {
@@ -247,7 +307,7 @@ class TourManagerImpl {
       if (canGoBack) buttons.push('previous');
       buttons.push('next');
       if (!forced) buttons.push('close');
-      return driver({
+      return mountSingletonDriver({
         // Forced tours cannot be dismissed by ✕ or overlay tap — user must
         // walk through every step.
         allowClose: !forced,
