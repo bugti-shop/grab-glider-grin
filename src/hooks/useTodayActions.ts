@@ -1013,6 +1013,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
   return {
     // Folder actions
     handleCreateFolder, handleEditFolder, handleDeleteFolder, handleReorderFolders, handleToggleFolderFavorite,
+    ensureFolderByName, ensureSectionByName,
     // Section actions
     handleAddSection, handleEditSection, handleSaveSection, handleDeleteSection,
     handleDuplicateSection, handleMoveSection, handleToggleSectionCollapse,
