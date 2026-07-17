@@ -216,7 +216,7 @@ export const VirtualJourneyCard = () => {
           </div>
 
           {/* Horizontal circle timeline */}
-          <div className="relative mt-2 mb-5 px-1">
+          <div className="relative mt-1 mb-3 sm:mb-5 px-1">
             {/* connecting line */}
             <div className="absolute top-1/2 left-3 right-3 h-px bg-[#E5E7EB] dark:bg-border -translate-y-1/2" />
             <div className="relative flex justify-between items-center">
