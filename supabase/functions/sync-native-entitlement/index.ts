@@ -80,13 +80,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const appUserID = typeof body?.appUserID === "string" ? body.appUserID.trim() : "";
-    const identifiers = Array.from(
-      new Set([appUserID, user.id, user.email?.trim().toLowerCase()].filter(Boolean) as string[]),
+    // Only trust identifiers derived from the authenticated session.
+    // A client-supplied appUserID is intentionally ignored — otherwise an
+    // attacker could reference someone else's active RevenueCat subscriber
+    // and have entitlements written for their own user.id / email.
+    await req.json().catch(() => ({}));
+    const trustedIdentifiers = Array.from(
+      new Set([user.id, user.email?.trim().toLowerCase()].filter(Boolean) as string[]),
     );
 
-    if (identifiers.length === 0) {
+    if (trustedIdentifiers.length === 0) {
       return new Response(JSON.stringify({ error: "No identifier" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -95,7 +98,7 @@ Deno.serve(async (req) => {
 
     let matchedIdentifier = "";
     let entitlement: any = null;
-    for (const identifier of identifiers) {
+    for (const identifier of trustedIdentifiers) {
       const data = await fetchSubscriber(identifier).catch((e) => {
         console.warn("RevenueCat lookup failed", String(e));
         return null;
@@ -115,7 +118,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const payloads = identifiers.map((identifier) => ({
+    // Only write rows for the trusted (session-derived) identifiers.
+    const payloads = trustedIdentifiers.map((identifier) => ({
       app_user_id: identifier,
       is_active: true,
       product_id: entitlement.product_identifier || entitlement.product_id || "revenuecat_pro",
@@ -127,6 +131,7 @@ Deno.serve(async (req) => {
     const { error } = await admin
       .from("user_entitlements")
       .upsert(payloads, { onConflict: "app_user_id" });
+
 
     if (error) {
       console.error("Native entitlement sync upsert failed", error);
