@@ -542,7 +542,7 @@ export const FolderManager = ({
         </DialogContent>
       </Dialog>
 
-      <div className="flex gap-1.5 xs:gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-1.5 xs:gap-2 overflow-x-auto overflow-y-visible pt-2 pb-2 scrollbar-hide">
 
 
         {folders.map((folder) => (
