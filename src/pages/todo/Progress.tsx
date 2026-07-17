@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Flame, Check, Snowflake, Trophy, Zap, TrendingUp, Calendar, Gift, Clock, Award, CheckSquare, FileText, Sprout } from 'lucide-react';
 import { loadTodoItems } from '@/utils/todoItemsStorage';
 import { countCompletedTasksInDB } from '@/utils/taskStorage';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { startOfWeek, endOfWeek, subDays, format, startOfDay } from 'date-fns';
 
