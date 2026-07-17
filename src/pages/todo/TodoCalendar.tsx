@@ -55,6 +55,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { loadCountdowns, CountdownEvent } from '@/utils/countdownStorage';
+import { TodoCalendarFab } from '@/components/todo/TodoCalendarFab';
 
 
 
@@ -1443,14 +1444,7 @@ const TodoCalendar = () => {
       {/* Floating Action Button */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button 
-            variant="ghost"
-            size="lg"
-            className="fixed right-6 h-14 w-14 rounded-full shadow-lg z-30 bg-black text-white hover:bg-black/90 border-0"
-            style={{ bottom: 'calc(4.25rem + var(--safe-bottom, 0px))' }}
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
+          <TodoCalendarFab />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" side="top" className="mb-2 w-48 z-50 bg-card">
           <DropdownMenuItem onClick={() => {

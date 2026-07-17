@@ -23,6 +23,7 @@ import { CalendarBackgroundSheet } from '@/components/CalendarBackgroundSheet';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { NotesCalendarFab } from '@/components/notes/NotesCalendarFab';
 
 type CalendarLayout = 'month' | 'weekStrip' | 'dashboard';
 
@@ -324,17 +325,9 @@ const NotesCalendar = () => {
 
       </div>
 
-      {/* Floating Add Note button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => handleCreateNote('regular')}
-        aria-label={t('notes.addNote', 'Add note')}
-        className="fixed right-4 z-40 h-14 w-14 rounded-full shadow-lg bg-black text-white hover:bg-black/90 border-0"
-        style={{ bottom: 'calc(72px + var(--safe-bottom, 0px))' }}
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
+      {/* Floating Add Note button (dedicated Notes FAB) */}
+      <NotesCalendarFab onClick={() => handleCreateNote('regular')} />
+
 
 
       <NoteEditor
