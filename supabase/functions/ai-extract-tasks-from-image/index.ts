@@ -19,12 +19,14 @@ interface ExtractRequest {
   webUnlockCode?: string;
 }
 
-const AI_GATEWAY_TIMEOUT_MS = 40_000;
+const AI_GATEWAY_TIMEOUT_MS = 120_000;
 // Pro is verified server-side via entitlements plus web Stripe subscriptions.
 const STRIPE_GRACE_PERIOD_MS = 2 * 24 * 60 * 60 * 1000;
 const REVENUECAT_ENTITLEMENT_ID = "Pro";
 
-const MAX_IMAGE_BASE64_BYTES = 8 * 1024 * 1024; // ~6MB image
+// Allow large scans (dense pages of ~2000 tasks). Base64 grows ~1.37x
+// the raw byte size, so 32 MB base64 ~ 24 MB image payload.
+const MAX_IMAGE_BASE64_BYTES = 32 * 1024 * 1024;
 
 const verifyRevenueCatAccess = async (admin: any, identifiers: string[]) => {
   const rcSecret = Deno.env.get("REVENUECAT_SECRET_API_KEY");
