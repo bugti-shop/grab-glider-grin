@@ -292,9 +292,6 @@ export const VirtualJourneyCard = () => {
               );
             })}
           </div>
-              );
-            })}
-          </div>
           {/* Journey badges */}
           {journeyBadges.length > 0 && (
             <div className="mt-4 space-y-2">
