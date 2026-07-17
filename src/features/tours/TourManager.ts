@@ -53,9 +53,11 @@ class TourManagerImpl {
     return !!this.activeDriver;
   }
 
-  isForced() {
-    return this.forcedActive;
+  /** True while a chained tour has been scheduled but not yet mounted. */
+  isChainScheduled() {
+    return this.chainScheduled || this.starting;
   }
+
 
   activeId() {
     return this.activeTourId;
