@@ -276,12 +276,13 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         {/* Water droplet — top-right corner, pixel-matched */}
         <div style={{
           position: 'absolute',
-          top: s(28),
-          right: s(20),
+          top: s(32),
+          right: s(24),
           zIndex: 0,
           pointerEvents: 'none',
         }}>
-          <svg width={s(115)} height={s(150)} viewBox="0 0 115 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width={s(96)} height={s(126)} viewBox="0 0 115 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+
             <defs>
               <radialGradient id="dropBody" cx="35%" cy="40%" r="75%">
                 <stop offset="0%" stopColor="#F5F9FF" />
