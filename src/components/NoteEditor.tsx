@@ -2439,22 +2439,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 headerSlot={showToc ? (
                   <TableOfContents content={content} editorRef={editorRef} maxLevel={tocMaxLevel} />
                 ) : undefined}
-                metaSlot={(
-                  <div className="note-meta-row">
-                    <button
-                      type="button"
-                      className="note-location-pill"
-                      onClick={() => setIsLocationInputOpen(true)}
-                      aria-label={location ? t('editor.editLocation', 'Edit location') : t('editor.addLocation', 'Add location')}
-                    >
-                      <MapPin className="h-3.5 w-3.5" />
-                      <span>{location || t('editor.addLocation', 'Add location')}</span>
-                    </button>
-                    <span className="note-date-text">
-                      {format(createdAt, 'MMM d')}
-                    </span>
-                  </div>
-                )}
+                metaSlot={undefined}
                 footerSlot={(() => {
                   const plain = (content || '').replace(/<[^>]+>/g, ' ');
                   const matches = plain.match(/#[\p{L}\p{N}_]+/gu);
