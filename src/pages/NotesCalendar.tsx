@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
 import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStrip';
 import { NotesCalendarDashboard } from '@/components/notes/NotesCalendarDashboard';
+import { NotesCalendarYearHeatmap } from '@/components/notes/NotesCalendarYearHeatmap';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3 } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -25,7 +26,7 @@ import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NotesCalendarFab } from '@/components/notes/NotesCalendarFab';
 
-type CalendarLayout = 'month' | 'weekStrip' | 'dashboard';
+type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap';
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
