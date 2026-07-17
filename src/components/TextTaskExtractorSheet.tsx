@@ -92,6 +92,13 @@ export const TextTaskExtractorSheet = ({
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [hasRun, setHasRun] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Double-click / concurrent-request guard. `inFlightRef` is set synchronously
+  // on tap so a rapid second tap can't slip through before React re-renders
+  // the disabled button. `abortRef` cancels the current fetch if the sheet
+  // closes or a legitimate retry needs to supersede it.
+  const inFlightRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const lastTapAtRef = useRef(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -101,10 +108,20 @@ export const TextTaskExtractorSheet = ({
     } else {
       setMode('text'); setText(''); setPdfName(null); setPdfText('');
       setIsParsingPdf(false); setIsExtracting(false); setItems([]); setHasRun(false);
+      // Cancel any in-flight extraction and reset guards when the sheet closes.
+      if (abortRef.current) { try { abortRef.current.abort(); } catch {} abortRef.current = null; }
+      inFlightRef.current = false;
       releaseAllAiLocks();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  // Cancel on unmount too.
+  useEffect(() => () => {
+    if (abortRef.current) { try { abortRef.current.abort(); } catch {} }
+    inFlightRef.current = false;
+  }, []);
+
 
   const handlePdfUpload = async (file: File) => {
     if (!file) return;
