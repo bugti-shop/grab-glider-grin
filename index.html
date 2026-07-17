@@ -114,6 +114,25 @@
 </head>
   <body>
     <script>
+      // Instant app-store redirect for /get, /download, /app — runs before React,
+      // so users never see the landing page flash.
+      (function () {
+        try {
+          var p = location.pathname.replace(/\/+$/, '').toLowerCase();
+          if (p === '/get' || p === '/download' || p === '/app') {
+            var ios = 'https://apps.apple.com/us/app/flowist-notes-tasks-habits/id6772996510';
+            var android = 'https://play.google.com/store/apps/details?id=nota.npd.com';
+            var ua = navigator.userAgent || '';
+            var isAndroid = /android/i.test(ua);
+            var isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+            location.replace(isAndroid ? android : isIOS ? ios : ios);
+            // Stop the rest of the page from booting React
+            throw new Error('redirecting');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script>
       // Quick-Add overlay boots at /quick-add inside a translucent Android
       // activity. Force html/body/root fully transparent BEFORE React mounts
       // so the launcher shows through — no white flash during JS hydration.
