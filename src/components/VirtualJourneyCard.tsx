@@ -262,13 +262,13 @@ export const VirtualJourneyCard = () => {
                 <div
                   key={ms.id}
                   className={cn(
-                    "flex items-center gap-3.5 sm:gap-3 px-3 sm:px-4 py-3.5 sm:py-3 transition-colors",
+                    "flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2 transition-colors",
                     i > 0 && "border-t border-[#F3F4F6] dark:border-border/60",
                     isCurrent && "bg-[#EFF6FF] dark:bg-primary/10"
                   )}
                 >
                   <span className={cn(
-                    "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[13px] sm:text-[14px] font-semibold flex-shrink-0",
+                    "w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-[12px] font-semibold flex-shrink-0",
                     reached
                       ? "bg-[#3B82F6] text-white"
                       : isCurrent
@@ -278,14 +278,14 @@ export const VirtualJourneyCard = () => {
                     {reached ? '✓' : (i + 1)}
                   </span>
                   <span className={cn(
-                    "flex-1 min-w-0 truncate text-[14px] sm:text-[15px]",
+                    "flex-1 min-w-0 truncate text-[12px] sm:text-[13px]",
                     isCurrent
                       ? "font-semibold text-[#111827] dark:text-foreground"
                       : "font-medium text-[#374151] dark:text-foreground/90"
                   )}>
                     {jt.milestoneName(journey, ms)}
                   </span>
-                  <span className="text-[12px] sm:text-[13px] text-[#6B7280] dark:text-muted-foreground flex-shrink-0 whitespace-nowrap">
+                  <span className="text-[11px] sm:text-[12px] text-[#6B7280] dark:text-muted-foreground flex-shrink-0 whitespace-nowrap">
                     {currentTasks}/{msTarget} {t('common.tasks', 'tasks')}
                   </span>
                 </div>
