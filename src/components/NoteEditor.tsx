@@ -736,6 +736,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     notificationId,
     notificationIds,
     metaDescription,
+    location,
   ]);
 
   const commitNote = useCallback(async ({ full }: { full: boolean }) => {
