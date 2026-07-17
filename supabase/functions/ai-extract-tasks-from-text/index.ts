@@ -323,7 +323,9 @@ Rules:
                           priority: { type: "string", enum: ["high", "medium", "low", "none"] },
                           isUrgent: { type: "boolean" },
                           folderId: { type: ["string", "null"] },
+                          folderName: { type: ["string", "null"] },
                           sectionId: { type: ["string", "null"] },
+                          sectionName: { type: ["string", "null"] },
                           repeatType: {
                             type: "string",
                             enum: ["none","hourly","daily","weekly","weekdays","weekends","monthly","yearly"],
