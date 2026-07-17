@@ -43,6 +43,14 @@ body.flowist-task-dragging [data-flowist-virtual-list="tasks"] {
     --keyboard-inset: 0px;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    /* Responsive header system — viewport-adaptive */
+    --header-pad-x: clamp(8px, 2.5vw, 14px);
+    --header-pad-y: 6px;
+    --header-icon-btn: clamp(36px, 10vw, 40px);
+    --header-icon-size: clamp(18px, 5.2vw, 22px);
+    --header-title-size: clamp(15px, 4.4vw, 17px);
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
