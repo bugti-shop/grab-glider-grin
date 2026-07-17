@@ -1440,6 +1440,26 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           </Button>
 
           <div className="flex items-center gap-1">
+            {/* Undo / Redo */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { editorRef.current?.focus(); document.execCommand('undo'); }}
+              className={cn("app-header-btn", noteType === 'sticky' && "text-black hover:text-black")}
+              aria-label="Undo"
+            >
+              <Undo2 strokeWidth={1.75} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { editorRef.current?.focus(); document.execCommand('redo'); }}
+              className={cn("app-header-btn", noteType === 'sticky' && "text-black hover:text-black")}
+              aria-label="Redo"
+            >
+              <Redo2 strokeWidth={1.75} />
+            </Button>
+
             {/* Copy with Formatting Button - prominent for textformat notes */}
             {noteType === 'textformat' && (
               <Button
@@ -1456,6 +1476,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
               </Button>
             )}
           </div>
+
 
           <div className="flex items-center gap-0.5 shrink-0 -mr-1">
             {/* Table Picker moved to toolbar/options menu */}
