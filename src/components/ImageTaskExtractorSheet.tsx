@@ -38,7 +38,9 @@ interface ExtractedTask {
   priority: Priority;
   isUrgent?: boolean;
   folderId: string | null;
+  folderName?: string | null;
   sectionId: string | null;
+  sectionName?: string | null;
   repeatType: RepeatType;
   repeatDays?: number[];
   tags?: string[];
