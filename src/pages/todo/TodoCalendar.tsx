@@ -58,7 +58,7 @@ import { loadCountdowns, CountdownEvent } from '@/utils/countdownStorage';
 
 
 
-type ViewMode = 'flat' | 'kanban' | 'kanban-status' | 'timeline' | 'progress' | 'priority' | 'history';
+type ViewMode = 'flat' | 'kanban-status' | 'timeline' | 'progress' | 'priority' | 'history';
 
 const defaultSections: TaskSection[] = [
   { id: 'default', name: 'Tasks', color: '#3b82f6', isCollapsed: false, order: 0 }
@@ -777,8 +777,6 @@ const TodoCalendar = () => {
     switch (viewMode) {
       case 'priority':
         return renderPriorityView();
-      case 'kanban':
-        return renderKanbanView();
       case 'kanban-status':
         return renderStatusView();
       case 'timeline':
@@ -948,89 +946,6 @@ const TodoCalendar = () => {
     );
   };
 
-  const renderKanbanView = () => {
-    return (
-      <DragDropContext onDragStart={() => { isDraggingRef.current = true; }} onDragEnd={(result) => {
-        isDraggingRef.current = true;
-        if (!result.destination) return;
-        const { source, destination, draggableId } = result;
-        if (source.droppableId === destination.droppableId && source.index === destination.index) return;
-
-        const sourceSectionId = source.droppableId.replace('cal-kanban-', '');
-        const destSectionId = destination.droppableId.replace('cal-kanban-', '');
-        if (sourceSectionId !== destSectionId) {
-          handleUpdateTask(draggableId, { sectionId: destSectionId === 'default' ? undefined : destSectionId });
-          toast.success(t('todayPage.taskMoved'));
-        }
-        Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
-      }}>
-        <div className="overflow-x-auto pb-4 -mx-4 px-4">
-          <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
-            {sortedSections.map((section) => {
-              const sectionTasks = uncompletedTasks.filter(item => 
-                item.sectionId === section.id || (!item.sectionId && section.id === sections[0]?.id)
-              );
-              const kanbanId = `cal-kanban-${section.id}`;
-              const isCollapsed = collapsedViewSections.has(kanbanId);
-              return (
-                <div key={section.id} className="flex-shrink-0 w-72 bg-muted/30 rounded-xl border border-border/30 overflow-hidden">
-                  <button onClick={() => toggleViewSectionCollapse(kanbanId)} className="w-full flex items-center gap-2 px-3 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors" style={{ borderLeft: `4px solid ${section.color}` }}>
-                    <Columns3 className="h-3.5 w-3.5" style={{ color: section.color }} />
-                    <span className="text-sm font-semibold flex-1 text-left">{section.name}</span>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{sectionTasks.length}</span>
-                    {isCollapsed ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                  </button>
-                  {!isCollapsed && (
-                    <Droppable droppableId={kanbanId}>
-                      {(provided, snapshot) => (
-                        <div ref={provided.innerRef} {...provided.droppableProps} className={cn("min-h-[200px] max-h-[400px] overflow-y-auto p-2 space-y-2", snapshot.isDraggingOver && "bg-primary/5")}>
-                          {sectionTasks.length === 0 ? (
-                            <div className="py-8 text-center text-sm text-muted-foreground">{t('todayPage.dropTasksHere')}</div>
-                          ) : sectionTasks.map((task, index) => (
-                            <Draggable key={task.id} draggableId={task.id} index={index}>
-                              {(provided, snapshot) => (
-                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card rounded-lg border border-border/50 shadow-sm", snapshot.isDragging && "shadow-lg ring-2 ring-primary")}
-                                  onTouchStart={(e) => { touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
-                                  onTouchMove={(e) => { if (touchStartRef.current) { const dx = Math.abs(e.touches[0].clientX - touchStartRef.current.x); const dy = Math.abs(e.touches[0].clientY - touchStartRef.current.y); if (dx > 10 || dy > 10) isDraggingRef.current = true; } }}
-                                  onTouchEnd={() => { touchStartRef.current = null; }}
-                                >
-                                   <TaskItem item={task} onUpdate={handleUpdateTask} onDelete={handleDeleteTask} onTaskClick={handleTaskClick} onImageClick={handleImageClick} allTasks={items} hideDetails hidePriorityBorder />
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                  )}
-                </div>
-              );
-            })}
-            {/* Completed column */}
-            {showCompleted && completedTasks.length > 0 && (
-              <div className="flex-shrink-0 w-72 bg-muted/30 rounded-xl border border-border/30 overflow-hidden">
-                <button onClick={() => toggleViewSectionCollapse('cal-kanban-completed')} className="w-full flex items-center gap-2 px-3 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors" style={{ borderLeft: '4px solid #10b981' }}>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                  <span className="text-sm font-semibold flex-1 text-left text-muted-foreground uppercase tracking-wide">{t('todayPage.completed')}</span>
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{completedTasks.length}</span>
-                </button>
-                {!collapsedViewSections.has('cal-kanban-completed') && (
-                  <div className="min-h-[100px] max-h-[400px] overflow-y-auto p-2 space-y-2">
-                    {completedTasks.map(task => (
-                      <div key={task.id} className="bg-card rounded-lg border border-border/50 shadow-sm opacity-70">
-                        <TaskItem item={task} onUpdate={handleUpdateTask} onDelete={handleDeleteTask} onTaskClick={handleTaskClick} onImageClick={handleImageClick} allTasks={items} hideDetails hidePriorityBorder />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </DragDropContext>
-    );
-  };
 
   const renderStatusView = () => {
     const statusGroups: { id: TaskStatus; label: string; color: string; icon: React.ReactNode; tasks: TodoItem[] }[] = [
@@ -1482,9 +1397,6 @@ const TodoCalendar = () => {
                     <DropdownMenuContent align="end" className="w-48 bg-popover border shadow-lg z-50">
                       <DropdownMenuItem onClick={() => handleViewModeChange('flat')} className={cn("cursor-pointer", viewMode === 'flat' && "bg-accent")}>
                         <LayoutList className="h-4 w-4 mr-2" />{t('menu.flatLayout', 'Flat Layout')}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleViewModeChange('kanban')} className={cn("cursor-pointer", viewMode === 'kanban' && "bg-accent")}>
-                        <Columns3 className="h-4 w-4 mr-2" />{t('menu.kanbanBoard', 'Kanban Board')}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => { if (!requireFeature('view_mode_status_board')) return; handleViewModeChange('kanban-status'); }} className={cn("cursor-pointer", viewMode === 'kanban-status' && "bg-accent")}>
                         <ListChecks className="h-4 w-4 mr-2" />{t('menu.statusBoard', 'Status Board')}

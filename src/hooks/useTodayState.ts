@@ -26,7 +26,7 @@ import { isToday, isTomorrow, isThisWeek, isBefore, startOfDay } from 'date-fns'
 import { useStreakChallengeDialog } from '@/components/StreakChallengeDialog';
 import { useStreak } from '@/hooks/useStreak';
 
-export type ViewMode = 'flat' | 'kanban' | 'kanban-status' | 'timeline' | 'progress' | 'priority' | 'history';
+export type ViewMode = 'flat' | 'kanban-status' | 'timeline' | 'progress' | 'priority' | 'history';
 export type SortBy = 'date' | 'priority' | 'name' | 'created';
 
 const getStrictAllowedFolderIds = (folders: Folder[], selectedFolderId: string | null): string[] | undefined => {
@@ -252,7 +252,7 @@ export const useTodayState = () => {
         setPriorityFilter(g<PriorityFilter>('todoPriorityFilter', 'all'));
         setStatusFilter(g<StatusFilter>('todoStatusFilter', 'all'));
         setTagFilter(g<string[]>('todoTagFilter', []));
-        setViewMode(g<ViewMode>('todoViewMode', 'flat'));
+        { const vm = g<ViewMode | 'kanban'>('todoViewMode', 'flat'); setViewMode(vm === 'kanban' ? 'flat' : vm); }
         setHideDetailsOptions(g<HideDetailsOptions>('todoHideDetailsOptions', { hideDateTime: true, hideStatus: true, hideSubtasks: true }));
         setSortBy(g<SortBy>('todoSortBy', 'date'));
         setSmartList(g<SmartListType>('todoSmartList', 'all'));
