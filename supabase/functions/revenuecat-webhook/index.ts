@@ -17,6 +17,12 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
 
+const readRevenueCatSecret = (req: Request) => {
+  const authHeader = req.headers.get("authorization") || "";
+  const trimmed = authHeader.trim();
+  return trimmed.replace(/^Bearer\s+/i, "").trim();
+};
+
 // Events that REVOKE access immediately (no grace period for user-initiated cancels)
 const REVOKE_EVENTS = new Set([
   "EXPIRATION",
@@ -54,8 +60,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const authHeader = req.headers.get("authorization") || "";
-    if (authHeader !== `Bearer ${RC_WEBHOOK_AUTH}`) {
+    const providedSecret = readRevenueCatSecret(req);
+    if (providedSecret !== RC_WEBHOOK_AUTH.trim()) {
       console.warn("[RC Webhook] Unauthorized request");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
