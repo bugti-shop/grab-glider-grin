@@ -92,6 +92,9 @@ export const TodoOptionsDropdown = ({
   setIsSelectActionsOpen,
   viewMode,
   setViewMode,
+  canToggleExpandCollapse,
+  isAnyCollapsed,
+  onToggleExpandCollapse,
 }: TodoOptionsDropdownProps) => {
   const { t } = useTranslation();
   const [isImportOpen, setIsImportOpen] = useState(false);
