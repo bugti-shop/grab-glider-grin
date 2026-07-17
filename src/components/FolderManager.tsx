@@ -595,12 +595,10 @@ export const FolderManager = ({
                 }}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, folder.id)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all active:scale-95"
+                className="flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all active:scale-95 text-white"
                 style={{
-                  backgroundColor: selectedFolderId === folder.id
-                    ? folder.color
-                    : (folder.color && folder.color.startsWith('#') ? `${folder.color}26` : 'hsl(var(--muted))'),
-                  color: selectedFolderId === folder.id ? '#ffffff' : 'hsl(var(--foreground))',
+                  backgroundColor: folder.color,
+                  boxShadow: selectedFolderId === folder.id ? '0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5)' : undefined,
                 }}
               >
                 <FolderIcon className="w-4 h-4" />
