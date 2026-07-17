@@ -176,9 +176,10 @@ const Progress = () => {
             <div className="absolute -right-2 -bottom-16 w-56 h-56 sm:w-64 sm:h-64 rounded-full border border-white/10" />
             {/* Bottom-right soft white glow */}
             <div
-              className="absolute -right-10 -bottom-10 w-52 h-52 sm:w-64 sm:h-64 rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 65%)' }}
+              className="absolute -right-4 -bottom-4 w-28 h-28 sm:w-32 sm:h-32 rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 65%)' }}
             />
+
 
             <div className="relative z-10">
               <p className="text-6xl sm:text-7xl font-extrabold text-white leading-none tracking-tight">
