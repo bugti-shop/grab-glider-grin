@@ -66,7 +66,23 @@ interface Props {
   sections: TaskSection[];
   currentFolderId?: string | null;
   currentSectionId?: string | null;
+  /** Resolve an AI-proposed folder name → id (creating one if needed). */
+  onEnsureFolder?: (name: string) => string | null;
+  /** Resolve an AI-proposed section name → id (creating one if needed). */
+  onEnsureSection?: (name: string, folderId?: string | null) => string | null;
 }
+
+export const ImageTaskExtractorSheet = ({
+  isOpen,
+  onClose,
+  onAddTasks,
+  folders,
+  sections,
+  currentFolderId,
+  currentSectionId,
+  onEnsureFolder,
+  onEnsureSection,
+}: Props) => {
 
 export const ImageTaskExtractorSheet = ({
   isOpen,
