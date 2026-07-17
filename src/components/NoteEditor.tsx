@@ -698,6 +698,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       notificationId,
       notificationIds,
       metaDescription: metaDescription || undefined,
+      location: location || undefined,
       tagIds: noteTagIds.length > 0 ? noteTagIds : undefined,
       createdAt: note?.createdAt || combinedDateTime,
       updatedAt: new Date(),
