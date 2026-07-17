@@ -481,8 +481,12 @@ class TourManagerImpl {
     if (!nextId) return;
     // Give the just-completed action's UI a moment to render (e.g. task row
     // appears in the list) before highlighting the next feature.
+    this.chainScheduled = true;
     await this.closeTransientUi();
-    setTimeout(() => this.startTour(nextId, { chain: true, forced: wasForced }), ACTION_CHAIN_DELAY_MS);
+    setTimeout(() => {
+      this.chainScheduled = false;
+      this.startTour(nextId, { chain: true, forced: wasForced });
+    }, ACTION_CHAIN_DELAY_MS);
   }
 
 
