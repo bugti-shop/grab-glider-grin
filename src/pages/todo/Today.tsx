@@ -1151,6 +1151,8 @@ const Today = () => {
         folders={folders}
         selectedFolderId={selectedFolderId}
         onCreateFolder={handleCreateFolder}
+        onEnsureFolder={ensureFolderByName}
+        onEnsureSection={ensureSectionByName}
         sections={sections}
         inputSectionId={inputSectionId}
         selectedTask={selectedTask}
