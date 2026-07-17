@@ -367,7 +367,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         <div style={{
           position: 'absolute',
           right: s(40),
-          top: s(190),
+          top: s(210),
 
 
           display: 'flex',
