@@ -131,6 +131,10 @@ interface RichTextEditorProps {
   onFloatingImageUpload?: () => void;
   /** Optional slot rendered between the title input and the editor body (e.g. Table of Contents). */
   headerSlot?: React.ReactNode;
+  /** Optional slot rendered right below the title (e.g. location pill + date). */
+  metaSlot?: React.ReactNode;
+  /** Optional slot rendered below the editor body (e.g. hashtag pills). */
+  footerSlot?: React.ReactNode;
 }
 
 const RICH_TEXT_BLOCK_TAG_PATTERN = /^(P|DIV|H[1-6]|LI|BLOCKQUOTE)$/;
@@ -187,6 +191,8 @@ export const RichTextEditor = ({
   onVoiceRecordingDelete,
   onFloatingImageUpload,
   headerSlot,
+  metaSlot,
+  footerSlot,
 }: RichTextEditorProps) => {
   const { t } = useTranslation();
   const { isPro, requireProFeature, requireCapacity } = useSubscription();
@@ -2776,6 +2782,8 @@ export const RichTextEditor = ({
         />
       )}
 
+      {metaSlot}
+
       {headerSlot}
 
 
@@ -2865,6 +2873,10 @@ export const RichTextEditor = ({
         autoCapitalize="sentences"
         suppressContentEditableWarning
       />
+
+      {footerSlot}
+
+
 
 
       {toolbarPosition === 'bottom' && (

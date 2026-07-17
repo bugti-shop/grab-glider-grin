@@ -327,6 +327,8 @@ export interface Note {
   isProtected?: boolean;
   // Meta description for note
   metaDescription?: string;
+  /** Optional location tag shown as a blue pill under the title. */
+  location?: string;
   // File attachments
   attachments?: TaskAttachment[];
   /** Compressed gzip+base64 snapshot of the full raw HTML page (fullpage web clips). */

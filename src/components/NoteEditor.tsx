@@ -60,7 +60,7 @@ import 'katex/dist/katex.min.css';
 import { ErrorBoundary } from './ErrorBoundary';
 import { PdfExportSuccessDialog } from './PdfExportSuccessDialog';
 import { PdfExportOptionsSheet, PdfExportSettings } from './PdfExportOptionsSheet';
-import { ArrowLeft, Folder as FolderIcon, Plus, CalendarIcon, History, FileDown, Link2, ChevronDown, FileText, BookOpen, BarChart3, MoreVertical, Mic, Share2, Search, Image, Table, Minus, SeparatorHorizontal, MessageSquare, FileSymlink, FileType, Bell, Clock, Repeat, Trash2, Mail, Phone, LinkIcon, Copy, Replace, Palette, Hash, Crown, ListFilter, CaseLower, Tag as TagIcon, Camera, Sparkles, Globe, Keyboard } from 'lucide-react';
+import { ArrowLeft, Folder as FolderIcon, Plus, CalendarIcon, History, FileDown, Link2, ChevronDown, FileText, BookOpen, BarChart3, MoreVertical, Mic, Share2, Search, Image, Table, Minus, SeparatorHorizontal, MessageSquare, FileSymlink, FileType, Bell, Clock, Repeat, Trash2, Mail, Phone, LinkIcon, Copy, Replace, Palette, Hash, Crown, ListFilter, CaseLower, Tag as TagIcon, Camera, Sparkles, Globe, Keyboard, MapPin } from 'lucide-react';
 import { exportNoteToPdf, getPageBreakCount, PdfExportResult } from '@/utils/exportToPdf';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -165,6 +165,8 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
   const [noteType, setNoteType] = useState<NoteType>(defaultType);
   const [title, setTitle] = useState('');
+  const [location, setLocation] = useState('');
+  const [isLocationInputOpen, setIsLocationInputOpen] = useState(false);
   const [content, setContentState] = useState('');
   const contentRef = useRef('');
   const setContent = useCallback((val: React.SetStateAction<string>) => {
@@ -545,6 +547,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       }
       setCodeLanguage(note.codeLanguage || 'auto');
       setMetaDescription(note.metaDescription || '');
+      setLocation(note.location || '');
       
     } else {
       // Reset draft ID for new notes to prevent overwriting
@@ -608,6 +611,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       setNotificationId(undefined);
       setNotificationIds(undefined);
       setMetaDescription('');
+      setLocation('');
 
       // Reset code fields
       setCodeContent('');
@@ -695,6 +699,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       notificationId,
       notificationIds,
       metaDescription: metaDescription || undefined,
+      location: location || undefined,
       tagIds: noteTagIds.length > 0 ? noteTagIds : undefined,
       createdAt: note?.createdAt || combinedDateTime,
       updatedAt: new Date(),
@@ -731,6 +736,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     notificationId,
     notificationIds,
     metaDescription,
+    location,
   ]);
 
   const commitNote = useCallback(async ({ full }: { full: boolean }) => {
@@ -1453,6 +1459,31 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
           <div className="flex items-center gap-1">
             {/* Table Picker moved to toolbar/options menu */}
+
+            {!isReadOnlyWebClip && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={async () => {
+                  const plain = (contentRef.current || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                  const shareText = `${title || t('notes.untitled', 'Untitled')}${plain ? '\n\n' + plain : ''}`;
+                  try {
+                    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+                      await (navigator as any).share({ title: title || 'Note', text: shareText });
+                    } else {
+                      await navigator.clipboard.writeText(shareText);
+                      toast.success(t('editor.copiedToClipboard', 'Copied to clipboard'));
+                    }
+                  } catch (e) {
+                    // user cancelled or share failed silently
+                  }
+                }}
+                className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}
+                aria-label={t('common.share', 'Share')}
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
+            )}
 
             {!isReadOnlyWebClip && <DropdownMenu open={isOptionsMenuOpen} onOpenChange={setIsOptionsMenuOpen}>
               <DropdownMenuTrigger asChild>
@@ -2408,6 +2439,45 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 headerSlot={showToc ? (
                   <TableOfContents content={content} editorRef={editorRef} maxLevel={tocMaxLevel} />
                 ) : undefined}
+                metaSlot={(
+                  <div className="note-meta-row">
+                    <button
+                      type="button"
+                      className="note-location-pill"
+                      onClick={() => setIsLocationInputOpen(true)}
+                      aria-label={location ? t('editor.editLocation', 'Edit location') : t('editor.addLocation', 'Add location')}
+                    >
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span>{location || t('editor.addLocation', 'Add location')}</span>
+                    </button>
+                    <span className="note-date-text">
+                      {format(createdAt, 'MMM d')}
+                    </span>
+                  </div>
+                )}
+                footerSlot={(() => {
+                  const plain = (content || '').replace(/<[^>]+>/g, ' ');
+                  const matches = plain.match(/#[\p{L}\p{N}_]+/gu);
+                  if (!matches || matches.length === 0) return null;
+                  const unique = [...new Set(matches.map(h => h.trim()))].slice(0, 12);
+                  return (
+                    <div className="note-hashtag-pills">
+                      {unique.map((tag) => (
+                        <span key={tag} className="note-hashtag">{tag}</span>
+                      ))}
+                    </div>
+                  );
+                })()}
+              />
+              {/* Location input sheet */}
+              <InputSheetPage
+                isOpen={isLocationInputOpen}
+                onClose={() => setIsLocationInputOpen(false)}
+                onSave={(val) => setLocation(val.trim())}
+                title={t('editor.location', 'Location')}
+                placeholder={t('editor.locationPlaceholder', 'e.g. Kyoto, Japan')}
+                defaultValue={location}
+                maxLength={80}
               />
               {/* Floating images layer for regular/sticky/lined notes */}
               {(noteType === 'regular' || noteType === 'sticky' || noteType === 'textformat') && (
