@@ -950,7 +950,8 @@ body.onboarding-active [data-vaul-drawer] {
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
-  font-style: italic;
+  font-style: normal;
+
   position: absolute;
   top: 1rem;
   left: 1rem;
