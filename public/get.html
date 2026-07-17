@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Get Flowist</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<script>
+(function(){
+  var ios = "https://apps.apple.com/us/app/flowist-notes-tasks-habits/id6772996510";
+  var android = "https://play.google.com/store/apps/details?id=nota.npd.com";
+  var ua = navigator.userAgent || navigator.vendor || "";
+  var isAndroid = /android/i.test(ua);
+  var isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  var url = isAndroid ? android : isIOS ? ios : ios;
+  try { location.replace(url); } catch(e) { location.href = url; }
+})();
+</script>
+<meta http-equiv="refresh" content="0;url=https://apps.apple.com/us/app/flowist-notes-tasks-habits/id6772996510">
+<style>html,body{margin:0;background:#fff;height:100%}</style>
+</head>
+<body>
+<noscript>
+  <p style="font-family:-apple-system,sans-serif;text-align:center;padding:24px">
+    <a href="https://apps.apple.com/us/app/flowist-notes-tasks-habits/id6772996510">Download for iOS</a> ·
+    <a href="https://play.google.com/store/apps/details?id=nota.npd.com">Download for Android</a>
+  </p>
+</noscript>
+</body>
+</html>
