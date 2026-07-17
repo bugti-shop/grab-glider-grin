@@ -165,6 +165,8 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
   const [noteType, setNoteType] = useState<NoteType>(defaultType);
   const [title, setTitle] = useState('');
+  const [location, setLocation] = useState('');
+  const [isLocationInputOpen, setIsLocationInputOpen] = useState(false);
   const [content, setContentState] = useState('');
   const contentRef = useRef('');
   const setContent = useCallback((val: React.SetStateAction<string>) => {
