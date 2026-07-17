@@ -19,12 +19,14 @@ interface ExtractRequest {
   webUnlockCode?: string;
 }
 
-const AI_GATEWAY_TIMEOUT_MS = 40_000;
+const AI_GATEWAY_TIMEOUT_MS = 120_000;
 // Pro is verified server-side via entitlements plus web Stripe subscriptions.
 const STRIPE_GRACE_PERIOD_MS = 2 * 24 * 60 * 60 * 1000;
 const REVENUECAT_ENTITLEMENT_ID = "Pro";
 
-const MAX_IMAGE_BASE64_BYTES = 8 * 1024 * 1024; // ~6MB image
+// Allow large scans (dense pages of ~2000 tasks). Base64 grows ~1.37x
+// the raw byte size, so 32 MB base64 ~ 24 MB image payload.
+const MAX_IMAGE_BASE64_BYTES = 32 * 1024 * 1024;
 
 const verifyRevenueCatAccess = async (admin: any, identifiers: string[]) => {
   const rcSecret = Deno.env.get("REVENUECAT_SECRET_API_KEY");
@@ -402,9 +404,11 @@ REPEAT:
 - Recognize "every day", "daily", "every Monday", "weekly", "M-F", "weekdays", "Sat & Sun", "every month", "monthly bill", "yearly", "annual", "हर रोज़", "tous les jours", "毎日".
 - "repeatDays": for weekly/weekdays/weekends, return array of 0-6 (Sun=0..Sat=6) when specific days are written.
 
-FOLDER / SECTION:
-- Detect a folder/section label written near the task (heading at top of page, "[Work]", "Personal:", "#Home", a circled category). Map fuzzy to the available lists.
-- "folderId" / "sectionId": id from the available lists. Null otherwise.
+FOLDER / SECTION — the writer usually groups tasks under a heading:
+- Detect a folder/section label written near or above the task (page heading, "[Work]", "Personal:", "#Home", a circled category, project name).
+- If a matching folder/section already exists in the lists above, return its id in "folderId" / "sectionId".
+- If the label is NEW (not in the lists), leave "folderId"/"sectionId" null AND return the label in "folderName"/"sectionName" so the app can create it. Keep names short (≤ 30 chars), Title Case, in the writer's language.
+- If no grouping cue exists at all, leave all four null.
 
 TAGS:
 - "tags": any hashtags or @-tags ("#work", "#errand", "@home", "@call"). Return as plain strings WITHOUT the # or @.
@@ -466,7 +470,9 @@ LOCATION:
                           },
                           isUrgent: { type: "boolean" },
                           folderId: { type: ["string", "null"] },
+                          folderName: { type: ["string", "null"] },
                           sectionId: { type: ["string", "null"] },
+                          sectionName: { type: ["string", "null"] },
                           repeatType: {
                             type: "string",
                             enum: [

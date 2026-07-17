@@ -20,7 +20,7 @@ interface ExtractRequest {
   webUnlockCode?: string;
 }
 
-const AI_GATEWAY_TIMEOUT_MS = 60_000;
+const AI_GATEWAY_TIMEOUT_MS = 120_000;
 // Pro is verified server-side via entitlements plus web Stripe subscriptions.
 const STRIPE_GRACE_PERIOD_MS = 2 * 24 * 60 * 60 * 1000;
 const REVENUECAT_ENTITLEMENT_ID = "Pro";
@@ -161,7 +161,9 @@ function mergeTask(a: any, b: any): any {
     priority: (priRank[a.priority] ?? 0) >= (priRank[b.priority] ?? 0) ? a.priority : b.priority,
     isUrgent: Boolean(a.isUrgent || b.isUrgent),
     folderId: pick(a.folderId, b.folderId),
+    folderName: pick(a.folderName, b.folderName),
     sectionId: pick(a.sectionId, b.sectionId),
+    sectionName: pick(a.sectionName, b.sectionName),
     repeatType: repeatRank(a.repeatType) >= repeatRank(b.repeatType) ? a.repeatType : b.repeatType,
     repeatDays: mergedRepeatDays.length ? mergedRepeatDays : undefined,
     tags: mergedTags.length ? mergedTags : undefined,
@@ -276,7 +278,7 @@ Rules:
 - "isUrgent": true only for strongest cues (URGENT, ASAP, !!!, critical).
 - "repeatType": none|hourly|daily|weekly|weekdays|weekends|monthly|yearly. Detect "every Monday", "daily standup", "monthly report", etc.
 - "repeatDays": 0-6 (Sun=0..Sat=6) for weekly/weekdays/weekends with specific days.
-- "folderId" / "sectionId": fuzzy match to available lists. Null otherwise.
+- FOLDER / SECTION: fuzzy match to available lists → return "folderId"/"sectionId". If the source clearly implies a NEW folder/section (project name, subject line, category heading) that is not in the lists, leave the id null AND set "folderName"/"sectionName" so the app can auto-create it. Keep the name short (≤ 30 chars). If no grouping cue exists, leave all four null.
 - "tags": hashtags (#work), @mentions of contexts (@home), or topical keywords. No # or @ prefix.
 - "location": any place mentioned. Null otherwise.
 - Return [] if nothing actionable is found.
@@ -321,7 +323,9 @@ Rules:
                           priority: { type: "string", enum: ["high", "medium", "low", "none"] },
                           isUrgent: { type: "boolean" },
                           folderId: { type: ["string", "null"] },
+                          folderName: { type: ["string", "null"] },
                           sectionId: { type: ["string", "null"] },
+                          sectionName: { type: ["string", "null"] },
                           repeatType: {
                             type: "string",
                             enum: ["none","hourly","daily","weekly","weekdays","weekends","monthly","yearly"],

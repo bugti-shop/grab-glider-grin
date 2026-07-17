@@ -420,6 +420,7 @@ const Today = () => {
 
   const {
     handleCreateFolder, handleEditFolder, handleDeleteFolder, handleReorderFolders, handleToggleFolderFavorite,
+    ensureFolderByName, ensureSectionByName,
     handleAddSection, handleEditSection, handleSaveSection, handleDeleteSection,
     handleDuplicateSection, handleMoveSection, handleToggleSectionCollapse,
     handleAddTaskToSection, handleSectionDragEnd,
@@ -1150,6 +1151,8 @@ const Today = () => {
         folders={folders}
         selectedFolderId={selectedFolderId}
         onCreateFolder={handleCreateFolder}
+        onEnsureFolder={ensureFolderByName}
+        onEnsureSection={ensureSectionByName}
         sections={sections}
         inputSectionId={inputSectionId}
         selectedTask={selectedTask}

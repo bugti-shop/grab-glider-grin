@@ -85,6 +85,10 @@ interface TaskInputSheetProps {
   folders: Folder[];
   selectedFolderId?: string | null;
   onCreateFolder: (name: string, color: string) => void;
+  /** AI extractor: resolve or auto-create a folder by name; returns id. */
+  onEnsureFolder?: (name: string) => string | null;
+  /** AI extractor: resolve or auto-create a section by name; returns id. */
+  onEnsureSection?: (name: string, folderId?: string | null) => string | null;
   sections?: TaskSection[];
   selectedSectionId?: string | null;
   defaultDate?: Date; // New prop for calendar auto-assignment
@@ -93,7 +97,7 @@ interface TaskInputSheetProps {
   autoOpenScanner?: boolean;
 }
 
-export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders, selectedFolderId, onCreateFolder, sections = [], selectedSectionId, defaultDate, preventBackdropClose = false, autoOpenScanner = false }: TaskInputSheetProps) => {
+export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders, selectedFolderId, onCreateFolder, onEnsureFolder, onEnsureSection, sections = [], selectedSectionId, defaultDate, preventBackdropClose = false, autoOpenScanner = false }: TaskInputSheetProps) => {
   const { t } = useTranslation();
 
   // Keep the sheet open across consecutive task adds. After handleSend fires
@@ -1812,6 +1816,8 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
           sections={sections}
           currentFolderId={folderId ?? selectedFolderId ?? null}
           currentSectionId={sectionId ?? selectedSectionId ?? null}
+          onEnsureFolder={onEnsureFolder}
+          onEnsureSection={onEnsureSection}
         />
       </SafeComponent>
       <SafeComponent fallback={null}>
@@ -1823,6 +1829,8 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
           sections={sections}
           currentFolderId={folderId ?? selectedFolderId ?? null}
           currentSectionId={sectionId ?? selectedSectionId ?? null}
+          onEnsureFolder={onEnsureFolder}
+          onEnsureSection={onEnsureSection}
         />
       </SafeComponent>
     </>

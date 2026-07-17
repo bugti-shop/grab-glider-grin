@@ -38,7 +38,9 @@ interface ExtractedTask {
   priority: Priority;
   isUrgent?: boolean;
   folderId: string | null;
+  folderName?: string | null;
   sectionId: string | null;
+  sectionName?: string | null;
   repeatType: RepeatType;
   repeatDays?: number[];
   tags?: string[];
@@ -64,6 +66,10 @@ interface Props {
   sections: TaskSection[];
   currentFolderId?: string | null;
   currentSectionId?: string | null;
+  /** Resolve an AI-proposed folder name → id (creating one if needed). */
+  onEnsureFolder?: (name: string) => string | null;
+  /** Resolve an AI-proposed section name → id (creating one if needed). */
+  onEnsureSection?: (name: string, folderId?: string | null) => string | null;
 }
 
 export const ImageTaskExtractorSheet = ({
@@ -74,6 +80,8 @@ export const ImageTaskExtractorSheet = ({
   sections,
   currentFolderId,
   currentSectionId,
+  onEnsureFolder,
+  onEnsureSection,
 }: Props) => {
   const { t, i18n } = useTranslation();
   const { requireFeature } = useSubscription();
@@ -226,7 +234,9 @@ export const ImageTaskExtractorSheet = ({
           priority: (tk.priority || 'none') as Priority,
           isUrgent: Boolean(tk.isUrgent),
           folderId: tk.folderId || null,
+          folderName: tk.folderName || null,
           sectionId: tk.sectionId || null,
+          sectionName: tk.sectionName || null,
           repeatType: (tk.repeatType || 'none') as RepeatType,
           repeatDays: Array.isArray(tk.repeatDays) ? tk.repeatDays : undefined,
           tags: Array.isArray(tk.tags) ? tk.tags : undefined,
@@ -381,20 +391,31 @@ export const ImageTaskExtractorSheet = ({
     }
 
     const newTasks: Array<Omit<TodoItem, 'id' | 'completed'>> = selected.map(
-      (it) => ({
-        text: it.title.trim(),
-        description: it.description || undefined,
-        priority: it.priority,
-        dueDate: it.dueDateIso ? new Date(it.dueDateIso) : undefined,
-        reminderTime: it.reminderIso ? new Date(it.reminderIso) : undefined,
-        repeatType: it.repeatType,
-        repeatDays: it.repeatDays && it.repeatDays.length ? it.repeatDays : undefined,
-        tags: it.tags && it.tags.length ? it.tags : undefined,
-        location: it.location || undefined,
-        isUrgent: it.isUrgent || undefined,
-        folderId: it.folderId || currentFolderId || undefined,
-        sectionId: it.sectionId || currentSectionId || undefined,
-      }),
+      (it) => {
+        // Resolve AI-proposed folder/section names to real ids (auto-creating).
+        let resolvedFolderId = it.folderId || null;
+        if (!resolvedFolderId && it.folderName && onEnsureFolder) {
+          resolvedFolderId = onEnsureFolder(it.folderName);
+        }
+        let resolvedSectionId = it.sectionId || null;
+        if (!resolvedSectionId && it.sectionName && onEnsureSection) {
+          resolvedSectionId = onEnsureSection(it.sectionName, resolvedFolderId);
+        }
+        return {
+          text: it.title.trim(),
+          description: it.description || undefined,
+          priority: it.priority,
+          dueDate: it.dueDateIso ? new Date(it.dueDateIso) : undefined,
+          reminderTime: it.reminderIso ? new Date(it.reminderIso) : undefined,
+          repeatType: it.repeatType,
+          repeatDays: it.repeatDays && it.repeatDays.length ? it.repeatDays : undefined,
+          tags: it.tags && it.tags.length ? it.tags : undefined,
+          location: it.location || undefined,
+          isUrgent: it.isUrgent || undefined,
+          folderId: resolvedFolderId || currentFolderId || undefined,
+          sectionId: resolvedSectionId || currentSectionId || undefined,
+        };
+      },
     );
 
     onAddTasks(newTasks);
