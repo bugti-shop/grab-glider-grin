@@ -248,44 +248,53 @@ const Progress = () => {
         <SafeComponent fallback={null}>
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <CheckSquare className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-primary" />
                 </div>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.tasksDone', 'Tasks Done')}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.tasksDone', 'Tasks Done')}</p>
+                  <p className="text-xl sm:text-2xl font-bold leading-tight">{lifetimeCompleted}</p>
+                </div>
               </div>
-              <p className="text-xl sm:text-2xl font-bold mt-1.5">{lifetimeCompleted}</p>
             </div>
 
             <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-success/15 flex items-center justify-center flex-shrink-0">
                   <Clock className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-success" />
                 </div>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.focusTime', 'Focus Time')}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.focusTime', 'Focus Time')}</p>
+                  <p className="text-xl sm:text-2xl font-bold leading-tight">0h</p>
+                </div>
               </div>
-              <p className="text-xl sm:text-2xl font-bold mt-1.5">0h</p>
             </div>
 
             <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
                   <FileText className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-purple-500" />
                 </div>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.notes', 'Notes')}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.notes', 'Notes')}</p>
+                  <p className="text-xl sm:text-2xl font-bold leading-tight">{weekStats.completed}</p>
+                </div>
               </div>
-              <p className="text-xl sm:text-2xl font-bold mt-1.5">{weekStats.completed}</p>
             </div>
 
             <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
-              <div className="flex items-center gap-2">
+              <div className="flex items-start gap-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                   <Sprout className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-amber-600" />
                 </div>
-                <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.habits', 'Habits')}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.habits', 'Habits')}</p>
+                  <p className="text-xl sm:text-2xl font-bold leading-tight">0</p>
+                </div>
               </div>
-              <p className="text-xl sm:text-2xl font-bold mt-1.5">0</p>
             </div>
+
 
           </div>
         </SafeComponent>
