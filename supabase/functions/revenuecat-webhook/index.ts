@@ -17,10 +17,19 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
 
+const normalizeWebhookSecret = (value: string) => {
+  return value
+    .trim()
+    .replace(/^Bearer\s+/i, "")
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .trim();
+};
+
 const readRevenueCatSecret = (req: Request) => {
   const authHeader = req.headers.get("authorization") || "";
-  const trimmed = authHeader.trim();
-  return trimmed.replace(/^Bearer\s+/i, "").trim();
+  return normalizeWebhookSecret(authHeader);
 };
 
 // Events that REVOKE access immediately (no grace period for user-initiated cancels)
@@ -60,9 +69,16 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const expectedSecret = normalizeWebhookSecret(RC_WEBHOOK_AUTH);
     const providedSecret = readRevenueCatSecret(req);
-    if (providedSecret !== RC_WEBHOOK_AUTH.trim()) {
-      console.warn("[RC Webhook] Unauthorized request");
+    if (providedSecret !== expectedSecret) {
+      const authHeader = req.headers.get("authorization") || "";
+      console.warn("[RC Webhook] Unauthorized request", {
+        hasAuthorizationHeader: Boolean(authHeader),
+        usesBearerPrefix: /^Bearer\s+/i.test(authHeader.trim()),
+        providedLength: providedSecret.length,
+        expectedLength: expectedSecret.length,
+      });
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
