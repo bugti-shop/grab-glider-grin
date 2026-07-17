@@ -393,18 +393,24 @@ const Progress = () => {
 
             <div className="w-full h-72 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 12, right: 20, left: -6, bottom: 6 }}>
-                  <CartesianGrid stroke="#E5E7EB" strokeDasharray="4 4" vertical={false} />
+                <AreaChart data={chartData} margin={{ top: 12, right: 16, left: -6, bottom: 6 }}>
+                  <defs>
+                    <linearGradient id="lovableAreaFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="hsl(var(--border))" strokeOpacity={0.35} vertical={false} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: 12, fill: '#6B7280' }}
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                     tickLine={false}
-                    axisLine={{ stroke: '#E5E7EB' }}
+                    axisLine={false}
                     tickMargin={10}
                     interval={Math.max(0, Math.floor(chartData.length / 5) - 1)}
                   />
                   <YAxis
-                    tick={{ fontSize: 12, fill: '#6B7280' }}
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                     tickLine={false}
                     axisLine={false}
                     width={32}
@@ -412,26 +418,28 @@ const Progress = () => {
                     tickMargin={6}
                   />
                   <Tooltip
-                    cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '3 3' }}
+                    cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeOpacity: 0.5 }}
                     contentStyle={{
-                      background: '#FFFFFF',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: 10,
+                      background: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: 12,
                       fontSize: 13,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                      color: 'hsl(var(--foreground))',
                     }}
-                    labelStyle={{ color: '#6B7280', fontWeight: 500 }}
+                    labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
                     formatter={(v: number) => [v, t('streak.tasks', 'tasks')]}
                   />
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="value"
                     stroke="#3B82F6"
                     strokeWidth={2.5}
-                    dot={{ r: 3.5, fill: '#3B82F6', stroke: '#3B82F6', strokeWidth: 0 }}
-                    activeDot={{ r: 6, fill: '#3B82F6', stroke: '#FFFFFF', strokeWidth: 2 }}
+                    fill="url(#lovableAreaFill)"
+                    activeDot={{ r: 5, fill: '#3B82F6', stroke: '#FFFFFF', strokeWidth: 2 }}
                   />
-                </LineChart>
+                </AreaChart>
+
               </ResponsiveContainer>
             </div>
           </div>
