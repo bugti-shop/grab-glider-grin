@@ -420,6 +420,7 @@ const Today = () => {
 
   const {
     handleCreateFolder, handleEditFolder, handleDeleteFolder, handleReorderFolders, handleToggleFolderFavorite,
+    ensureFolderByName, ensureSectionByName,
     handleAddSection, handleEditSection, handleSaveSection, handleDeleteSection,
     handleDuplicateSection, handleMoveSection, handleToggleSectionCollapse,
     handleAddTaskToSection, handleSectionDragEnd,
