@@ -184,7 +184,7 @@ export const VirtualJourneyCard = () => {
           className="bg-white dark:bg-card rounded-2xl p-3 sm:p-6 border border-[#E5E7EB] dark:border-border shadow-sm w-full"
         >
           {/* Header row */}
-          <div className="flex items-start justify-between gap-3 mb-5">
+          <div className="flex items-start justify-between gap-3 mb-3 sm:mb-5">
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-3xl leading-none flex-shrink-0">{journey.emoji}</span>
               <div className="min-w-0">
