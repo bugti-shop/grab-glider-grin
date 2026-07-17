@@ -2424,6 +2424,61 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
             </div>
           ) : (
             <div className="relative flex-1 min-h-0 flex flex-col">
+              {/* Notebook + Tag meta row (above title) */}
+              {!isReadOnlyWebClip && (
+                <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-1 text-sm text-muted-foreground">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 min-w-0 hover:text-foreground transition-colors"
+                        aria-label="Select notebook"
+                      >
+                        <NotebookText className="h-4 w-4 shrink-0" />
+                        <span className="truncate">
+                          {folders.find((f) => f.id === selectedFolderId)?.name || t('editor.selectNotebook', 'Select Notebook')}
+                        </span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 bg-card z-50 max-h-[60vh] overflow-y-auto">
+                      {folders.map((folder) => (
+                        <DropdownMenuItem
+                          key={folder.id}
+                          onClick={() => {
+                            setSelectedFolderId(folder.id);
+                            setTimeout(() => handleSaveRef.current?.(), 100);
+                          }}
+                          className={cn(selectedFolderId === folder.id && "bg-accent")}
+                        >
+                          <span
+                            className="h-3 w-3 rounded-full mr-2 flex-shrink-0"
+                            style={{ backgroundColor: folder.color || '#3B82F6' }}
+                          />
+                          <span className="truncate">{folder.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuItem onClick={() => setIsNewFolderDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        {t('notes.newFolder', 'New notebook')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowTagSheet(true)}
+                    className="inline-flex items-center gap-1.5 shrink-0 hover:text-foreground transition-colors"
+                    aria-label="Add tag"
+                  >
+                    <TagIcon className="h-4 w-4" />
+                    <span>
+                      {noteTagIds.length > 0
+                        ? t('editor.tagsCount', { count: noteTagIds.length, defaultValue: `${noteTagIds.length} tag${noteTagIds.length === 1 ? '' : 's'}` })
+                        : t('editor.addTag', 'Add tag')}
+                    </span>
+                  </button>
+                </div>
+              )}
               <RichTextEditor
                 content={content}
                 onChange={setContent}
