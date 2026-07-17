@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { TodoLayout } from './TodoLayout';
 import { useStreak } from '@/hooks/useStreak';
 import { cn } from '@/lib/utils';
-import { Flame, Check, Snowflake, Trophy, Zap, TrendingUp, Calendar, Gift, Clock, Award, CheckSquare, FileText, Sprout } from 'lucide-react';
+import { Flame, Check, Snowflake, Trophy, Zap, TrendingUp, Calendar, Gift, Clock, Award, CheckSquare, FileText, Sprout, Droplet } from 'lucide-react';
+import { Suspense, lazy } from 'react';
+import { useUserProfile } from '@/hooks/useUserProfile';
+const QRCodeSVG = lazy(() => import('qrcode.react').then(m => ({ default: m.QRCodeSVG })));
 import { loadTodoItems } from '@/utils/todoItemsStorage';
 import { countCompletedTasksInDB } from '@/utils/taskStorage';
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -25,6 +28,7 @@ const Progress = () => {
   const { t } = useTranslation();
   const { openPaywall } = useSubscription();
   const { data, isLoading, completedToday, atRisk, status, weekData, gracePeriodRemaining, isPro } = useStreak();
+  const { profile } = useUserProfile();
   useFirstVisitTour('/todo/progress');
   useEffect(() => {
     // Mark Progress tab visit for the onboarding checklist auto-check.
@@ -164,30 +168,67 @@ const Progress = () => {
     <TodoLayout title={t('nav.progress', 'Progress')}>
       <div className="container mx-auto px-4 sm:px-5 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-2xl">
         
-        {/* Blue Streak Hero Card */}
+        {/* Blue Certificate Streak Card — pixel-matched to reference */}
         <SafeComponent fallback={null}>
           <button
             onClick={() => setShowStreakDetail(true)}
-            className="relative w-full rounded-3xl p-6 sm:p-8 text-left overflow-hidden shadow-md active:scale-[0.99] transition-transform"
-            style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
+            className="relative w-full rounded-3xl text-left overflow-hidden shadow-md active:scale-[0.99] transition-transform"
+            style={{ background: '#3B82F6' }}
           >
-            {/* Decorative rings */}
-            <div className="absolute -right-8 -bottom-8 w-40 h-40 sm:w-48 sm:h-48 rounded-full border border-white/15" />
-            <div className="absolute -right-2 -bottom-16 w-56 h-56 sm:w-64 sm:h-64 rounded-full border border-white/10" />
+            <div className="relative p-6 sm:p-7">
+              {/* Droplet decoration */}
+              <Droplet
+                className="absolute top-6 right-6 h-16 w-16 sm:h-20 sm:w-20 text-white/25"
+                strokeWidth={1.5}
+                fill="rgba(255,255,255,0.18)"
+              />
 
-            <div className="relative z-10">
-              <p className="text-7xl sm:text-8xl font-extrabold text-white leading-none tracking-tight">
+              <p className="text-white text-[15px] sm:text-base font-normal leading-none">
+                {t('streak.imOnA', "I'm on a")}
+              </p>
+              <p className="text-white text-[88px] sm:text-[104px] font-extrabold leading-[0.9] tracking-tight mt-1">
                 {data?.currentStreak || 0}
               </p>
-              <div className="flex items-center gap-2 mt-3 sm:mt-4">
-                <span className="text-lg sm:text-xl font-semibold text-white">
-                  {t('streak.dayStreak', 'Day Streak')}
-                </span>
-                <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-orange-300 fill-orange-400" />
-              </div>
-              {(data?.currentStreak || 0) > 0 && (data?.currentStreak || 0) >= (data?.longestStreak || 0) && (
-                <p className="text-xs sm:text-sm font-medium text-white/90 mt-2">New Personal Best! 🎉</p>
+              <p className="text-white text-[20px] sm:text-[22px] font-bold leading-tight mt-2 max-w-[70%]">
+                {t('streak.dayProductivityStreak', 'day productivity streak')}
+              </p>
+              {profile?.name && (
+                <p className="text-white/85 text-[13px] font-normal mt-1.5">{profile.name}</p>
               )}
+
+              {/* Stats row + QR */}
+              <div className="flex items-end justify-between mt-6 gap-4">
+                <div className="flex items-stretch gap-4">
+                  <div>
+                    <p className="text-white text-[30px] sm:text-[32px] font-bold leading-none">{lifetimeCompleted}</p>
+                    <p className="text-white/85 text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase mt-1.5">
+                      {t('streak.tasksDone', 'Tasks Done')}
+                    </p>
+                  </div>
+                  <div className="w-px bg-white/25 mx-1" />
+                  <div>
+                    <p className="text-white text-[30px] sm:text-[32px] font-bold leading-none">{data?.longestStreak || 0}</p>
+                    <p className="text-white/85 text-[10px] sm:text-[11px] font-semibold tracking-wider uppercase mt-1.5">
+                      {t('streak.bestStreak', 'Best Streak')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-1 shrink-0">
+                  <div className="bg-white p-1.5 rounded-lg">
+                    <Suspense fallback={<div className="w-[56px] h-[56px] bg-white" />}>
+                      <QRCodeSVG
+                        value={typeof window !== 'undefined' ? window.location.origin : 'https://flowist.me'}
+                        size={56}
+                        level="L"
+                        bgColor="#FFFFFF"
+                        fgColor="#000000"
+                      />
+                    </Suspense>
+                  </div>
+                  <p className="text-white text-[11px] font-semibold leading-none">Flowist</p>
+                </div>
+              </div>
             </div>
           </button>
         </SafeComponent>
