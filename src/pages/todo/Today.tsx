@@ -845,12 +845,11 @@ const Today = () => {
   return (
     <TodoLayout title="Flowist" searchValue={viewModeSearch} onSearchChange={(val) => startTransition(() => setViewModeSearch(val))}>
       <TodayTourTrigger />
-      <main className="py-3 pb-32">
+      <main className="pt-1 pb-32">
         <h1 className="sr-only">Flowist — Today's Tasks &amp; Daily Planner</h1>
-        
 
         {/* Folders — full width to align with search bar */}
-        <div className="mb-4" data-tour="todo-folders-section">
+        <div className="mb-2" data-tour="todo-folders-section">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold flex items-center gap-2"><FolderIcon className="h-5 w-5" />{t('menu.folders')}</h2>
@@ -896,10 +895,38 @@ const Today = () => {
                   setIsSelectActionsOpen={setIsSelectActionsOpen}
                   viewMode={viewMode}
                   setViewMode={setViewMode}
+                  canToggleExpandCollapse={['flat', 'timeline', 'progress', 'priority', 'history'].includes(viewMode)}
+                  isAnyCollapsed={collapsedViewSections.size > 0}
+                  onToggleExpandCollapse={() => {
+                    if (collapsedViewSections.size > 0) {
+                      setCollapsedViewSections(new Set());
+                      return;
+                    }
+                    const allSectionIds = new Set<string>();
+                    if (viewMode === 'flat') {
+                      if (groupByOption !== 'none') {
+                        if (groupByOption === 'section') sortedSections.forEach(s => allSectionIds.add(`group-section-${s.id}`));
+                        else if (groupByOption === 'priority') ['high', 'medium', 'low', 'none'].forEach(id => allSectionIds.add(`group-priority-${id}`));
+                        else if (groupByOption === 'date') ['overdue', 'today', 'tomorrow', 'this-week', 'later', 'no-date'].forEach(id => allSectionIds.add(`group-date-${id}`));
+                      } else {
+                        sortedSections.forEach(s => allSectionIds.add(`flat-${s.id}`));
+                      }
+                    } else if (viewMode === 'timeline') {
+                      ['timeline-overdue', 'timeline-today', 'timeline-tomorrow', 'timeline-thisweek', 'timeline-later', 'timeline-nodate'].forEach(id => allSectionIds.add(id));
+                    } else if (viewMode === 'progress') {
+                      ['progress-notstarted', 'progress-inprogress', 'progress-almostdone'].forEach(id => allSectionIds.add(id));
+                    } else if (viewMode === 'priority') {
+                      ['priority-high', 'priority-medium', 'priority-low', 'priority-none'].forEach(id => allSectionIds.add(id));
+                    } else if (viewMode === 'history') {
+                      ['history-completed-today', 'history-completed-yesterday', 'history-this-week', 'history-older'].forEach(id => allSectionIds.add(id));
+                    }
+                    allSectionIds.add('view-completed');
+                    setCollapsedViewSections(allSectionIds);
+                  }}
                 />
               </div>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
 
               <DragDropContext onDragEnd={(result: DropResult) => {
                 if (!result.destination) return;
@@ -914,6 +941,8 @@ const Today = () => {
                     <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-2">
                       {[...folders].sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0)).map((folder, index) => {
                         const isSelected = selectedFolderId === folder.id;
+                        const chipColor = folder.color || '#6b7280';
+                        const chipTint = chipColor.startsWith('#') ? `${chipColor}26` : chipColor;
                         return (
                           <Draggable key={folder.id} draggableId={`folder-chip-${folder.id}`} index={index}>
                             {(dragProvided, snapshot) => (
@@ -921,11 +950,14 @@ const Today = () => {
                                 ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                 onClick={() => setSelectedFolderId(folder.id)}
                                 onContextMenu={(e) => { e.preventDefault(); handleToggleFolderFavorite(folder.id); }}
-                                className={cn("flex items-center gap-2 px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0", isSelected ? "text-primary-foreground" : "hover:opacity-80 text-foreground", !isSelected && "bg-muted", snapshot.isDragging && "shadow-lg opacity-90 ring-2 ring-primary/30")}
-                                style={{ ...(isSelected ? { backgroundColor: folder.color } : undefined), ...dragProvided.draggableProps.style }}
+                                className={cn("flex items-center gap-2 px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0", isSelected ? "text-primary-foreground" : "text-foreground hover:opacity-90", snapshot.isDragging && "shadow-lg opacity-90 ring-2 ring-primary/30")}
+                                style={{
+                                  backgroundColor: isSelected ? chipColor : chipTint,
+                                  ...dragProvided.draggableProps.style,
+                                }}
                               >
                                 {folder.isFavorite && <Star className="h-3.5 w-3.5 fill-current" />}
-                                <FolderIcon className="h-4 w-4" />{folder.name}
+                                <FolderIcon className="h-4 w-4" style={{ color: isSelected ? undefined : chipColor }} />{folder.name}
                               </button>
                             )}
                           </Draggable>
@@ -938,6 +970,7 @@ const Today = () => {
               </DragDropContext>
             </div>
           </div>
+
 
 
         <div className="max-w-2xl mx-auto md:max-w-none md:mx-0">
@@ -954,39 +987,9 @@ const Today = () => {
             </div>
           )}
 
-          {/* Collapse All / Expand All */}
-          {['flat', 'timeline', 'progress', 'priority', 'history'].includes(viewMode) && (
-            <div className="mb-4 flex justify-end">
-              <Button variant="outline" size="sm" onClick={() => {
-                if (collapsedViewSections.size > 0) {
-                  setCollapsedViewSections(new Set());
-                } else {
-                  const allSectionIds = new Set<string>();
-                  if (viewMode === 'flat') {
-                    if (groupByOption !== 'none') {
-                      if (groupByOption === 'section') sortedSections.forEach(s => allSectionIds.add(`group-section-${s.id}`));
-                      else if (groupByOption === 'priority') ['high', 'medium', 'low', 'none'].forEach(id => allSectionIds.add(`group-priority-${id}`));
-                      else if (groupByOption === 'date') ['overdue', 'today', 'tomorrow', 'this-week', 'later', 'no-date'].forEach(id => allSectionIds.add(`group-date-${id}`));
-                    } else {
-                      sortedSections.forEach(s => allSectionIds.add(`flat-${s.id}`));
-                    }
-                  } else if (viewMode === 'timeline') {
-                    ['timeline-overdue', 'timeline-today', 'timeline-tomorrow', 'timeline-thisweek', 'timeline-later', 'timeline-nodate'].forEach(id => allSectionIds.add(id));
-                  } else if (viewMode === 'progress') {
-                    ['progress-notstarted', 'progress-inprogress', 'progress-almostdone'].forEach(id => allSectionIds.add(id));
-                  } else if (viewMode === 'priority') {
-                    ['priority-high', 'priority-medium', 'priority-low', 'priority-none'].forEach(id => allSectionIds.add(id));
-                  } else if (viewMode === 'history') {
-                    ['history-completed-today', 'history-completed-yesterday', 'history-this-week', 'history-older'].forEach(id => allSectionIds.add(id));
-                  }
-                  allSectionIds.add('view-completed');
-                  setCollapsedViewSections(allSectionIds);
-                }
-              }} className="gap-1 whitespace-nowrap">
-                {collapsedViewSections.size > 0 ? <><ChevronDown className="h-4 w-4" />{t('sections.expandAll')}</> : <><ChevronRight className="h-4 w-4" />{t('sections.collapseAll')}</>}
-              </Button>
-            </div>
-          )}
+          {/* Collapse All / Expand All moved to the options dropdown */}
+
+
 
           {/* Tasks by View Mode */}
           {processedItems.length === 0 ? (

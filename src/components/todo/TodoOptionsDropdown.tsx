@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sparkles, Flame, Clock, Calendar as CalendarIcon2, Upload, Download } from 'lucide-react';
-import { MoreVertical, Eye, EyeOff, Filter, Copy, MousePointer2, Settings, LayoutList, LayoutGrid, ListPlus, ArrowUpDown, Columns3, GitBranch, Flag, ChevronRight, Trash2, ListChecks, Crown } from 'lucide-react';
+import { MoreVertical, Eye, EyeOff, Filter, Copy, MousePointer2, Settings, LayoutList, LayoutGrid, ListPlus, ArrowUpDown, Columns3, GitBranch, Flag, ChevronRight, ChevronDown, ChevronsUpDown, Trash2, ListChecks, Crown } from 'lucide-react';
 import { Plus as PlusIcon, FolderIcon, ArrowDownAZ } from 'lucide-react';
 import { toast } from 'sonner';
 import { loadCustomSmartViews, deleteCustomSmartView } from '@/utils/customSmartViews';
@@ -50,6 +50,9 @@ interface TodoOptionsDropdownProps {
   setIsSelectActionsOpen: (v: boolean) => void;
   viewMode: string;
   setViewMode: (v: any) => void;
+  canToggleExpandCollapse?: boolean;
+  isAnyCollapsed?: boolean;
+  onToggleExpandCollapse?: () => void;
 }
 
 export const TodoOptionsDropdown = ({
@@ -89,6 +92,9 @@ export const TodoOptionsDropdown = ({
   setIsSelectActionsOpen,
   viewMode,
   setViewMode,
+  canToggleExpandCollapse,
+  isAnyCollapsed,
+  onToggleExpandCollapse,
 }: TodoOptionsDropdownProps) => {
   const { t } = useTranslation();
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -141,6 +147,12 @@ export const TodoOptionsDropdown = ({
                 <span className="flex-1">{t('menu.addMultipleTasks')}</span>
                 <Crown className="h-3.5 w-3.5 ml-2" fill="#FFD700" color="#FFD700" />
               </DropdownMenuItem>
+              {canToggleExpandCollapse && onToggleExpandCollapse && (
+                <DropdownMenuItem onClick={onToggleExpandCollapse} className="cursor-pointer">
+                  {isAnyCollapsed ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronsUpDown className="h-4 w-4 mr-2" />}
+                  {isAnyCollapsed ? t('sections.expandAll', 'Expand all') : t('sections.collapseAll', 'Collapse all')}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem data-tour="todo-menu-add-section" onClick={() => handleAddSection('below')} className="cursor-pointer"><PlusIcon className="h-4 w-4 mr-2" />{t('menu.sections')}</DropdownMenuItem>
               <DropdownMenuItem data-tour="todo-menu-manage-folders" onClick={() => setIsFolderManageOpen(true)} className="cursor-pointer"><FolderIcon className="h-4 w-4 mr-2" />{t('menu.folders')}</DropdownMenuItem>
