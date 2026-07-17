@@ -240,7 +240,7 @@ export const VirtualJourneyCard = () => {
           </div>
 
           {/* Next location label */}
-          <div className="flex items-center gap-1.5 mb-4">
+          <div className="flex items-center gap-1.5 mb-2.5 sm:mb-4">
             <MapPin className="h-4 w-4 text-[#3B82F6] flex-shrink-0" />
             <span className="text-[13px] font-medium text-[#111827] dark:text-foreground">
               {isComplete
