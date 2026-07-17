@@ -925,7 +925,7 @@ const Today = () => {
                                 onContextMenu={(e) => { e.preventDefault(); handleToggleFolderFavorite(folder.id); }}
                                 className={cn("flex items-center gap-2 px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0", isSelected ? "text-primary-foreground" : "text-foreground hover:opacity-90", snapshot.isDragging && "shadow-lg opacity-90 ring-2 ring-primary/30")}
                                 style={{
-                                  backgroundColor: isSelected ? chipColor : `${chipColor}26`,
+                                  backgroundColor: isSelected ? chipColor : chipTint,
                                   ...dragProvided.draggableProps.style,
                                 }}
                               >
