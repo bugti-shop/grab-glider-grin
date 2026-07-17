@@ -2782,6 +2782,8 @@ export const RichTextEditor = ({
         />
       )}
 
+      {metaSlot}
+
       {headerSlot}
 
 
