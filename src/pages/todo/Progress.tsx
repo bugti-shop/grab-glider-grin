@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTranslation } from 'react-i18next';
 import { TodoLayout } from './TodoLayout';
 import { useStreak } from '@/hooks/useStreak';
 import { cn } from '@/lib/utils';
-import { Flame, Check, Snowflake, Trophy, Zap, TrendingUp, Calendar, Gift, Clock, Award } from 'lucide-react';
+import { Flame, Check, Snowflake, Trophy, Zap, TrendingUp, Calendar, Gift, Clock, Award, CheckSquare, FileText, Sprout } from 'lucide-react';
 import { loadTodoItems } from '@/utils/todoItemsStorage';
 import { countCompletedTasksInDB } from '@/utils/taskStorage';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-import { startOfWeek, endOfWeek } from 'date-fns';
+import { startOfWeek, endOfWeek, subDays, format, startOfDay } from 'date-fns';
+
 import { checkDailyReward, loadDailyRewardData } from '@/utils/dailyRewardStorage';
 import { SafeComponent } from '@/components/ErrorBoundary';
 
@@ -34,6 +36,8 @@ const Progress = () => {
 
   const [weekStats, setWeekStats] = useState({ completed: 0, total: 0 });
   const [lifetimeCompleted, setLifetimeCompleted] = useState(0);
+  const [chartData, setChartData] = useState<{ date: string; label: string; value: number }[]>([]);
+
 
   
   const [showCertificates, setShowCertificates] = useState(false);
@@ -62,10 +66,27 @@ const Progress = () => {
           total: tasks.filter(t => t.completed).length,
         });
 
+        // Build last-30-day completion series for the chart.
+        const days: { date: string; label: string; value: number }[] = [];
+        const buckets = new Map<string, number>();
+        for (let i = 29; i >= 0; i--) {
+          const d = startOfDay(subDays(now, i));
+          const key = format(d, 'yyyy-MM-dd');
+          buckets.set(key, 0);
+          days.push({ date: key, label: format(d, 'MMM d'), value: 0 });
+        }
+        for (const task of tasks) {
+          if (!task.completedAt) continue;
+          const key = format(startOfDay(new Date(task.completedAt)), 'yyyy-MM-dd');
+          if (buckets.has(key)) buckets.set(key, (buckets.get(key) || 0) + 1);
+        }
+        setChartData(days.map(d => ({ ...d, value: buckets.get(d.date) || 0 })));
+
         // Lifetime completed task count — the true source of truth,
         // synced instantly with today's tasks via the tasksUpdated event.
         const completedTotal = await countCompletedTasksInDB();
         setLifetimeCompleted(completedTotal);
+
 
 
         const rewardResult = await checkDailyReward();
@@ -143,139 +164,213 @@ const Progress = () => {
     <TodoLayout title={t('nav.progress', 'Progress')}>
       <div className="container mx-auto px-4 py-6 space-y-6">
         
-        {/* Tappable Streak Counter Widget */}
+        {/* Blue Streak Hero Card */}
         <SafeComponent fallback={null}>
           <button
             onClick={() => setShowStreakDetail(true)}
-            className="w-full bg-card rounded-2xl p-6 border shadow-sm text-left active:bg-muted/50 active:scale-[0.99] transition-colors"
+            className="relative w-full rounded-2xl p-6 text-left overflow-hidden shadow-sm active:scale-[0.99] transition-transform"
+            style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
           >
-            <div className="relative bg-muted rounded-xl p-4 mb-6">
-              <p className="text-sm text-foreground">{getMessage()}</p>
-              <div className="absolute -bottom-2 left-8 w-4 h-4 bg-muted rotate-45" />
-            </div>
-            
-            <div className="flex flex-col items-center py-6">
-              <div className="relative">
-                {completedToday && (
-                  <div className="absolute inset-0 rounded-full blur-xl bg-streak/30" />
-                )}
-                <Flame 
-                  className={cn(
-                    "h-24 w-24 transition-colors relative z-10",
-                    completedToday ? "text-streak fill-streak/80" : "text-muted-foreground/30"
-                  )} 
-                />
+            {/* Decorative rings */}
+            <div className="absolute -right-8 -bottom-8 w-40 h-40 rounded-full border border-white/15" />
+            <div className="absolute -right-2 -bottom-16 w-56 h-56 rounded-full border border-white/10" />
+
+            <div className="relative z-10">
+              <p className="text-6xl sm:text-7xl font-extrabold text-white leading-none tracking-tight">
+                {data?.currentStreak || 0}
+              </p>
+              <div className="flex items-center gap-2 mt-3">
+                <span className="text-lg font-semibold text-white">
+                  {t('streak.dayStreak', 'Day Streak')}
+                </span>
+                <Flame className="h-5 w-5 text-orange-300 fill-orange-400" />
               </div>
-              
-              <div className="text-center mt-5">
-                <p className={cn(
-                  "text-2xl font-extrabold tracking-tight uppercase",
-                  completedToday 
-                    ? "bg-gradient-to-r from-streak via-warning to-streak bg-clip-text text-transparent" 
-                    : "text-muted-foreground/60"
-                )}>
-                  {t('streak.dayStreak', 'day streak')}
-                </p>
-                <div
-                  className={cn(
-                    "mx-auto mt-1.5 h-0.5 rounded-full",
-                    completedToday ? "bg-gradient-to-r from-transparent via-streak to-transparent w-24" : "bg-muted-foreground/20 w-16"
-                  )}
-                />
-                <div className="flex justify-center mt-2">
-                  <StreakSocietyBadge streak={data?.currentStreak || 0} compact />
-                </div>
-                {(data?.currentStreak || 0) > 0 && (data?.currentStreak || 0) >= (data?.longestStreak || 0) ? (
-                  <p className="text-xs font-bold text-warning mt-1">
-                    New Personal Best! 🎉
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t('streak.tapForDetails', 'Tap for details')}
-                  </p>
-                )}
-              </div>
+              {(data?.currentStreak || 0) > 0 && (data?.currentStreak || 0) >= (data?.longestStreak || 0) && (
+                <p className="text-xs font-medium text-white/90 mt-2">New Personal Best! 🎉</p>
+              )}
             </div>
           </button>
         </SafeComponent>
 
-        {/* Week Progress & Freeze Info Card */}
+        {/* Week Strip Card */}
         <SafeComponent fallback={null}>
-          <div className="bg-card rounded-2xl p-6 border shadow-sm">
-            <div className="flex justify-between items-center gap-1 overflow-hidden">
-              {weekData.map((day, index) => (
-                <div key={day.date} className="flex flex-col items-center gap-2 min-w-0 flex-1">
-                  <span className={cn(
-                    "text-xs font-medium truncate",
-                    day.isToday ? "text-primary" : "text-muted-foreground"
-                  )}>
-                    {day.day}
-                  </span>
-                  <div
-                    className={cn(
-                      "w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all flex-shrink-0",
-                      day.completed 
-                        ? "bg-streak border-streak text-streak-foreground" 
-                        : day.isToday 
-                          ? "border-primary bg-primary/10" 
-                          : "border-muted bg-muted/50"
-                    )}
-                  >
-                    {day.completed && <Check className="h-4 w-4 sm:h-5 sm:w-5" />}
+          <div className="bg-card rounded-2xl p-4 sm:p-5 border shadow-sm">
+            <div className="flex justify-between items-start gap-1">
+              {weekData.map((day) => {
+                const dayDate = new Date(day.date);
+                const dateNum = dayDate.getDate();
+                return (
+                  <div key={day.date} className="flex flex-col items-center gap-1.5 min-w-0 flex-1">
+                    <span className={cn(
+                      "text-xs font-medium",
+                      day.isToday ? "text-primary" : "text-muted-foreground"
+                    )}>
+                      {day.day}
+                    </span>
+                    <div
+                      className={cn(
+                        "w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all",
+                        day.completed
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : day.isToday
+                            ? "border-primary bg-primary/10"
+                            : "border-muted bg-muted/40"
+                      )}
+                    >
+                      {day.completed && <Check className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={3} />}
+                    </div>
+                    <span className={cn(
+                      "text-[11px] font-medium",
+                      day.isToday ? "text-primary font-semibold" : "text-muted-foreground"
+                    )}>
+                      {dateNum}
+                    </span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-            
+
             {status === 'grace_period' && gracePeriodRemaining > 0 && (
-              <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t bg-warning/10 -mx-6 -mb-6 px-6 py-4 rounded-b-2xl">
-                <Clock className="h-5 w-5 text-warning" />
-                <span className="text-sm text-warning font-medium">
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                <Clock className="h-4 w-4 text-warning flex-shrink-0" />
+                <span className="text-xs text-warning font-medium">
                   {t('streak.gracePeriodActive', '{{hours}}h grace period remaining - complete a task to save your streak!', { hours: gracePeriodRemaining })}
                 </span>
               </div>
             )}
-            
-            {status !== 'grace_period' && data?.streakFreezes !== undefined && data.streakFreezes > 0 && (
-              <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t">
-                <Snowflake className="h-5 w-5 text-info" />
-                <span className="text-sm text-muted-foreground">
-                  {data.streakFreezes} {t('streak.freezesAvailable', 'streak freeze(s) available')}
-                </span>
-              </div>
-            )}
-            
-            {!data?.freezesEarnedToday && (
-              <div className="mt-6 pt-4 border-t">
+
+            {status !== 'grace_period' && !data?.freezesEarnedToday && (
+              <div className="mt-4 pt-4 border-t">
                 <div className="flex items-center gap-2 mb-2">
-                  <Gift className="h-4 w-4 text-info" />
-                  <span className="text-sm text-muted-foreground">
+                  <Gift className="h-4 w-4 text-info flex-shrink-0" />
+                  <span className="text-xs text-muted-foreground">
                     {t('streak.earnFreeze', 'Complete {{remaining}} more tasks today to earn a freeze', { remaining: TASKS_FOR_FREEZE - freezeProgress })}
                   </span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2">
+                <div className="w-full bg-muted rounded-full h-1.5">
                   <div
-                    className="bg-info h-2 rounded-full transition-all"
+                    className="bg-primary h-1.5 rounded-full transition-all"
                     style={{ width: `${freezeProgressPercent}%` }}
                   />
                 </div>
                 <div className="flex justify-between mt-1">
-                  <span className="text-xs text-muted-foreground">{freezeProgress}/{TASKS_FOR_FREEZE}</span>
+                  <span className="text-[11px] text-muted-foreground">{freezeProgress}/{TASKS_FOR_FREEZE}</span>
+                  {data?.streakFreezes !== undefined && data.streakFreezes > 0 && (
+                    <span className="text-[11px] text-info flex items-center gap-1">
+                      <Snowflake className="h-3 w-3" /> {data.streakFreezes}
+                    </span>
+                  )}
                 </div>
               </div>
             )}
-            
+
             {data?.freezesEarnedToday && (
-              <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t">
-                <Gift className="h-5 w-5 text-success" />
-                <span className="text-sm text-success">
+              <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t">
+                <Gift className="h-4 w-4 text-success" />
+                <span className="text-xs text-success">
                   {t('streak.freezeEarnedToday', 'Freeze earned today! 🎉')}
                 </span>
               </div>
             )}
           </div>
         </SafeComponent>
-        
+
+        {/* Stats Grid 2x2 */}
+        <SafeComponent fallback={null}>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="bg-card rounded-2xl p-4 border shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                <CheckSquare className="h-5 w-5 text-primary" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t('streak.totalCompleted', 'Tasks Done')}</p>
+              <p className="text-2xl font-bold mt-0.5">{lifetimeCompleted}</p>
+            </div>
+
+            <div className="bg-card rounded-2xl p-4 border shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-success/15 flex items-center justify-center mb-3">
+                <Trophy className="h-5 w-5 text-success" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t('streak.longestStreak', 'Longest Streak')}</p>
+              <p className="text-2xl font-bold mt-0.5">{data?.longestStreak || 0}<span className="text-sm font-normal text-muted-foreground ml-1">d</span></p>
+            </div>
+
+            <div className="bg-card rounded-2xl p-4 border shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mb-3">
+                <Calendar className="h-5 w-5 text-purple-500" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t('streak.thisWeek', 'This Week')}</p>
+              <p className="text-2xl font-bold mt-0.5">{weekStats.completed}</p>
+            </div>
+
+            <div className="bg-card rounded-2xl p-4 border shadow-sm">
+              <div className="w-10 h-10 rounded-full bg-info/15 flex items-center justify-center mb-3">
+                <Snowflake className="h-5 w-5 text-info" />
+              </div>
+              <p className="text-xs text-muted-foreground">{t('streak.freezes', 'Freezes')}</p>
+              <p className="text-2xl font-bold mt-0.5">{data?.streakFreezes || 0}</p>
+            </div>
+          </div>
+        </SafeComponent>
+
+        {/* Completed Tasks Last 30 Days Chart */}
+        <SafeComponent fallback={null}>
+          <div className="bg-card rounded-2xl p-4 sm:p-5 border shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">
+                {t('streak.completedLast30', 'Completed Tasks (Last 30 Days)')}
+              </h3>
+              <span className="text-sm font-bold text-primary">
+                {chartData.reduce((s, d) => s + d.value, 0)}
+              </span>
+            </div>
+            <div className="w-full h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 5, right: 8, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="progressChartFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={6}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={30}
+                    allowDecimals={false}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                    labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+                    formatter={(v: number) => [v, t('streak.tasks', 'tasks')]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#3B82F6"
+                    strokeWidth={2.5}
+                    fill="url(#progressChartFill)"
+                    dot={false}
+                    activeDot={{ r: 5, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </SafeComponent>
+
         {/* Streak Consistency Certificate - always visible */}
         <SafeComponent fallback={null}>
           <div className="-mx-3 sm:mx-0">
@@ -287,43 +382,6 @@ const Progress = () => {
           </div>
         </SafeComponent>
 
-
-        {/* Stats Grid */}
-        <SafeComponent fallback={null}>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-card rounded-xl p-4 border">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Trophy className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase">{t('streak.longestStreak', 'Longest Streak')}</span>
-              </div>
-              <p className="text-2xl font-bold">{data?.longestStreak || 0} <span className="text-sm font-normal text-muted-foreground">{t('streak.days', 'days')}</span></p>
-            </div>
-            
-            <div className="bg-card rounded-xl p-4 border">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Check className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase">{t('streak.totalCompleted', 'Total Completed')}</span>
-              </div>
-              <p className="text-2xl font-bold">{lifetimeCompleted} <span className="text-sm font-normal text-muted-foreground">{t('streak.tasks', 'tasks')}</span></p>
-            </div>
-            
-            <div className="bg-card rounded-xl p-4 border">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Calendar className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase">{t('streak.thisWeek', 'This Week')}</span>
-              </div>
-              <p className="text-2xl font-bold">{weekStats.completed} <span className="text-sm font-normal text-muted-foreground">{t('streak.tasks', 'tasks')}</span></p>
-            </div>
-            
-            <div className="bg-card rounded-xl p-4 border">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Snowflake className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase">{t('streak.freezes', 'Freezes')}</span>
-              </div>
-              <p className="text-2xl font-bold">{data?.streakFreezes || 0}</p>
-            </div>
-          </div>
-        </SafeComponent>
 
         {/* Milestones */}
         <SafeComponent fallback={null}>
