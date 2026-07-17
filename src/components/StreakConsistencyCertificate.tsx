@@ -273,7 +273,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           zIndex: 0,
           pointerEvents: 'none',
         }}>
-          <svg width={s(72)} height={s(94)} viewBox="0 0 115 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width={s(58)} height={s(76)} viewBox="0 0 115 150" fill="none" xmlns="http://www.w3.org/2000/svg">
 
             <defs>
               <radialGradient id="dropBody" cx="35%" cy="40%" r="75%">
