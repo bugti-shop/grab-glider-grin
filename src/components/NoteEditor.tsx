@@ -1594,9 +1594,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   {t('editor.shortcutsCheatSheet', 'Shortcuts cheat sheet')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
-                  if (!requireFeature('ai_dictation')) return;
+                  // AI GUARD: never block on subscription; sign-in + daily cap only.
                   setShowExtractTasks(true);
                 }}>
+
                   <ListChecks className="h-4 w-4 mr-2 text-primary" />
                   <span className="font-medium">{t('editor.extractTasks', 'Extract Tasks with AI')}</span>
                   <Sparkles className="h-3 w-3 ml-auto text-primary" />
