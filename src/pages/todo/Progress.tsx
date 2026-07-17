@@ -377,35 +377,12 @@ const Progress = () => {
         </SafeComponent>
 
 
-        {/* Milestones */}
+        {/* Virtual Journey */}
         <SafeComponent fallback={null}>
-          <div className="bg-card rounded-xl p-4 border">
-            <h3 className="font-semibold mb-4">{t('streak.milestones', 'Milestones')}</h3>
-            <div className="grid grid-cols-4 gap-3">
-              {milestones.map((milestone) => {
-                const achieved = data?.milestones?.includes(milestone.value);
-                const Icon = milestone.icon;
-                
-                return (
-                  <div 
-                    key={milestone.value}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all",
-                      achieved 
-                        ? "border-primary/50 bg-primary/5" 
-                        : "border-muted bg-muted/30 opacity-50"
-                    )}
-                  >
-                    <Icon className={cn("h-6 w-6", achieved ? milestone.color : "text-muted-foreground")} />
-                    <span className="text-xs font-medium text-center">{milestone.label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <VirtualJourneyCard />
         </SafeComponent>
 
-        {/* Certificates Button */}
+        {/* Certificates Button — moved below Virtual Journey */}
         <div>
           <button
             onClick={() => setShowCertificates(true)}
@@ -420,10 +397,9 @@ const Progress = () => {
           </button>
         </div>
 
-        {/* Virtual Journey */}
-        <SafeComponent fallback={null}>
-          <VirtualJourneyCard />
-        </SafeComponent>
+        {/* Streak card controls (Name + Share/PDF/Copy) — portaled from StreakConsistencyCertificate */}
+        <div id="streak-controls-slot" />
+
 
         {/* At Risk Warning */}
         {atRisk && !completedToday && (
