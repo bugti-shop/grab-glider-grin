@@ -547,6 +547,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       }
       setCodeLanguage(note.codeLanguage || 'auto');
       setMetaDescription(note.metaDescription || '');
+      setLocation(note.location || '');
       
     } else {
       // Reset draft ID for new notes to prevent overwriting
