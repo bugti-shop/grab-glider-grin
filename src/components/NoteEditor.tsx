@@ -2439,6 +2439,45 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 headerSlot={showToc ? (
                   <TableOfContents content={content} editorRef={editorRef} maxLevel={tocMaxLevel} />
                 ) : undefined}
+                metaSlot={(
+                  <div className="note-meta-row">
+                    <button
+                      type="button"
+                      className="note-location-pill"
+                      onClick={() => setIsLocationInputOpen(true)}
+                      aria-label={location ? t('editor.editLocation', 'Edit location') : t('editor.addLocation', 'Add location')}
+                    >
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span>{location || t('editor.addLocation', 'Add location')}</span>
+                    </button>
+                    <span className="note-date-text">
+                      {format(createdAt, 'MMM d')}
+                    </span>
+                  </div>
+                )}
+                footerSlot={(() => {
+                  const plain = (content || '').replace(/<[^>]+>/g, ' ');
+                  const matches = plain.match(/#[\p{L}\p{N}_]+/gu);
+                  if (!matches || matches.length === 0) return null;
+                  const unique = [...new Set(matches.map(h => h.trim()))].slice(0, 12);
+                  return (
+                    <div className="note-hashtag-pills">
+                      {unique.map((tag) => (
+                        <span key={tag} className="note-hashtag">{tag}</span>
+                      ))}
+                    </div>
+                  );
+                })()}
+              />
+              {/* Location input sheet */}
+              <InputSheetPage
+                isOpen={isLocationInputOpen}
+                onClose={() => setIsLocationInputOpen(false)}
+                onSave={(val) => setLocation(val.trim())}
+                title={t('editor.location', 'Location')}
+                placeholder={t('editor.locationPlaceholder', 'e.g. Kyoto, Japan')}
+                defaultValue={location}
+                maxLength={80}
               />
               {/* Floating images layer for regular/sticky/lined notes */}
               {(noteType === 'regular' || noteType === 'sticky' || noteType === 'textformat') && (
