@@ -38,7 +38,7 @@ const getShareText = (streak: number, totalTasks: number, userName: string) => {
 };
 
 const getStreakColor = (_streak: number) => {
-  return { bg: 'linear-gradient(135deg, #f98e40, #f87415)', accent: '#f87415', glow: 'rgba(248, 116, 21, 0.4)' };
+  return { bg: 'linear-gradient(135deg, #3B82F6, #2563EB)', accent: '#2563EB', glow: 'rgba(59, 130, 246, 0.4)' };
 };
 
 export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, longestStreak }: StreakConsistencyCertificateProps) => {
