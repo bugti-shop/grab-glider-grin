@@ -151,6 +151,73 @@ const Progress = () => {
   const freezeProgress = Math.min(dailyTaskCount, TASKS_FOR_FREEZE);
   const freezeProgressPercent = (freezeProgress / TASKS_FOR_FREEZE) * 100;
 
+  const rangeOptions: { key: ChartRange; label: string }[] = [
+    { key: 'today', label: t('streak.rangeToday', 'Today') },
+    { key: '24h', label: t('streak.range24h', '24h') },
+    { key: '7d', label: t('streak.range7d', '7 Days') },
+    { key: '30d', label: t('streak.range30d', '30 Days') },
+    { key: 'month', label: t('streak.rangeMonth', 'Last Month') },
+    { key: 'year', label: t('streak.rangeYear', 'Last Year') },
+  ];
+
+  const chartData = useMemo(() => {
+    const now = new Date();
+    type Bucket = { date: string; label: string; value: number };
+    const buckets: Bucket[] = [];
+    const map = new Map<string, number>();
+
+    const pushDay = (d: Date, labelFmt: string) => {
+      const key = format(startOfDay(d), 'yyyy-MM-dd');
+      map.set(key, 0);
+      buckets.push({ date: key, label: format(d, labelFmt), value: 0 });
+    };
+    const pushHour = (d: Date) => {
+      const key = format(startOfHour(d), 'yyyy-MM-dd HH');
+      map.set(key, 0);
+      buckets.push({ date: key, label: format(d, 'ha'), value: 0 });
+    };
+    const pushMonth = (d: Date) => {
+      const key = format(d, 'yyyy-MM');
+      map.set(key, 0);
+      buckets.push({ date: key, label: format(d, 'MMM'), value: 0 });
+    };
+
+    let mode: 'hour' | 'day' | 'month' = 'day';
+    if (chartRange === 'today') {
+      mode = 'hour';
+      const start = startOfDay(now);
+      for (let h = 0; h <= now.getHours(); h++) {
+        const d = new Date(start); d.setHours(h);
+        pushHour(d);
+      }
+    } else if (chartRange === '24h') {
+      mode = 'hour';
+      for (let i = 23; i >= 0; i--) pushHour(subHours(now, i));
+    } else if (chartRange === '7d') {
+      for (let i = 6; i >= 0; i--) pushDay(subDays(now, i), 'EEE');
+    } else if (chartRange === '30d') {
+      for (let i = 29; i >= 0; i--) pushDay(subDays(now, i), 'MMM d');
+    } else if (chartRange === 'month') {
+      for (let i = 29; i >= 0; i--) pushDay(subDays(now, i), 'MMM d');
+    } else if (chartRange === 'year') {
+      mode = 'month';
+      for (let i = 11; i >= 0; i--) pushMonth(subMonths(now, i));
+    }
+
+    for (const task of allTasks) {
+      if (!task.completedAt) continue;
+      const dt = new Date(task.completedAt);
+      let key = '';
+      if (mode === 'hour') key = format(startOfHour(dt), 'yyyy-MM-dd HH');
+      else if (mode === 'day') key = format(startOfDay(dt), 'yyyy-MM-dd');
+      else key = format(dt, 'yyyy-MM');
+      if (map.has(key)) map.set(key, (map.get(key) || 0) + 1);
+    }
+    return buckets.map(b => ({ ...b, value: map.get(b.date) || 0 }));
+  }, [allTasks, chartRange]);
+
+
+
   return (
     <TodoLayout title={t('nav.progress', 'Progress')}>
       <div className="container mx-auto px-1.5 sm:px-3 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-4xl">
