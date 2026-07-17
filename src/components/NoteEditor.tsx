@@ -60,7 +60,7 @@ import 'katex/dist/katex.min.css';
 import { ErrorBoundary } from './ErrorBoundary';
 import { PdfExportSuccessDialog } from './PdfExportSuccessDialog';
 import { PdfExportOptionsSheet, PdfExportSettings } from './PdfExportOptionsSheet';
-import { ArrowLeft, Folder as FolderIcon, Plus, CalendarIcon, History, FileDown, Link2, ChevronDown, FileText, BookOpen, BarChart3, MoreVertical, Mic, Share2, Search, Image, Table, Minus, SeparatorHorizontal, MessageSquare, FileSymlink, FileType, Bell, Clock, Repeat, Trash2, Mail, Phone, LinkIcon, Copy, Replace, Palette, Hash, Crown, ListFilter, CaseLower, Tag as TagIcon, Camera, Sparkles, Globe, Keyboard, MapPin } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, Folder as FolderIcon, Plus, CalendarIcon, History, FileDown, Link2, ChevronDown, FileText, BookOpen, BarChart3, MoreVertical, MoreHorizontal, Mic, Share2, Share, Search, Image, Table, Minus, SeparatorHorizontal, MessageSquare, FileSymlink, FileType, Bell, Clock, Repeat, Trash2, Mail, Phone, LinkIcon, Copy, Replace, Palette, Hash, Crown, ListFilter, CaseLower, Tag as TagIcon, Camera, Sparkles, Globe, Keyboard, MapPin } from 'lucide-react';
 import { exportNoteToPdf, getPageBreakCount, PdfExportResult } from '@/utils/exportToPdf';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -1436,7 +1436,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           style={{ backgroundColor: getEditorBackgroundColor(), borderColor: 'rgba(0,0,0,0.1)', paddingTop: 'calc(var(--safe-top, 0px) + 12px)' }}
         >
           <Button variant="ghost" size="icon" onClick={handleClose} className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
-            <ArrowLeft className="h-5 w-5" />
+            <ChevronLeft className="h-6 w-6" strokeWidth={2.25} />
           </Button>
 
           <div className="flex items-center gap-1">
@@ -1481,14 +1481,14 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}
                 aria-label={t('common.share', 'Share')}
               >
-                <Share2 className="h-5 w-5" />
+                <Share className="h-[22px] w-[22px]" strokeWidth={2} />
               </Button>
             )}
 
             {!isReadOnlyWebClip && <DropdownMenu open={isOptionsMenuOpen} onOpenChange={setIsOptionsMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button data-tour="note-options-menu" variant="ghost" size="icon" className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
-                  <MoreVertical className="h-5 w-5" />
+                  <MoreHorizontal className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-card z-50 max-h-[70vh] overflow-y-auto">
