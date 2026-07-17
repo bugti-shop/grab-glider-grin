@@ -404,9 +404,11 @@ REPEAT:
 - Recognize "every day", "daily", "every Monday", "weekly", "M-F", "weekdays", "Sat & Sun", "every month", "monthly bill", "yearly", "annual", "हर रोज़", "tous les jours", "毎日".
 - "repeatDays": for weekly/weekdays/weekends, return array of 0-6 (Sun=0..Sat=6) when specific days are written.
 
-FOLDER / SECTION:
-- Detect a folder/section label written near the task (heading at top of page, "[Work]", "Personal:", "#Home", a circled category). Map fuzzy to the available lists.
-- "folderId" / "sectionId": id from the available lists. Null otherwise.
+FOLDER / SECTION — the writer usually groups tasks under a heading:
+- Detect a folder/section label written near or above the task (page heading, "[Work]", "Personal:", "#Home", a circled category, project name).
+- If a matching folder/section already exists in the lists above, return its id in "folderId" / "sectionId".
+- If the label is NEW (not in the lists), leave "folderId"/"sectionId" null AND return the label in "folderName"/"sectionName" so the app can create it. Keep names short (≤ 30 chars), Title Case, in the writer's language.
+- If no grouping cue exists at all, leave all four null.
 
 TAGS:
 - "tags": any hashtags or @-tags ("#work", "#errand", "@home", "@call"). Return as plain strings WITHOUT the # or @.
