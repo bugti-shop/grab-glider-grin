@@ -27,7 +27,7 @@ import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NotesCalendarFab } from '@/components/notes/NotesCalendarFab';
 
-type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap';
+type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap' | 'darkHero';
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
