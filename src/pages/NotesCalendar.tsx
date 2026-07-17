@@ -230,6 +230,11 @@ const NotesCalendar = () => {
                 <span className="flex-1">Dashboard</span>
                 {layout === 'dashboard' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeLayout('yearHeatmap')} className="gap-2">
+                <Grid3x3 className="h-4 w-4" />
+                <span className="flex-1">Year heatmap</span>
+                {layout === 'yearHeatmap' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
                 <ImageIcon className="h-4 w-4" />
@@ -256,6 +261,16 @@ const NotesCalendar = () => {
           ) : layout === 'dashboard' ? (
             <ErrorBoundary fallback={<CalendarPanelFallback />}>
               <NotesCalendarDashboard
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
+              />
+            </ErrorBoundary>
+          ) : layout === 'yearHeatmap' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarYearHeatmap
                 selectedDate={date || new Date()}
                 onDateSelect={setDate}
                 notes={notes}
