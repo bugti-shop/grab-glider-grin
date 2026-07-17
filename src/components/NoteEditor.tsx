@@ -60,7 +60,7 @@ import 'katex/dist/katex.min.css';
 import { ErrorBoundary } from './ErrorBoundary';
 import { PdfExportSuccessDialog } from './PdfExportSuccessDialog';
 import { PdfExportOptionsSheet, PdfExportSettings } from './PdfExportOptionsSheet';
-import { ArrowLeft, ChevronLeft, Folder as FolderIcon, Plus, CalendarIcon, History, FileDown, Link2, ChevronDown, FileText, BookOpen, BarChart3, MoreVertical, MoreHorizontal, Mic, Share2, Share, Search, Image, Table, Minus, SeparatorHorizontal, MessageSquare, FileSymlink, FileType, Bell, Clock, Repeat, Trash2, Mail, Phone, LinkIcon, Copy, Replace, Palette, Hash, Crown, ListFilter, CaseLower, Tag as TagIcon, Camera, Sparkles, Globe, Keyboard, MapPin } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, Folder as FolderIcon, Plus, CalendarIcon, History, FileDown, Link2, ChevronDown, FileText, BookOpen, BarChart3, MoreVertical, MoreHorizontal, Mic, Share2, Share, Search, Image, Table, Minus, SeparatorHorizontal, MessageSquare, FileSymlink, FileType, Bell, Clock, Repeat, Trash2, Mail, Phone, LinkIcon, Copy, Replace, Palette, Hash, Crown, ListFilter, CaseLower, Tag as TagIcon, Camera, Sparkles, Globe, Keyboard, MapPin, Undo2, Redo2, TagIcon as TagPlusIcon, NotebookText } from 'lucide-react';
 import { exportNoteToPdf, getPageBreakCount, PdfExportResult } from '@/utils/exportToPdf';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -1440,6 +1440,26 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           </Button>
 
           <div className="flex items-center gap-1">
+            {/* Undo / Redo */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { editorRef.current?.focus(); document.execCommand('undo'); }}
+              className={cn("app-header-btn", noteType === 'sticky' && "text-black hover:text-black")}
+              aria-label="Undo"
+            >
+              <Undo2 strokeWidth={1.75} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { editorRef.current?.focus(); document.execCommand('redo'); }}
+              className={cn("app-header-btn", noteType === 'sticky' && "text-black hover:text-black")}
+              aria-label="Redo"
+            >
+              <Redo2 strokeWidth={1.75} />
+            </Button>
+
             {/* Copy with Formatting Button - prominent for textformat notes */}
             {noteType === 'textformat' && (
               <Button
@@ -1456,6 +1476,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
               </Button>
             )}
           </div>
+
 
           <div className="flex items-center gap-0.5 shrink-0 -mr-1">
             {/* Table Picker moved to toolbar/options menu */}
@@ -2326,7 +2347,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 <LinkedInTextFormatter
                   initialContent={content}
                   onContentChange={setContent}
-                  placeholder={t('notes.writeHerePlaceholder', 'Write here…   Type @ to mention notes & tasks · Type / for blocks')}
+                  placeholder={t('notes.writeHerePlaceholder', 'Start writing')}
                   className="h-full"
                 />
               </div>
@@ -2403,6 +2424,61 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
             </div>
           ) : (
             <div className="relative flex-1 min-h-0 flex flex-col">
+              {/* Notebook + Tag meta row (above title) */}
+              {!isReadOnlyWebClip && (
+                <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-1 text-sm text-muted-foreground">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 min-w-0 hover:text-foreground transition-colors"
+                        aria-label="Select notebook"
+                      >
+                        <NotebookText className="h-4 w-4 shrink-0" />
+                        <span className="truncate">
+                          {folders.find((f) => f.id === selectedFolderId)?.name || t('editor.selectNotebook', 'Select Notebook')}
+                        </span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56 bg-card z-50 max-h-[60vh] overflow-y-auto">
+                      {folders.map((folder) => (
+                        <DropdownMenuItem
+                          key={folder.id}
+                          onClick={() => {
+                            setSelectedFolderId(folder.id);
+                            setTimeout(() => handleSaveRef.current?.(), 100);
+                          }}
+                          className={cn(selectedFolderId === folder.id && "bg-accent")}
+                        >
+                          <span
+                            className="h-3 w-3 rounded-full mr-2 flex-shrink-0"
+                            style={{ backgroundColor: folder.color || '#3B82F6' }}
+                          />
+                          <span className="truncate">{folder.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuItem onClick={() => setIsNewFolderDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        {t('notes.newFolder', 'New notebook')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowTagSheet(true)}
+                    className="inline-flex items-center gap-1.5 shrink-0 hover:text-foreground transition-colors"
+                    aria-label="Add tag"
+                  >
+                    <TagIcon className="h-4 w-4" />
+                    <span>
+                      {noteTagIds.length > 0
+                        ? t('editor.tagsCount', { count: noteTagIds.length, defaultValue: `${noteTagIds.length} tag${noteTagIds.length === 1 ? '' : 's'}` })
+                        : t('editor.addTag', 'Add tag')}
+                    </span>
+                  </button>
+                </div>
+              )}
               <RichTextEditor
                 content={content}
                 onChange={setContent}

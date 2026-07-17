@@ -312,7 +312,7 @@ const TodoSettings = () => {
   };
 
   const handleShareApp = () => {
-    const shareUrl = 'https://onelink.to/9xy8rz';
+    const shareUrl = 'https://flowist.me/download';
     if (navigator.share) {
       navigator.share({
         title: t('share.appTitle'),
@@ -329,7 +329,7 @@ const TodoSettings = () => {
   };
 
   const handleRateAndShare = () => {
-    window.open('https://onelink.to/9xy8rz', '_blank');
+    window.open('https://flowist.me/download', '_blank');
   };
 
   // Settings row component

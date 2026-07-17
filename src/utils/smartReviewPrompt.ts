@@ -103,12 +103,12 @@ export const openPlayStoreReview = async () => {
     try {
       const { Browser } = await import('@capacitor/browser');
       await Browser.open({
-        url: `https://onelink.to/9xy8rz`,
+        url: `https://flowist.me/download`,
       });
     } catch {
-      window.open(`https://onelink.to/9xy8rz`, '_blank');
+      window.open(`https://flowist.me/download`, '_blank');
     }
   } else {
-    window.open(`https://onelink.to/9xy8rz`, '_blank');
+    window.open(`https://flowist.me/download`, '_blank');
   }
 };

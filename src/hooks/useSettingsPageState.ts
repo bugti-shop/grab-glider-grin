@@ -255,7 +255,7 @@ export const useSettingsPageState = () => {
   };
 
   const handleShareApp = () => {
-    const shareUrl = 'https://onelink.to/9xy8rz';
+    const shareUrl = 'https://flowist.me/download';
     if (navigator.share) {
       navigator.share({ title: t('share.appTitle'), text: t('share.appDescription'), url: shareUrl });
     } else {
@@ -286,7 +286,7 @@ export const useSettingsPageState = () => {
   };
 
   const handleRateAndShare = () => {
-    window.open('https://onelink.to/9xy8rz', '_blank');
+    window.open('https://flowist.me/download', '_blank');
   };
 
   const handleCustomThemeSelect = async (theme: CustomTheme) => {
