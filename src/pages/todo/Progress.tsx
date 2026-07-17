@@ -275,7 +275,7 @@ const Progress = () => {
                 <Sprout className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-amber-600" />
               </div>
               <p className="text-xs sm:text-sm text-muted-foreground mt-2">{t('streak.habits', 'Habits')}</p>
-              <p className="text-xl sm:text-2xl font-bold mt-0.5">{data?.habitsCount || 0}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-0.5">0</p>
             </div>
           </div>
         </SafeComponent>
