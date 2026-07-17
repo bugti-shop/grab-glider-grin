@@ -381,7 +381,6 @@ const Today = () => {
 
   useEffect(() => {
     const preloadViewChunks = () => {
-      void kanbanFactory();
       void kanbanStatusFactory();
       void timelineFactory();
       void progressFactory();
