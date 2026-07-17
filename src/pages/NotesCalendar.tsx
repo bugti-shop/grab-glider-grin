@@ -5,6 +5,7 @@ import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
 import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStrip';
 import { NotesCalendarDashboard } from '@/components/notes/NotesCalendarDashboard';
 import { NotesCalendarYearHeatmap } from '@/components/notes/NotesCalendarYearHeatmap';
+import { NotesCalendarDarkHero } from '@/components/notes/NotesCalendarDarkHero';
 
 import { AppLogo } from '@/components/AppLogo';
 import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3 } from 'lucide-react';
