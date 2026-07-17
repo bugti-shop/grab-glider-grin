@@ -1478,7 +1478,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                     // user cancelled or share failed silently
                   }
                 }}
-                className={cn("app-header-btn", noteType === 'sticky' && "text-black hover:text-black")}
+                className={cn("app-header-btn app-header-share", noteType === 'sticky' && "text-black hover:text-black")}
                 aria-label={t('common.share', 'Share')}
               >
                 <Share strokeWidth={1.75} />
