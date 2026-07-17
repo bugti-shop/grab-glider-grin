@@ -176,9 +176,10 @@ const Progress = () => {
             <div className="absolute -right-2 -bottom-16 w-56 h-56 sm:w-64 sm:h-64 rounded-full border border-white/10" />
             {/* Bottom-right soft white glow */}
             <div
-              className="absolute -right-10 -bottom-10 w-52 h-52 sm:w-64 sm:h-64 rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 65%)' }}
+              className="absolute -right-4 -bottom-4 w-28 h-28 sm:w-32 sm:h-32 rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 65%)' }}
             />
+
 
             <div className="relative z-10">
               <p className="text-6xl sm:text-7xl font-extrabold text-white leading-none tracking-tight">
@@ -246,37 +247,46 @@ const Progress = () => {
         {/* Stats Grid 2x2 — icon top-left, label above small number */}
         <SafeComponent fallback={null}>
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-card rounded-2xl p-3.5 sm:p-4 border shadow-sm">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <CheckSquare className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-primary" />
+            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <CheckSquare className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-primary" />
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.tasksDone', 'Tasks Done')}</p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2">{t('streak.tasksDone', 'Tasks Done')}</p>
-              <p className="text-xl sm:text-2xl font-bold mt-0.5">{lifetimeCompleted}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-1.5">{lifetimeCompleted}</p>
             </div>
 
-            <div className="bg-card rounded-2xl p-3.5 sm:p-4 border shadow-sm">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-success/15 flex items-center justify-center">
-                <Clock className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-success" />
+            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-success/15 flex items-center justify-center flex-shrink-0">
+                  <Clock className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-success" />
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.focusTime', 'Focus Time')}</p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2">{t('streak.focusTime', 'Focus Time')}</p>
-              <p className="text-xl sm:text-2xl font-bold mt-0.5">0h</p>
+              <p className="text-xl sm:text-2xl font-bold mt-1.5">0h</p>
             </div>
 
-            <div className="bg-card rounded-2xl p-3.5 sm:p-4 border shadow-sm">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                <FileText className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-purple-500" />
+            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                  <FileText className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-purple-500" />
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.notes', 'Notes')}</p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2">{t('streak.notes', 'Notes')}</p>
-              <p className="text-xl sm:text-2xl font-bold mt-0.5">{weekStats.completed}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-1.5">{weekStats.completed}</p>
             </div>
 
-            <div className="bg-card rounded-2xl p-3.5 sm:p-4 border shadow-sm">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <Sprout className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-amber-600" />
+            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <Sprout className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-amber-600" />
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.habits', 'Habits')}</p>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-2">{t('streak.habits', 'Habits')}</p>
-              <p className="text-xl sm:text-2xl font-bold mt-0.5">0</p>
+              <p className="text-xl sm:text-2xl font-bold mt-1.5">0</p>
             </div>
+
           </div>
         </SafeComponent>
 
