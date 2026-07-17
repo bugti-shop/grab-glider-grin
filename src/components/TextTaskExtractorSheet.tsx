@@ -152,6 +152,23 @@ export const TextTaskExtractorSheet = ({
   };
 
   const runExtraction = async () => {
+    // Synchronous double-tap guard — runs BEFORE any await so a burst of
+    // taps within the same event loop tick cannot start two extractions.
+    const now = Date.now();
+    if (now - lastTapAtRef.current < 600) return;
+    lastTapAtRef.current = now;
+    if (inFlightRef.current) {
+      toast.info(t('textExtract.alreadyRunning', 'AI is already extracting — please wait…'));
+      return;
+    }
+    inFlightRef.current = true;
+
+    // Abort any prior in-flight request (defensive; inFlightRef should have
+    // caught it, but this makes cancellation deterministic).
+    if (abortRef.current) { try { abortRef.current.abort(); } catch {} }
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     // Show immediate feedback BEFORE any async guard — users complained the
     // button felt dead on Android because auth/lock checks awaited silently.
     setIsExtracting(true);
@@ -159,6 +176,7 @@ export const TextTaskExtractorSheet = ({
     setItems([]);
     const loadingToastId = `ai-extract-${Date.now()}`;
     toast.loading(t('textExtract.extracting', 'Extracting tasks…'), { id: loadingToastId });
+
 
     let release: (() => void) | null = null;
     try {
