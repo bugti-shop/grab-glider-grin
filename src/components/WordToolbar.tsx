@@ -477,7 +477,7 @@ export const WordToolbar = ({
       className={cn(
         "h-[38px] w-[38px] flex items-center justify-center rounded-lg transition-all duration-150 flex-shrink-0",
         "hover:bg-accent/60 active:scale-95",
-        active && "bg-primary/12 text-primary shadow-sm",
+        active && "bg-[#3B82F6] text-white shadow-sm hover:bg-[#3B82F6]",
         disabled && "opacity-30 pointer-events-none"
       )}
     >

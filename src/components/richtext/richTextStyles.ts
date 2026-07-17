@@ -2,6 +2,14 @@
 // Extracted from inline <style> tag in RichTextEditor.tsx
 
 export const RICH_TEXT_EDITOR_STYLES = `
+  .rich-text-editor ::selection {
+    background-color: rgba(59, 130, 246, 0.22);
+    color: inherit;
+  }
+  .rich-text-editor ::-moz-selection {
+    background-color: rgba(59, 130, 246, 0.22);
+    color: inherit;
+  }
   .rich-text-editor a {
     color: #3B82F6;
     text-decoration: underline;
