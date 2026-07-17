@@ -50,6 +50,8 @@ interface TodaySheetsProps {
   folders: Folder[];
   selectedFolderId: string | null;
   onCreateFolder: (name: string, color: string) => void;
+  onEnsureFolder?: (name: string) => string | null;
+  onEnsureSection?: (name: string, folderId?: string | null) => string | null;
   sections: TaskSection[];
   inputSectionId: string | null;
   // Task detail
