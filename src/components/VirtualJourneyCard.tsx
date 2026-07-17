@@ -279,16 +279,17 @@ export const VirtualJourneyCard = () => {
                     {reached ? '✓' : (i + 1)}
                   </span>
                   <span className={cn(
-                    "flex-1 min-w-0 truncate text-[14px] sm:text-[15px]",
+                    "flex-1 min-w-0 truncate text-[13px] sm:text-[15px]",
                     isCurrent
                       ? "font-semibold text-[#111827] dark:text-foreground"
                       : "font-medium text-[#374151] dark:text-foreground/90"
                   )}>
                     {jt.milestoneName(journey, ms)}
                   </span>
-                  <span className="text-[12px] sm:text-[13px] text-[#6B7280] dark:text-muted-foreground flex-shrink-0 whitespace-nowrap">
+                  <span className="text-[11px] sm:text-[13px] text-[#6B7280] dark:text-muted-foreground flex-shrink-0 whitespace-nowrap tabular-nums">
                     {currentTasks}/{msTarget} {t('common.tasks', 'tasks')}
                   </span>
+
                 </div>
               );
             })}
