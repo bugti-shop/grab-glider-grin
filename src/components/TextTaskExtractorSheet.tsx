@@ -341,8 +341,24 @@ export const TextTaskExtractorSheet = ({
               )}
             </Button>
 
+            {/* Loading state — visible progress card while AI works */}
+            {isExtracting && (
+              <div className="flex flex-col items-center justify-center gap-3 py-8 px-4 rounded-xl border border-primary/20 bg-primary/5">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-medium">
+                    {t('textExtract.extracting', 'Extracting tasks…')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('textExtract.extractingHint', 'AI is reading your text. This can take up to a minute for long content.')}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Results */}
             {!isExtracting && items.length > 0 && (
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
