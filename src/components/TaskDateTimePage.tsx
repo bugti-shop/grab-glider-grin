@@ -195,7 +195,7 @@ export const TaskDateTimePage = ({
         "fixed inset-0 bg-background flex flex-col transition-transform duration-300",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}
-      style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)', zIndex: isOnboarding ? 400 : 100 }}
+      style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)', paddingBottom: 'var(--safe-bottom, 0px)', zIndex: isOnboarding ? 400 : 100 }}
     >
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-3">

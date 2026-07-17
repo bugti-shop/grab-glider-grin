@@ -288,7 +288,7 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-background pb-14">
       {/* Header bar */}
-      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm" style={{ paddingTop: 'var(--safe-top, 0px)' }}>
+      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm" style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }}>
         <div className="flex items-center justify-between px-4 h-12">
           <Link to={lastDashboard === 'todo' ? '/todo/today' : '/'} className="p-2 -ml-2 hover:bg-muted/50 rounded-lg">
             <ArrowLeft className="h-5 w-5 text-foreground" />

@@ -8,7 +8,7 @@ const Reminders = () => {
 
   return (
     <div className="min-h-screen bg-background pb-14">
-      <header className="sticky top-0 bg-background z-10" style={{ paddingTop: 'var(--safe-top, 0px)' }}>
+      <header className="sticky top-0 bg-background z-10" style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }}>
         <div className="container mx-auto px-4 py-2">
           <div className="flex items-center gap-2">
             <AppLogo size="lg" />

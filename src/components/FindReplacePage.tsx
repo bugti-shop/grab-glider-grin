@@ -305,7 +305,7 @@ export const FindReplacePage = ({
         "fixed inset-0 bg-background z-50 flex flex-col transition-transform duration-300",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}
-      style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}
+      style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}
     >
       <header className="flex items-center justify-between px-4 py-3">
         <Button variant="ghost" size="sm" onClick={handleClose}>
