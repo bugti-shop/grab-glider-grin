@@ -234,22 +234,48 @@ export const sanitizeJourneyData = (raw: any): VirtualJourneyData => {
 // In-memory cache for synchronous access
 let _journeyCache: VirtualJourneyData | null = null;
 
+// Mirror the journey to localStorage as a synchronous, sign-in-independent
+// fallback. IndexedDB writes are async and can lose a fresh selection if the
+// user refreshes quickly; localStorage guarantees the value is durable the
+// moment the click handler returns. This also protects the journey from
+// ever being wiped by a stale cloud settings snapshot on sign-in.
+const LS_MIRROR_KEY = 'flowist_virtual_journey_v1';
+const readLocalMirror = (): VirtualJourneyData | null => {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(LS_MIRROR_KEY) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return sanitizeJourneyData(parsed);
+  } catch { return null; }
+};
+const writeLocalMirror = (data: VirtualJourneyData) => {
+  try { localStorage.setItem(LS_MIRROR_KEY, JSON.stringify(data)); } catch {}
+};
+
 /** Load journey data — returns cached value synchronously if available, otherwise reads from IndexedDB */
 export const loadJourneyData = (): VirtualJourneyData => {
   if (_journeyCache) return _journeyCache;
-  // Return default — async init will populate cache
+  const mirror = readLocalMirror();
+  if (mirror) { _journeyCache = mirror; return mirror; }
   return { activeJourneyId: null, completedJourneys: [], journeyProgress: {}, totalTasksEver: 0, countedTaskIds: {} };
 };
 
 /** Async load from IndexedDB — call at startup */
 export const loadJourneyDataAsync = async (): Promise<VirtualJourneyData> => {
+  const mirror = readLocalMirror();
   try {
     const raw = await getSetting<any>(STORAGE_KEY, null);
     if (raw) {
-      _journeyCache = sanitizeJourneyData(raw);
+      const idb = sanitizeJourneyData(raw);
+      // If both exist, prefer whichever has an active journey / more progress
+      // so a stale empty side never wipes the good one.
+      const score = (v: VirtualJourneyData) => (v.activeJourneyId ? 1e9 : 0) + (v.totalTasksEver ?? 0);
+      _journeyCache = mirror && score(mirror) > score(idb) ? mirror : idb;
+      writeLocalMirror(_journeyCache);
       return _journeyCache;
     }
   } catch {}
+  if (mirror) { _journeyCache = mirror; return mirror; }
   _journeyCache = { activeJourneyId: null, completedJourneys: [], journeyProgress: {}, totalTasksEver: 0, countedTaskIds: {} };
   return _journeyCache;
 };
@@ -257,6 +283,9 @@ export const loadJourneyDataAsync = async (): Promise<VirtualJourneyData> => {
 export const saveJourneyData = (data: VirtualJourneyData) => {
   const sanitized = sanitizeJourneyData(data);
   _journeyCache = sanitized;
+  // Synchronous mirror first — durable even if the user refreshes before
+  // the IndexedDB write settles.
+  writeLocalMirror(sanitized);
   setSetting(STORAGE_KEY, sanitized).catch(console.error);
   window.dispatchEvent(new Event('journeyUpdated'));
 
