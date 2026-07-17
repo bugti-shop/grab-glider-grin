@@ -1382,10 +1382,16 @@ const TodoCalendar = () => {
             {tasksForSelectedDate.length > 0 && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-normal flex items-center gap-2">
-                    <ListTodo className="h-5 w-5 text-primary" />
-                    {format(date, 'MMMM dd, yyyy')}
-                    <Badge variant="secondary" className="ml-2">{tasksForSelectedDate.length}</Badge>
+                  <h3 className="text-[19px] font-bold text-foreground tracking-tight">
+                    {isToday(date) ? (
+                      <>
+                        {t('common.today', 'Today')},{' '}
+                        <span className="text-[#2563eb]">{format(date, 'MMM d')}</span>
+                      </>
+                    ) : (
+                      <span className="text-[#2563eb]">{format(date, 'EEEE, MMM d')}</span>
+                    )}
+                    <Badge variant="secondary" className="ml-2 align-middle">{tasksForSelectedDate.length}</Badge>
                   </h3>
                   {/* View mode selector */}
                   <DropdownMenu>
