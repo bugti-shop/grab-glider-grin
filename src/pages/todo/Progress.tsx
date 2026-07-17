@@ -9,7 +9,7 @@ import { loadTodoItems } from '@/utils/todoItemsStorage';
 import { countCompletedTasksInDB } from '@/utils/taskStorage';
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-import { startOfWeek, endOfWeek, subDays, format, startOfDay } from 'date-fns';
+import { startOfWeek, endOfWeek, subDays, subHours, subMonths, subYears, format, startOfDay, startOfHour } from 'date-fns';
 
 import { checkDailyReward, loadDailyRewardData } from '@/utils/dailyRewardStorage';
 import { SafeComponent } from '@/components/ErrorBoundary';
