@@ -3,9 +3,10 @@ import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
 import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
 import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStrip';
+import { NotesCalendarDashboard } from '@/components/notes/NotesCalendarDashboard';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -23,7 +24,7 @@ import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-type CalendarLayout = 'month' | 'weekStrip';
+type CalendarLayout = 'month' | 'weekStrip' | 'dashboard';
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
@@ -222,6 +223,11 @@ const NotesCalendar = () => {
                 <span className="flex-1">Week strip</span>
                 {layout === 'weekStrip' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeLayout('dashboard')} className="gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="flex-1">Dashboard</span>
+                {layout === 'dashboard' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
                 <ImageIcon className="h-4 w-4" />
@@ -243,6 +249,16 @@ const NotesCalendar = () => {
                 onDateSelect={setDate}
                 notes={notes}
                 onMonthClick={() => changeLayout('month')}
+              />
+            </ErrorBoundary>
+          ) : layout === 'dashboard' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarDashboard
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
               />
             </ErrorBoundary>
           ) : (
