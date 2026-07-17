@@ -1816,6 +1816,8 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
           sections={sections}
           currentFolderId={folderId ?? selectedFolderId ?? null}
           currentSectionId={sectionId ?? selectedSectionId ?? null}
+          onEnsureFolder={onEnsureFolder}
+          onEnsureSection={onEnsureSection}
         />
       </SafeComponent>
       <SafeComponent fallback={null}>
@@ -1827,6 +1829,8 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
           sections={sections}
           currentFolderId={folderId ?? selectedFolderId ?? null}
           currentSectionId={sectionId ?? selectedSectionId ?? null}
+          onEnsureFolder={onEnsureFolder}
+          onEnsureSection={onEnsureSection}
         />
       </SafeComponent>
     </>
