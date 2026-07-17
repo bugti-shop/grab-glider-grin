@@ -271,29 +271,50 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           {currentStreak.toLocaleString()}
         </p>
 
-        {/* Water droplet — top-right corner */}
+        {/* Water droplet — top-right corner, pixel-matched */}
         <div style={{
           position: 'absolute',
-          top: s(32),
-          right: s(22),
+          top: s(28),
+          right: s(20),
           zIndex: 0,
           pointerEvents: 'none',
         }}>
-          <svg width={s(120)} height={s(150)} viewBox="0 0 100 130" fill="none">
+          <svg width={s(115)} height={s(150)} viewBox="0 0 115 150" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <linearGradient id="dropGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.85" />
+              <radialGradient id="dropBody" cx="35%" cy="40%" r="75%">
+                <stop offset="0%" stopColor="#F5F9FF" />
+                <stop offset="55%" stopColor="#DCE9FB" />
+                <stop offset="100%" stopColor="#B7CDEF" />
+              </radialGradient>
+              <linearGradient id="dropShine" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.35" />
               </linearGradient>
             </defs>
+            {/* Teardrop body */}
             <path
-              d="M50 5 C50 5, 10 55, 10 85 C10 110, 30 125, 50 125 C70 125, 90 110, 90 85 C90 55, 50 5, 50 5 Z"
-              fill="url(#dropGrad)"
+              d="M57.5 4 C57.5 4, 8 62, 8 96 C8 125, 30 146, 57.5 146 C85 146, 107 125, 107 96 C107 62, 57.5 4, 57.5 4 Z"
+              fill="url(#dropBody)"
             />
-            {/* Highlight */}
-            <ellipse cx="35" cy="70" rx="10" ry="18" fill="#ffffff" opacity="0.85" transform="rotate(-20 35 70)" />
+            {/* Inner shading */}
+            <path
+              d="M57.5 4 C57.5 4, 8 62, 8 96 C8 125, 30 146, 57.5 146 C85 146, 107 125, 107 96 C107 62, 57.5 4, 57.5 4 Z"
+              stroke="#ffffff"
+              strokeOpacity="0.4"
+              strokeWidth="1"
+              fill="none"
+            />
+            {/* Curved highlight */}
+            <path
+              d="M38 68 C30 82, 30 100, 38 116"
+              stroke="url(#dropShine)"
+              strokeWidth="10"
+              strokeLinecap="round"
+              fill="none"
+            />
           </svg>
         </div>
+
 
         {/* "day/days productivity streak!" */}
         <p data-streak-label style={{
