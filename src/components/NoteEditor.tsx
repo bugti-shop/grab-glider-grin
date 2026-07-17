@@ -1488,7 +1488,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
             {!isReadOnlyWebClip && <DropdownMenu open={isOptionsMenuOpen} onOpenChange={setIsOptionsMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button data-tour="note-options-menu" variant="ghost" size="icon" className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
-                  <MoreVertical className="h-5 w-5" />
+                  <MoreHorizontal className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-card z-50 max-h-[70vh] overflow-y-auto">
