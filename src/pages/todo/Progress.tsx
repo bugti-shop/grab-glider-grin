@@ -70,21 +70,8 @@ const Progress = () => {
           total: tasks.filter(t => t.completed).length,
         });
 
-        // Build last-30-day completion series for the chart.
-        const days: { date: string; label: string; value: number }[] = [];
-        const buckets = new Map<string, number>();
-        for (let i = 29; i >= 0; i--) {
-          const d = startOfDay(subDays(now, i));
-          const key = format(d, 'yyyy-MM-dd');
-          buckets.set(key, 0);
-          days.push({ date: key, label: format(d, 'MMM d'), value: 0 });
-        }
-        for (const task of tasks) {
-          if (!task.completedAt) continue;
-          const key = format(startOfDay(new Date(task.completedAt)), 'yyyy-MM-dd');
-          if (buckets.has(key)) buckets.set(key, (buckets.get(key) || 0) + 1);
-        }
-        setChartData(days.map(d => ({ ...d, value: buckets.get(d.date) || 0 })));
+        setAllTasks(tasks);
+
 
         // Lifetime completed task count — the true source of truth,
         // synced instantly with today's tasks via the tasksUpdated event.
