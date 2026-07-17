@@ -36,7 +36,11 @@ const Progress = () => {
 
   const [weekStats, setWeekStats] = useState({ completed: 0, total: 0 });
   const [lifetimeCompleted, setLifetimeCompleted] = useState(0);
-  const [chartData, setChartData] = useState<{ date: string; label: string; value: number }[]>([]);
+  const [allTasks, setAllTasks] = useState<any[]>([]);
+  type ChartRange = 'today' | '24h' | '7d' | '30d' | 'month' | 'year';
+  const [chartRange, setChartRange] = useState<ChartRange>('7d');
+
+
 
 
   
