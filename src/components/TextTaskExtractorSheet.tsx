@@ -135,31 +135,50 @@ export const TextTaskExtractorSheet = ({
   };
 
   const runExtraction = async () => {
-    if (!(await ensureSignedInForAi())) {
-      onClose();
-      return;
-    }
-    if (!hasPaidAi) {
-      onClose();
-      requireFeature('ai_dictation');
-      return;
-    }
-    const sourceLabel: 'text' | 'email' | 'pdf' = mode;
-    const inputText = (mode === 'pdf' ? pdfText : text).trim();
-    if (!inputText) {
-      toast.error(t('textExtract.empty', 'Add some text first'));
-      return;
-    }
-    if (inputText.length < 10) {
-      toast.error(t('textExtract.tooShort', 'Add a little more text so AI can detect tasks'));
-      return;
-    }
-    const release = acquireAiLock();
-    if (!release) { toast.error(getAiBusyMessage()); return; }
+    // Show immediate feedback BEFORE any async guard — users complained the
+    // button felt dead on Android because auth/lock checks awaited silently.
     setIsExtracting(true);
     setHasRun(false);
     setItems([]);
+    const loadingToastId = `ai-extract-${Date.now()}`;
+    toast.loading(t('textExtract.extracting', 'Extracting tasks…'), { id: loadingToastId });
+
+    let release: (() => void) | null = null;
     try {
+      if (!(await ensureSignedInForAi())) {
+        toast.dismiss(loadingToastId);
+        setIsExtracting(false);
+        onClose();
+        return;
+      }
+      if (!hasPaidAi) {
+        toast.dismiss(loadingToastId);
+        setIsExtracting(false);
+        onClose();
+        requireFeature('ai_dictation');
+        return;
+      }
+      const sourceLabel: 'text' | 'email' | 'pdf' = mode;
+      const inputText = (mode === 'pdf' ? pdfText : text).trim();
+      if (!inputText) {
+        toast.dismiss(loadingToastId);
+        setIsExtracting(false);
+        toast.error(t('textExtract.empty', 'Add some text first'));
+        return;
+      }
+      if (inputText.length < 10) {
+        toast.dismiss(loadingToastId);
+        setIsExtracting(false);
+        toast.error(t('textExtract.tooShort', 'Add a little more text so AI can detect tasks'));
+        return;
+      }
+      release = acquireAiLock();
+      if (!release) {
+        toast.dismiss(loadingToastId);
+        setIsExtracting(false);
+        toast.error(getAiBusyMessage());
+        return;
+      }
       const { data, error } = await supabase.functions.invoke('ai-extract-tasks-from-text', {
         body: {
           text: inputText,
@@ -199,11 +218,15 @@ export const TextTaskExtractorSheet = ({
         }));
       setItems(review);
       setHasRun(true);
+      toast.dismiss(loadingToastId);
       if (review.length === 0) {
         toast.info(t('textExtract.noTasks', 'No tasks detected in this text'));
+      } else {
+        toast.success(t('textExtract.detectedCount', '{{count}} tasks detected', { count: review.length }));
       }
     } catch (e: any) {
       console.error('[text extract]', e);
+      toast.dismiss(loadingToastId);
       const msg = String(e?.message || '');
       if (msg.includes('402') || /pro feature|upgrade/i.test(msg)) {
         onClose();
@@ -217,9 +240,10 @@ export const TextTaskExtractorSheet = ({
       }
     } finally {
       setIsExtracting(false);
-      release();
+      if (release) release();
     }
   };
+
 
   const toggle = (uid: string) =>
     setItems((p) => p.map((it) => (it.uid === uid ? { ...it, selected: !it.selected } : it)));
@@ -317,8 +341,24 @@ export const TextTaskExtractorSheet = ({
               )}
             </Button>
 
+            {/* Loading state — visible progress card while AI works */}
+            {isExtracting && (
+              <div className="flex flex-col items-center justify-center gap-3 py-8 px-4 rounded-xl border border-primary/20 bg-primary/5">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-medium">
+                    {t('textExtract.extracting', 'Extracting tasks…')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('textExtract.extractingHint', 'AI is reading your text. This can take up to a minute for long content.')}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Results */}
             {!isExtracting && items.length > 0 && (
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
