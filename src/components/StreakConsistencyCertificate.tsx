@@ -483,7 +483,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
             </div>
           </div>
         );
-        const slot = typeof document !== 'undefined' ? document.getElementById('streak-controls-slot') : null;
+        const slot = mounted && typeof document !== 'undefined' ? document.getElementById('streak-controls-slot') : null;
         return slot ? createPortal(controls, slot) : controls;
       })()}
     </div>
