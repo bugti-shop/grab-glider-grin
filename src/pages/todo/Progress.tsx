@@ -409,13 +409,14 @@ const Progress = () => {
         <div>
           <button
             onClick={() => setShowCertificates(true)}
-            className="relative w-full bg-warning/10 border border-warning/20 rounded-xl p-3 flex flex-col items-center justify-center gap-1.5 text-warning font-semibold text-[10px] active:scale-[0.98] transition-transform"
+            className="relative w-full rounded-2xl px-5 py-5 flex flex-col items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+            style={{ background: '#FEF3C7', border: '1px solid #FDE68A' }}
           >
             {hasNewCerts && (
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-destructive animate-pulse shadow-sm" />
+              <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 rounded-full bg-destructive animate-pulse shadow-sm" />
             )}
-            <Award className="h-4 w-4" />
-            Certificates
+            <Award className="h-6 w-6" style={{ color: '#D97706' }} strokeWidth={2.25} />
+            <span className="text-sm font-semibold" style={{ color: '#D97706' }}>Certificates</span>
           </button>
         </div>
 
