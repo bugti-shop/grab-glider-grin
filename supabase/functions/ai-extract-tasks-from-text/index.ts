@@ -278,7 +278,7 @@ Rules:
 - "isUrgent": true only for strongest cues (URGENT, ASAP, !!!, critical).
 - "repeatType": none|hourly|daily|weekly|weekdays|weekends|monthly|yearly. Detect "every Monday", "daily standup", "monthly report", etc.
 - "repeatDays": 0-6 (Sun=0..Sat=6) for weekly/weekdays/weekends with specific days.
-- "folderId" / "sectionId": fuzzy match to available lists. Null otherwise.
+- FOLDER / SECTION: fuzzy match to available lists → return "folderId"/"sectionId". If the source clearly implies a NEW folder/section (project name, subject line, category heading) that is not in the lists, leave the id null AND set "folderName"/"sectionName" so the app can auto-create it. Keep the name short (≤ 30 chars). If no grouping cue exists, leave all four null.
 - "tags": hashtags (#work), @mentions of contexts (@home), or topical keywords. No # or @ prefix.
 - "location": any place mentioned. Null otherwise.
 - Return [] if nothing actionable is found.
