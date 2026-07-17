@@ -259,7 +259,7 @@ const Progress = () => {
                 <Clock className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-success" />
               </div>
               <p className="text-xs sm:text-sm text-muted-foreground mt-2">{t('streak.focusTime', 'Focus Time')}</p>
-              <p className="text-xl sm:text-2xl font-bold mt-0.5">{data?.focusMinutes ? `${Math.round((data.focusMinutes || 0) / 60)}h` : '0h'}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-0.5">0h</p>
             </div>
 
             <div className="bg-card rounded-2xl p-3.5 sm:p-4 border shadow-sm">
