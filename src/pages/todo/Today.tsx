@@ -899,7 +899,7 @@ const Today = () => {
                 />
               </div>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
 
               <DragDropContext onDragEnd={(result: DropResult) => {
                 if (!result.destination) return;
@@ -914,6 +914,7 @@ const Today = () => {
                     <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-2">
                       {[...folders].sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0)).map((folder, index) => {
                         const isSelected = selectedFolderId === folder.id;
+                        const chipColor = folder.color || 'hsl(var(--muted-foreground))';
                         return (
                           <Draggable key={folder.id} draggableId={`folder-chip-${folder.id}`} index={index}>
                             {(dragProvided, snapshot) => (
@@ -921,11 +922,14 @@ const Today = () => {
                                 ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                 onClick={() => setSelectedFolderId(folder.id)}
                                 onContextMenu={(e) => { e.preventDefault(); handleToggleFolderFavorite(folder.id); }}
-                                className={cn("flex items-center gap-2 px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0", isSelected ? "text-primary-foreground" : "hover:opacity-80 text-foreground", !isSelected && "bg-muted", snapshot.isDragging && "shadow-lg opacity-90 ring-2 ring-primary/30")}
-                                style={{ ...(isSelected ? { backgroundColor: folder.color } : undefined), ...dragProvided.draggableProps.style }}
+                                className={cn("flex items-center gap-2 px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0", isSelected ? "text-primary-foreground" : "text-foreground hover:opacity-90", snapshot.isDragging && "shadow-lg opacity-90 ring-2 ring-primary/30")}
+                                style={{
+                                  backgroundColor: isSelected ? chipColor : `${chipColor}26`,
+                                  ...dragProvided.draggableProps.style,
+                                }}
                               >
                                 {folder.isFavorite && <Star className="h-3.5 w-3.5 fill-current" />}
-                                <FolderIcon className="h-4 w-4" />{folder.name}
+                                <FolderIcon className="h-4 w-4" style={{ color: isSelected ? undefined : chipColor }} />{folder.name}
                               </button>
                             )}
                           </Draggable>
@@ -938,6 +942,7 @@ const Today = () => {
               </DragDropContext>
             </div>
           </div>
+
 
 
         <div className="max-w-2xl mx-auto md:max-w-none md:mx-0">
