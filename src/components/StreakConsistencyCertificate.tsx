@@ -227,7 +227,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         ref={cardRef}
         style={{
           background: colors.bg,
-          borderRadius: 20,
+          borderRadius: 10,
           padding: `${s(36)}px ${s(28)}px ${s(24)}px`,
           position: 'relative',
           overflow: 'hidden',
