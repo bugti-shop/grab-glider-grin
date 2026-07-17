@@ -914,7 +914,8 @@ const Today = () => {
                     <div ref={provided.innerRef} {...provided.droppableProps} className="flex gap-2">
                       {[...folders].sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0)).map((folder, index) => {
                         const isSelected = selectedFolderId === folder.id;
-                        const chipColor = folder.color || 'hsl(var(--muted-foreground))';
+                        const chipColor = folder.color || '#6b7280';
+                        const chipTint = chipColor.startsWith('#') ? `${chipColor}26` : chipColor;
                         return (
                           <Draggable key={folder.id} draggableId={`folder-chip-${folder.id}`} index={index}>
                             {(dragProvided, snapshot) => (
