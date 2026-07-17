@@ -1432,17 +1432,11 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       {/* Top Header */}
       {true && (
         <div
-          className="flex justify-between items-center px-2 sm:px-3 py-1.5 gap-1 min-w-0"
-          style={{
-            backgroundColor: getEditorBackgroundColor(),
-            borderColor: 'rgba(0,0,0,0.1)',
-            paddingTop: 'calc(max(var(--safe-top, 0px), env(safe-area-inset-top, 0px)) + 6px)',
-            paddingLeft: 'calc(env(safe-area-inset-left, 0px) + 8px)',
-            paddingRight: 'calc(env(safe-area-inset-right, 0px) + 8px)',
-          }}
+          className="app-header"
+          style={{ backgroundColor: getEditorBackgroundColor(), borderColor: 'rgba(0,0,0,0.1)' }}
         >
-          <Button variant="ghost" size="icon" onClick={handleClose} className={cn("h-9 w-9 shrink-0 -ml-1", noteType === 'sticky' && "text-black hover:text-black")}>
-            <ChevronLeft className="!h-6 !w-6" strokeWidth={1.75} />
+          <Button variant="ghost" size="icon" onClick={handleClose} className={cn("app-header-btn -ml-1", noteType === 'sticky' && "text-black hover:text-black")}>
+            <ChevronLeft strokeWidth={1.75} />
           </Button>
 
           <div className="flex items-center gap-1">
