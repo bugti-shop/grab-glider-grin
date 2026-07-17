@@ -1432,11 +1432,11 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       {/* Top Header */}
       {true && (
         <div
-          className="flex justify-between items-center px-4 py-3 pt-4"
-          style={{ backgroundColor: getEditorBackgroundColor(), borderColor: 'rgba(0,0,0,0.1)', paddingTop: 'calc(var(--safe-top, 0px) + 12px)' }}
+          className="flex justify-between items-center px-2 sm:px-3 py-2 gap-1 min-w-0"
+          style={{ backgroundColor: getEditorBackgroundColor(), borderColor: 'rgba(0,0,0,0.1)', paddingTop: 'calc(var(--safe-top, 0px) + 8px)' }}
         >
-          <Button variant="ghost" size="icon" onClick={handleClose} className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
-            <ChevronLeft className="h-6 w-6" strokeWidth={2.25} />
+          <Button variant="ghost" size="icon" onClick={handleClose} className={cn("h-10 w-10 shrink-0 -ml-1", noteType === 'sticky' && "text-black hover:text-black")}>
+            <ChevronLeft className="!h-7 !w-7" strokeWidth={1.75} />
           </Button>
 
           <div className="flex items-center gap-1">
@@ -1457,7 +1457,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
             )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 shrink-0 -mr-1">
             {/* Table Picker moved to toolbar/options menu */}
 
             {!isReadOnlyWebClip && (
@@ -1478,17 +1478,17 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                     // user cancelled or share failed silently
                   }
                 }}
-                className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}
+                className={cn("h-10 w-10", noteType === 'sticky' && "text-black hover:text-black")}
                 aria-label={t('common.share', 'Share')}
               >
-                <Share className="h-[22px] w-[22px]" strokeWidth={2} />
+                <Share className="!h-[22px] !w-[22px]" strokeWidth={1.75} />
               </Button>
             )}
 
             {!isReadOnlyWebClip && <DropdownMenu open={isOptionsMenuOpen} onOpenChange={setIsOptionsMenuOpen}>
               <DropdownMenuTrigger asChild>
-                <Button data-tour="note-options-menu" variant="ghost" size="icon" className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
-                  <MoreHorizontal className="h-5 w-5" />
+                <Button data-tour="note-options-menu" variant="ghost" size="icon" className={cn("h-10 w-10", noteType === 'sticky' && "text-black hover:text-black")}>
+                  <MoreHorizontal className="!h-[22px] !w-[22px]" strokeWidth={2} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-card z-50 max-h-[70vh] overflow-y-auto">
