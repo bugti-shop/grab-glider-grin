@@ -228,10 +228,9 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         style={{
           background: colors.bg,
           borderRadius: 20,
-          padding: `${s(36)}px ${s(28)}px ${s(32)}px`,
+          padding: `${s(36)}px ${s(28)}px ${s(24)}px`,
           position: 'relative',
           overflow: 'hidden',
-          minHeight: s(340),
         }}
       >
         {/* Decorative glow circles */}
