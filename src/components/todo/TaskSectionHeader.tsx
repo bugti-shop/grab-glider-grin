@@ -39,7 +39,7 @@ export const TaskSectionHeader = ({
 
   const getViewModeIcon = () => {
     switch (viewMode) {
-      case 'kanban': return <Columns3 className="h-3.5 w-3.5" />;
+      
       case 'kanban-status': return <ListChecks className="h-3.5 w-3.5" />;
       case 'timeline': return <GitBranch className="h-3.5 w-3.5" />;
       case 'progress': return <TrendingUp className="h-3.5 w-3.5" />;
