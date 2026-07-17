@@ -168,7 +168,7 @@ const Progress = () => {
         <SafeComponent fallback={null}>
           <button
             onClick={() => setShowStreakDetail(true)}
-            className="relative w-full rounded-2xl px-6 sm:px-8 py-8 sm:py-10 text-left overflow-hidden active:scale-[0.99] transition-transform min-h-[180px] sm:min-h-[220px]"
+            className="relative w-full rounded-xl px-6 sm:px-8 py-8 sm:py-10 text-left overflow-hidden active:scale-[0.99] transition-transform min-h-[180px] sm:min-h-[220px]"
             style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
           >
             <div className="relative z-10">
@@ -236,53 +236,45 @@ const Progress = () => {
 
         {/* Stats Grid 2x2 — icon top-left, label above small number */}
         <SafeComponent fallback={null}>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
-              <div className="flex items-start gap-2">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <CheckSquare className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-primary" />
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
+            <div className="bg-card rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <CheckSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.tasksDone', 'Tasks Done')}</p>
-                  <p className="text-xl sm:text-2xl font-bold leading-tight">{lifetimeCompleted}</p>
-                </div>
+                <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{t('streak.tasksDone', 'Tasks Done')}</p>
               </div>
+              <p className="text-lg sm:text-xl font-bold leading-tight mt-1">{lifetimeCompleted}</p>
             </div>
 
-            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
-              <div className="flex items-start gap-2">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-success/15 flex items-center justify-center flex-shrink-0">
-                  <Clock className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-success" />
+            <div className="bg-card rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-success/15 flex items-center justify-center flex-shrink-0">
+                  <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.focusTime', 'Focus Time')}</p>
-                  <p className="text-xl sm:text-2xl font-bold leading-tight">0h</p>
-                </div>
+                <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{t('streak.focusTime', 'Focus Time')}</p>
               </div>
+              <p className="text-lg sm:text-xl font-bold leading-tight mt-1">0h</p>
             </div>
 
-            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
-              <div className="flex items-start gap-2">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                  <FileText className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-purple-500" />
+            <div className="bg-card rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                  <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-500" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.notes', 'Notes')}</p>
-                  <p className="text-xl sm:text-2xl font-bold leading-tight">{weekStats.completed}</p>
-                </div>
+                <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{t('streak.notes', 'Notes')}</p>
               </div>
+              <p className="text-lg sm:text-xl font-bold leading-tight mt-1">{weekStats.completed}</p>
             </div>
 
-            <div className="bg-card rounded-2xl p-3 sm:p-3.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
-              <div className="flex items-start gap-2">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <Sprout className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-amber-600" />
+            <div className="bg-card rounded-xl px-3 py-2 sm:px-3.5 sm:py-2.5 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <Sprout className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-muted-foreground truncate">{t('streak.habits', 'Habits')}</p>
-                  <p className="text-xl sm:text-2xl font-bold leading-tight">0</p>
-                </div>
+                <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{t('streak.habits', 'Habits')}</p>
               </div>
+              <p className="text-lg sm:text-xl font-bold leading-tight mt-1">0</p>
             </div>
 
 
