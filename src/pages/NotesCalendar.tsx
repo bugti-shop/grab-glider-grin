@@ -3,9 +3,10 @@ import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
 import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
 import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStrip';
+import { NotesCalendarDashboard } from '@/components/notes/NotesCalendarDashboard';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -23,7 +24,7 @@ import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-type CalendarLayout = 'month' | 'weekStrip';
+type CalendarLayout = 'month' | 'weekStrip' | 'dashboard';
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
