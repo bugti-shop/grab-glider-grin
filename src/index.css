@@ -613,10 +613,10 @@ table th[contenteditable="true"]:hover {
   }
   .app-header-back > svg,
   .app-header-back > .lucide {
-    width: calc(var(--header-icon-size) + 1px) !important;
-    height: calc(var(--header-icon-size) + 1px) !important;
+    width: calc(var(--header-icon-size) + 6px) !important;
+    height: calc(var(--header-icon-size) + 6px) !important;
   }
-  /* Share icon: trim height and vertically align with header title baseline */
+  /* Share icon: prominent and vertically aligned with header title baseline */
   .app-header-share {
     display: inline-flex !important;
     align-items: center !important;
@@ -624,8 +624,8 @@ table th[contenteditable="true"]:hover {
   }
   .app-header-share > svg,
   .app-header-share > .lucide {
-    height: calc(var(--header-icon-size) - 5px) !important;
-    width: calc(var(--header-icon-size) - 1px) !important;
+    height: calc(var(--header-icon-size) + 3px) !important;
+    width: calc(var(--header-icon-size) + 3px) !important;
     display: block;
     vertical-align: middle;
   }
