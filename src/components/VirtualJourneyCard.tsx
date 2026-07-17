@@ -181,7 +181,7 @@ export const VirtualJourneyCard = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-card rounded-2xl p-3 sm:p-6 border border-[#E5E7EB] dark:border-border shadow-sm w-full"
+          className="bg-white dark:bg-card rounded-2xl p-3 sm:p-6 border border-[#E5E7EB] dark:border-border shadow-sm w-full max-w-full overflow-hidden"
         >
           {/* Header row */}
           <div className="flex items-start justify-between gap-3 mb-3 sm:mb-5">
