@@ -1,3 +1,4 @@
+import { useAiFeatureGuard } from '@/utils/aiFeatureGuard';
 /**
  * TextTaskExtractorSheet — Paste an email or any text, OR upload a PDF, and let
  * the AI extract a fully-structured task list (title, description, priority,

@@ -1,3 +1,4 @@
+import { useAiFeatureGuard } from '@/utils/aiFeatureGuard';
 /**
  * ImageTaskExtractorSheet — Capture a paper / sticky-note photo, run AI vision
  * extraction, and let the user review & add the detected tasks in bulk.

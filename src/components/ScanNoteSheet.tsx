@@ -1,3 +1,4 @@
+import { useAiFeatureGuard } from '@/utils/aiFeatureGuard';
 /**
  * ScanNoteSheet — Upload a page photo from gallery, OCR + structure it via AI vision,
  * preview as formatted HTML, and insert into the current note.
