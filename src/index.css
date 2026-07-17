@@ -954,7 +954,7 @@ body.onboarding-active [data-vaul-drawer] {
   font-style: normal;
 
   position: absolute;
-  top: 1rem;
+  top: 0.35rem;
   left: 1rem;
   right: 1rem;
   white-space: pre-wrap;
