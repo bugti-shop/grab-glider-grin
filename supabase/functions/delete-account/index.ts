@@ -32,18 +32,36 @@ Deno.serve(async (req) => {
     // Admin client to perform deletion
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Best-effort: wipe rows in our own tables that reference this user
-    const tables = [
-      'subscriptions',
-      'user_entitlements',
-      'user_daily_ai_usage',
-      'user_lifetime_counters',
-      'user_refresh_tokens',
-      'onboarding_responses',
-    ];
-    for (const t of tables) {
-      try { await admin.from(t).delete().eq('user_id', userId); } catch (_) {}
+    const userEmail = userData.user.email?.toLowerCase() ?? null;
+
+    // Admin client to perform deletion
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+
+    // Wipe rows in our own tables that reference this user. Different tables
+    // key on different columns (user_id, user_email, app_user_id, device_id),
+    // so we run per-table deletes with the correct column and surface errors.
+    const deletions: Array<Promise<{ error: unknown; table: string }>> = [];
+    const del = (table: string, q: any) =>
+      deletions.push(q.then((r: any) => ({ error: r.error, table })));
+
+    del('user_daily_ai_usage', admin.from('user_daily_ai_usage').delete().eq('identifier', userId));
+    del('user_lifetime_counters', admin.from('user_lifetime_counters').delete().eq('user_id', userId));
+    del('user_refresh_tokens', admin.from('user_refresh_tokens').delete().eq('user_id', userId));
+
+    if (userEmail) {
+      del('user_daily_ai_usage_email', admin.from('user_daily_ai_usage').delete().eq('identifier', userEmail));
+      del('subscriptions', admin.from('subscriptions').delete().eq('user_email', userEmail));
+      del('user_entitlements_email', admin.from('user_entitlements').delete().eq('app_user_id', userEmail));
+      del('onboarding_responses', admin.from('onboarding_responses').delete().eq('user_email', userEmail));
     }
+    del('user_entitlements_uid', admin.from('user_entitlements').delete().eq('app_user_id', userId));
+
+    const results = await Promise.all(deletions);
+    const failures = results.filter((r) => r.error);
+    if (failures.length > 0) {
+      console.error('delete-account: some cleanup deletes failed', failures);
+    }
+
 
     const { error: delErr } = await admin.auth.admin.deleteUser(userId);
     if (delErr) {
