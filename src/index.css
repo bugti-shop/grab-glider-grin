@@ -47,9 +47,9 @@ body.flowist-task-dragging [data-flowist-virtual-list="tasks"] {
     --safe-right: env(safe-area-inset-right, 0px);
     /* Responsive header system — viewport-adaptive */
     --header-pad-x: clamp(8px, 2.5vw, 14px);
-    --header-pad-y: 6px;
-    --header-icon-btn: clamp(36px, 10vw, 40px);
-    --header-icon-size: clamp(18px, 5.2vw, 22px);
+    --header-pad-y: 12px;
+    --header-icon-btn: clamp(40px, 11vw, 44px);
+    --header-icon-size: clamp(20px, 5.6vw, 24px);
     --header-title-size: clamp(15px, 4.4vw, 17px);
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
@@ -604,6 +604,16 @@ table th[contenteditable="true"]:hover {
   .app-header-btn > .lucide {
     width: var(--header-icon-size) !important;
     height: var(--header-icon-size) !important;
+  }
+  /* Prominent back button — visually anchors the header */
+  .app-header-back {
+    width: calc(var(--header-icon-btn) + 6px) !important;
+    height: calc(var(--header-icon-btn) + 6px) !important;
+  }
+  .app-header-back > svg,
+  .app-header-back > .lucide {
+    width: calc(var(--header-icon-size) + 10px) !important;
+    height: calc(var(--header-icon-size) + 10px) !important;
   }
   .app-header-title {
     font-size: var(--header-title-size);

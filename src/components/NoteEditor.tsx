@@ -1435,8 +1435,8 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           className="app-header"
           style={{ backgroundColor: getEditorBackgroundColor(), borderColor: 'rgba(0,0,0,0.1)' }}
         >
-          <Button variant="ghost" size="icon" onClick={handleClose} className={cn("app-header-btn -ml-1", noteType === 'sticky' && "text-black hover:text-black")}>
-            <ChevronLeft strokeWidth={1.75} />
+          <Button variant="ghost" size="icon" onClick={handleClose} className={cn("app-header-btn app-header-back -ml-1", noteType === 'sticky' && "text-black hover:text-black")}>
+            <ChevronLeft strokeWidth={2.25} />
           </Button>
 
           <div className="flex items-center gap-1">

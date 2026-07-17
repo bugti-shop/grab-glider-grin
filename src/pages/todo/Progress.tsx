@@ -162,31 +162,31 @@ const Progress = () => {
 
   return (
     <TodoLayout title={t('nav.progress', 'Progress')}>
-      <div className="container mx-auto px-3 sm:px-4 py-5 sm:py-6 space-y-4 sm:space-y-6 max-w-2xl">
+      <div className="container mx-auto px-4 sm:px-5 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-2xl">
         
         {/* Blue Streak Hero Card */}
         <SafeComponent fallback={null}>
           <button
             onClick={() => setShowStreakDetail(true)}
-            className="relative w-full rounded-2xl p-5 sm:p-6 text-left overflow-hidden shadow-sm active:scale-[0.99] transition-transform"
+            className="relative w-full rounded-3xl p-6 sm:p-8 text-left overflow-hidden shadow-md active:scale-[0.99] transition-transform"
             style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
           >
             {/* Decorative rings */}
-            <div className="absolute -right-8 -bottom-8 w-32 h-32 sm:w-40 sm:h-40 rounded-full border border-white/15" />
-            <div className="absolute -right-2 -bottom-16 w-44 h-44 sm:w-56 sm:h-56 rounded-full border border-white/10" />
+            <div className="absolute -right-8 -bottom-8 w-40 h-40 sm:w-48 sm:h-48 rounded-full border border-white/15" />
+            <div className="absolute -right-2 -bottom-16 w-56 h-56 sm:w-64 sm:h-64 rounded-full border border-white/10" />
 
             <div className="relative z-10">
-              <p className="text-5xl sm:text-7xl font-extrabold text-white leading-none tracking-tight">
+              <p className="text-7xl sm:text-8xl font-extrabold text-white leading-none tracking-tight">
                 {data?.currentStreak || 0}
               </p>
-              <div className="flex items-center gap-2 mt-2 sm:mt-3">
-                <span className="text-base sm:text-lg font-semibold text-white">
+              <div className="flex items-center gap-2 mt-3 sm:mt-4">
+                <span className="text-lg sm:text-xl font-semibold text-white">
                   {t('streak.dayStreak', 'Day Streak')}
                 </span>
-                <Flame className="h-4 w-4 sm:h-5 sm:w-5 text-orange-300 fill-orange-400" />
+                <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-orange-300 fill-orange-400" />
               </div>
               {(data?.currentStreak || 0) > 0 && (data?.currentStreak || 0) >= (data?.longestStreak || 0) && (
-                <p className="text-[11px] sm:text-xs font-medium text-white/90 mt-2">New Personal Best! 🎉</p>
+                <p className="text-xs sm:text-sm font-medium text-white/90 mt-2">New Personal Best! 🎉</p>
               )}
             </div>
           </button>
@@ -194,22 +194,22 @@ const Progress = () => {
 
         {/* Week Strip Card */}
         <SafeComponent fallback={null}>
-          <div className="bg-card rounded-2xl p-3 sm:p-5 border shadow-sm">
-            <div className="flex justify-between items-start gap-0.5 sm:gap-1">
+          <div className="bg-card rounded-3xl p-4 sm:p-6 border shadow-sm">
+            <div className="flex justify-between items-start gap-1 sm:gap-2">
               {weekData.map((day) => {
                 const dayDate = new Date(day.date);
                 const dateNum = dayDate.getDate();
                 return (
-                  <div key={day.date} className="flex flex-col items-center gap-1 sm:gap-1.5 min-w-0 flex-1">
+                  <div key={day.date} className="flex flex-col items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
                     <span className={cn(
-                      "text-[10px] sm:text-xs font-medium",
+                      "text-xs sm:text-sm font-medium",
                       day.isToday ? "text-primary" : "text-muted-foreground"
                     )}>
                       {day.day}
                     </span>
                     <div
                       className={cn(
-                        "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all",
+                        "w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all",
                         day.completed
                           ? "bg-primary border-primary text-primary-foreground"
                           : day.isToday
@@ -217,10 +217,10 @@ const Progress = () => {
                             : "border-muted bg-muted/40"
                       )}
                     >
-                      {day.completed && <Check className="h-3.5 w-3.5 sm:h-5 sm:w-5" strokeWidth={3} />}
+                      {day.completed && <Check className="h-4.5 w-4.5 sm:h-5 sm:w-5" strokeWidth={3} />}
                     </div>
                     <span className={cn(
-                      "text-[10px] sm:text-[11px] font-medium",
+                      "text-xs sm:text-sm font-medium",
                       day.isToday ? "text-primary font-semibold" : "text-muted-foreground"
                     )}>
                       {dateNum}
@@ -277,74 +277,74 @@ const Progress = () => {
 
         {/* Stats Grid 2x2 */}
         <SafeComponent fallback={null}>
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
-            <div className="bg-card rounded-2xl p-3 sm:p-4 border shadow-sm">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2 sm:mb-3">
-                <CheckSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="bg-card rounded-3xl p-4 sm:p-5 border shadow-sm">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+                <CheckSquare className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
               </div>
-              <p className="text-[11px] sm:text-xs text-muted-foreground">{t('streak.totalCompleted', 'Tasks Done')}</p>
-              <p className="text-xl sm:text-2xl font-bold mt-0.5">{lifetimeCompleted}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('streak.totalCompleted', 'Tasks Done')}</p>
+              <p className="text-2xl sm:text-3xl font-bold mt-1">{lifetimeCompleted}</p>
             </div>
 
-            <div className="bg-card rounded-2xl p-3 sm:p-4 border shadow-sm">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-success/15 flex items-center justify-center mb-2 sm:mb-3">
-                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
+            <div className="bg-card rounded-3xl p-4 sm:p-5 border shadow-sm">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-success/15 flex items-center justify-center mb-3">
+                <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-success" />
               </div>
-              <p className="text-[11px] sm:text-xs text-muted-foreground">{t('streak.longestStreak', 'Longest Streak')}</p>
-              <p className="text-xl sm:text-2xl font-bold mt-0.5">{data?.longestStreak || 0}<span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1">d</span></p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('streak.longestStreak', 'Longest Streak')}</p>
+              <p className="text-2xl sm:text-3xl font-bold mt-1">{data?.longestStreak || 0}<span className="text-sm sm:text-base font-normal text-muted-foreground ml-1">d</span></p>
             </div>
 
-            <div className="bg-card rounded-2xl p-3 sm:p-4 border shadow-sm">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-purple-500/10 flex items-center justify-center mb-2 sm:mb-3">
-                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
+            <div className="bg-card rounded-3xl p-4 sm:p-5 border shadow-sm">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/10 flex items-center justify-center mb-3">
+                <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
               </div>
-              <p className="text-[11px] sm:text-xs text-muted-foreground">{t('streak.thisWeek', 'This Week')}</p>
-              <p className="text-xl sm:text-2xl font-bold mt-0.5">{weekStats.completed}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('streak.thisWeek', 'This Week')}</p>
+              <p className="text-2xl sm:text-3xl font-bold mt-1">{weekStats.completed}</p>
             </div>
 
-            <div className="bg-card rounded-2xl p-3 sm:p-4 border shadow-sm">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-info/15 flex items-center justify-center mb-2 sm:mb-3">
-                <Snowflake className="h-4 w-4 sm:h-5 sm:w-5 text-info" />
+            <div className="bg-card rounded-3xl p-4 sm:p-5 border shadow-sm">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-info/15 flex items-center justify-center mb-3">
+                <Snowflake className="h-5 w-5 sm:h-6 sm:w-6 text-info" />
               </div>
-              <p className="text-[11px] sm:text-xs text-muted-foreground">{t('streak.freezes', 'Freezes')}</p>
-              <p className="text-xl sm:text-2xl font-bold mt-0.5">{data?.streakFreezes || 0}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{t('streak.freezes', 'Freezes')}</p>
+              <p className="text-2xl sm:text-3xl font-bold mt-1">{data?.streakFreezes || 0}</p>
             </div>
           </div>
         </SafeComponent>
 
         {/* Completed Tasks Last 30 Days - Line Chart (reference-matched) */}
         <SafeComponent fallback={null}>
-          <div className="bg-white dark:bg-card rounded-2xl p-5 border border-[#E5E7EB] dark:border-border shadow-sm">
-            <h3 className="text-[15px] font-semibold text-[#111827] dark:text-foreground mb-5 leading-tight">
+          <div className="bg-white dark:bg-card rounded-3xl p-5 sm:p-6 border border-[#E5E7EB] dark:border-border shadow-sm">
+            <h3 className="text-[17px] sm:text-[19px] font-semibold text-[#111827] dark:text-foreground mb-5 leading-tight">
               {t('streak.completedLast30', 'Completed Tasks (Last 30 Days)')}
             </h3>
-            <div className="w-full h-60 sm:h-64">
+            <div className="w-full h-72 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 16, left: -8, bottom: 4 }}>
+                <LineChart data={chartData} margin={{ top: 12, right: 20, left: -6, bottom: 6 }}>
                   <CartesianGrid stroke="#E5E7EB" strokeDasharray="4 4" vertical={false} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: 11, fill: '#6B7280' }}
+                    tick={{ fontSize: 12, fill: '#6B7280' }}
                     tickLine={false}
                     axisLine={{ stroke: '#E5E7EB' }}
-                    tickMargin={8}
+                    tickMargin={10}
                     interval={Math.max(0, Math.floor(chartData.length / 5) - 1)}
                   />
                   <YAxis
-                    tick={{ fontSize: 11, fill: '#6B7280' }}
+                    tick={{ fontSize: 12, fill: '#6B7280' }}
                     tickLine={false}
                     axisLine={false}
-                    width={28}
+                    width={32}
                     allowDecimals={false}
-                    tickMargin={4}
+                    tickMargin={6}
                   />
                   <Tooltip
                     cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '3 3' }}
                     contentStyle={{
                       background: '#FFFFFF',
                       border: '1px solid #E5E7EB',
-                      borderRadius: 8,
-                      fontSize: 12,
+                      borderRadius: 10,
+                      fontSize: 13,
                       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                     }}
                     labelStyle={{ color: '#6B7280', fontWeight: 500 }}
@@ -354,9 +354,9 @@ const Progress = () => {
                     type="monotone"
                     dataKey="value"
                     stroke="#3B82F6"
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: '#3B82F6', stroke: '#3B82F6', strokeWidth: 0 }}
-                    activeDot={{ r: 5, fill: '#3B82F6', stroke: '#FFFFFF', strokeWidth: 2 }}
+                    strokeWidth={2.5}
+                    dot={{ r: 3.5, fill: '#3B82F6', stroke: '#3B82F6', strokeWidth: 0 }}
+                    activeDot={{ r: 6, fill: '#3B82F6', stroke: '#FFFFFF', strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
