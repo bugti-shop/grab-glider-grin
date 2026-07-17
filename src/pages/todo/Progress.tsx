@@ -9,7 +9,7 @@ import { loadTodoItems } from '@/utils/todoItemsStorage';
 import { countCompletedTasksInDB } from '@/utils/taskStorage';
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-import { startOfWeek, endOfWeek, subDays, format, startOfDay } from 'date-fns';
+import { startOfWeek, endOfWeek, subDays, subHours, subMonths, subYears, format, startOfDay, startOfHour } from 'date-fns';
 
 import { checkDailyReward, loadDailyRewardData } from '@/utils/dailyRewardStorage';
 import { SafeComponent } from '@/components/ErrorBoundary';
@@ -36,7 +36,11 @@ const Progress = () => {
 
   const [weekStats, setWeekStats] = useState({ completed: 0, total: 0 });
   const [lifetimeCompleted, setLifetimeCompleted] = useState(0);
-  const [chartData, setChartData] = useState<{ date: string; label: string; value: number }[]>([]);
+  const [allTasks, setAllTasks] = useState<any[]>([]);
+  type ChartRange = 'today' | '24h' | '7d' | '30d' | 'month' | 'year';
+  const [chartRange, setChartRange] = useState<ChartRange>('7d');
+
+
 
 
   
@@ -66,21 +70,8 @@ const Progress = () => {
           total: tasks.filter(t => t.completed).length,
         });
 
-        // Build last-30-day completion series for the chart.
-        const days: { date: string; label: string; value: number }[] = [];
-        const buckets = new Map<string, number>();
-        for (let i = 29; i >= 0; i--) {
-          const d = startOfDay(subDays(now, i));
-          const key = format(d, 'yyyy-MM-dd');
-          buckets.set(key, 0);
-          days.push({ date: key, label: format(d, 'MMM d'), value: 0 });
-        }
-        for (const task of tasks) {
-          if (!task.completedAt) continue;
-          const key = format(startOfDay(new Date(task.completedAt)), 'yyyy-MM-dd');
-          if (buckets.has(key)) buckets.set(key, (buckets.get(key) || 0) + 1);
-        }
-        setChartData(days.map(d => ({ ...d, value: buckets.get(d.date) || 0 })));
+        setAllTasks(tasks);
+
 
         // Lifetime completed task count — the true source of truth,
         // synced instantly with today's tasks via the tasksUpdated event.
@@ -160,6 +151,73 @@ const Progress = () => {
   const freezeProgress = Math.min(dailyTaskCount, TASKS_FOR_FREEZE);
   const freezeProgressPercent = (freezeProgress / TASKS_FOR_FREEZE) * 100;
 
+  const rangeOptions: { key: ChartRange; label: string }[] = [
+    { key: 'today', label: t('streak.rangeToday', 'Today') },
+    { key: '24h', label: t('streak.range24h', '24h') },
+    { key: '7d', label: t('streak.range7d', '7 Days') },
+    { key: '30d', label: t('streak.range30d', '30 Days') },
+    { key: 'month', label: t('streak.rangeMonth', 'Last Month') },
+    { key: 'year', label: t('streak.rangeYear', 'Last Year') },
+  ];
+
+  const chartData = useMemo(() => {
+    const now = new Date();
+    type Bucket = { date: string; label: string; value: number };
+    const buckets: Bucket[] = [];
+    const map = new Map<string, number>();
+
+    const pushDay = (d: Date, labelFmt: string) => {
+      const key = format(startOfDay(d), 'yyyy-MM-dd');
+      map.set(key, 0);
+      buckets.push({ date: key, label: format(d, labelFmt), value: 0 });
+    };
+    const pushHour = (d: Date) => {
+      const key = format(startOfHour(d), 'yyyy-MM-dd HH');
+      map.set(key, 0);
+      buckets.push({ date: key, label: format(d, 'ha'), value: 0 });
+    };
+    const pushMonth = (d: Date) => {
+      const key = format(d, 'yyyy-MM');
+      map.set(key, 0);
+      buckets.push({ date: key, label: format(d, 'MMM'), value: 0 });
+    };
+
+    let mode: 'hour' | 'day' | 'month' = 'day';
+    if (chartRange === 'today') {
+      mode = 'hour';
+      const start = startOfDay(now);
+      for (let h = 0; h <= now.getHours(); h++) {
+        const d = new Date(start); d.setHours(h);
+        pushHour(d);
+      }
+    } else if (chartRange === '24h') {
+      mode = 'hour';
+      for (let i = 23; i >= 0; i--) pushHour(subHours(now, i));
+    } else if (chartRange === '7d') {
+      for (let i = 6; i >= 0; i--) pushDay(subDays(now, i), 'EEE');
+    } else if (chartRange === '30d') {
+      for (let i = 29; i >= 0; i--) pushDay(subDays(now, i), 'MMM d');
+    } else if (chartRange === 'month') {
+      for (let i = 29; i >= 0; i--) pushDay(subDays(now, i), 'MMM d');
+    } else if (chartRange === 'year') {
+      mode = 'month';
+      for (let i = 11; i >= 0; i--) pushMonth(subMonths(now, i));
+    }
+
+    for (const task of allTasks) {
+      if (!task.completedAt) continue;
+      const dt = new Date(task.completedAt);
+      let key = '';
+      if (mode === 'hour') key = format(startOfHour(dt), 'yyyy-MM-dd HH');
+      else if (mode === 'day') key = format(startOfDay(dt), 'yyyy-MM-dd');
+      else key = format(dt, 'yyyy-MM');
+      if (map.has(key)) map.set(key, (map.get(key) || 0) + 1);
+    }
+    return buckets.map(b => ({ ...b, value: map.get(b.date) || 0 }));
+  }, [allTasks, chartRange]);
+
+
+
   return (
     <TodoLayout title={t('nav.progress', 'Progress')}>
       <div className="container mx-auto px-1.5 sm:px-3 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-4xl">
@@ -182,6 +240,30 @@ const Progress = () => {
                 <Flame className="h-6 w-6 sm:h-7 sm:w-7 text-orange-300 fill-orange-400" />
               </div>
             </div>
+
+            {/* Decorative flame illustration on the right */}
+            <div className="pointer-events-none absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 opacity-90">
+              <svg width="120" height="140" viewBox="0 0 120 140" fill="none" xmlns="http://www.w3.org/2000/svg" className="sm:w-[150px] sm:h-[170px]">
+                <defs>
+                  <radialGradient id="flameGlow" cx="50%" cy="55%" r="55%">
+                    <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.55" />
+                    <stop offset="60%" stopColor="#FFFFFF" stopOpacity="0.12" />
+                    <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+                  </radialGradient>
+                </defs>
+                <circle cx="60" cy="72" r="58" fill="url(#flameGlow)" />
+                <path
+                  d="M60 14c8 14 22 24 22 42 0 20-14 34-22 34S38 76 38 56c0-12 8-20 14-30 2-4 6-8 8-12z"
+                  fill="#FFFFFF"
+                  fillOpacity="0.28"
+                />
+                <path
+                  d="M60 40c4 8 12 14 12 24 0 12-8 20-12 20s-12-8-12-20c0-7 4-11 8-16 2-2 3-5 4-8z"
+                  fill="#FFFFFF"
+                  fillOpacity="0.55"
+                />
+              </svg>
+            </div>
           </button>
         </SafeComponent>
 
@@ -190,6 +272,8 @@ const Progress = () => {
           <div className="bg-card rounded-2xl px-3 sm:px-5 py-6 sm:py-7 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
             <div className="flex justify-between items-start gap-2.5 sm:gap-3">
               {weekData.map((day) => {
+
+
                 const dayDate = new Date(day.date);
                 const dateNum = dayDate.getDate();
                 return (
@@ -286,9 +370,28 @@ const Progress = () => {
         {/* Completed Tasks Last 30 Days - Line Chart (reference-matched) */}
         <SafeComponent fallback={null}>
           <div className="bg-white dark:bg-card rounded-3xl p-5 sm:p-6 border border-[#E5E7EB] dark:border-border shadow-sm">
-            <h3 className="text-[17px] sm:text-[19px] font-semibold text-[#111827] dark:text-foreground mb-5 leading-tight">
-              {t('streak.completedLast30', 'Completed Tasks (Last 30 Days)')}
-            </h3>
+            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+              <h3 className="text-[17px] sm:text-[19px] font-semibold text-[#111827] dark:text-foreground leading-tight">
+                {t('streak.completedTasks', 'Completed Tasks')}
+              </h3>
+            </div>
+            <div className="flex gap-1.5 mb-5 overflow-x-auto -mx-1 px-1 no-scrollbar">
+              {rangeOptions.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setChartRange(opt.key)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-colors border",
+                    chartRange === opt.key
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-transparent text-muted-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             <div className="w-full h-72 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 12, right: 20, left: -6, bottom: 6 }}>
