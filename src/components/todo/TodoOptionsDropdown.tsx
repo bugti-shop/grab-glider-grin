@@ -147,6 +147,12 @@ export const TodoOptionsDropdown = ({
                 <span className="flex-1">{t('menu.addMultipleTasks')}</span>
                 <Crown className="h-3.5 w-3.5 ml-2" fill="#FFD700" color="#FFD700" />
               </DropdownMenuItem>
+              {canToggleExpandCollapse && onToggleExpandCollapse && (
+                <DropdownMenuItem onClick={onToggleExpandCollapse} className="cursor-pointer">
+                  {isAnyCollapsed ? <ChevronDown className="h-4 w-4 mr-2" /> : <ChevronsUpDown className="h-4 w-4 mr-2" />}
+                  {isAnyCollapsed ? t('sections.expandAll', 'Expand all') : t('sections.collapseAll', 'Collapse all')}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem data-tour="todo-menu-add-section" onClick={() => handleAddSection('below')} className="cursor-pointer"><PlusIcon className="h-4 w-4 mr-2" />{t('menu.sections')}</DropdownMenuItem>
               <DropdownMenuItem data-tour="todo-menu-manage-folders" onClick={() => setIsFolderManageOpen(true)} className="cursor-pointer"><FolderIcon className="h-4 w-4 mr-2" />{t('menu.folders')}</DropdownMenuItem>
