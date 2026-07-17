@@ -72,7 +72,6 @@ const lazyRetry = <T extends React.ComponentType<any>>(
 const TodaySheets = lazyRetry(() => import('@/components/todo/TodaySheets').then(m => ({ default: m.TodaySheets })));
 
 // Preload factories for view components — called eagerly so chunks are cached before user switches
-const kanbanFactory = () => import('@/components/todo/KanbanView').then(m => ({ default: m.KanbanView }));
 const kanbanStatusFactory = () => import('@/components/todo/KanbanStatusView').then(m => ({ default: m.KanbanStatusView }));
 const timelineFactory = () => import('@/components/todo/TimelineView').then(m => ({ default: m.TimelineView }));
 const progressFactory = () => import('@/components/todo/ProgressView').then(m => ({ default: m.ProgressView }));
@@ -81,7 +80,6 @@ const historyFactory = () => import('@/components/todo/HistoryView').then(m => (
 const groupedFactory = () => import('@/components/todo/GroupedView').then(m => ({ default: m.GroupedView }));
 const flatFactory = () => import('@/components/todo/FlatView').then(m => ({ default: m.FlatView }));
 
-const KanbanView = lazyRetry(kanbanFactory);
 const KanbanStatusView = lazyRetry(kanbanStatusFactory);
 const TimelineView = lazyRetry(timelineFactory);
 const ProgressView = lazyRetry(progressFactory);
