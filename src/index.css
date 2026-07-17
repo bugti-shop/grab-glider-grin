@@ -607,13 +607,18 @@ table th[contenteditable="true"]:hover {
   }
   /* Prominent back button — visually anchors the header */
   .app-header-back {
-    width: calc(var(--header-icon-btn) + 6px) !important;
-    height: calc(var(--header-icon-btn) + 6px) !important;
+    width: calc(var(--header-icon-btn) + 2px) !important;
+    height: calc(var(--header-icon-btn) + 2px) !important;
   }
   .app-header-back > svg,
   .app-header-back > .lucide {
-    width: calc(var(--header-icon-size) + 10px) !important;
-    height: calc(var(--header-icon-size) + 10px) !important;
+    width: calc(var(--header-icon-size) + 4px) !important;
+    height: calc(var(--header-icon-size) + 4px) !important;
+  }
+  /* Share icon: slightly shorter height than default header icons */
+  .app-header-share > svg,
+  .app-header-share > .lucide {
+    height: calc(var(--header-icon-size) - 3px) !important;
   }
   .app-header-title {
     font-size: var(--header-title-size);
