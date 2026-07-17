@@ -181,15 +181,17 @@ export const VirtualJourneyCard = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card rounded-2xl p-5 border shadow-sm"
+          className="bg-white dark:bg-card rounded-2xl p-5 sm:p-6 border border-[#E5E7EB] dark:border-border shadow-sm"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <span className="text-2xl">{journey.emoji}</span>
-              <div>
-                <h3 className="font-bold text-sm">{jt.journeyName(journey)}</h3>
-                <p className="text-xs text-muted-foreground">
+          {/* Header row */}
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-3xl leading-none flex-shrink-0">{journey.emoji}</span>
+              <div className="min-w-0">
+                <h3 className="font-bold text-[17px] text-[#111827] dark:text-foreground leading-tight truncate">
+                  {jt.journeyName(journey)}
+                </h3>
+                <p className="text-[13px] text-[#6B7280] dark:text-muted-foreground mt-0.5">
                   {`${totalDone}/${totalJourneyTasks} ${t('common.tasks', 'tasks')}`}
                 </p>
               </div>
@@ -198,113 +200,94 @@ export const VirtualJourneyCard = () => {
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { handleAbandon(); setShowPicker(true); }}
-                className="text-xs font-medium text-primary flex items-center gap-1"
+                className="text-[14px] font-semibold text-[#3B82F6] flex items-center gap-1 flex-shrink-0"
               >
-                {t('journey.newJourney', 'New Journey')} <ChevronRight className="h-3 w-3" />
+                {t('journey.newJourney', 'New Journey')} <ChevronRight className="h-4 w-4" />
               </motion.button>
             ) : (
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAbandon}
-                className="text-xs text-muted-foreground flex items-center gap-1"
+                className="text-[14px] font-semibold text-[#3B82F6] flex items-center gap-1.5 flex-shrink-0"
               >
-                <RotateCcw className="h-3 w-3" /> {t('journey.change', 'Change')}
+                {t('journey.change', 'Change')} <RotateCcw className="h-3.5 w-3.5" />
               </motion.button>
             )}
           </div>
 
-          {/* Visual Journey Map */}
-          <div className="relative mb-3">
-            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${percent}%` }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
-                className={cn(
-                  "h-full rounded-full",
-                  isComplete
-                    ? "bg-gradient-to-r from-warning to-success"
-                    : `bg-${journey.color}`
-                )}
-                style={{
-                  background: isComplete
-                    ? undefined
-                    : `hsl(var(--${journey.color}))`,
-                }}
-              />
-            </div>
-
-            <div className="absolute top-0 left-0 right-0 h-3 flex items-center">
-              {journey.milestones.map((ms, i) => {
-                const msPercent = (ms.tasksRequired / totalJourneyTasks) * 100;
+          {/* Horizontal circle timeline */}
+          <div className="relative mt-2 mb-5 px-1">
+            {/* connecting line */}
+            <div className="absolute top-1/2 left-3 right-3 h-px bg-[#E5E7EB] dark:bg-border -translate-y-1/2" />
+            <div className="relative flex justify-between items-center">
+              {journey.milestones.map((ms) => {
                 const reached = progress.milestonesReached.includes(ms.id);
                 return (
                   <div
                     key={ms.id}
-                    className="absolute -translate-x-1/2"
-                    style={{ left: `${msPercent}%` }}
-                    title={jt.milestoneName(journey, ms)}
+                    className={cn(
+                      "w-6 h-6 rounded-full border-[1.5px] bg-white dark:bg-card flex items-center justify-center",
+                      reached
+                        ? "border-[#3B82F6] bg-[#3B82F6]"
+                        : "border-[#D1D5DB] dark:border-border"
+                    )}
                   >
-                    <div
-                      className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center text-[8px] -mt-1",
-                        reached
-                          ? "bg-warning border-warning text-warning-foreground"
-                          : "bg-card border-muted-foreground/30"
-                      )}
-                    >
-                      {reached ? ms.icon : ''}
-                    </div>
+                    {reached && <span className="text-[10px] text-white font-bold">✓</span>}
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Current location label */}
-          <div className="flex items-center gap-1.5 mt-4">
-            <MapPin className="h-3.5 w-3.5 text-primary" />
-            <span className="text-xs font-medium">
+          {/* Next location label */}
+          <div className="flex items-center gap-1.5 mb-4">
+            <MapPin className="h-4 w-4 text-[#3B82F6] flex-shrink-0" />
+            <span className="text-[13px] font-medium text-[#111827] dark:text-foreground">
               {isComplete
                 ? `🏆 ${t('journey.journeyComplete', 'Journey Complete! 🎉')}`
                 : nextMilestone
-                  ? t('journey.nextMilestone', { name: jt.milestoneName(journey, nextMilestone), count: nextMilestone.tasksRequired - (currentMsTasksDisplay), defaultValue: 'Next: {{name}} ({{count}} tasks away)' })
+                  ? `${t('journey.next', 'Next')}: ${jt.milestoneName(journey, nextMilestone)} · ${nextMilestone.tasksRequired - currentMsTasksDisplay} ${t('common.tasks', 'tasks')} ${t('journey.away', 'away')}`
                   : lastReached ? jt.milestoneName(journey, lastReached) : t('journey.startingPoint', 'Starting point')}
             </span>
           </div>
 
-          {/* Milestones list - compact */}
-          <div className="mt-4 space-y-1.5">
+          {/* Numbered milestones list */}
+          <div className="rounded-xl border border-[#E5E7EB] dark:border-border overflow-hidden">
             {journey.milestones.map((ms, i) => {
               const reached = progress.milestonesReached.includes(ms.id);
               const isCurrent = i === (progress.currentMilestoneIndex ?? 0) && !isComplete;
               const msTarget = ms.tasksRequired - (i > 0 ? journey.milestones[i - 1].tasksRequired : 0);
-              const currentTasks = isCurrent ? (currentMsTasksDisplay) : reached ? msTarget : 0;
+              const currentTasks = isCurrent ? currentMsTasksDisplay : reached ? msTarget : 0;
               return (
                 <div
                   key={ms.id}
                   className={cn(
-                    "flex items-center gap-2.5 py-1.5 px-2 rounded-lg text-xs transition-all",
-                    reached && "bg-success/10",
-                    isCurrent && "bg-primary/10 border border-primary/20"
+                    "flex items-center gap-3 px-4 py-3.5 transition-colors",
+                    i > 0 && "border-t border-[#F3F4F6] dark:border-border/60",
+                    isCurrent && "bg-[#EFF6FF] dark:bg-primary/10"
                   )}
                 >
                   <span className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-sm flex-shrink-0",
-                    reached ? "bg-success/20" : "bg-muted"
+                    "w-8 h-8 rounded-full flex items-center justify-center text-[14px] font-semibold flex-shrink-0",
+                    reached
+                      ? "bg-[#3B82F6] text-white"
+                      : isCurrent
+                        ? "bg-[#DBEAFE] text-[#3B82F6] dark:bg-primary/20"
+                        : "bg-[#F3F4F6] text-[#6B7280] dark:bg-muted dark:text-muted-foreground"
                   )}>
-                    {reached ? ms.icon : (i + 1)}
+                    {reached ? '✓' : (i + 1)}
                   </span>
                   <span className={cn(
-                    "font-medium flex-1",
-                    reached ? "text-foreground" : "text-muted-foreground"
+                    "flex-1 text-[15px]",
+                    isCurrent
+                      ? "font-semibold text-[#111827] dark:text-foreground"
+                      : "font-medium text-[#374151] dark:text-foreground/90"
                   )}>
                     {jt.milestoneName(journey, ms)}
                   </span>
-                  <span className="text-muted-foreground text-[10px]">
+                  <span className="text-[13px] text-[#6B7280] dark:text-muted-foreground flex-shrink-0">
                     {currentTasks}/{msTarget} {t('common.tasks', 'tasks')}
                   </span>
-                  {reached && <span className="text-success text-xs">✓</span>}
                 </div>
               );
             })}
