@@ -189,7 +189,7 @@ export const TodaySheets = (props: TodaySheetsProps) => {
 
   return (
     <>
-      <TaskInputSheet isOpen={props.isInputOpen} onClose={props.onCloseInput} onAddTask={props.onAddTask} folders={props.folders} selectedFolderId={props.selectedFolderId} onCreateFolder={props.onCreateFolder} sections={props.sections} selectedSectionId={props.inputSectionId} defaultDate={props.inputDefaultDate} preventBackdropClose={props.preventInputBackdropClose} />
+      <TaskInputSheet isOpen={props.isInputOpen} onClose={props.onCloseInput} onAddTask={props.onAddTask} folders={props.folders} selectedFolderId={props.selectedFolderId} onCreateFolder={props.onCreateFolder} onEnsureFolder={props.onEnsureFolder} onEnsureSection={props.onEnsureSection} sections={props.sections} selectedSectionId={props.inputSectionId} defaultDate={props.inputDefaultDate} preventBackdropClose={props.preventInputBackdropClose} />
       <TaskDetailPage 
         isOpen={!!props.selectedTask} 
         task={props.selectedTask} 
