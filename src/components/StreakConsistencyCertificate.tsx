@@ -228,10 +228,9 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         style={{
           background: colors.bg,
           borderRadius: 20,
-          padding: `${s(36)}px ${s(28)}px ${s(32)}px`,
+          padding: `${s(36)}px ${s(28)}px ${s(24)}px`,
           position: 'relative',
           overflow: 'hidden',
-          minHeight: s(340),
         }}
       >
         {/* Decorative glow circles */}
@@ -355,7 +354,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           display: 'flex',
           alignItems: 'center',
           gap: s(18),
-          marginTop: s(30),
+          marginTop: s(46),
           position: 'relative',
           zIndex: 1,
         }}>
@@ -370,11 +369,11 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           </div>
         </div>
 
-        {/* QR + Flowist branding — bottom-right, stacked */}
+        {/* QR + Flowist branding — directly under the water drop, right side */}
         <div style={{
           position: 'absolute',
-          right: s(20),
-          bottom: s(20),
+          right: s(28),
+          top: s(190),
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -409,6 +408,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           </Suspense>
           <p style={{ color: '#ffffff', fontSize: s(12), fontWeight: 700, margin: 0 }}>Flowist</p>
         </div>
+
 
       </div>
 
