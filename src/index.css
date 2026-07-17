@@ -43,6 +43,14 @@ body.flowist-task-dragging [data-flowist-virtual-list="tasks"] {
     --keyboard-inset: 0px;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    /* Responsive header system — viewport-adaptive */
+    --header-pad-x: clamp(8px, 2.5vw, 14px);
+    --header-pad-y: 6px;
+    --header-icon-btn: clamp(36px, 10vw, 40px);
+    --header-icon-size: clamp(18px, 5.2vw, 22px);
+    --header-title-size: clamp(15px, 4.4vw, 17px);
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -573,6 +581,40 @@ table th[contenteditable="true"]:hover {
 
   .safe-area-top {
     padding-top: var(--safe-top, 0px);
+  }
+
+  /* ============================================================
+     Global app-header system — safe-area aware + responsive icons.
+     Any header wrapper can opt-in with `.app-header`; icon buttons
+     inside auto-scale via CSS vars (no per-file tweaks needed).
+     ============================================================ */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    min-width: 0;
+    padding-top: calc(var(--safe-top, 0px) + var(--header-pad-y));
+    padding-bottom: var(--header-pad-y);
+    padding-left: calc(var(--safe-left, 0px) + var(--header-pad-x));
+    padding-right: calc(var(--safe-right, 0px) + var(--header-pad-x));
+  }
+  .app-header-btn {
+    width: var(--header-icon-btn) !important;
+    height: var(--header-icon-btn) !important;
+    flex-shrink: 0;
+  }
+  .app-header-btn > svg,
+  .app-header-btn > .lucide {
+    width: var(--header-icon-size) !important;
+    height: var(--header-icon-size) !important;
+  }
+  .app-header-title {
+    font-size: var(--header-title-size);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* Smooth scrolling optimizations */

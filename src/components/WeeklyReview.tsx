@@ -132,7 +132,7 @@ export const WeeklyReview = ({ isOpen, onClose }: WeeklyReviewProps) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-background z-50 flex flex-col animate-in slide-in-from-bottom duration-300" style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}>
+    <div className="fixed inset-0 bg-background z-50 flex flex-col animate-in slide-in-from-bottom duration-300" style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)', paddingBottom: 'var(--safe-bottom, 0px)' }}>
       <header className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-3">
           <button onClick={onClose} className="p-2 -ml-2 hover:bg-muted rounded-lg">

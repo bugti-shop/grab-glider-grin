@@ -240,7 +240,7 @@ const EisenhowerMatrix = () => {
     const items = visibleByCompletion.filter(t => matchesFilter(t, filter));
     return (
       <div className="min-h-screen bg-muted/30 pb-20">
-        <header className="sticky top-0 bg-muted/30 backdrop-blur z-20" style={{ paddingTop: 'var(--safe-top, 0px)' }}>
+        <header className="sticky top-0 bg-muted/30 backdrop-blur z-20" style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }}>
           <div className="flex items-center justify-between px-3 py-3">
             <div className="flex items-center gap-2 min-w-0">
               <button
@@ -403,7 +403,7 @@ const EisenhowerMatrix = () => {
   // ============= Overview (4 quadrants) =============
   return (
     <div className="min-h-screen bg-muted/30 pb-20">
-      <header className="sticky top-0 bg-background z-20 border-b" style={{ paddingTop: 'var(--safe-top, 0px)' }}>
+      <header className="sticky top-0 bg-background z-20 border-b" style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }}>
         <div className="flex items-center justify-between px-3 py-3">
           <div className="flex items-center gap-2">
             <AppLogo size="sm" />

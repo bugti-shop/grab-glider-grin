@@ -223,7 +223,7 @@ export const EditActionsSheet = ({ isOpen, onClose, actions, onSave }: EditActio
   const isOnboarding = document.body.classList.contains('onboarding-active');
 
   return (
-    <div className="fixed inset-0 bg-background flex flex-col animate-in slide-in-from-bottom duration-300" style={{ paddingTop: 'var(--safe-top, 0px)', paddingBottom: 'var(--safe-bottom, 0px)', zIndex: isOnboarding ? 400 : 80 }}>
+    <div className="fixed inset-0 bg-background flex flex-col animate-in slide-in-from-bottom duration-300" style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)', paddingBottom: 'var(--safe-bottom, 0px)', zIndex: isOnboarding ? 400 : 80 }}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-3">
