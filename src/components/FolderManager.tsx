@@ -595,10 +595,9 @@ export const FolderManager = ({
                 }}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, folder.id)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all active:scale-95 text-white"
+                className={cn("flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-opacity text-white", selectedFolderId === folder.id ? "opacity-100" : "opacity-80 hover:opacity-100")}
                 style={{
                   backgroundColor: folder.color,
-                  boxShadow: selectedFolderId === folder.id ? 'inset 0 0 0 2px hsl(var(--background)), inset 0 0 0 4px hsl(var(--primary) / 0.6)' : undefined,
                 }}
               >
                 <FolderIcon className="w-4 h-4" />
