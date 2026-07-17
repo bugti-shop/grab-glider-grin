@@ -233,17 +233,8 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           overflow: 'hidden',
         }}
       >
-        {/* Decorative glow circles */}
-        <div style={{
-          position: 'absolute', top: -40, right: -40,
-          width: s(180), height: s(180), borderRadius: '50%',
-          background: `radial-gradient(circle, ${colors.glow}30, transparent 70%)`,
-        }} />
-        <div style={{
-          position: 'absolute', bottom: -30, left: -30,
-          width: s(120), height: s(120), borderRadius: '50%',
-          background: `radial-gradient(circle, ${colors.glow}20, transparent 70%)`,
-        }} />
+        {/* Decorative overlays removed for a cleaner look */}
+
 
         {/* "I'm on a" text */}
         <p data-streak-intro style={{
