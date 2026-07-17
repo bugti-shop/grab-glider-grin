@@ -1481,7 +1481,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}
                 aria-label={t('common.share', 'Share')}
               >
-                <Share2 className="h-5 w-5" />
+                <Share className="h-[22px] w-[22px]" strokeWidth={2} />
               </Button>
             )}
 
