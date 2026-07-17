@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sparkles, Flame, Clock, Calendar as CalendarIcon2, Upload, Download } from 'lucide-react';
-import { MoreVertical, Eye, EyeOff, Filter, Copy, MousePointer2, Settings, LayoutList, LayoutGrid, ListPlus, ArrowUpDown, Columns3, GitBranch, Flag, ChevronRight, Trash2, ListChecks, Crown } from 'lucide-react';
+import { MoreVertical, Eye, EyeOff, Filter, Copy, MousePointer2, Settings, LayoutList, LayoutGrid, ListPlus, ArrowUpDown, Columns3, GitBranch, Flag, ChevronRight, ChevronDown, ChevronsUpDown, Trash2, ListChecks, Crown } from 'lucide-react';
 import { Plus as PlusIcon, FolderIcon, ArrowDownAZ } from 'lucide-react';
 import { toast } from 'sonner';
 import { loadCustomSmartViews, deleteCustomSmartView } from '@/utils/customSmartViews';
