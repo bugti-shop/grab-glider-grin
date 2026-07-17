@@ -23,6 +23,7 @@ import { CalendarBackgroundSheet } from '@/components/CalendarBackgroundSheet';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { NotesCalendarFab } from '@/components/notes/NotesCalendarFab';
 
 type CalendarLayout = 'month' | 'weekStrip' | 'dashboard';
 
