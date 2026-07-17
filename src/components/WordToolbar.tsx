@@ -590,7 +590,7 @@ export const WordToolbar = ({
         {/* Group 4: Text Direction */}
         {onTextDirection && isToolbarItemVisible('textDirection') && (
           <>
-            <IconBtn onClick={() => onTextDirection('ltr')} title={t('wordToolbar.leftToRight')} active={textDirection === 'ltr'}>
+            <IconBtn onClick={() => onTextDirection('ltr')} title={t('wordToolbar.leftToRight')} active={false}>
               <PilcrowLeft className="h-[18px] w-[18px]" strokeWidth={2.5} />
             </IconBtn>
             <IconBtn onClick={() => onTextDirection('rtl')} title={t('wordToolbar.rightToLeft')} active={textDirection === 'rtl'}>
