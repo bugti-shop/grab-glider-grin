@@ -950,14 +950,14 @@ const Today = () => {
                                 ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                 onClick={() => setSelectedFolderId(folder.id)}
                                 onContextMenu={(e) => { e.preventDefault(); handleToggleFolderFavorite(folder.id); }}
-                                className={cn("flex items-center gap-2 px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0", isSelected ? "text-primary-foreground" : "text-foreground hover:opacity-90", snapshot.isDragging && "shadow-lg opacity-90 ring-2 ring-primary/30")}
+                                className={cn("flex items-center gap-2 px-4 py-2 rounded-full transition-all whitespace-nowrap flex-shrink-0 text-primary-foreground", isSelected ? "ring-2 ring-offset-2 ring-offset-background ring-primary/50" : "hover:opacity-90", snapshot.isDragging && "shadow-lg opacity-90")}
                                 style={{
-                                  backgroundColor: isSelected ? chipColor : chipTint,
+                                  backgroundColor: chipColor,
                                   ...dragProvided.draggableProps.style,
                                 }}
                               >
                                 {folder.isFavorite && <Star className="h-3.5 w-3.5 fill-current" />}
-                                <FolderIcon className="h-4 w-4" style={{ color: isSelected ? undefined : chipColor }} />{folder.name}
+                                <FolderIcon className="h-4 w-4" />{folder.name}
                               </button>
                             )}
                           </Draggable>
