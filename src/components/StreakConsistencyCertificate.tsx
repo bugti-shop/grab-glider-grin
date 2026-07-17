@@ -269,41 +269,50 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           {currentStreak.toLocaleString()}
         </p>
 
-        {/* Flame drop — big, top-right corner, subtle */}
+        {/* Water droplet — top-right corner */}
         <div style={{
           position: 'absolute',
-          top: s(28),
-          right: s(24),
+          top: s(32),
+          right: s(22),
           zIndex: 0,
           pointerEvents: 'none',
         }}>
-          <svg width={s(110)} height={s(145)} viewBox="0 0 24 24" fill="white" style={{ opacity: 0.35 }}>
-            <path d="M12 23c-3.866 0-7-3.134-7-7 0-3.866 4-9 7-13 3 4 7 9.134 7 13 0 3.866-3.134 7-7 7z" />
+          <svg width={s(120)} height={s(150)} viewBox="0 0 100 130" fill="none">
+            <defs>
+              <linearGradient id="dropGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0.85" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M50 5 C50 5, 10 55, 10 85 C10 110, 30 125, 50 125 C70 125, 90 110, 90 85 C90 55, 50 5, 50 5 Z"
+              fill="url(#dropGrad)"
+            />
+            {/* Highlight */}
+            <ellipse cx="35" cy="70" rx="10" ry="18" fill="#ffffff" opacity="0.85" transform="rotate(-20 35 70)" />
           </svg>
         </div>
 
-
-
         {/* "day/days productivity streak!" */}
         <p data-streak-label style={{
-          color: '#ffffffdd',
-          fontSize: s(22),
-          fontWeight: 700,
+          color: '#ffffff',
+          fontSize: s(20),
+          fontWeight: 800,
           margin: 0,
           lineHeight: 1.3,
           position: 'relative',
           zIndex: 1,
         }}>
-          {currentStreak === 1 ? 'day' : 'days'} productivity<br />streak!
+          {currentStreak === 1 ? 'day' : 'days'} productivity streak
         </p>
 
         {/* User name */}
         {displayName && (
           <p style={{
-            color: '#ffffffbb',
-            fontSize: s(13),
-            fontWeight: 600,
-            marginTop: s(12),
+            color: '#ffffffcc',
+            fontSize: s(14),
+            fontWeight: 500,
+            margin: `${s(6)}px 0 0`,
             position: 'relative',
             zIndex: 1,
             maxWidth: '60%',
@@ -315,44 +324,40 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           </p>
         )}
 
-        {/* Bottom row: stats only */}
+        {/* Bottom row: stats with divider */}
         <div style={{
           display: 'flex',
-          alignItems: 'flex-end',
-          gap: s(16),
-          marginTop: s(28),
+          alignItems: 'center',
+          gap: s(18),
+          marginTop: s(30),
           position: 'relative',
           zIndex: 1,
         }}>
-          <div style={{ display: 'flex', gap: s(24), flexShrink: 0 }}>
-            <div>
-              <p style={{ color: '#ffffff', fontSize: s(22), fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{totalCompletions}</p>
-              <p style={{ color: '#ffffffaa', fontSize: s(11), margin: `${s(4)}px 0 0`, fontWeight: 500 }}>Tasks Done</p>
-            </div>
-            <div>
-              <p style={{ color: '#ffffff', fontSize: s(22), fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{longestStreak}</p>
-              <p style={{ color: '#ffffffaa', fontSize: s(11), margin: `${s(4)}px 0 0`, fontWeight: 500 }}>Best Streak</p>
-            </div>
+          <div>
+            <p style={{ color: '#ffffff', fontSize: s(28), fontWeight: 800, margin: 0, lineHeight: 1 }}>{totalCompletions}</p>
+            <p style={{ color: '#ffffffcc', fontSize: s(10), margin: `${s(6)}px 0 0`, fontWeight: 700, letterSpacing: '0.08em' }}>TASKS DONE</p>
+          </div>
+          <div style={{ width: 1, height: s(38), background: '#ffffff55' }} />
+          <div>
+            <p style={{ color: '#ffffff', fontSize: s(28), fontWeight: 800, margin: 0, lineHeight: 1 }}>{longestStreak}</p>
+            <p style={{ color: '#ffffffcc', fontSize: s(10), margin: `${s(6)}px 0 0`, fontWeight: 700, letterSpacing: '0.08em' }}>BEST STREAK</p>
           </div>
         </div>
 
-
-
-
-        {/* QR + Flowist branding — small, right side */}
+        {/* QR + Flowist branding — bottom-right, stacked */}
         <div style={{
           position: 'absolute',
-          right: s(12),
-          bottom: s(60),
+          right: s(20),
+          bottom: s(20),
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          gap: s(8),
+          gap: s(6),
           zIndex: 2,
         }}>
           <Suspense fallback={null}>
             {(() => {
-              const qrSize = Math.max(40, Math.min(56, s(38)));
-
+              const qrSize = Math.max(48, Math.min(72, s(56)));
               const quietZone = Math.max(6, Math.round(qrSize * 0.1));
               return (
                 <div style={{
@@ -376,10 +381,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
               );
             })()}
           </Suspense>
-          <div>
-            <p style={{ color: '#ffffffee', fontSize: s(11), fontWeight: 700, margin: 0 }}>Flowist</p>
-            <p style={{ color: '#ffffff99', fontSize: s(8), margin: `${s(2)}px 0 0` }}>Notepad & To Do List</p>
-          </div>
+          <p style={{ color: '#ffffff', fontSize: s(12), fontWeight: 700, margin: 0 }}>Flowist</p>
         </div>
 
       </div>
