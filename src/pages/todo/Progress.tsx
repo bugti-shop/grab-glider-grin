@@ -162,31 +162,31 @@ const Progress = () => {
 
   return (
     <TodoLayout title={t('nav.progress', 'Progress')}>
-      <div className="container mx-auto px-3 sm:px-4 py-5 sm:py-6 space-y-4 sm:space-y-6 max-w-2xl">
+      <div className="container mx-auto px-4 sm:px-5 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-2xl">
         
         {/* Blue Streak Hero Card */}
         <SafeComponent fallback={null}>
           <button
             onClick={() => setShowStreakDetail(true)}
-            className="relative w-full rounded-2xl p-5 sm:p-6 text-left overflow-hidden shadow-sm active:scale-[0.99] transition-transform"
+            className="relative w-full rounded-3xl p-6 sm:p-8 text-left overflow-hidden shadow-md active:scale-[0.99] transition-transform"
             style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
           >
             {/* Decorative rings */}
-            <div className="absolute -right-8 -bottom-8 w-32 h-32 sm:w-40 sm:h-40 rounded-full border border-white/15" />
-            <div className="absolute -right-2 -bottom-16 w-44 h-44 sm:w-56 sm:h-56 rounded-full border border-white/10" />
+            <div className="absolute -right-8 -bottom-8 w-40 h-40 sm:w-48 sm:h-48 rounded-full border border-white/15" />
+            <div className="absolute -right-2 -bottom-16 w-56 h-56 sm:w-64 sm:h-64 rounded-full border border-white/10" />
 
             <div className="relative z-10">
-              <p className="text-5xl sm:text-7xl font-extrabold text-white leading-none tracking-tight">
+              <p className="text-7xl sm:text-8xl font-extrabold text-white leading-none tracking-tight">
                 {data?.currentStreak || 0}
               </p>
-              <div className="flex items-center gap-2 mt-2 sm:mt-3">
-                <span className="text-base sm:text-lg font-semibold text-white">
+              <div className="flex items-center gap-2 mt-3 sm:mt-4">
+                <span className="text-lg sm:text-xl font-semibold text-white">
                   {t('streak.dayStreak', 'Day Streak')}
                 </span>
-                <Flame className="h-4 w-4 sm:h-5 sm:w-5 text-orange-300 fill-orange-400" />
+                <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-orange-300 fill-orange-400" />
               </div>
               {(data?.currentStreak || 0) > 0 && (data?.currentStreak || 0) >= (data?.longestStreak || 0) && (
-                <p className="text-[11px] sm:text-xs font-medium text-white/90 mt-2">New Personal Best! 🎉</p>
+                <p className="text-xs sm:text-sm font-medium text-white/90 mt-2">New Personal Best! 🎉</p>
               )}
             </div>
           </button>
