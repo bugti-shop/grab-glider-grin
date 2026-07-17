@@ -1478,17 +1478,17 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                     // user cancelled or share failed silently
                   }
                 }}
-                className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}
+                className={cn("app-header-btn", noteType === 'sticky' && "text-black hover:text-black")}
                 aria-label={t('common.share', 'Share')}
               >
-                <Share className="!h-[19px] !w-[19px]" strokeWidth={1.75} />
+                <Share strokeWidth={1.75} />
               </Button>
             )}
 
             {!isReadOnlyWebClip && <DropdownMenu open={isOptionsMenuOpen} onOpenChange={setIsOptionsMenuOpen}>
               <DropdownMenuTrigger asChild>
-                <Button data-tour="note-options-menu" variant="ghost" size="icon" className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
-                  <MoreHorizontal className="!h-[19px] !w-[19px]" strokeWidth={2} />
+                <Button data-tour="note-options-menu" variant="ghost" size="icon" className={cn("app-header-btn", noteType === 'sticky' && "text-black hover:text-black")}>
+                  <MoreHorizontal strokeWidth={2} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-card z-50 max-h-[70vh] overflow-y-auto">
