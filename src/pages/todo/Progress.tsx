@@ -240,13 +240,31 @@ const Progress = () => {
                 <Flame className="h-6 w-6 sm:h-7 sm:w-7 text-orange-300 fill-orange-400" />
               </div>
             </div>
-          </button>
-        </SafeComponent>
 
-        {/* Week Strip Card */}
-        <SafeComponent fallback={null}>
-          <div className="bg-card rounded-2xl px-3 sm:px-5 py-6 sm:py-7 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
-            <div className="flex justify-between items-start gap-2.5 sm:gap-3">
+            {/* Decorative flame illustration on the right */}
+            <div className="pointer-events-none absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 opacity-90">
+              <svg width="120" height="140" viewBox="0 0 120 140" fill="none" xmlns="http://www.w3.org/2000/svg" className="sm:w-[150px] sm:h-[170px]">
+                <defs>
+                  <radialGradient id="flameGlow" cx="50%" cy="55%" r="55%">
+                    <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.55" />
+                    <stop offset="60%" stopColor="#FFFFFF" stopOpacity="0.12" />
+                    <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+                  </radialGradient>
+                </defs>
+                <circle cx="60" cy="72" r="58" fill="url(#flameGlow)" />
+                <path
+                  d="M60 14c8 14 22 24 22 42 0 20-14 34-22 34S38 76 38 56c0-12 8-20 14-30 2-4 6-8 8-12z"
+                  fill="#FFFFFF"
+                  fillOpacity="0.28"
+                />
+                <path
+                  d="M60 40c4 8 12 14 12 24 0 12-8 20-12 20s-12-8-12-20c0-7 4-11 8-16 2-2 3-5 4-8z"
+                  fill="#FFFFFF"
+                  fillOpacity="0.55"
+                />
+              </svg>
+            </div>
+
               {weekData.map((day) => {
                 const dayDate = new Date(day.date);
                 const dateNum = dayDate.getDate();
