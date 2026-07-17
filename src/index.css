@@ -336,23 +336,19 @@ body.flowist-task-dragging [data-flowist-virtual-list="tasks"] {
     color: #000000 !important;
   }
   
-  /* Sticky note editor text should be black - including title and content */
-  .sticky-note-editor,
-  .sticky-note-editor *,
-  .sticky-note-editor input,
-  .sticky-note-editor textarea,
-  .sticky-note-editor [contenteditable],
-  .sticky-note-editor h1,
-  .sticky-note-editor h2,
-  .sticky-note-editor h3,
-  .sticky-note-editor p,
-  .sticky-note-editor span,
-  .sticky-note-editor div {
+  /* Sticky note: force black text ONLY inside the title + editable content.
+     Do NOT cascade to the bottom WordToolbar / popovers so it matches the
+     regular note editor exactly. */
+  .sticky-note-editor > .title-input,
+  .sticky-note-editor > .title-input::placeholder,
+  .sticky-note-editor [contenteditable="true"],
+  .sticky-note-editor [contenteditable="true"] *,
+  .sticky-note-editor .note-hashtag-pills,
+  .sticky-note-editor .note-hashtag-pills * {
     color: #000000 !important;
   }
-  
-  /* Title input specifically */
-  .sticky-note-editor input::placeholder {
+
+  .sticky-note-editor > .title-input::placeholder {
     color: rgba(0, 0, 0, 0.5) !important;
   }
 
