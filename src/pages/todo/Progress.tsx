@@ -194,22 +194,22 @@ const Progress = () => {
 
         {/* Week Strip Card */}
         <SafeComponent fallback={null}>
-          <div className="bg-card rounded-2xl p-3 sm:p-5 border shadow-sm">
-            <div className="flex justify-between items-start gap-0.5 sm:gap-1">
+          <div className="bg-card rounded-3xl p-4 sm:p-6 border shadow-sm">
+            <div className="flex justify-between items-start gap-1 sm:gap-2">
               {weekData.map((day) => {
                 const dayDate = new Date(day.date);
                 const dateNum = dayDate.getDate();
                 return (
-                  <div key={day.date} className="flex flex-col items-center gap-1 sm:gap-1.5 min-w-0 flex-1">
+                  <div key={day.date} className="flex flex-col items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
                     <span className={cn(
-                      "text-[10px] sm:text-xs font-medium",
+                      "text-xs sm:text-sm font-medium",
                       day.isToday ? "text-primary" : "text-muted-foreground"
                     )}>
                       {day.day}
                     </span>
                     <div
                       className={cn(
-                        "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all",
+                        "w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all",
                         day.completed
                           ? "bg-primary border-primary text-primary-foreground"
                           : day.isToday
@@ -217,10 +217,10 @@ const Progress = () => {
                             : "border-muted bg-muted/40"
                       )}
                     >
-                      {day.completed && <Check className="h-3.5 w-3.5 sm:h-5 sm:w-5" strokeWidth={3} />}
+                      {day.completed && <Check className="h-4.5 w-4.5 sm:h-5 sm:w-5" strokeWidth={3} />}
                     </div>
                     <span className={cn(
-                      "text-[10px] sm:text-[11px] font-medium",
+                      "text-xs sm:text-sm font-medium",
                       day.isToday ? "text-primary font-semibold" : "text-muted-foreground"
                     )}>
                       {dateNum}
