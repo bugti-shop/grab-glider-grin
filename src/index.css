@@ -897,9 +897,14 @@ body[data-tour-active="true"] [aria-busy="true"][role="status"] {
 
 /* Scroll containers: strict containment for scroll performance */
 .perf-contain-scroll {
-  contain: strict;
+  /* Was `contain: strict` — that collapsed the scroll container to 0
+     height inside flex parents on Android/iOS WebViews (blank pages).
+     `content` still gives us paint/layout isolation without breaking
+     intrinsic sizing. */
+  contain: content;
   overflow: auto;
 }
+
 
 /* GPU-accelerated elements: swipe actions, sheets, draggable items */
 .perf-gpu-layer {
