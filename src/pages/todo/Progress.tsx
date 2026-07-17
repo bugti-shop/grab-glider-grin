@@ -368,9 +368,28 @@ const Progress = () => {
         {/* Completed Tasks Last 30 Days - Line Chart (reference-matched) */}
         <SafeComponent fallback={null}>
           <div className="bg-white dark:bg-card rounded-3xl p-5 sm:p-6 border border-[#E5E7EB] dark:border-border shadow-sm">
-            <h3 className="text-[17px] sm:text-[19px] font-semibold text-[#111827] dark:text-foreground mb-5 leading-tight">
-              {t('streak.completedLast30', 'Completed Tasks (Last 30 Days)')}
-            </h3>
+            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+              <h3 className="text-[17px] sm:text-[19px] font-semibold text-[#111827] dark:text-foreground leading-tight">
+                {t('streak.completedTasks', 'Completed Tasks')}
+              </h3>
+            </div>
+            <div className="flex gap-1.5 mb-5 overflow-x-auto -mx-1 px-1 no-scrollbar">
+              {rangeOptions.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setChartRange(opt.key)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-colors border",
+                    chartRange === opt.key
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-transparent text-muted-foreground border-border hover:bg-muted"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             <div className="w-full h-72 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 12, right: 20, left: -6, bottom: 6 }}>
