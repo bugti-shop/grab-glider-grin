@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { m as motion } from 'framer-motion';
 import { Share2, Edit3, Check, Copy, Download } from 'lucide-react';
@@ -7,6 +8,7 @@ import { triggerHaptic } from '@/utils/haptics';
 import { shareImageBlob } from '@/utils/shareImage';
 
 const QRCodeSVG = lazy(() => import('qrcode.react').then(m => ({ default: m.QRCodeSVG })));
+
 
 const exportElementToBlob = async (element: HTMLElement): Promise<Blob | null> => {
   const html2canvas = (await import('html2canvas')).default;
