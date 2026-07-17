@@ -36,11 +36,18 @@ class TourManagerImpl {
   private forcedGuard: ReturnType<typeof setInterval> | null = null;
   private remountCurrentStep: (() => void) | null = null;
   private activeRoute: string | null = null;
+  // Re-entrancy guard: prevents concurrent startTour() calls from stacking
+  // multiple driver.js instances on top of each other (root cause of the
+  // Android WebView crash on first install — chain advance + watchdog +
+  // pointer/keydown activity watchdog all raced to mount tours).
+  private starting = false;
+  private chainScheduled = false;
 
   /** Called once by <TourProvider/> so we can navigate before starting a tour. */
   setNavigate(fn: NavigateFn) {
     this.navigate = fn;
   }
+
 
   isActive() {
     return !!this.activeDriver;
