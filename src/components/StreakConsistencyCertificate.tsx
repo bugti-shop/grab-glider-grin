@@ -53,6 +53,9 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
   const [cardName, setCardName] = useState(profile.name || '');
   const [copiedText, setCopiedText] = useState(false);
   const [cardWidth, setCardWidth] = useState(360);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
 
   useEffect(() => {
     if (!cardName && profile.name) setCardName(profile.name);
