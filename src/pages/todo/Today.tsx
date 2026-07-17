@@ -950,7 +950,7 @@ const Today = () => {
                                 ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                                 onClick={() => setSelectedFolderId(folder.id)}
                                 onContextMenu={(e) => { e.preventDefault(); handleToggleFolderFavorite(folder.id); }}
-                                className={cn("flex items-center gap-2 px-4 py-2 rounded-full transition-opacity whitespace-nowrap flex-shrink-0 text-primary-foreground", isSelected ? "opacity-100" : "opacity-80 hover:opacity-100", snapshot.isDragging && "shadow-lg")}
+                                className={cn("flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap flex-shrink-0 text-primary-foreground", snapshot.isDragging && "shadow-lg")}
                                 style={{
                                   backgroundColor: chipColor,
                                   ...dragProvided.draggableProps.style,
