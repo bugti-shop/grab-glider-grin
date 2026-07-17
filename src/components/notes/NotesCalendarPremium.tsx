@@ -127,14 +127,8 @@ export const NotesCalendarPremium = ({
                 >
                   {format(day, 'd')}
                 </span>
-                {inMonth && dot && (
-                  <span
-                    className={cn(
-                      'absolute h-[5px] w-[5px] rounded-full',
-                      'bottom-[3px]',
-                      isSelected ? 'bg-[#2563eb]' : 'bg-muted-foreground/40',
-                    )}
-                  />
+                {inMonth && dot && !isSelected && (
+                  <span className="absolute h-[5px] w-[5px] rounded-full bottom-[3px] bg-muted-foreground/40" />
                 )}
               </button>
             );
