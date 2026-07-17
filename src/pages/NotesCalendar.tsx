@@ -198,12 +198,43 @@ const NotesCalendar = () => {
           </ErrorBoundary>
 
           {selectedDateNotes.length > 0 && (
-            <div className="px-4 pt-2">
-              <h2 className="text-lg font-semibold text-foreground py-2">
-                {format(date || new Date(), 'MMMM dd, yyyy')}
-              </h2>
+            <div className="mt-2 rounded-t-[28px] bg-card shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.08)] pt-3 pb-6 px-4">
+              {/* Drag handle */}
+              <div className="mx-auto mb-3 h-[5px] w-10 rounded-full bg-muted-foreground/25" />
+              {/* Section header: "Today, Nov 14" + options */}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[19px] font-bold text-foreground tracking-tight">
+                  {date && isTodayFn(date) ? (
+                    <>
+                      {t('common.today', 'Today')},{' '}
+                      <span className="text-[#2563eb]">{format(date, 'MMM d')}</span>
+                    </>
+                  ) : (
+                    <span className="text-[#2563eb]">{format(date || new Date(), 'EEEE, MMM d')}</span>
+                  )}
+                </h2>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      aria-label={t('common.options', 'Options')}
+                      className="h-9 w-9 flex items-center justify-center rounded-full border border-border/60 active:bg-muted transition-colors"
+                    >
+                      <MoreHorizontal className="h-[18px] w-[18px] text-foreground/80" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-card">
+                    <DropdownMenuItem onClick={() => setDate(new Date())}>
+                      {t('calendar.goToToday', 'Go to Today')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      {t('calendar.changeBackground', 'Change Background')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               <ErrorBoundary fallback={<NotesListFallback />}>
-                <div className="space-y-3 pb-4">
+                <div className="space-y-3">
                   <NotesVirtualGrid
                     notes={selectedDateNotes}
                     estimatedRowHeight={190}
