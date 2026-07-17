@@ -20,7 +20,7 @@ interface ExtractRequest {
   webUnlockCode?: string;
 }
 
-const AI_GATEWAY_TIMEOUT_MS = 60_000;
+const AI_GATEWAY_TIMEOUT_MS = 120_000;
 // Pro is verified server-side via entitlements plus web Stripe subscriptions.
 const STRIPE_GRACE_PERIOD_MS = 2 * 24 * 60 * 60 * 1000;
 const REVENUECAT_ENTITLEMENT_ID = "Pro";
