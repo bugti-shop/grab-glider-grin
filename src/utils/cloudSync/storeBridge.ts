@@ -365,6 +365,9 @@ async function applySettingsFromCloud(rows: SyncRow[]) {
   delete safeDisplay.folders;
   delete safeDisplay.todoFolders;
   delete safeDisplay.todoSections;
+  // Virtual journey lives in local IndexedDB only — a stale cloud snapshot
+  // must never overwrite a freshly-selected journey on refresh.
+  delete safeDisplay.flowist_virtual_journey;
   await setManySettings(safeDisplay);
 }
 

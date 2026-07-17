@@ -147,6 +147,8 @@ export const setSetting = async <T>(key: string, value: T, options?: { skipCloud
       try {
         const snap: Record<string, unknown> = {};
         _warmCache.forEach((v, k) => { snap[k] = v; });
+        // Journey is local-only — never mirror it via user_settings.
+        delete snap['flowist_virtual_journey'];
         pushSettingsSnapshot(snap);
       } catch {}
     }).catch(() => {});
