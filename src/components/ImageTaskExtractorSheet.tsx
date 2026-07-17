@@ -83,16 +83,6 @@ export const ImageTaskExtractorSheet = ({
   onEnsureFolder,
   onEnsureSection,
 }: Props) => {
-
-export const ImageTaskExtractorSheet = ({
-  isOpen,
-  onClose,
-  onAddTasks,
-  folders,
-  sections,
-  currentFolderId,
-  currentSectionId,
-}: Props) => {
   const { t, i18n } = useTranslation();
   const { requireFeature } = useSubscription();
   // AI GUARD: AI features must never break due to subscription/trial state.
