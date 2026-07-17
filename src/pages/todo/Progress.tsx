@@ -271,6 +271,8 @@ const Progress = () => {
         <SafeComponent fallback={null}>
           <div className="bg-card rounded-2xl px-3 sm:px-5 py-6 sm:py-7 border shadow-[0_6px_20px_-8px_rgba(15,23,42,0.15)]">
             <div className="flex justify-between items-start gap-2.5 sm:gap-3">
+              {weekData.map((day) => {
+
 
                 const dayDate = new Date(day.date);
                 const dateNum = dayDate.getDate();
