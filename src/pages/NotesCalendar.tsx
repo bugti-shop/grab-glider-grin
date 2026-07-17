@@ -324,17 +324,9 @@ const NotesCalendar = () => {
 
       </div>
 
-      {/* Floating Add Note button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => handleCreateNote('regular')}
-        aria-label={t('notes.addNote', 'Add note')}
-        className="fixed right-4 z-40 h-14 w-14 rounded-full shadow-lg bg-black text-white hover:bg-black/90 border-0"
-        style={{ bottom: 'calc(72px + var(--safe-bottom, 0px))' }}
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
+      {/* Floating Add Note button (dedicated Notes FAB) */}
+      <NotesCalendarFab onClick={() => handleCreateNote('regular')} />
+
 
 
       <NoteEditor
