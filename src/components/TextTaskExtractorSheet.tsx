@@ -265,6 +265,11 @@ export const TextTaskExtractorSheet = ({
         toast.success(t('textExtract.detectedCount', '{{count}} tasks detected', { count: review.length }));
       }
     } catch (e: any) {
+      // Silently swallow aborts triggered by sheet close or supersede.
+      if (controller.signal.aborted || e?.name === 'AbortError') {
+        toast.dismiss(loadingToastId);
+        return;
+      }
       console.error('[text extract]', e);
       toast.dismiss(loadingToastId);
       const msg = String(e?.message || '');
@@ -273,7 +278,7 @@ export const TextTaskExtractorSheet = ({
         requireFeature('ai_dictation');
       } else if (msg.includes('429')) {
         toast.error(t('tasks.aiRateLimit', 'AI is busy, try again shortly'));
-      } else if (msg.includes('AbortError') || msg.includes('timeout')) {
+      } else if (msg.includes('timeout')) {
         toast.error(t('textExtract.timeout', 'AI took too long. Try shorter text.'));
       } else {
         toast.error(t('textExtract.failed', 'Could not extract tasks from this text'));
@@ -281,8 +286,11 @@ export const TextTaskExtractorSheet = ({
     } finally {
       setIsExtracting(false);
       if (release) release();
+      inFlightRef.current = false;
+      if (abortRef.current === controller) abortRef.current = null;
     }
   };
+
 
 
   const toggle = (uid: string) =>
