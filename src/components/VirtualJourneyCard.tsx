@@ -262,7 +262,7 @@ export const VirtualJourneyCard = () => {
                 <div
                   key={ms.id}
                   className={cn(
-                    "flex items-center gap-2.5 sm:gap-3 px-2.5 sm:px-4 py-2.5 sm:py-3 transition-colors",
+                    "flex items-center gap-3.5 sm:gap-3 px-3 sm:px-4 py-3.5 sm:py-3 transition-colors",
                     i > 0 && "border-t border-[#F3F4F6] dark:border-border/60",
                     isCurrent && "bg-[#EFF6FF] dark:bg-primary/10"
                   )}
