@@ -959,39 +959,9 @@ const Today = () => {
             </div>
           )}
 
-          {/* Collapse All / Expand All */}
-          {['flat', 'timeline', 'progress', 'priority', 'history'].includes(viewMode) && (
-            <div className="mb-4 flex justify-end">
-              <Button variant="outline" size="sm" onClick={() => {
-                if (collapsedViewSections.size > 0) {
-                  setCollapsedViewSections(new Set());
-                } else {
-                  const allSectionIds = new Set<string>();
-                  if (viewMode === 'flat') {
-                    if (groupByOption !== 'none') {
-                      if (groupByOption === 'section') sortedSections.forEach(s => allSectionIds.add(`group-section-${s.id}`));
-                      else if (groupByOption === 'priority') ['high', 'medium', 'low', 'none'].forEach(id => allSectionIds.add(`group-priority-${id}`));
-                      else if (groupByOption === 'date') ['overdue', 'today', 'tomorrow', 'this-week', 'later', 'no-date'].forEach(id => allSectionIds.add(`group-date-${id}`));
-                    } else {
-                      sortedSections.forEach(s => allSectionIds.add(`flat-${s.id}`));
-                    }
-                  } else if (viewMode === 'timeline') {
-                    ['timeline-overdue', 'timeline-today', 'timeline-tomorrow', 'timeline-thisweek', 'timeline-later', 'timeline-nodate'].forEach(id => allSectionIds.add(id));
-                  } else if (viewMode === 'progress') {
-                    ['progress-notstarted', 'progress-inprogress', 'progress-almostdone'].forEach(id => allSectionIds.add(id));
-                  } else if (viewMode === 'priority') {
-                    ['priority-high', 'priority-medium', 'priority-low', 'priority-none'].forEach(id => allSectionIds.add(id));
-                  } else if (viewMode === 'history') {
-                    ['history-completed-today', 'history-completed-yesterday', 'history-this-week', 'history-older'].forEach(id => allSectionIds.add(id));
-                  }
-                  allSectionIds.add('view-completed');
-                  setCollapsedViewSections(allSectionIds);
-                }
-              }} className="gap-1 whitespace-nowrap">
-                {collapsedViewSections.size > 0 ? <><ChevronDown className="h-4 w-4" />{t('sections.expandAll')}</> : <><ChevronRight className="h-4 w-4" />{t('sections.collapseAll')}</>}
-              </Button>
-            </div>
-          )}
+          {/* Collapse All / Expand All moved to the options dropdown */}
+
+
 
           {/* Tasks by View Mode */}
           {processedItems.length === 0 ? (
