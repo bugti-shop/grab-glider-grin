@@ -2,9 +2,10 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
 import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
+import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStrip';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -12,17 +13,20 @@ import { Note, Folder, NoteType } from '@/types/note';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { format, isSameDay } from 'date-fns';
 import { NoteCard } from '@/components/NoteCard';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { saveNoteToDBSingle, deleteNoteFromDB, loadNoteFromDB, isNoteContentStub } from '@/utils/noteStorage';
 import { useNotes } from '@/contexts/NotesContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CalendarBackgroundSheet } from '@/components/CalendarBackgroundSheet';
-import { getSetting } from '@/utils/settingsStorage';
+import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
+type CalendarLayout = 'month' | 'weekStrip';
+
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
 
 const CalendarPanelFallback = () => (
   <div className="mx-4 my-4 rounded-lg border border-border bg-card p-4 text-center">
@@ -57,18 +61,28 @@ const NotesCalendar = () => {
   const [isBackgroundSheetOpen, setIsBackgroundSheetOpen] = useState(false);
   
   
-  // Load folders and background preference
+  const [layout, setLayout] = useState<CalendarLayout>('month');
+
+  // Load folders, background preference, and calendar layout
   useEffect(() => {
     const loadSettings = async () => {
-      const [savedFolders, savedBackground] = await Promise.all([
+      const [savedFolders, savedBackground, savedLayout] = await Promise.all([
         getSetting<Folder[]>('folders', []),
-        getSetting<string>('calendarBackground', 'none')
+        getSetting<string>('calendarBackground', 'none'),
+        getSetting<CalendarLayout>('notesCalendarLayout', 'month'),
       ]);
       setFolders(savedFolders);
       setCalendarBackground(savedBackground);
+      setLayout(savedLayout);
     };
     loadSettings();
   }, []);
+
+  const changeLayout = useCallback((next: CalendarLayout) => {
+    setLayout(next);
+    setSetting('notesCalendarLayout', next);
+  }, []);
+
 
   const selectedDateNotes = useMemo(() => {
     if (!date) return [];
@@ -179,89 +193,119 @@ const NotesCalendar = () => {
   return (
     <div className="min-h-screen min-h-screen-dynamic bg-background pb-14 flex flex-col">
       <div style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }} className="flex-1 flex flex-col min-h-0">
-        {/* Header with App Logo */}
-        <div className="flex items-center gap-2 px-4 pt-3 pb-1 flex-shrink-0">
-          <AppLogo />
-          <h1 className="text-lg font-bold text-foreground">{t('nav.calendar', 'Calendar')}</h1>
+        {/* Header with App Logo + layout switcher */}
+        <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-1 flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <AppLogo />
+            <h1 className="text-lg font-bold text-foreground truncate">{t('nav.calendar', 'Calendar')}</h1>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                aria-label="Switch calendar layout"
+                className="h-9 w-9 flex items-center justify-center rounded-full border border-border/60 bg-card active:bg-muted transition-colors"
+              >
+                <LayoutGrid className="h-[17px] w-[17px] text-foreground/80" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-card">
+              <DropdownMenuLabel className="text-[11px] tracking-wider text-muted-foreground">
+                CALENDAR LAYOUT
+              </DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => changeLayout('month')} className="gap-2">
+                <CalendarRange className="h-4 w-4" />
+                <span className="flex-1">Month grid</span>
+                {layout === 'month' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeLayout('weekStrip')} className="gap-2">
+                <LayoutGrid className="h-4 w-4" />
+                <span className="flex-1">Week strip</span>
+                {layout === 'weekStrip' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
+                <ImageIcon className="h-4 w-4" />
+                {t('calendar.changeBackground', 'Change Background')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDate(new Date())}>
+                {t('calendar.goToToday', 'Go to Today')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Scrollable area: calendar + notes list scroll together so the full month is revealed */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <ErrorBoundary fallback={<CalendarPanelFallback />}>
-            <NotesCalendarPremium
-              selectedDate={date}
-              onDateSelect={setDate}
-              highlightedDates={noteDates}
-              onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
-              onAddClick={() => handleCreateNote('regular')}
-            />
-          </ErrorBoundary>
-
-          <div className="mt-2 rounded-t-[28px] bg-card shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.08)] pt-3 pb-6 px-4">
-            {/* Drag handle */}
-            <div className="mx-auto mb-3 h-[5px] w-10 rounded-full bg-muted-foreground/25" />
-            {/* Section header: "Today, Nov 14" + options */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[19px] font-bold text-foreground tracking-tight">
-                {date && isTodayFn(date) ? (
-                  <>
-                    {t('common.today', 'Today')},{' '}
-                    <span className="text-[#2563eb]">{format(date, 'MMM d')}</span>
-                  </>
-                ) : (
-                  <span className="text-[#2563eb]">{format(date || new Date(), 'EEEE, MMM d')}</span>
-                )}
-                {selectedDateNotes.length > 0 && (
-                  <span className="ml-2 text-[13px] font-medium text-muted-foreground align-middle">
-                    {selectedDateNotes.length}
-                  </span>
-                )}
-              </h2>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    aria-label={t('common.options', 'Options')}
-                    className="h-9 w-9 flex items-center justify-center rounded-full border border-border/60 active:bg-muted transition-colors"
-                  >
-                    <MoreHorizontal className="h-[18px] w-[18px] text-foreground/80" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-card">
-                  <DropdownMenuItem onClick={() => setDate(new Date())}>
-                    {t('calendar.goToToday', 'Go to Today')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
-                    <ImageIcon className="h-4 w-4" />
-                    {t('calendar.changeBackground', 'Change Background')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <ErrorBoundary fallback={<NotesListFallback />}>
-              {selectedDateNotes.length > 0 ? (
-                <div className="space-y-3">
-                  <NotesVirtualGrid
-                    notes={selectedDateNotes}
-                    estimatedRowHeight={190}
-                    useWindowing={false}
-                    getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
-                    renderCard={(note) => (
-                      <NoteCard
-                        note={note}
-                        onEdit={handleEditNote}
-                        onDelete={handleDeleteNote}
-                      />
-                    )}
-                  />
-                </div>
-              ) : (
-                <div className="py-10 text-center text-sm text-muted-foreground">
-                  {t('notes.noNotesForDate', 'No notes for this date yet.')}
-                </div>
-              )}
+          {layout === 'weekStrip' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarWeekStrip
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onMonthClick={() => changeLayout('month')}
+              />
             </ErrorBoundary>
-          </div>
+          ) : (
+            <>
+              <ErrorBoundary fallback={<CalendarPanelFallback />}>
+                <NotesCalendarPremium
+                  selectedDate={date}
+                  onDateSelect={setDate}
+                  highlightedDates={noteDates}
+                  onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
+                  onAddClick={() => handleCreateNote('regular')}
+                />
+              </ErrorBoundary>
+
+              <div className="mt-2 rounded-t-[28px] bg-card shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.08)] pt-3 pb-6 px-4">
+                {/* Drag handle */}
+                <div className="mx-auto mb-3 h-[5px] w-10 rounded-full bg-muted-foreground/25" />
+                {/* Section header: "Today, Nov 14" + options */}
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-[19px] font-bold text-foreground tracking-tight">
+                    {date && isTodayFn(date) ? (
+                      <>
+                        {t('common.today', 'Today')},{' '}
+                        <span className="text-[#2563eb]">{format(date, 'MMM d')}</span>
+                      </>
+                    ) : (
+                      <span className="text-[#2563eb]">{format(date || new Date(), 'EEEE, MMM d')}</span>
+                    )}
+                    {selectedDateNotes.length > 0 && (
+                      <span className="ml-2 text-[13px] font-medium text-muted-foreground align-middle">
+                        {selectedDateNotes.length}
+                      </span>
+                    )}
+                  </h2>
+                </div>
+                <ErrorBoundary fallback={<NotesListFallback />}>
+                  {selectedDateNotes.length > 0 ? (
+                    <div className="space-y-3">
+                      <NotesVirtualGrid
+                        notes={selectedDateNotes}
+                        estimatedRowHeight={190}
+                        useWindowing={false}
+                        getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
+                        renderCard={(note) => (
+                          <NoteCard
+                            note={note}
+                            onEdit={handleEditNote}
+                            onDelete={handleDeleteNote}
+                          />
+                        )}
+                      />
+                    </div>
+                  ) : (
+                    <div className="py-10 text-center text-sm text-muted-foreground">
+                      {t('notes.noNotesForDate', 'No notes for this date yet.')}
+                    </div>
+                  )}
+                </ErrorBoundary>
+              </div>
+            </>
+          )}
         </div>
+
       </div>
 
       {/* Floating Add Note button */}
