@@ -409,7 +409,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
               );
             })()}
           </Suspense>
-          <p style={{ color: '#ffffff', fontSize: s(12), fontWeight: 700, margin: 0 }}>Flowist</p>
+          
         </div>
 
 
