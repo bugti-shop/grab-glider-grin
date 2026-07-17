@@ -36,6 +36,8 @@ const Progress = () => {
 
   const [weekStats, setWeekStats] = useState({ completed: 0, total: 0 });
   const [lifetimeCompleted, setLifetimeCompleted] = useState(0);
+  const [chartData, setChartData] = useState<{ date: string; label: string; value: number }[]>([]);
+
 
   
   const [showCertificates, setShowCertificates] = useState(false);
