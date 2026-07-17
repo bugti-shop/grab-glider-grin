@@ -409,73 +409,81 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
 
       </div>
 
+      {(() => {
+        const controls = (
+          <div className="space-y-3">
+            {/* Name input */}
+            <div className="bg-card border rounded-xl p-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-muted-foreground">Your Name</span>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="text-xs text-primary flex items-center gap-1"
+                >
+                  <Edit3 className="h-3 w-3" />
+                  {isEditing ? 'Done' : 'Edit'}
+                </button>
+              </div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={cardName}
+                  onChange={(e) => setCardName(e.target.value)}
+                  placeholder={t('common.enterYourName', 'Enter your name')}
+                  maxLength={40}
+                  autoFocus
+                  className="w-full text-sm bg-muted rounded-lg px-3 py-2 border border-border focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              ) : (
+                <p className="text-sm font-medium truncate">{displayName || t('common.tapEditName', 'Tap Edit to add your name')}</p>
+              )}
+            </div>
 
-      {/* Name input */}
-      <div className="bg-card border rounded-xl p-3">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-semibold text-muted-foreground">Your Name</span>
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className="text-xs text-primary flex items-center gap-1"
-          >
-            <Edit3 className="h-3 w-3" />
-            {isEditing ? 'Done' : 'Edit'}
-          </button>
-        </div>
-        {isEditing ? (
-          <input
-            type="text"
-            value={cardName}
-            onChange={(e) => setCardName(e.target.value)}
-            placeholder={t('common.enterYourName', 'Enter your name')}
-            maxLength={40}
-            autoFocus
-            className="w-full text-sm bg-muted rounded-lg px-3 py-2 border border-border focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        ) : (
-          <p className="text-sm font-medium truncate">{displayName || t('common.tapEditName', 'Tap Edit to add your name')}</p>
-        )}
-      </div>
+            {/* Action buttons */}
+            <div className="flex gap-2 flex-wrap">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleShare}
+                disabled={isSharing}
+                className="flex-1 min-w-[120px] bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isSharing ? (
+                  <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4" />
+                )}
+                {isSharing ? 'Exporting...' : 'Share'}
+              </motion.button>
 
-      {/* Action buttons */}
-      <div className="flex gap-2 flex-wrap">
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={handleShare}
-          disabled={isSharing}
-          className="flex-1 min-w-[120px] bg-primary text-primary-foreground rounded-xl py-3 font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {isSharing ? (
-            <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-          ) : (
-            <Share2 className="h-4 w-4" />
-          )}
-          {isSharing ? 'Exporting...' : 'Share'}
-        </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleDownloadPdf}
+                disabled={isDownloading}
+                className="bg-card border rounded-xl px-4 py-3 text-sm flex items-center gap-2 disabled:opacity-50"
+              >
+                {isDownloading ? (
+                  <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                )}
+                {isDownloading ? 'Preparing...' : 'PDF'}
+              </motion.button>
 
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={handleDownloadPdf}
-          disabled={isDownloading}
-          className="bg-card border rounded-xl px-4 py-3 text-sm flex items-center gap-2 disabled:opacity-50"
-        >
-          {isDownloading ? (
-            <div className="w-4 h-4 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
-          ) : (
-            <Download className="h-4 w-4 text-muted-foreground" />
-          )}
-          {isDownloading ? 'Preparing...' : 'PDF'}
-        </motion.button>
-
-        <motion.button
-          whileTap={{ scale: 0.95 }}
-          onClick={handleCopyText}
-          className="bg-card border rounded-xl px-4 py-3 text-sm flex items-center gap-2"
-        >
-          {copiedText ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
-          {copiedText ? 'Copied!' : 'Copy'}
-        </motion.button>
-      </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleCopyText}
+                className="bg-card border rounded-xl px-4 py-3 text-sm flex items-center gap-2"
+              >
+                {copiedText ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
+                {copiedText ? 'Copied!' : 'Copy'}
+              </motion.button>
+            </div>
+          </div>
+        );
+        const slot = typeof document !== 'undefined' ? document.getElementById('streak-controls-slot') : null;
+        return slot ? createPortal(controls, slot) : controls;
+      })()}
     </div>
   );
+
 };
