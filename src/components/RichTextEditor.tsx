@@ -2874,6 +2874,10 @@ export const RichTextEditor = ({
         suppressContentEditableWarning
       />
 
+      {footerSlot}
+
+
+
 
       {toolbarPosition === 'bottom' && (
         <div
