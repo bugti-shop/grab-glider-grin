@@ -953,11 +953,23 @@ body.onboarding-active [data-vaul-drawer] {
   -webkit-user-select: none;
   font-style: normal;
 
+  /* Align exactly with the caret. The editor uses `p-4` (1rem padding on
+     every side) so anchoring the placeholder at the same 1rem offset makes
+     it sit flush with where the cursor blinks on both mobile and desktop.
+     Absolute positioning means it never pushes text or affects selection. */
   position: absolute;
-  top: 0.35rem;
+  top: 1rem;
   left: 1rem;
   right: 1rem;
+  line-height: inherit;
+  font-size: inherit;
+  font-family: inherit;
   white-space: pre-wrap;
+}
+/* Hide placeholder as soon as the field has focus so the caret is never
+   visually stacked on top of hint text mid-typing. */
+.rich-text-editor:focus::before {
+  content: none;
 }
 .rich-text-editor:focus:not(:empty):not(:has(> br:only-child))::before {
   content: none;
