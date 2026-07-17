@@ -1652,6 +1652,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           created_at: string
@@ -1784,6 +1805,13 @@ export type Database = {
         Args: { p_note_id: string; p_url: string }
         Returns: string
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       increment_ai_usage_if_under_limit: {
         Args: {
           p_feature: string
@@ -1846,6 +1874,7 @@ export type Database = {
       web_clips_dispatch: { Args: never; Returns: undefined }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       project_role: "owner" | "editor" | "viewer"
       web_clip_job_status: "pending" | "processing" | "done" | "failed"
     }
@@ -1975,6 +2004,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       project_role: ["owner", "editor", "viewer"],
       web_clip_job_status: ["pending", "processing", "done", "failed"],
     },

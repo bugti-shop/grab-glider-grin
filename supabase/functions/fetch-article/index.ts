@@ -362,21 +362,105 @@ function pickMeta(html: string, name: string): string {
   ]);
 }
 
-/** Fetch with timeout + size cap. */
+/** SSRF guard: block private/reserved IPv4 and IPv6 ranges + localhost hostnames. */
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split(".").map((n) => parseInt(n, 10));
+  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) return true;
+  const [a, b] = parts;
+  if (a === 10) return true;
+  if (a === 127) return true;
+  if (a === 0) return true;
+  if (a === 169 && b === 254) return true; // link-local incl. cloud metadata 169.254.169.254
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 192 && b === 0) return true; // 192.0.0.0/24
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  if (a >= 224) return true; // multicast/reserved
+  return false;
+}
+
+function isPrivateIPv6(ip: string): boolean {
+  const lower = ip.toLowerCase();
+  if (lower === "::1" || lower === "::" ) return true;
+  if (lower.startsWith("fe80:") || lower.startsWith("fc") || lower.startsWith("fd")) return true;
+  if (lower.startsWith("ff")) return true; // multicast
+  // IPv4-mapped ::ffff:a.b.c.d
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(lower);
+  if (mapped) return isPrivateIPv4(mapped[1]);
+  return false;
+}
+
+const BLOCKED_HOSTNAMES = new Set([
+  "localhost", "ip6-localhost", "ip6-loopback", "metadata.google.internal",
+]);
+
+async function assertPublicUrl(u: URL): Promise<void> {
+  const host = u.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (!host) throw new Error("Blocked: empty host");
+  if (BLOCKED_HOSTNAMES.has(host) || host.endsWith(".localhost") || host.endsWith(".internal")) {
+    throw new Error("Blocked: internal hostname");
+  }
+  // If host is already an IP literal, validate directly.
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    if (isPrivateIPv4(host)) throw new Error("Blocked: private IPv4");
+    return;
+  }
+  if (host.includes(":")) {
+    if (isPrivateIPv6(host)) throw new Error("Blocked: private IPv6");
+    return;
+  }
+  // Resolve DNS and reject if any A/AAAA record is private.
+  try {
+    const [a, aaaa] = await Promise.allSettled([
+      Deno.resolveDns(host, "A"),
+      Deno.resolveDns(host, "AAAA"),
+    ]);
+    const v4 = a.status === "fulfilled" ? a.value : [];
+    const v6 = aaaa.status === "fulfilled" ? aaaa.value : [];
+    if (v4.length === 0 && v6.length === 0) throw new Error("Blocked: DNS resolution failed");
+    for (const ip of v4) if (isPrivateIPv4(ip)) throw new Error("Blocked: resolves to private IPv4");
+    for (const ip of v6) if (isPrivateIPv6(ip)) throw new Error("Blocked: resolves to private IPv6");
+  } catch (err) {
+    if ((err as Error)?.message?.startsWith("Blocked:")) throw err;
+    throw new Error("Blocked: DNS resolution failed");
+  }
+}
+
+/** Fetch with timeout + size cap. Manually follows redirects so each hop is
+ *  SSRF-validated (prevents redirect-based bypass to internal addresses). */
 async function fetchHtml(url: string, userAgent: string = DEFAULT_UA): Promise<{ html: string; finalUrl: string; status: number; truncated: boolean }> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(url, {
-      redirect: "follow",
-      signal: ctrl.signal,
-      headers: {
-        "User-Agent": userAgent,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-    });
-    const finalUrl = res.url || url;
+    let currentUrl = url;
+    let res: Response | null = null;
+    const MAX_HOPS = 6;
+    for (let hop = 0; hop < MAX_HOPS; hop++) {
+      const parsed = new URL(currentUrl);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        throw new Error("Blocked: non-http(s) redirect");
+      }
+      await assertPublicUrl(parsed);
+      res = await fetch(currentUrl, {
+        redirect: "manual",
+        signal: ctrl.signal,
+        headers: {
+          "User-Agent": userAgent,
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
+      });
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location");
+        if (!loc) break;
+        currentUrl = new URL(loc, currentUrl).toString();
+        try { await res.body?.cancel(); } catch { /* ignore */ }
+        continue;
+      }
+      break;
+    }
+    if (!res) throw new Error("No response");
+    const finalUrl = res.url || currentUrl;
     const status = res.status;
     if (!res.ok) {
       // Still try to read body — some sites 403 but include the page
