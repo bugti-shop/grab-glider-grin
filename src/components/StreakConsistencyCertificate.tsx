@@ -352,14 +352,15 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           zIndex: 1,
         }}>
           <div>
-            <p style={{ color: '#ffffff', fontSize: s(28), fontWeight: 800, margin: 0, lineHeight: 1 }}>{totalCompletions}</p>
+            <p style={{ color: '#ffffff', fontSize: s(28), fontWeight: 800, margin: 0, lineHeight: 1.25 }}>{totalCompletions}</p>
             <p style={{ color: '#ffffffcc', fontSize: s(10), margin: `${s(6)}px 0 0`, fontWeight: 700, letterSpacing: '0.08em' }}>TASKS DONE</p>
           </div>
           <div style={{ width: 1, height: s(38), background: '#ffffff55' }} />
           <div>
-            <p style={{ color: '#ffffff', fontSize: s(28), fontWeight: 800, margin: 0, lineHeight: 1 }}>{longestStreak}</p>
+            <p style={{ color: '#ffffff', fontSize: s(28), fontWeight: 800, margin: 0, lineHeight: 1.25 }}>{longestStreak}</p>
             <p style={{ color: '#ffffffcc', fontSize: s(10), margin: `${s(6)}px 0 0`, fontWeight: 700, letterSpacing: '0.08em' }}>BEST STREAK</p>
           </div>
+
         </div>
 
         {/* QR + Flowist branding — directly under the water drop, right side */}
