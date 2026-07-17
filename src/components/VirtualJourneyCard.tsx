@@ -181,7 +181,7 @@ export const VirtualJourneyCard = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-card rounded-2xl p-3 sm:p-6 border border-[#E5E7EB] dark:border-border shadow-sm w-full"
+          className="bg-white dark:bg-card rounded-2xl p-3 sm:p-6 border border-[#E5E7EB] dark:border-border shadow-sm w-full max-w-full overflow-hidden"
         >
           {/* Header row */}
           <div className="flex items-start justify-between gap-3 mb-3 sm:mb-5">
@@ -215,10 +215,10 @@ export const VirtualJourneyCard = () => {
             )}
           </div>
 
-          {/* Horizontal circle timeline */}
-          <div className="relative mt-1 mb-3 sm:mb-5 px-1">
-            {/* connecting line */}
-            <div className="absolute top-1/2 left-3 right-3 h-px bg-[#E5E7EB] dark:bg-border -translate-y-1/2" />
+          {/* Horizontal circle timeline — padding matches milestone row px */}
+          <div className="relative mt-1 mb-3 sm:mb-5 px-3 sm:px-4">
+            {/* connecting line — inset by half circle width so it starts/ends at circle centers */}
+            <div className="absolute top-1/2 left-6 right-6 sm:left-7 sm:right-7 h-px bg-[#E5E7EB] dark:bg-border -translate-y-1/2" />
             <div className="relative flex justify-between items-center">
               {journey.milestones.map((ms) => {
                 const reached = progress.milestonesReached.includes(ms.id);
@@ -226,7 +226,7 @@ export const VirtualJourneyCard = () => {
                   <div
                     key={ms.id}
                     className={cn(
-                      "w-6 h-6 rounded-full border-[1.5px] bg-white dark:bg-card flex items-center justify-center",
+                      "w-6 h-6 rounded-full border-[1.5px] bg-white dark:bg-card flex items-center justify-center flex-shrink-0",
                       reached
                         ? "border-[#3B82F6] bg-[#3B82F6]"
                         : "border-[#D1D5DB] dark:border-border"
@@ -238,6 +238,7 @@ export const VirtualJourneyCard = () => {
               })}
             </div>
           </div>
+
 
           {/* Next location label */}
           <div className="flex items-center gap-1.5 mb-2.5 sm:mb-4">
@@ -278,16 +279,17 @@ export const VirtualJourneyCard = () => {
                     {reached ? '✓' : (i + 1)}
                   </span>
                   <span className={cn(
-                    "flex-1 min-w-0 truncate text-[14px] sm:text-[15px]",
+                    "flex-1 min-w-0 truncate text-[13px] sm:text-[15px]",
                     isCurrent
                       ? "font-semibold text-[#111827] dark:text-foreground"
                       : "font-medium text-[#374151] dark:text-foreground/90"
                   )}>
                     {jt.milestoneName(journey, ms)}
                   </span>
-                  <span className="text-[12px] sm:text-[13px] text-[#6B7280] dark:text-muted-foreground flex-shrink-0 whitespace-nowrap">
+                  <span className="text-[11px] sm:text-[13px] text-[#6B7280] dark:text-muted-foreground flex-shrink-0 whitespace-nowrap tabular-nums">
                     {currentTasks}/{msTarget} {t('common.tasks', 'tasks')}
                   </span>
+
                 </div>
               );
             })}
