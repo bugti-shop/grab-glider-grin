@@ -307,7 +307,7 @@ class TourManagerImpl {
       if (canGoBack) buttons.push('previous');
       buttons.push('next');
       if (!forced) buttons.push('close');
-      return driver({
+      return mountSingletonDriver({
         // Forced tours cannot be dismissed by ✕ or overlay tap — user must
         // walk through every step.
         allowClose: !forced,
