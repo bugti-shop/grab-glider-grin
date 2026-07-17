@@ -50,6 +50,9 @@ interface TodoOptionsDropdownProps {
   setIsSelectActionsOpen: (v: boolean) => void;
   viewMode: string;
   setViewMode: (v: any) => void;
+  canToggleExpandCollapse?: boolean;
+  isAnyCollapsed?: boolean;
+  onToggleExpandCollapse?: () => void;
 }
 
 export const TodoOptionsDropdown = ({
