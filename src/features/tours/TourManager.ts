@@ -210,9 +210,14 @@ class TourManagerImpl {
         const nextId = nextOnboardingTourId(finishedId);
         if (nextId) {
           // Close whatever sheet/menu the previous tour opened before we
-          // navigate to and highlight the next feature.
+          // navigate to and highlight the next feature. Set chainScheduled
+          // so the activity watchdog can't race and start a duplicate.
+          this.chainScheduled = true;
           await this.closeTransientUi();
-          setTimeout(() => this.startTour(nextId, { chain: true, forced }), BETWEEN_CHAIN_TOURS_DELAY_MS);
+          setTimeout(() => {
+            this.chainScheduled = false;
+            this.startTour(nextId, { chain: true, forced });
+          }, BETWEEN_CHAIN_TOURS_DELAY_MS);
           return;
         }
       }
