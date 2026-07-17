@@ -136,21 +136,6 @@ const Progress = () => {
     { value: 30, icon: Flame, label: '1 month', color: 'text-streak' },
   ];
 
-  if (isLoading) {
-    return (
-      <TodoLayout title={t('nav.progress', 'Progress')}>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-pulse text-muted-foreground">Loading...</div>
-        </div>
-      </TodoLayout>
-    );
-  }
-
-  const TASKS_FOR_FREEZE = 5;
-  const dailyTaskCount = data?.dailyTaskCount || 0;
-  const freezeProgress = Math.min(dailyTaskCount, TASKS_FOR_FREEZE);
-  const freezeProgressPercent = (freezeProgress / TASKS_FOR_FREEZE) * 100;
-
   const rangeOptions: { key: ChartRange; label: string }[] = [
     { key: 'today', label: t('streak.rangeToday', 'Today') },
     { key: '24h', label: t('streak.range24h', '24h') },
@@ -216,9 +201,23 @@ const Progress = () => {
     return buckets.map(b => ({ ...b, value: map.get(b.date) || 0 }));
   }, [allTasks, chartRange]);
 
+  if (isLoading) {
+    return (
+      <TodoLayout title={t('nav.progress', 'Progress')}>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-pulse text-muted-foreground">Loading...</div>
+        </div>
+      </TodoLayout>
+    );
+  }
 
+  const TASKS_FOR_FREEZE = 5;
+  const dailyTaskCount = data?.dailyTaskCount || 0;
+  const freezeProgress = Math.min(dailyTaskCount, TASKS_FOR_FREEZE);
+  const freezeProgressPercent = (freezeProgress / TASKS_FOR_FREEZE) * 100;
 
   return (
+
     <TodoLayout title={t('nav.progress', 'Progress')}>
       <div className="container mx-auto px-1.5 sm:px-3 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-4xl">
         
