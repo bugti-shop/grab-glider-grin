@@ -605,6 +605,16 @@ table th[contenteditable="true"]:hover {
     width: var(--header-icon-size) !important;
     height: var(--header-icon-size) !important;
   }
+  /* Prominent back button — visually anchors the header */
+  .app-header-back {
+    width: calc(var(--header-icon-btn) + 6px) !important;
+    height: calc(var(--header-icon-btn) + 6px) !important;
+  }
+  .app-header-back > svg,
+  .app-header-back > .lucide {
+    width: calc(var(--header-icon-size) + 10px) !important;
+    height: calc(var(--header-icon-size) + 10px) !important;
+  }
   .app-header-title {
     font-size: var(--header-title-size);
     min-width: 0;
