@@ -113,7 +113,12 @@ export const useTourBootstrap = () => {
     const kickChainIfPending = async () => {
       if (watchdogPending) return;
       if (TourManager.isActive()) return;
+      // Don't race with a chain advance that's already scheduled (setTimeout
+      // between tours) — otherwise we'd mount two drivers at once, which was
+      // the root cause of the Android WebView crash on first install.
+      if (TourManager.isChainScheduled()) return;
       watchdogPending = true;
+
       try {
         const { getSetting } = await import('@/utils/settingsStorage');
         const CHAIN_KEY = 'feature-guide-chain-started-v5';

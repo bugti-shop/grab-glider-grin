@@ -36,11 +36,18 @@ class TourManagerImpl {
   private forcedGuard: ReturnType<typeof setInterval> | null = null;
   private remountCurrentStep: (() => void) | null = null;
   private activeRoute: string | null = null;
+  // Re-entrancy guard: prevents concurrent startTour() calls from stacking
+  // multiple driver.js instances on top of each other (root cause of the
+  // Android WebView crash on first install — chain advance + watchdog +
+  // pointer/keydown activity watchdog all raced to mount tours).
+  private starting = false;
+  private chainScheduled = false;
 
   /** Called once by <TourProvider/> so we can navigate before starting a tour. */
   setNavigate(fn: NavigateFn) {
     this.navigate = fn;
   }
+
 
   isActive() {
     return !!this.activeDriver;
@@ -49,6 +56,13 @@ class TourManagerImpl {
   isForced() {
     return this.forcedActive;
   }
+
+  /** True while a chained tour has been scheduled but not yet mounted. */
+  isChainScheduled() {
+    return this.chainScheduled || this.starting;
+  }
+
+
 
   activeId() {
     return this.activeTourId;
@@ -60,8 +74,26 @@ class TourManagerImpl {
     const tour = getTour(tourId);
     if (!tour) return;
 
+    // Re-entrancy guard — see field comment. If another startTour is already
+    // in-flight, queue this request (unless force) and bail so we don't
+    // mount a second driver on top of the first.
+    if (this.starting) {
+      if (!opts.force && !this.queue.includes(tourId)) this.queue.push(tourId);
+      return;
+    }
+    this.starting = true;
+    this.chainScheduled = false;
+    try {
+      return await this._startTourInner(tourId, tour, opts);
+    } finally {
+      this.starting = false;
+    }
+  }
+
+  private async _startTourInner(tourId: string, tour: FeatureTour, opts: { force?: boolean; auto?: boolean; chain?: boolean; forced?: boolean }) {
     // Tooltip tutorials are enabled on both web and native. Auto/chain/forced
     // runs proceed everywhere unless the caller explicitly opts out.
+
 
 
     // A previous driver instance can occasionally remain referenced after its
@@ -185,9 +217,14 @@ class TourManagerImpl {
         const nextId = nextOnboardingTourId(finishedId);
         if (nextId) {
           // Close whatever sheet/menu the previous tour opened before we
-          // navigate to and highlight the next feature.
+          // navigate to and highlight the next feature. Set chainScheduled
+          // so the activity watchdog can't race and start a duplicate.
+          this.chainScheduled = true;
           await this.closeTransientUi();
-          setTimeout(() => this.startTour(nextId, { chain: true, forced }), BETWEEN_CHAIN_TOURS_DELAY_MS);
+          setTimeout(() => {
+            this.chainScheduled = false;
+            this.startTour(nextId, { chain: true, forced });
+          }, BETWEEN_CHAIN_TOURS_DELAY_MS);
           return;
         }
       }
@@ -451,8 +488,12 @@ class TourManagerImpl {
     if (!nextId) return;
     // Give the just-completed action's UI a moment to render (e.g. task row
     // appears in the list) before highlighting the next feature.
+    this.chainScheduled = true;
     await this.closeTransientUi();
-    setTimeout(() => this.startTour(nextId, { chain: true, forced: wasForced }), ACTION_CHAIN_DELAY_MS);
+    setTimeout(() => {
+      this.chainScheduled = false;
+      this.startTour(nextId, { chain: true, forced: wasForced });
+    }, ACTION_CHAIN_DELAY_MS);
   }
 
 
