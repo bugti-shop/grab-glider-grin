@@ -284,6 +284,16 @@ const NotesCalendar = () => {
                 onDeleteNote={handleDeleteNote}
               />
             </ErrorBoundary>
+          ) : layout === 'darkHero' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarDarkHero
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
+              />
+            </ErrorBoundary>
           ) : (
             <>
               <ErrorBoundary fallback={<CalendarPanelFallback />}>
