@@ -35,7 +35,7 @@ const getShareText = (streak: number, totalTasks: number, userName: string) => {
     `💪 Every day counts!`,
   ];
   if (userName) lines.push('', `— ${userName}`);
-  lines.push('', 'Track your productivity with Flowist 👇', 'https://onelink.to/9xy8rz');
+  lines.push('', 'Track your productivity with Flowist 👇', 'https://flowist.me/download');
   return lines.join('\n');
 };
 
@@ -391,7 +391,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
                   boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 }}>
                   <QRCodeSVG
-                    value="https://onelink.to/9xy8rz"
+                    value="https://flowist.me/download"
                     size={qrSize}
                     level="H"
                     bgColor="#ffffff"

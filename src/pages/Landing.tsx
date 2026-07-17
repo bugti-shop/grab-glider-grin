@@ -631,7 +631,7 @@ export default function Landing() {
               <h4 className="mb-4 text-base font-bold text-slate-900">Download</h4>
               <ul className="space-y-3 text-sm text-slate-600">
                 <li><a href="https://apps.apple.com/us/app/flowist-ai-note-taker/id6772996510" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900">iOS</a></li>
-                <li><a href="https://onelink.to/9xy8rz" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900">Android</a></li>
+                <li><a href="https://flowist.me/download" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900">Android</a></li>
                 <li><button onClick={handleGetStarted} className="hover:text-slate-900">Web App</button></li>
               </ul>
             </div>

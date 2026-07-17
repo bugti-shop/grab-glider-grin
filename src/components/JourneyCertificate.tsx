@@ -321,7 +321,7 @@ export const JourneyCertificate = ({ open, onClose, journey, progress }: Journey
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <QRCodeSVG
-                  value="https://onelink.to/9xy8rz"
+                  value="https://flowist.me/download"
                   size={64}
                   level="M"
                   bgColor="#ffffff"
