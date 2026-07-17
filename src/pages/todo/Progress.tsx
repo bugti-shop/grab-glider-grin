@@ -162,32 +162,34 @@ const Progress = () => {
 
   return (
     <TodoLayout title={t('nav.progress', 'Progress')}>
-      <div className="container mx-auto px-4 sm:px-5 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-2xl">
+      <div className="container mx-auto px-4 sm:px-5 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-3xl">
         
         {/* Blue Streak Hero Card */}
         <SafeComponent fallback={null}>
           <button
             onClick={() => setShowStreakDetail(true)}
-            className="relative w-full rounded-3xl p-6 sm:p-8 text-left overflow-hidden shadow-md active:scale-[0.99] transition-transform"
+            className="relative w-full rounded-3xl p-5 sm:p-7 text-left overflow-hidden active:scale-[0.99] transition-transform"
             style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
           >
             {/* Decorative rings */}
             <div className="absolute -right-8 -bottom-8 w-40 h-40 sm:w-48 sm:h-48 rounded-full border border-white/15" />
             <div className="absolute -right-2 -bottom-16 w-56 h-56 sm:w-64 sm:h-64 rounded-full border border-white/10" />
+            {/* Bottom-right soft white glow */}
+            <div
+              className="absolute -right-10 -bottom-10 w-52 h-52 sm:w-64 sm:h-64 rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 65%)' }}
+            />
 
             <div className="relative z-10">
-              <p className="text-7xl sm:text-8xl font-extrabold text-white leading-none tracking-tight">
+              <p className="text-6xl sm:text-7xl font-extrabold text-white leading-none tracking-tight">
                 {data?.currentStreak || 0}
               </p>
-              <div className="flex items-center gap-2 mt-3 sm:mt-4">
+              <div className="flex items-center gap-2 mt-2 sm:mt-3">
                 <span className="text-lg sm:text-xl font-semibold text-white">
                   {t('streak.dayStreak', 'Day Streak')}
                 </span>
                 <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-orange-300 fill-orange-400" />
               </div>
-              {(data?.currentStreak || 0) > 0 && (data?.currentStreak || 0) >= (data?.longestStreak || 0) && (
-                <p className="text-xs sm:text-sm font-medium text-white/90 mt-2">New Personal Best! 🎉</p>
-              )}
             </div>
           </button>
         </SafeComponent>
@@ -238,79 +240,46 @@ const Progress = () => {
                 </span>
               </div>
             )}
-
-            {status !== 'grace_period' && !data?.freezesEarnedToday && (
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex items-center gap-2 mb-2">
-                  <Gift className="h-4 w-4 text-info flex-shrink-0" />
-                  <span className="text-xs text-muted-foreground">
-                    {t('streak.earnFreeze', 'Complete {{remaining}} more tasks today to earn a freeze', { remaining: TASKS_FOR_FREEZE - freezeProgress })}
-                  </span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-1.5">
-                  <div
-                    className="bg-primary h-1.5 rounded-full transition-all"
-                    style={{ width: `${freezeProgressPercent}%` }}
-                  />
-                </div>
-                <div className="flex justify-between mt-1">
-                  <span className="text-[11px] text-muted-foreground">{freezeProgress}/{TASKS_FOR_FREEZE}</span>
-                  {data?.streakFreezes !== undefined && data.streakFreezes > 0 && (
-                    <span className="text-[11px] text-info flex items-center gap-1">
-                      <Snowflake className="h-3 w-3" /> {data.streakFreezes}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {data?.freezesEarnedToday && (
-              <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t">
-                <Gift className="h-4 w-4 text-success" />
-                <span className="text-xs text-success">
-                  {t('streak.freezeEarnedToday', 'Freeze earned today! 🎉')}
-                </span>
-              </div>
-            )}
           </div>
         </SafeComponent>
 
-        {/* Stats Grid 2x2 */}
+        {/* Stats Grid 2x2 — icon top-left, label above small number */}
         <SafeComponent fallback={null}>
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-card rounded-3xl p-4 sm:p-5 border shadow-sm">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
-                <CheckSquare className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+            <div className="bg-card rounded-2xl p-3.5 sm:p-4 border shadow-sm">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <CheckSquare className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-primary" />
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground">{t('streak.totalCompleted', 'Tasks Done')}</p>
-              <p className="text-2xl sm:text-3xl font-bold mt-1">{lifetimeCompleted}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2">{t('streak.tasksDone', 'Tasks Done')}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-0.5">{lifetimeCompleted}</p>
             </div>
 
-            <div className="bg-card rounded-3xl p-4 sm:p-5 border shadow-sm">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-success/15 flex items-center justify-center mb-3">
-                <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-success" />
+            <div className="bg-card rounded-2xl p-3.5 sm:p-4 border shadow-sm">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-success/15 flex items-center justify-center">
+                <Clock className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-success" />
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground">{t('streak.longestStreak', 'Longest Streak')}</p>
-              <p className="text-2xl sm:text-3xl font-bold mt-1">{data?.longestStreak || 0}<span className="text-sm sm:text-base font-normal text-muted-foreground ml-1">d</span></p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2">{t('streak.focusTime', 'Focus Time')}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-0.5">{data?.focusMinutes ? `${Math.round((data.focusMinutes || 0) / 60)}h` : '0h'}</p>
             </div>
 
-            <div className="bg-card rounded-3xl p-4 sm:p-5 border shadow-sm">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/10 flex items-center justify-center mb-3">
-                <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
+            <div className="bg-card rounded-2xl p-3.5 sm:p-4 border shadow-sm">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
+                <FileText className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-purple-500" />
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground">{t('streak.thisWeek', 'This Week')}</p>
-              <p className="text-2xl sm:text-3xl font-bold mt-1">{weekStats.completed}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2">{t('streak.notes', 'Notes')}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-0.5">{weekStats.completed}</p>
             </div>
 
-            <div className="bg-card rounded-3xl p-4 sm:p-5 border shadow-sm">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-info/15 flex items-center justify-center mb-3">
-                <Snowflake className="h-5 w-5 sm:h-6 sm:w-6 text-info" />
+            <div className="bg-card rounded-2xl p-3.5 sm:p-4 border shadow-sm">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <Sprout className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-amber-600" />
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground">{t('streak.freezes', 'Freezes')}</p>
-              <p className="text-2xl sm:text-3xl font-bold mt-1">{data?.streakFreezes || 0}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2">{t('streak.habits', 'Habits')}</p>
+              <p className="text-xl sm:text-2xl font-bold mt-0.5">{data?.habitsCount || 0}</p>
             </div>
           </div>
         </SafeComponent>
+
 
         {/* Completed Tasks Last 30 Days - Line Chart (reference-matched) */}
         <SafeComponent fallback={null}>
