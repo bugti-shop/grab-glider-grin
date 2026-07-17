@@ -1460,6 +1460,31 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
           <div className="flex items-center gap-1">
             {/* Table Picker moved to toolbar/options menu */}
 
+            {!isReadOnlyWebClip && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={async () => {
+                  const plain = (contentRef.current || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                  const shareText = `${title || t('notes.untitled', 'Untitled')}${plain ? '\n\n' + plain : ''}`;
+                  try {
+                    if (typeof navigator !== 'undefined' && (navigator as any).share) {
+                      await (navigator as any).share({ title: title || 'Note', text: shareText });
+                    } else {
+                      await navigator.clipboard.writeText(shareText);
+                      toast.success(t('editor.copiedToClipboard', 'Copied to clipboard'));
+                    }
+                  } catch (e) {
+                    // user cancelled or share failed silently
+                  }
+                }}
+                className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}
+                aria-label={t('common.share', 'Share')}
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
+            )}
+
             {!isReadOnlyWebClip && <DropdownMenu open={isOptionsMenuOpen} onOpenChange={setIsOptionsMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button data-tour="note-options-menu" variant="ghost" size="icon" className={cn("h-9 w-9", noteType === 'sticky' && "text-black hover:text-black")}>
