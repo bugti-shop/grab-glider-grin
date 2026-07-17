@@ -2,9 +2,10 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
 import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
+import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStrip';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -12,17 +13,20 @@ import { Note, Folder, NoteType } from '@/types/note';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { format, isSameDay } from 'date-fns';
 import { NoteCard } from '@/components/NoteCard';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { saveNoteToDBSingle, deleteNoteFromDB, loadNoteFromDB, isNoteContentStub } from '@/utils/noteStorage';
 import { useNotes } from '@/contexts/NotesContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CalendarBackgroundSheet } from '@/components/CalendarBackgroundSheet';
-import { getSetting } from '@/utils/settingsStorage';
+import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
+type CalendarLayout = 'month' | 'weekStrip';
+
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
 
 const CalendarPanelFallback = () => (
   <div className="mx-4 my-4 rounded-lg border border-border bg-card p-4 text-center">
