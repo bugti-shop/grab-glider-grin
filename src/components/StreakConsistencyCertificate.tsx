@@ -373,8 +373,9 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         {/* QR + Flowist branding — directly under the water drop, right side */}
         <div style={{
           position: 'absolute',
-          right: s(28),
-          top: s(190),
+          right: s(40),
+          top: s(170),
+
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
