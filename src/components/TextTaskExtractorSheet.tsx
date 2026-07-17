@@ -71,8 +71,10 @@ export const TextTaskExtractorSheet = ({
   initialText, initialMode, titleOverride,
 }: Props) => {
   const { t, i18n } = useTranslation();
-  const { isPro, isAdminBypass, requireFeature } = useSubscription();
-  const hasPaidAi = isPro || isAdminBypass;
+  const { requireFeature } = useSubscription();
+  // AI GUARD: AI features must never break due to subscription/trial state.
+  // Sign-in + the daily-usage cap in aiUsageLimits.ts are the ONLY gates.
+  const hasPaidAi = true;
 
   const [mode, setMode] = useState<SourceMode>('text');
   const [text, setText] = useState(initialText || '');

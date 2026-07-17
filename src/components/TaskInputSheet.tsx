@@ -294,11 +294,8 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
     openScannerLockRef.current = true;
     setIsOpeningScanner(true);
     try {
-      // 1) Subscription gate FIRST — unsubscribed users see the paywall
-      //    before we ever ask them to sign in.
-      if (!requireFeature('ai_dictation')) return;
-      // 2) Then require sign-in — subscribed users who aren't signed in
-      //    get the "please sign in to use scan" prompt.
+      // AI features guard: sign-in only. Subscription/trial state must NEVER
+      // block AI — daily-usage cap in aiUsageLimits.ts handles free-tier abuse.
       const { ensureSignedInForAi } = await import('@/utils/aiAccessGuard');
       if (!(await ensureSignedInForAi({ intent: 'scan-tasks' }))) return;
       setShowImageExtractor(true);
@@ -308,7 +305,7 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
     }
   };
   const openTextExtractor = () => {
-    if (!requireFeature('ai_dictation')) return;
+    // AI guard: no subscription gate — sign-in + daily cap are the only limits.
     setShowTextExtractor(true);
   };
 

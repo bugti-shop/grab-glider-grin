@@ -76,9 +76,10 @@ export const ImageTaskExtractorSheet = ({
   currentSectionId,
 }: Props) => {
   const { t, i18n } = useTranslation();
-  const { isPro, isAdminBypass, requireFeature } = useSubscription();
-  // Strict paid-only access: must be Pro entitled (paid sub, paid trial, or admin bypass).
-  const hasPaidAi = isPro || isAdminBypass;
+  const { requireFeature } = useSubscription();
+  // AI GUARD: AI features must never break due to subscription/trial state.
+  // Sign-in + the daily-usage cap in aiUsageLimits.ts are the ONLY gates.
+  const hasPaidAi = true;
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [items, setItems] = useState<ReviewItem[]>([]);

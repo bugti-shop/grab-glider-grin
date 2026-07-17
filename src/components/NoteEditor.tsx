@@ -1594,9 +1594,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                   {t('editor.shortcutsCheatSheet', 'Shortcuts cheat sheet')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => {
-                  if (!requireFeature('ai_dictation')) return;
+                  // AI GUARD: never block on subscription; sign-in + daily cap only.
                   setShowExtractTasks(true);
                 }}>
+
                   <ListChecks className="h-4 w-4 mr-2 text-primary" />
                   <span className="font-medium">{t('editor.extractTasks', 'Extract Tasks with AI')}</span>
                   <Sparkles className="h-3 w-3 ml-auto text-primary" />
@@ -2510,7 +2511,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
                 onLineHeightChange={setLineHeight}
                 onInsertNoteLink={() => setIsNoteLinkingOpen(true)}
                 onVoiceRecord={() => setShowVoiceRecorder(true)}
-                onScan={() => { if (showScanNote) return; if (requireFeature('ai_dictation')) setShowScanNote(true); }}
+                onScan={() => { if (showScanNote) return; setShowScanNote(true); /* AI GUARD: no subscription gate */ }}
                 externalEditorRef={editorRef}
                 isFindReplaceOpen={isFindReplaceOpen}
                 onFloatingImageUpload={(noteType === 'regular' || noteType === 'sticky' || noteType === 'textformat') ? () => floatingImageRef.current?.triggerAdd() : undefined}
@@ -2566,7 +2567,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
               disabled={showScanNote}
               onClick={() => {
                 if (showScanNote) return;
-                if (!requireFeature('ai_dictation')) return;
+                // AI GUARD: never block on subscription; sign-in + daily cap only.
                 setShowScanNote(true);
               }}
               className="group relative h-14 pl-4 pr-5 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center gap-2 hover:scale-105 active:scale-95 transition-transform ring-2 ring-primary/20 disabled:opacity-60 disabled:cursor-wait"
