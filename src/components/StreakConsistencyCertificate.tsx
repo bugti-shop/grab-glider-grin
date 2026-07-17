@@ -227,23 +227,14 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
         ref={cardRef}
         style={{
           background: colors.bg,
-          borderRadius: 20,
+          borderRadius: 10,
           padding: `${s(36)}px ${s(28)}px ${s(24)}px`,
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        {/* Decorative glow circles */}
-        <div style={{
-          position: 'absolute', top: -40, right: -40,
-          width: s(180), height: s(180), borderRadius: '50%',
-          background: `radial-gradient(circle, ${colors.glow}30, transparent 70%)`,
-        }} />
-        <div style={{
-          position: 'absolute', bottom: -30, left: -30,
-          width: s(120), height: s(120), borderRadius: '50%',
-          background: `radial-gradient(circle, ${colors.glow}20, transparent 70%)`,
-        }} />
+        {/* Decorative overlays removed for a cleaner look */}
+
 
         {/* "I'm on a" text */}
         <p data-streak-intro style={{
@@ -264,7 +255,8 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           fontSize: s(currentStreak >= 10000 ? 36 : currentStreak >= 1000 ? 42 : 48),
           fontWeight: 900,
           margin: '0 0 2px',
-          lineHeight: 1,
+          lineHeight: 1.15,
+
           position: 'relative',
           zIndex: 1,
           textShadow: `0 4px 20px ${colors.glow}`,
@@ -281,7 +273,7 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           zIndex: 0,
           pointerEvents: 'none',
         }}>
-          <svg width={s(96)} height={s(126)} viewBox="0 0 115 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width={s(72)} height={s(94)} viewBox="0 0 115 150" fill="none" xmlns="http://www.w3.org/2000/svg">
 
             <defs>
               <radialGradient id="dropBody" cx="35%" cy="40%" r="75%">
@@ -360,21 +352,22 @@ export const StreakConsistencyCertificate = ({ currentStreak, totalCompletions, 
           zIndex: 1,
         }}>
           <div>
-            <p style={{ color: '#ffffff', fontSize: s(28), fontWeight: 800, margin: 0, lineHeight: 1 }}>{totalCompletions}</p>
+            <p style={{ color: '#ffffff', fontSize: s(28), fontWeight: 800, margin: 0, lineHeight: 1.25 }}>{totalCompletions}</p>
             <p style={{ color: '#ffffffcc', fontSize: s(10), margin: `${s(6)}px 0 0`, fontWeight: 700, letterSpacing: '0.08em' }}>TASKS DONE</p>
           </div>
           <div style={{ width: 1, height: s(38), background: '#ffffff55' }} />
           <div>
-            <p style={{ color: '#ffffff', fontSize: s(28), fontWeight: 800, margin: 0, lineHeight: 1 }}>{longestStreak}</p>
+            <p style={{ color: '#ffffff', fontSize: s(28), fontWeight: 800, margin: 0, lineHeight: 1.25 }}>{longestStreak}</p>
             <p style={{ color: '#ffffffcc', fontSize: s(10), margin: `${s(6)}px 0 0`, fontWeight: 700, letterSpacing: '0.08em' }}>BEST STREAK</p>
           </div>
+
         </div>
 
         {/* QR + Flowist branding — directly under the water drop, right side */}
         <div style={{
           position: 'absolute',
           right: s(40),
-          top: s(210),
+          top: s(190),
 
 
           display: 'flex',
