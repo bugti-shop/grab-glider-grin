@@ -223,6 +223,11 @@ const NotesCalendar = () => {
                 <span className="flex-1">Week strip</span>
                 {layout === 'weekStrip' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeLayout('dashboard')} className="gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="flex-1">Dashboard</span>
+                {layout === 'dashboard' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
                 <ImageIcon className="h-4 w-4" />
@@ -244,6 +249,16 @@ const NotesCalendar = () => {
                 onDateSelect={setDate}
                 notes={notes}
                 onMonthClick={() => changeLayout('month')}
+              />
+            </ErrorBoundary>
+          ) : layout === 'dashboard' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarDashboard
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
               />
             </ErrorBoundary>
           ) : (
