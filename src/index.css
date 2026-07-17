@@ -613,8 +613,8 @@ table th[contenteditable="true"]:hover {
   }
   .app-header-back > svg,
   .app-header-back > .lucide {
-    width: calc(var(--header-icon-size) + 2px) !important;
-    height: calc(var(--header-icon-size) + 2px) !important;
+    width: var(--header-icon-size) !important;
+    height: var(--header-icon-size) !important;
   }
   /* Share icon: prominent and vertically aligned with header title baseline */
   .app-header-share {
@@ -624,8 +624,9 @@ table th[contenteditable="true"]:hover {
   }
   .app-header-share > svg,
   .app-header-share > .lucide {
-    height: calc(var(--header-icon-size) + 1px) !important;
-    width: calc(var(--header-icon-size) + 1px) !important;
+    height: calc(var(--header-icon-size) - 1px) !important;
+    width: calc(var(--header-icon-size) - 1px) !important;
+
 
     display: block;
     vertical-align: middle;
