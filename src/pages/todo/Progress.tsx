@@ -168,7 +168,7 @@ const Progress = () => {
         <SafeComponent fallback={null}>
           <button
             onClick={() => setShowStreakDetail(true)}
-            className="relative w-full rounded-2xl px-6 sm:px-8 py-8 sm:py-10 text-left overflow-hidden active:scale-[0.99] transition-transform min-h-[180px] sm:min-h-[220px]"
+            className="relative w-full rounded-xl px-6 sm:px-8 py-8 sm:py-10 text-left overflow-hidden active:scale-[0.99] transition-transform min-h-[180px] sm:min-h-[220px]"
             style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
           >
             <div className="relative z-10">
