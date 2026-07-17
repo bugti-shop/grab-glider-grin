@@ -226,9 +226,14 @@ export const TextTaskExtractorSheet = ({
           languageName: 'auto',
         },
         timeout: AI_TIMEOUT_MS,
+        signal: controller.signal,
       } as any);
+      // If a newer request superseded this one (controller aborted while we
+      // were awaiting), drop the result silently — a fresh handler owns state.
+      if (controller.signal.aborted || abortRef.current !== controller) return;
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
+
       const raw: ExtractedTask[] = Array.isArray((data as any)?.tasks) ? (data as any).tasks : [];
       const review: ReviewItem[] = raw
         .filter((tk) => tk && typeof tk.title === 'string' && tk.title.trim().length > 0)
