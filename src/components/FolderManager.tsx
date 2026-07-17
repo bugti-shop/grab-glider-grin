@@ -595,7 +595,7 @@ export const FolderManager = ({
                 }}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, folder.id)}
-                className={cn("flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-opacity text-white", selectedFolderId === folder.id ? "opacity-100" : "opacity-80 hover:opacity-100")}
+                className="flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-white"
                 style={{
                   backgroundColor: folder.color,
                 }}
