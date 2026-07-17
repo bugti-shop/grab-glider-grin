@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
 import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStrip';
 import { NotesCalendarDashboard } from '@/components/notes/NotesCalendarDashboard';
+import { NotesCalendarYearHeatmap } from '@/components/notes/NotesCalendarYearHeatmap';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3 } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -25,7 +26,7 @@ import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NotesCalendarFab } from '@/components/notes/NotesCalendarFab';
 
-type CalendarLayout = 'month' | 'weekStrip' | 'dashboard';
+type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap';
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
@@ -229,6 +230,11 @@ const NotesCalendar = () => {
                 <span className="flex-1">Dashboard</span>
                 {layout === 'dashboard' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeLayout('yearHeatmap')} className="gap-2">
+                <Grid3x3 className="h-4 w-4" />
+                <span className="flex-1">Year heatmap</span>
+                {layout === 'yearHeatmap' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
                 <ImageIcon className="h-4 w-4" />
@@ -255,6 +261,16 @@ const NotesCalendar = () => {
           ) : layout === 'dashboard' ? (
             <ErrorBoundary fallback={<CalendarPanelFallback />}>
               <NotesCalendarDashboard
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
+              />
+            </ErrorBoundary>
+          ) : layout === 'yearHeatmap' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarYearHeatmap
                 selectedDate={date || new Date()}
                 onDateSelect={setDate}
                 notes={notes}
