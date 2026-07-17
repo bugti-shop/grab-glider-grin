@@ -162,34 +162,24 @@ const Progress = () => {
 
   return (
     <TodoLayout title={t('nav.progress', 'Progress')}>
-      <div className="container mx-auto px-4 sm:px-5 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-3xl">
+      <div className="container mx-auto px-2 sm:px-3 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-4xl">
         
         {/* Blue Streak Hero Card */}
         <SafeComponent fallback={null}>
           <button
             onClick={() => setShowStreakDetail(true)}
-            className="relative w-full rounded-3xl p-5 sm:p-7 text-left overflow-hidden active:scale-[0.99] transition-transform"
+            className="relative w-full rounded-2xl px-6 sm:px-8 py-8 sm:py-10 text-left overflow-hidden active:scale-[0.99] transition-transform min-h-[180px] sm:min-h-[220px]"
             style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
           >
-            {/* Decorative rings */}
-            <div className="absolute -right-8 -bottom-8 w-40 h-40 sm:w-48 sm:h-48 rounded-full border border-white/15" />
-            <div className="absolute -right-2 -bottom-16 w-56 h-56 sm:w-64 sm:h-64 rounded-full border border-white/10" />
-            {/* Bottom-right soft white glow */}
-            <div
-              className="absolute -right-4 -bottom-4 w-28 h-28 sm:w-32 sm:h-32 rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 65%)' }}
-            />
-
-
             <div className="relative z-10">
-              <p className="text-6xl sm:text-7xl font-extrabold text-white leading-none tracking-tight">
+              <p className="text-7xl sm:text-8xl font-extrabold text-white leading-none tracking-tight">
                 {data?.currentStreak || 0}
               </p>
-              <div className="flex items-center gap-2 mt-2 sm:mt-3">
-                <span className="text-lg sm:text-xl font-semibold text-white">
+              <div className="flex items-center gap-2 mt-3 sm:mt-4">
+                <span className="text-xl sm:text-2xl font-semibold text-white">
                   {t('streak.dayStreak', 'Day Streak')}
                 </span>
-                <Flame className="h-5 w-5 sm:h-6 sm:w-6 text-orange-300 fill-orange-400" />
+                <Flame className="h-6 w-6 sm:h-7 sm:w-7 text-orange-300 fill-orange-400" />
               </div>
             </div>
           </button>
@@ -197,22 +187,22 @@ const Progress = () => {
 
         {/* Week Strip Card */}
         <SafeComponent fallback={null}>
-          <div className="bg-card rounded-3xl p-4 sm:p-6 border shadow-sm">
-            <div className="flex justify-between items-start gap-1 sm:gap-2">
+          <div className="bg-card rounded-2xl px-3 sm:px-5 py-6 sm:py-7 border shadow-sm">
+            <div className="flex justify-between items-start gap-1.5 sm:gap-3">
               {weekData.map((day) => {
                 const dayDate = new Date(day.date);
                 const dateNum = dayDate.getDate();
                 return (
-                  <div key={day.date} className="flex flex-col items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                  <div key={day.date} className="flex flex-col items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
                     <span className={cn(
-                      "text-xs sm:text-sm font-medium",
+                      "text-[13px] sm:text-sm font-medium",
                       day.isToday ? "text-primary" : "text-muted-foreground"
                     )}>
                       {day.day}
                     </span>
                     <div
                       className={cn(
-                        "w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all",
+                        "w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 transition-all",
                         day.completed
                           ? "bg-primary border-primary text-primary-foreground"
                           : day.isToday
@@ -220,10 +210,10 @@ const Progress = () => {
                             : "border-muted bg-muted/40"
                       )}
                     >
-                      {day.completed && <Check className="h-4.5 w-4.5 sm:h-5 sm:w-5" strokeWidth={3} />}
+                      {day.completed && <Check className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={3} />}
                     </div>
                     <span className={cn(
-                      "text-xs sm:text-sm font-medium",
+                      "text-[13px] sm:text-sm font-medium",
                       day.isToday ? "text-primary font-semibold" : "text-muted-foreground"
                     )}>
                       {dateNum}
