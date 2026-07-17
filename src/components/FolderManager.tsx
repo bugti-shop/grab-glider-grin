@@ -597,7 +597,9 @@ export const FolderManager = ({
                 onDrop={(e) => handleDrop(e, folder.id)}
                 className="flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all active:scale-95"
                 style={{
-                  backgroundColor: selectedFolderId === folder.id ? folder.color : 'hsl(var(--muted))',
+                  backgroundColor: selectedFolderId === folder.id
+                    ? folder.color
+                    : (folder.color && folder.color.startsWith('#') ? `${folder.color}26` : 'hsl(var(--muted))'),
                   color: selectedFolderId === folder.id ? '#ffffff' : 'hsl(var(--foreground))',
                 }}
               >
