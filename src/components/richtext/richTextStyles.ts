@@ -69,20 +69,71 @@ export const RICH_TEXT_EDITOR_STYLES = `
     touch-action: pan-y;
   }
   .title-input {
-    font-size: 1.5rem;
-    font-weight: bold;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
     border: none;
     outline: none;
     background: transparent;
     width: 100%;
-    padding: 1rem 1rem 0.5rem 1rem;
+    padding: 0.75rem 1rem 0.25rem 1rem;
   }
   .title-input::placeholder {
-    color: rgba(0, 0, 0, 0.3);
+    color: rgba(0, 0, 0, 0.25);
+    font-weight: 800;
   }
-  /* Sticky note title should be black */
   .sticky-note-editor .title-input {
     color: #000000 !important;
+  }
+  /* === Note meta row (location pill + date) === */
+  .note-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 0 1rem 0.75rem 1rem;
+  }
+  .note-meta-row .note-location-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid #3B82F6;
+    color: #3B82F6;
+    font-size: 13px;
+    font-weight: 500;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .note-meta-row .note-location-pill:hover {
+    background: rgba(59, 130, 246, 0.08);
+  }
+  .note-meta-row .note-date-text {
+    font-size: 13px;
+    color: hsl(var(--muted-foreground));
+    font-weight: 500;
+  }
+  /* === Note hashtag pills (bottom of body) === */
+  .note-hashtag-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 1rem 12px 1rem;
+  }
+  .note-hashtag-pills .note-hashtag {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid #3B82F6;
+    color: #3B82F6;
+    font-size: 13px;
+    font-weight: 500;
+    background: transparent;
   }
   /* Enhanced audio player styling */
   .audio-player-container {
