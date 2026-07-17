@@ -583,6 +583,40 @@ table th[contenteditable="true"]:hover {
     padding-top: var(--safe-top, 0px);
   }
 
+  /* ============================================================
+     Global app-header system — safe-area aware + responsive icons.
+     Any header wrapper can opt-in with `.app-header`; icon buttons
+     inside auto-scale via CSS vars (no per-file tweaks needed).
+     ============================================================ */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    min-width: 0;
+    padding-top: calc(var(--safe-top, 0px) + var(--header-pad-y));
+    padding-bottom: var(--header-pad-y);
+    padding-left: calc(var(--safe-left, 0px) + var(--header-pad-x));
+    padding-right: calc(var(--safe-right, 0px) + var(--header-pad-x));
+  }
+  .app-header-btn {
+    width: var(--header-icon-btn) !important;
+    height: var(--header-icon-btn) !important;
+    flex-shrink: 0;
+  }
+  .app-header-btn > svg,
+  .app-header-btn > .lucide {
+    width: var(--header-icon-size) !important;
+    height: var(--header-icon-size) !important;
+  }
+  .app-header-title {
+    font-size: var(--header-title-size);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   /* Smooth scrolling optimizations */
   * {
     -webkit-overflow-scrolling: touch;
