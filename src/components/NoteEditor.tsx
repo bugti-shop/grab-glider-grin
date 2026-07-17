@@ -611,6 +611,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       setNotificationId(undefined);
       setNotificationIds(undefined);
       setMetaDescription('');
+      setLocation('');
 
       // Reset code fields
       setCodeContent('');
