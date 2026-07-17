@@ -391,31 +391,32 @@ const Progress = () => {
               ))}
             </div>
 
-            <div className="w-full h-72 sm:h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 12, right: 16, left: -6, bottom: 6 }}>
+            <div className="w-full h-64 sm:h-72 md:h-80">
+              <ResponsiveContainer width="100%" height="100%" debounce={50}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="lovableAreaFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.35} />
+                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.32} />
+                      <stop offset="60%" stopColor="#3B82F6" stopOpacity={0.08} />
                       <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="hsl(var(--border))" strokeOpacity={0.35} vertical={false} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                     tickLine={false}
                     axisLine={false}
-                    tickMargin={10}
-                    interval={Math.max(0, Math.floor(chartData.length / 5) - 1)}
+                    tickMargin={8}
+                    minTickGap={16}
+                    interval="preserveStartEnd"
                   />
                   <YAxis
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                     tickLine={false}
                     axisLine={false}
-                    width={32}
+                    width={28}
                     allowDecimals={false}
-                    tickMargin={6}
+                    tickMargin={4}
                   />
                   <Tooltip
                     cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeOpacity: 0.5 }}
@@ -424,7 +425,7 @@ const Progress = () => {
                       border: '1px solid hsl(var(--border))',
                       borderRadius: 12,
                       fontSize: 13,
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
                       color: 'hsl(var(--foreground))',
                     }}
                     labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
@@ -439,7 +440,6 @@ const Progress = () => {
                     activeDot={{ r: 5, fill: '#3B82F6', stroke: '#FFFFFF', strokeWidth: 2 }}
                   />
                 </AreaChart>
-
               </ResponsiveContainer>
             </div>
           </div>
