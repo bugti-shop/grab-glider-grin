@@ -162,7 +162,7 @@ const Progress = () => {
 
   return (
     <TodoLayout title={t('nav.progress', 'Progress')}>
-      <div className="container mx-auto px-2 sm:px-3 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-4xl">
+      <div className="container mx-auto px-1.5 sm:px-3 py-6 sm:py-8 space-y-5 sm:space-y-7 max-w-4xl">
         
         {/* Blue Streak Hero Card */}
         <SafeComponent fallback={null}>
