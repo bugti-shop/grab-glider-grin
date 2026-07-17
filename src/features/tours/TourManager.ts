@@ -67,8 +67,26 @@ class TourManagerImpl {
     const tour = getTour(tourId);
     if (!tour) return;
 
+    // Re-entrancy guard — see field comment. If another startTour is already
+    // in-flight, queue this request (unless force) and bail so we don't
+    // mount a second driver on top of the first.
+    if (this.starting) {
+      if (!opts.force && !this.queue.includes(tourId)) this.queue.push(tourId);
+      return;
+    }
+    this.starting = true;
+    this.chainScheduled = false;
+    try {
+      return await this._startTourInner(tourId, tour, opts);
+    } finally {
+      this.starting = false;
+    }
+  }
+
+  private async _startTourInner(tourId: string, tour: FeatureTour, opts: { force?: boolean; auto?: boolean; chain?: boolean; forced?: boolean }) {
     // Tooltip tutorials are enabled on both web and native. Auto/chain/forced
     // runs proceed everywhere unless the caller explicitly opts out.
+
 
 
     // A previous driver instance can occasionally remain referenced after its
