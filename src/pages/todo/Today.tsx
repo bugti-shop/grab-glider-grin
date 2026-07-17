@@ -955,7 +955,7 @@ const Today = () => {
           )}
 
           {/* Collapse All / Expand All */}
-          {['flat', 'timeline', 'progress', 'priority', 'history', 'kanban'].includes(viewMode) && (
+          {['flat', 'timeline', 'progress', 'priority', 'history'].includes(viewMode) && (
             <div className="mb-4 flex justify-end">
               <Button variant="outline" size="sm" onClick={() => {
                 if (collapsedViewSections.size > 0) {
@@ -970,9 +970,6 @@ const Today = () => {
                     } else {
                       sortedSections.forEach(s => allSectionIds.add(`flat-${s.id}`));
                     }
-                  } else if (viewMode === 'kanban') {
-                    sortedSections.forEach(s => allSectionIds.add(`kanban-${s.id}`));
-                    allSectionIds.add('kanban-completed');
                   } else if (viewMode === 'timeline') {
                     ['timeline-overdue', 'timeline-today', 'timeline-tomorrow', 'timeline-thisweek', 'timeline-later', 'timeline-nodate'].forEach(id => allSectionIds.add(id));
                   } else if (viewMode === 'progress') {
@@ -996,26 +993,7 @@ const Today = () => {
             <div className="text-center py-20"><p className="text-muted-foreground">{t('emptyStates.noTasks')}</p></div>
           ) : (
             <Suspense fallback={null}>
-              {viewMode === 'kanban' ? (
-                <KanbanView
-                  sortedSections={sortedSections}
-                  sections={sections}
-                  uncompletedItems={uncompletedItems}
-                  completedItems={completedItems}
-                  showCompleted={showCompleted}
-                  collapsedViewSections={collapsedViewSections}
-                  toggleViewSectionCollapse={toggleViewSectionCollapse}
-                  renderTaskItem={renderTaskItem}
-                  renderSubtasksInline={renderSubtasksInline}
-                  setItems={setItems}
-                  setOrderVersion={setOrderVersion}
-                  handleEditSection={handleEditSection}
-                  handleAddTaskToSection={handleAddTaskToSection}
-                  handleDuplicateSection={handleDuplicateSection}
-                  handleDeleteSection={handleDeleteSection}
-                  handleAddSection={handleAddSection}
-                />
-              ) : viewMode === 'kanban-status' ? (
+              {viewMode === 'kanban-status' ? (
                 <KanbanStatusView
                   items={items}
                   uncompletedItems={uncompletedItems}
