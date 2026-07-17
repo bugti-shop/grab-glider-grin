@@ -1,6 +1,7 @@
+import { useState, useEffect, useMemo } from 'react';
 import { TodoItem, TaskSection } from '@/types/note';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Columns3, ChevronRight, ChevronDown, MoreVertical, Edit, Plus as PlusIcon, Copy, Trash2, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, MoreVertical, Edit, Plus as PlusIcon, Copy, Trash2, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,14 +29,14 @@ interface KanbanViewProps {
   handleAddSection: (position: string) => void;
 }
 
+const COMPLETED_TAB = '__completed__';
+
 export const KanbanView = ({
   sortedSections,
   sections,
   uncompletedItems,
   completedItems,
   showCompleted,
-  collapsedViewSections,
-  toggleViewSectionCollapse,
   renderTaskItem,
   renderSubtasksInline,
   setItems,
@@ -47,6 +48,38 @@ export const KanbanView = ({
   handleAddSection,
 }: KanbanViewProps) => {
   const { t } = useTranslation();
+
+  const tabs = useMemo(() => {
+    const base = sortedSections.map((s) => ({ id: s.id, section: s as TaskSection | null }));
+    if (showCompleted && completedItems.length > 0) {
+      base.push({ id: COMPLETED_TAB, section: null });
+    }
+    return base;
+  }, [sortedSections, showCompleted, completedItems.length]);
+
+  const [activeTab, setActiveTab] = useState<string>(() => sortedSections[0]?.id ?? COMPLETED_TAB);
+
+  // Keep active tab valid if sections change
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab(tabs[0]?.id ?? '');
+    }
+  }, [tabs, activeTab]);
+
+  const activeSection = sortedSections.find((s) => s.id === activeTab) || null;
+
+  const sectionTasksMap = useMemo(() => {
+    const map = new Map<string, TodoItem[]>();
+    for (const section of sortedSections) {
+      const raw = uncompletedItems.filter(
+        (item) => item.sectionId === section.id || (!item.sectionId && section.id === sections[0]?.id),
+      );
+      map.set(section.id, applyTaskOrder(raw, `kanban-${section.id}`));
+    }
+    return map;
+  }, [sortedSections, uncompletedItems, sections]);
+
+  const activeTasks = activeSection ? sectionTasksMap.get(activeSection.id) ?? [] : [];
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -82,88 +115,145 @@ export const KanbanView = ({
     toast.success(t('tasks.taskMoved', 'Task moved'));
   };
 
+  const isCompletedActive = activeTab === COMPLETED_TAB;
+
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="overflow-x-auto pb-4 -mx-4 px-4">
-        <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
-          {sortedSections.map((section) => {
-            const rawSectionTasks = uncompletedItems.filter(item => item.sectionId === section.id || (!item.sectionId && section.id === sections[0]?.id));
-            const sectionTasks = applyTaskOrder(rawSectionTasks, `kanban-${section.id}`);
-            const kanbanSectionId = `kanban-${section.id}`;
-            const isCollapsed = collapsedViewSections.has(kanbanSectionId);
-            return (
-              <div key={section.id} className="flex-shrink-0 w-72 bg-muted/30 rounded-xl border border-border/30 overflow-hidden">
-                <button onClick={() => toggleViewSectionCollapse(kanbanSectionId)} className="w-full flex items-center gap-2 px-3 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors" style={{ borderLeft: `4px solid ${section.color}` }}>
-                  <Columns3 className="h-3.5 w-3.5" style={{ color: section.color }} />
-                  <span className="text-sm font-semibold flex-1 text-left">{section.name}</span>
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{sectionTasks.length}</span>
-                  {isCollapsed ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <div className="p-1 hover:bg-muted/50 rounded transition-colors"><MoreVertical className="h-4 w-4 text-muted-foreground" /></div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 bg-popover border shadow-lg z-50">
-                      <DropdownMenuItem onClick={() => handleEditSection(section)} className="cursor-pointer"><Edit className="h-4 w-4 mr-2" />{t('sections.editSection')}</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAddTaskToSection(section.id)} className="cursor-pointer"><PlusIcon className="h-4 w-4 mr-2" />{t('sections.addTask')}</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDuplicateSection(section.id)} className="cursor-pointer"><Copy className="h-4 w-4 mr-2" />{t('common.duplicate')}</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDeleteSection(section.id)} className="cursor-pointer text-destructive focus:text-destructive" disabled={sections.length <= 1}><Trash2 className="h-4 w-4 mr-2" />{t('common.delete')}</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+      <div className="w-full">
+        {/* Segmented tab bar */}
+        <div className="relative border-b border-border/60">
+          <div className="flex items-stretch overflow-x-auto scrollbar-hide -mx-4 px-4">
+            {tabs.map((tab) => {
+              const isActive = tab.id === activeTab;
+              const isCompleted = tab.id === COMPLETED_TAB;
+              const label = isCompleted ? t('common.completed', 'Completed') : tab.section?.name ?? '';
+              const count = isCompleted
+                ? completedItems.length
+                : (sectionTasksMap.get(tab.id)?.length ?? 0);
+              const accent = isCompleted ? '#10b981' : tab.section?.color;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'relative flex items-center gap-2 px-4 py-3 flex-shrink-0 transition-colors',
+                    'text-sm font-semibold whitespace-nowrap',
+                    isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {isCompleted && <CheckCircle2 className="h-4 w-4" style={{ color: accent }} />}
+                  <span>{label}</span>
+                  <span
+                    className={cn(
+                      'text-[11px] font-medium px-1.5 py-0.5 rounded-full min-w-[20px] text-center',
+                      isActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground',
+                    )}
+                  >
+                    {count}
+                  </span>
+                  {isActive && (
+                    <span
+                      className="absolute left-3 right-3 -bottom-px h-[3px] rounded-full bg-primary"
+                      style={accent && !isCompleted ? { backgroundColor: accent } : undefined}
+                    />
+                  )}
                 </button>
-                {!isCollapsed && (
-                  <>
-                    <Droppable droppableId={section.id}>
-                      {(provided, snapshot) => (
-                        <div ref={provided.innerRef} {...provided.droppableProps} className={cn("min-h-[300px] max-h-[400px] overflow-y-auto p-2 space-y-2", snapshot.isDraggingOver && "bg-primary/5")}>
-                          {sectionTasks.length === 0 ? (
-                            <div className="py-8 text-center text-sm text-muted-foreground">{t('sections.dropTasksHere')}</div>
-                          ) : sectionTasks.map((item, index) => (
-                            <Draggable key={item.id} draggableId={item.id} index={index}>
-                              {(provided, snapshot) => (
-                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className={cn("bg-card rounded-lg border border-border/50 shadow-sm", snapshot.isDragging && "shadow-lg ring-2 ring-primary")}>
-                                  {renderTaskItem(item)}
-                                  {renderSubtasksInline(item)}
-                                </div>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                    <div className="p-2 border-t border-border/30">
-                      <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground" onClick={() => handleAddTaskToSection(section.id)}>
-                        <PlusIcon className="h-4 w-4 mr-2" />{t('sections.addTask')}
-                      </Button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Active tab header actions (edit / add / duplicate / delete) */}
+        {activeSection && (
+          <div className="flex items-center justify-end px-2 pt-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-popover border shadow-lg z-50">
+                <DropdownMenuItem onClick={() => handleEditSection(activeSection)} className="cursor-pointer">
+                  <Edit className="h-4 w-4 mr-2" />{t('sections.editSection')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleAddTaskToSection(activeSection.id)} className="cursor-pointer">
+                  <PlusIcon className="h-4 w-4 mr-2" />{t('sections.addTask')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleDuplicateSection(activeSection.id)} className="cursor-pointer">
+                  <Copy className="h-4 w-4 mr-2" />{t('common.duplicate')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleDeleteSection(activeSection.id)}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                  disabled={sections.length <= 1}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />{t('common.delete')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleAddSection('below')} className="cursor-pointer">
+                  <PlusIcon className="h-4 w-4 mr-2" />Add Section
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
+        {/* Active tab content */}
+        <div className="pt-1 pb-2">
+          {isCompletedActive ? (
+            <div className="divide-y divide-border/40">
+              {completedItems.map((item) => (
+                <div key={item.id} className="opacity-70">
+                  {renderTaskItem(item)}
+                </div>
+              ))}
+            </div>
+          ) : activeSection ? (
+            <Droppable droppableId={activeSection.id}>
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className={cn(
+                    'min-h-[300px] divide-y divide-border/40 transition-colors',
+                    snapshot.isDraggingOver && 'bg-primary/5',
+                  )}
+                >
+                  {activeTasks.length === 0 ? (
+                    <div className="py-16 text-center text-sm text-muted-foreground">
+                      {t('sections.dropTasksHere')}
                     </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
-          {showCompleted && completedItems.length > 0 && (
-            <div className="flex-shrink-0 w-72 bg-muted/30 rounded-xl border border-border/30 overflow-hidden">
-              <button onClick={() => toggleViewSectionCollapse('kanban-completed')} className="w-full flex items-center gap-2 px-3 py-3 border-b border-border/30 hover:bg-muted/20 transition-colors" style={{ borderLeft: `4px solid #10b981` }}>
-                <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                <span className="text-sm font-semibold flex-1 text-left text-muted-foreground uppercase tracking-wide">Completed</span>
-                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{completedItems.length}</span>
-                {collapsedViewSections.has('kanban-completed') ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-              </button>
-              {!collapsedViewSections.has('kanban-completed') && (
-                <div className="min-h-[100px] max-h-[400px] overflow-y-auto p-2 space-y-2">
-                  {completedItems.map((item) => (
-                    <div key={item.id} className="bg-card rounded-lg border border-border/50 shadow-sm opacity-70">{renderTaskItem(item)}</div>
-                  ))}
+                  ) : (
+                    activeTasks.map((item, index) => (
+                      <Draggable key={item.id} draggableId={item.id} index={index}>
+                        {(dragProvided, dragSnapshot) => (
+                          <div
+                            ref={dragProvided.innerRef}
+                            {...dragProvided.draggableProps}
+                            {...dragProvided.dragHandleProps}
+                            className={cn(
+                              'bg-card transition-shadow',
+                              dragSnapshot.isDragging && 'shadow-lg ring-2 ring-primary rounded-lg',
+                            )}
+                          >
+                            <div className="flex items-start">
+                              <div className="flex-1 min-w-0">
+                                {renderTaskItem(item)}
+                                {renderSubtasksInline(item)}
+                              </div>
+                              <ChevronRight className="h-4 w-4 text-muted-foreground mt-4 mr-2 flex-shrink-0" />
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))
+                  )}
+                  {provided.placeholder}
                 </div>
               )}
-            </div>
-          )}
-          <div className="flex-shrink-0 w-72">
-            <Button variant="outline" className="w-full h-12 border-dashed" onClick={() => handleAddSection('below')}>
-              <PlusIcon className="h-4 w-4 mr-2" />Add Section
-            </Button>
-          </div>
+            </Droppable>
+          ) : null}
         </div>
       </div>
     </DragDropContext>
