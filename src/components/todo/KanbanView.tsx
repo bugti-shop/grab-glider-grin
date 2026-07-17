@@ -1,6 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import { TodoItem, TaskSection } from '@/types/note';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+  DragUpdate,
+} from '@hello-pangea/dnd';
 import { ChevronRight, MoreVertical, Edit, Plus as PlusIcon, Copy, Trash2, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
@@ -30,6 +36,79 @@ interface KanbanViewProps {
 }
 
 const COMPLETED_TAB = '__completed__';
+const ACTIVE_TAB_STORAGE_KEY = 'flowist:kanban:active-tab';
+const TAB_DROPPABLE_PREFIX = 'kanban-tab-';
+const TAB_HOVER_SWITCH_MS = 550;
+
+/* -------------------------------------------------------------------------- */
+/* Row — memoized so switching tabs / DnD doesn't re-render every card        */
+/* -------------------------------------------------------------------------- */
+
+interface KanbanRowProps {
+  item: TodoItem;
+  index: number;
+  renderTaskItem: (item: TodoItem) => React.ReactNode;
+  renderSubtasksInline: (item: TodoItem) => React.ReactNode;
+}
+
+const KanbanRow = memo(function KanbanRow({
+  item,
+  index,
+  renderTaskItem,
+  renderSubtasksInline,
+}: KanbanRowProps) {
+  return (
+    <Draggable draggableId={item.id} index={index}>
+      {(dragProvided, dragSnapshot) => (
+        <div
+          ref={dragProvided.innerRef}
+          {...dragProvided.draggableProps}
+          {...dragProvided.dragHandleProps}
+          style={{
+            ...dragProvided.draggableProps.style,
+            // Smooth scrolling: browser can skip painting off-screen cards
+            contentVisibility: dragSnapshot.isDragging ? 'visible' : 'auto',
+            containIntrinsicSize: '72px',
+          }}
+          className={cn(
+            'bg-card transition-shadow',
+            dragSnapshot.isDragging && 'shadow-lg ring-2 ring-primary rounded-lg z-10 relative',
+          )}
+        >
+          <div className="flex items-start">
+            <div className="flex-1 min-w-0">
+              {renderTaskItem(item)}
+              {renderSubtasksInline(item)}
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground mt-4 mr-2 flex-shrink-0" />
+          </div>
+        </div>
+      )}
+    </Draggable>
+  );
+});
+
+/* -------------------------------------------------------------------------- */
+/* Skeleton                                                                   */
+/* -------------------------------------------------------------------------- */
+
+const KanbanSkeleton = () => (
+  <div className="divide-y divide-border/40 animate-pulse">
+    {Array.from({ length: 5 }).map((_, i) => (
+      <div key={i} className="flex items-center gap-3 px-3 py-4">
+        <div className="h-6 w-6 rounded-full bg-muted flex-shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3.5 w-3/4 rounded bg-muted" />
+          <div className="h-3 w-1/2 rounded bg-muted/70" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+/* -------------------------------------------------------------------------- */
+/* Kanban view                                                                */
+/* -------------------------------------------------------------------------- */
 
 export const KanbanView = ({
   sortedSections,
@@ -50,16 +129,35 @@ export const KanbanView = ({
   const { t } = useTranslation();
 
   const tabs = useMemo(() => {
-    const base = sortedSections.map((s) => ({ id: s.id, section: s as TaskSection | null }));
+    const base: { id: string; section: TaskSection | null }[] = sortedSections.map((s) => ({
+      id: s.id,
+      section: s,
+    }));
     if (showCompleted && completedItems.length > 0) {
       base.push({ id: COMPLETED_TAB, section: null });
     }
     return base;
   }, [sortedSections, showCompleted, completedItems.length]);
 
-  const [activeTab, setActiveTab] = useState<string>(() => sortedSections[0]?.id ?? COMPLETED_TAB);
+  /* ---------- Active tab: persisted per device ---------- */
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (typeof window === 'undefined') return sortedSections[0]?.id ?? '';
+    try {
+      const saved = window.localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+      if (saved) return saved;
+    } catch { /* ignore */ }
+    return sortedSections[0]?.id ?? '';
+  });
 
-  // Keep active tab valid if sections change
+  // Persist on change
+  useEffect(() => {
+    if (!activeTab) return;
+    try {
+      window.localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, activeTab);
+    } catch { /* ignore */ }
+  }, [activeTab]);
+
+  // Keep active tab valid as sections change
   useEffect(() => {
     if (!tabs.some((tab) => tab.id === activeTab)) {
       setActiveTab(tabs[0]?.id ?? '');
@@ -68,6 +166,7 @@ export const KanbanView = ({
 
   const activeSection = sortedSections.find((s) => s.id === activeTab) || null;
 
+  /* ---------- Precompute tasks per section (memoized) ---------- */
   const sectionTasksMap = useMemo(() => {
     const map = new Map<string, TodoItem[]>();
     for (const section of sortedSections) {
@@ -81,13 +180,74 @@ export const KanbanView = ({
 
   const activeTasks = activeSection ? sectionTasksMap.get(activeSection.id) ?? [] : [];
 
-  const handleDragEnd = (result: DropResult) => {
+  /* ---------- Skeleton: brief shimmer on first mount / heavy switch ---------- */
+  const [isSwitching, setIsSwitching] = useState(false);
+  const switchTimer = useRef<number | null>(null);
+  const prevTab = useRef(activeTab);
+  useEffect(() => {
+    if (prevTab.current === activeTab) return;
+    prevTab.current = activeTab;
+    if (activeTasks.length > 40) {
+      setIsSwitching(true);
+      if (switchTimer.current) window.clearTimeout(switchTimer.current);
+      switchTimer.current = window.setTimeout(() => setIsSwitching(false), 120);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+  useEffect(() => () => {
+    if (switchTimer.current) window.clearTimeout(switchTimer.current);
+  }, []);
+
+  /* ---------- Cross-tab DnD: switch tab while hovering a tab header ---------- */
+  const hoverTimer = useRef<number | null>(null);
+  const hoverTarget = useRef<string | null>(null);
+  const clearHover = () => {
+    if (hoverTimer.current) {
+      window.clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
+    hoverTarget.current = null;
+  };
+
+  const handleDragUpdate = useCallback((update: DragUpdate) => {
+    const dest = update.destination?.droppableId;
+    if (!dest || !dest.startsWith(TAB_DROPPABLE_PREFIX)) {
+      clearHover();
+      return;
+    }
+    const targetTab = dest.slice(TAB_DROPPABLE_PREFIX.length);
+    if (targetTab === activeTab || targetTab === COMPLETED_TAB) {
+      clearHover();
+      return;
+    }
+    if (hoverTarget.current === targetTab) return;
+    clearHover();
+    hoverTarget.current = targetTab;
+    hoverTimer.current = window.setTimeout(() => {
+      setActiveTab(targetTab);
+      Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
+      clearHover();
+    }, TAB_HOVER_SWITCH_MS);
+  }, [activeTab]);
+
+  /* ---------- Drop handler: supports drop-on-tab and drop-in-list ---------- */
+  const handleDragEnd = useCallback((result: DropResult) => {
+    clearHover();
     if (!result.destination) return;
     const { source, destination, draggableId } = result;
     const taskId = draggableId;
     const sourceSectionId = source.droppableId;
-    const destSectionId = destination.droppableId;
-    if (sourceSectionId === destSectionId && source.index === destination.index) return;
+
+    // Resolve real destination section id (tab drop OR list drop)
+    let destSectionId = destination.droppableId;
+    let destIndex = destination.index;
+    if (destSectionId.startsWith(TAB_DROPPABLE_PREFIX)) {
+      destSectionId = destSectionId.slice(TAB_DROPPABLE_PREFIX.length);
+      destIndex = 0; // top of target list
+    }
+    if (destSectionId === COMPLETED_TAB) return;
+    if (sourceSectionId === destSectionId && source.index === destIndex) return;
+
     setItems(prevItems => {
       const taskToMove = prevItems.find(item => item.id === taskId);
       if (!taskToMove) return prevItems;
@@ -97,11 +257,11 @@ export const KanbanView = ({
       const destTasksRaw = uncompletedList.filter(item => item.id !== taskId && (item.sectionId === destSectionId || (!item.sectionId && destSectionId === sections[0]?.id)));
       const currentlyOrderedDestTasks = applyTaskOrder(destTasksRaw, `kanban-${destSectionId}`);
       const currentDestOrderIds = currentlyOrderedDestTasks.map(t => t.id);
-      currentDestOrderIds.splice(destination.index, 0, taskId);
+      currentDestOrderIds.splice(destIndex, 0, taskId);
       updateSectionOrder(`kanban-${destSectionId}`, currentDestOrderIds);
       const destTasks = [...currentlyOrderedDestTasks];
       const updatedTask = { ...taskToMove, sectionId: destSectionId };
-      destTasks.splice(destination.index, 0, updatedTask);
+      destTasks.splice(destIndex, 0, updatedTask);
       if (sourceSectionId !== destSectionId) {
         const currentlyOrderedSourceTasks = applyTaskOrder(sourceTasks, `kanban-${sourceSectionId}`);
         const sourceOrderIds = currentlyOrderedSourceTasks.map(t => t.id).filter(id => id !== taskId);
@@ -113,16 +273,21 @@ export const KanbanView = ({
     setOrderVersion(v => v + 1);
     Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {});
     toast.success(t('tasks.taskMoved', 'Task moved'));
-  };
+    // Follow the task to its new tab
+    if (sourceSectionId !== destSectionId) setActiveTab(destSectionId);
+  }, [sections, setItems, setOrderVersion, t]);
 
   const isCompletedActive = activeTab === COMPLETED_TAB;
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
+    <DragDropContext onDragEnd={handleDragEnd} onDragUpdate={handleDragUpdate}>
       <div className="w-full">
-        {/* Segmented tab bar */}
+        {/* Segmented tab bar — each tab is a Droppable for cross-tab DnD */}
         <div className="relative border-b border-border/60">
-          <div className="flex items-stretch overflow-x-auto scrollbar-hide -mx-4 px-4">
+          <div
+            className="flex items-stretch overflow-x-auto scrollbar-hide -mx-4 px-4"
+            style={{ WebkitOverflowScrolling: 'touch', scrollBehavior: 'smooth' }}
+          >
             {tabs.map((tab) => {
               const isActive = tab.id === activeTab;
               const isCompleted = tab.id === COMPLETED_TAB;
@@ -131,14 +296,18 @@ export const KanbanView = ({
                 ? completedItems.length
                 : (sectionTasksMap.get(tab.id)?.length ?? 0);
               const accent = isCompleted ? '#10b981' : tab.section?.color;
-              return (
+
+              const tabButton = (droppableRef?: (el: HTMLElement | null) => void, extraProps: Record<string, unknown> = {}, isDraggingOver = false) => (
                 <button
+                  ref={droppableRef as never}
+                  {...extraProps}
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     'relative flex items-center gap-2 px-4 py-3 flex-shrink-0 transition-colors',
-                    'text-sm font-semibold whitespace-nowrap',
+                    'text-sm font-semibold whitespace-nowrap select-none',
                     isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+                    isDraggingOver && !isActive && 'bg-primary/5 text-primary',
                   )}
                 >
                   {isCompleted && <CheckCircle2 className="h-4 w-4" style={{ color: accent }} />}
@@ -159,13 +328,40 @@ export const KanbanView = ({
                   )}
                 </button>
               );
+
+              // Don't allow drop onto completed tab
+              if (isCompleted) return tabButton();
+
+              return (
+                <Droppable key={tab.id} droppableId={`${TAB_DROPPABLE_PREFIX}${tab.id}`}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className="flex items-stretch"
+                    >
+                      {tabButton(undefined, {}, snapshot.isDraggingOver)}
+                      <span style={{ display: 'none' }}>{provided.placeholder}</span>
+                    </div>
+                  )}
+                </Droppable>
+              );
             })}
           </div>
         </div>
 
-        {/* Active tab header actions (edit / add / duplicate / delete) */}
+        {/* Active tab header actions */}
         {activeSection && (
-          <div className="flex items-center justify-end px-2 pt-2">
+          <div className="flex items-center justify-between px-2 pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-primary font-medium"
+              onClick={() => handleAddTaskToSection(activeSection.id)}
+            >
+              <PlusIcon className="h-4 w-4 mr-1" />
+              {t('sections.addTask', 'Add Task')}
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -200,11 +396,20 @@ export const KanbanView = ({
         )}
 
         {/* Active tab content */}
-        <div className="pt-1 pb-2">
-          {isCompletedActive ? (
+        <div
+          className="pt-1 pb-2"
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+        >
+          {isSwitching ? (
+            <KanbanSkeleton />
+          ) : isCompletedActive ? (
             <div className="divide-y divide-border/40">
               {completedItems.map((item) => (
-                <div key={item.id} className="opacity-70">
+                <div
+                  key={item.id}
+                  className="opacity-70"
+                  style={{ contentVisibility: 'auto', containIntrinsicSize: '72px' }}
+                >
                   {renderTaskItem(item)}
                 </div>
               ))}
@@ -226,27 +431,13 @@ export const KanbanView = ({
                     </div>
                   ) : (
                     activeTasks.map((item, index) => (
-                      <Draggable key={item.id} draggableId={item.id} index={index}>
-                        {(dragProvided, dragSnapshot) => (
-                          <div
-                            ref={dragProvided.innerRef}
-                            {...dragProvided.draggableProps}
-                            {...dragProvided.dragHandleProps}
-                            className={cn(
-                              'bg-card transition-shadow',
-                              dragSnapshot.isDragging && 'shadow-lg ring-2 ring-primary rounded-lg',
-                            )}
-                          >
-                            <div className="flex items-start">
-                              <div className="flex-1 min-w-0">
-                                {renderTaskItem(item)}
-                                {renderSubtasksInline(item)}
-                              </div>
-                              <ChevronRight className="h-4 w-4 text-muted-foreground mt-4 mr-2 flex-shrink-0" />
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
+                      <KanbanRow
+                        key={item.id}
+                        item={item}
+                        index={index}
+                        renderTaskItem={renderTaskItem}
+                        renderSubtasksInline={renderSubtasksInline}
+                      />
                     ))
                   )}
                   {provided.placeholder}
