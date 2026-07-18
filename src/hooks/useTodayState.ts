@@ -25,6 +25,7 @@ import { getSmartListFilter } from '@/components/SmartListsDropdown';
 import { isToday, isTomorrow, isThisWeek, isBefore, startOfDay } from 'date-fns';
 import { useStreakChallengeDialog } from '@/components/StreakChallengeDialog';
 import { useStreak } from '@/hooks/useStreak';
+import { genId } from '@/utils/genId';
 
 export type ViewMode = 'flat' | 'kanban-status' | 'timeline' | 'progress' | 'priority' | 'history';
 export type SortBy = 'date' | 'priority' | 'name' | 'created';
@@ -48,7 +49,7 @@ const getFallbackFolderId = (folders: Folder[]): string | null => {
 };
 
 const getDefaultSections = (t: (key: string) => string): TaskSection[] => [
-  { id: 'default', name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 }
+  { id: genId(), name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 }
 ];
 
 const todayRuntimeCache = ((globalThis as any).__flowistTodayRuntimeCache ??= {

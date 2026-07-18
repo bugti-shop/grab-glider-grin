@@ -14,6 +14,7 @@ const iso = (v: unknown): string | null => {
   if (!v) return null;
   if (v instanceof Date) return v.toISOString();
   if (typeof v === 'string') { const d = new Date(v); return isNaN(+d) ? null : d.toISOString(); }
+  if (typeof v === 'number') { const d = new Date(v); return isNaN(+d) ? null : d.toISOString(); }
   return null;
 };
 const nowIso = () => new Date().toISOString();
