@@ -1458,24 +1458,13 @@ const TodoCalendar = () => {
       </div>
 
       {/* Floating Action Button */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <TodoCalendarFab />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" side="top" className="mb-2 w-48 z-50 bg-card">
-          <DropdownMenuItem onClick={() => {
-            if (!isPro && !canCreateWithinSoftLimit('tasks', items.length)) { softRequireCreate('tasks', items.length); return; }
-            setIsInputOpen(true);
-          }} className="gap-2">
-            <ListTodo className="h-4 w-4" />
-            {t('calendar.addTask')}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => { setEditingEvent(null); setIsEventEditorOpen(true); }} className="gap-2">
-            <CalendarDays className="h-4 w-4" />
-            {t('calendar.addEvent')}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <TodoCalendarFab
+        onClick={() => {
+          if (!isPro && !canCreateWithinSoftLimit('tasks', items.length)) { softRequireCreate('tasks', items.length); return; }
+          setIsInputOpen(true);
+        }}
+      />
+
 
       <TaskInputSheet isOpen={isInputOpen} onClose={() => { setIsInputOpen(false); setQuickAddDate(null); }} onAddTask={handleAddTask} folders={folders} selectedFolderId={null} onCreateFolder={handleCreateFolder} defaultDate={quickAddDate || date} />
 
