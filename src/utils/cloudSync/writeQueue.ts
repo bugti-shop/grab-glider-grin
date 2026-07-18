@@ -169,6 +169,7 @@ export async function flushQueue(): Promise<void> {
           return sanitized ? { ...entry, ...sanitized } : null;
         })
         .filter((entry): entry is QueuedWrite => !!entry);
+      const flushingKeys = new Set(q.map((entry) => `${entry.table}:${entry.row.id}`));
       const remaining: QueuedWrite[] = [];
       const groups = new Map<string, QueuedWrite[]>();
       for (const entry of q) {
@@ -216,8 +217,16 @@ export async function flushQueue(): Promise<void> {
         }
         }
       }
-      inMemoryQueue = remaining;
-      save(remaining);
+      const failedKeys = new Set(remaining.map((entry) => `${entry.table}:${entry.row.id}`));
+      // Keep writes that were enqueued while this flush was in flight. Without
+      // this, a first-login upload can start flushing notes, then queue tasks,
+      // and the notes flush completion would overwrite the task queue.
+      const current = mergeQueuedEntries(loadPersisted(), inMemoryQueue);
+      inMemoryQueue = mergeQueuedEntries(
+        current.filter((entry) => !flushingKeys.has(`${entry.table}:${entry.row.id}`) || failedKeys.has(`${entry.table}:${entry.row.id}`)),
+        remaining,
+      );
+      save(inMemoryQueue);
     } finally {
       flushing = false;
       flushPromise = null;
