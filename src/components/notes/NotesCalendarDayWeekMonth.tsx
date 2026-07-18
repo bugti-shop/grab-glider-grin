@@ -331,7 +331,7 @@ export const NotesCalendarDayWeekMonth = ({
                   <li key={task.id}>
                     <button
                       onClick={() => onTaskClick?.(task)}
-                      className="w-full flex items-center gap-3 py-3.5 text-left active:bg-muted/40 rounded-md transition-colors"
+                      className="w-full flex items-center gap-3 py-3 text-left active:bg-muted/40 rounded-md transition-colors"
                     >
                       <span
                         role="checkbox"
@@ -361,7 +361,7 @@ export const NotesCalendarDayWeekMonth = ({
                       </span>
                       <span
                         className={cn(
-                          'flex-1 min-w-0 truncate text-[17px] leading-[1.35] font-medium',
+                          'flex-1 min-w-0 truncate text-[17px] leading-[1.25] font-normal',
                           task.completed
                             ? 'text-muted-foreground line-through'
                             : 'text-foreground',
@@ -370,7 +370,7 @@ export const NotesCalendarDayWeekMonth = ({
                         {task.text}
                       </span>
                       {time && (
-                        <span className="shrink-0 text-[14px] text-muted-foreground tabular-nums">
+                        <span className="shrink-0 text-[14px] font-normal text-muted-foreground tabular-nums">
                           {time}
                         </span>
                       )}
