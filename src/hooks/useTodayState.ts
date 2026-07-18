@@ -49,7 +49,7 @@ const getFallbackFolderId = (folders: Folder[]): string | null => {
 };
 
 const getDefaultSections = (t: (key: string) => string): TaskSection[] => [
-  { id: genId(), name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0, updatedAt: new Date() }
+  { id: genId(), name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 }
 ];
 
 const todayRuntimeCache = ((globalThis as any).__flowistTodayRuntimeCache ??= {
