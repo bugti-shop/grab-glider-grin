@@ -628,6 +628,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       // Reset code fields
       setCodeContent('');
       setCodeLanguage('auto');
+
+      // New note snapshot: empty. Any typed character will flip dirty=true.
+      initialSnapshotRef.current = { title: '', content: '', codeContent: '' };
       
       // Auto-open voice recorder for new voice notes
       if (defaultType === 'voice') {
