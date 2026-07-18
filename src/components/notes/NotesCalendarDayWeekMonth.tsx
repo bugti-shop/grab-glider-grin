@@ -41,7 +41,8 @@ const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 export const NotesCalendarDayWeekMonth = ({
   selectedDate,
   onDateSelect,
-  notes,
+  notes = [],
+
   onEditNote,
   onDeleteNote,
 }: Props) => {
