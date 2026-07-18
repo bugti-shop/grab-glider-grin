@@ -857,7 +857,7 @@ export const TaskDetailPage = ({
           ) : (
             <div
               onClick={() => setIsEditingDesc(true)}
-              className="rich-text-editor w-full text-[15px] whitespace-pre-wrap leading-[1.45] cursor-text"
+              className="rich-text-editor w-full text-[13px] whitespace-pre-wrap leading-[1.45] cursor-text"
               style={{ color: '#adadad', fontFamily: 'inherit' }}
               dangerouslySetInnerHTML={{ __html: descriptionToDisplayHtml(descText) }}
             />
