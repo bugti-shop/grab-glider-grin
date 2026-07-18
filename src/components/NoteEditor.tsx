@@ -904,9 +904,14 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     };
 
     window.addEventListener('popstate', onPopState);
+    const ignoreSyntheticSheetPop = () => {
+      isPoppingHistoryRef.current = true;
+    };
+    window.addEventListener('flowist:synthetic-sheet-history-pop', ignoreSyntheticSheetPop);
     return () => {
       clearTimeout(timeoutId);
       window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('flowist:synthetic-sheet-history-pop', ignoreSyntheticSheetPop);
     };
   }, [isOpen]);
 

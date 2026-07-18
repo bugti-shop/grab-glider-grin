@@ -158,6 +158,10 @@ export const TaskDetailPage = ({
   const [descText, setDescText] = useState(task?.description || '');
   const [isEditingDesc, setIsEditingDesc] = useState(false);
 
+  const stopNestedTap = useCallback((e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+  }, []);
+
 
   useEffect(() => {
     if (task) {
@@ -215,7 +219,7 @@ export const TaskDetailPage = ({
 
   useHardwareBackButton({
     onBack: handleBack,
-    enabled: isOpen && !showDateTimePage && !showDependencySheet && !isSubtaskInputSheetOpen && !showSubtaskDetailSheet && !showExtraReminderSheet && !showTimeTracker && !showPomodoro,
+    enabled: isOpen,
     priority: 'sheet',
   });
 
@@ -326,7 +330,6 @@ export const TaskDetailPage = ({
       subtasks: [...(task.subtasks || []), newSubtask]
     });
 
-    setIsSubtaskInputSheetOpen(false);
     toast.success(t('taskDetail.subtaskAdded'));
   };
 
@@ -926,7 +929,7 @@ export const TaskDetailPage = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <button type="button" onClick={(e) => { e.stopPropagation(); setShowDateTimePage(true); }} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
+          <button type="button" onPointerDown={stopNestedTap} onClick={(e) => { e.stopPropagation(); setShowDateTimePage(true); }} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
             <span className="flex-shrink-0 h-3.5 w-3.5 flex items-center justify-center">
               <CalendarIcon className="h-3.5 w-3.5" />
             </span>
@@ -939,6 +942,7 @@ export const TaskDetailPage = ({
 
           <button
             type="button"
+            onPointerDown={stopNestedTap}
             onClick={(e) => {
               e.stopPropagation();
               const currentList = (task as any).extraReminders as unknown[] | undefined;
@@ -969,6 +973,7 @@ export const TaskDetailPage = ({
           <button
             type="button"
             data-tour="task-detail-focus-mode"
+            onPointerDown={stopNestedTap}
             onClick={(e) => { e.stopPropagation(); if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
@@ -984,6 +989,7 @@ export const TaskDetailPage = ({
 
           <button
             type="button"
+            onPointerDown={stopNestedTap}
             onClick={(e) => { e.stopPropagation(); if (!requireFeature('time_tracking')) return; setShowTimeTracker(true); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
@@ -1002,6 +1008,7 @@ export const TaskDetailPage = ({
         <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <button
             type="button"
+            onPointerDown={stopNestedTap}
             onClick={(e) => { e.stopPropagation(); setIsSubtaskInputSheetOpen(true); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
@@ -1017,6 +1024,7 @@ export const TaskDetailPage = ({
 
           <button
             type="button"
+            onPointerDown={stopNestedTap}
             onClick={(e) => { e.stopPropagation(); setShowTagInput(true); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
@@ -1278,6 +1286,7 @@ export const TaskDetailPage = ({
           <div
             className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-5 space-y-4"
             style={{ paddingBottom: 'calc(var(--safe-bottom, 0px) + 20px)' }}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
@@ -1301,6 +1310,7 @@ export const TaskDetailPage = ({
           <div
             className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-5 space-y-4"
             style={{ paddingBottom: 'calc(var(--safe-bottom, 0px) + 20px)' }}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
