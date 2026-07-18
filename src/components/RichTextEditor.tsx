@@ -2756,6 +2756,10 @@ export const RichTextEditor = ({
           type="text"
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
+          onPointerDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           placeholder={t('editor.titlePlaceholder')}
           className="title-input"
           autoCapitalize="sentences"
@@ -2828,6 +2832,10 @@ export const RichTextEditor = ({
         ref={editorRef}
         contentEditable
         spellCheck={spellCheckEnabled}
+        onPointerDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
         onInput={handleInput}
         onBeforeInput={handleBeforeInput}
         onCompositionStart={handleCompositionStart}
