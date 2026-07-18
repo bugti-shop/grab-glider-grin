@@ -9,9 +9,10 @@ import { NotesCalendarDarkHero } from '@/components/notes/NotesCalendarDarkHero'
 import { NotesCalendarDayWeekMonth } from '@/components/notes/NotesCalendarDayWeekMonth';
 import { NotesCalendarCardGrid } from '@/components/notes/NotesCalendarCardGrid';
 import { NotesCalendarEditorial } from '@/components/notes/NotesCalendarEditorial';
+import { NotesCalendarTimeline } from '@/components/notes/NotesCalendarTimeline';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3, Moon, CalendarDays, LayoutPanelTop, BookOpen } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3, Moon, CalendarDays, LayoutPanelTop, BookOpen, Clock } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -30,7 +31,7 @@ import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NotesCalendarFab } from '@/components/notes/NotesCalendarFab';
 
-type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap' | 'darkHero' | 'dayWeekMonth' | 'cardGrid' | 'editorial';
+type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap' | 'darkHero' | 'dayWeekMonth' | 'cardGrid' | 'editorial' | 'timeline';
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
@@ -259,6 +260,11 @@ const NotesCalendar = () => {
                 <span className="flex-1">Editorial timeline</span>
                 {layout === 'editorial' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeLayout('timeline')} className="gap-2">
+                <Clock className="h-4 w-4" />
+                <span className="flex-1">Timeline (hour rail)</span>
+                {layout === 'timeline' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
                 <ImageIcon className="h-4 w-4" />
@@ -336,6 +342,16 @@ const NotesCalendar = () => {
           ) : layout === 'editorial' ? (
             <ErrorBoundary fallback={<CalendarPanelFallback />}>
               <NotesCalendarEditorial
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
+              />
+            </ErrorBoundary>
+          ) : layout === 'timeline' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarTimeline
                 selectedDate={date || new Date()}
                 onDateSelect={setDate}
                 notes={notes}
