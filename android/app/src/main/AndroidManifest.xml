@@ -156,12 +156,8 @@
         </activity>
 
 
-        <service
-            android:name=".FocusForegroundService"
-            android:foregroundServiceType="specialUse"
-            android:exported="false">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="focus_timer" />
-        </service>
+
+
 
         <provider
             android:name="androidx.core.content.FileProvider"
