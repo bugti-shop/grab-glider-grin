@@ -1153,7 +1153,7 @@ const Index = () => {
               >
                 {isDarkMode ? <Sun className="h-4 w-4 xs:h-5 xs:w-5 sm:h-5 sm:w-5" /> : <Moon className="h-4 w-4 xs:h-5 xs:w-5 sm:h-5 sm:w-5" />}
               </Button>
-              <NotificationCenter />
+              
               <FeatureGuideButton />
 
               <Button

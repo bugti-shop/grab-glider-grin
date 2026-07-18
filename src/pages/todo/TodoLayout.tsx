@@ -66,7 +66,7 @@ export const TodoLayout = ({ children, title, searchValue, onSearchChange }: Tod
               >
                 {isDarkMode ? <Sun className="h-4 w-4 sm:h-5 sm:w-5" /> : <Moon className="h-4 w-4 sm:h-5 sm:w-5" />}
               </Button>
-              <NotificationCenter />
+              
               <FeatureGuideButton />
 
               <Button
