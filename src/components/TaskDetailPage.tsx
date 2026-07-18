@@ -147,6 +147,7 @@ export const TaskDetailPage = ({
   const [previewAttachment, setPreviewAttachment] = useState<{ url: string; name: string; type: string } | null>(null);
   const [showPomodoro, setShowPomodoro] = useState(false);
   const [showHistoryPage, setShowHistoryPage] = useState(false);
+  const [showTimeTracker, setShowTimeTracker] = useState(false);
   const [pomodoroStats, setPomodoroStats] = useState(() => getPomodoroStats(task?.id));
   useEffect(() => {
     setPomodoroStats(getPomodoroStats(task?.id));
@@ -739,7 +740,7 @@ export const TaskDetailPage = ({
   return (
     <div 
       className={cn(
-        "fixed inset-y-0 right-0 left-0 z-50 flex flex-col transition-transform duration-300 border-l border-border",
+        "fixed inset-y-0 right-0 left-0 z-50 flex flex-col transition-transform duration-300 border-l border-border pointer-events-auto",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}
       style={{
@@ -872,8 +873,8 @@ export const TaskDetailPage = ({
                 <span className="flex-shrink-0 h-3.5 w-3.5 rounded-full border-[1.25px] border-foreground/80 flex items-center justify-center">
                   <MoreHorizontal className="h-2 w-2" />
                 </span>
-                <span className="flex-1 text-[13px] font-normal leading-none text-black">Status</span>
-                <span className="text-[12px] leading-none px-2 py-1 rounded-full bg-info/15 text-info font-medium">
+                <span className="flex-1 text-[13.5px] font-normal leading-none text-black">Status</span>
+                <span className="text-[12.5px] leading-none px-2 py-1 rounded-full bg-info/15 text-info font-medium">
                   {getStatusConfig(task.status || 'not_started').label}
                 </span>
                 <ChevronRight className="h-3 w-3 text-muted-foreground/70 ml-0.5" />
@@ -907,9 +908,9 @@ export const TaskDetailPage = ({
                     }}
                   />
                 </span>
-                <span className="flex-1 text-[13px] font-normal leading-none text-black">Priority</span>
+                <span className="flex-1 text-[13.5px] font-normal leading-none text-black">Priority</span>
                 <span
-                  className="text-[12px] leading-none font-medium capitalize"
+                  className="text-[12.5px] leading-none font-medium capitalize"
                   style={{ color: task.priority && task.priority !== 'none' ? getPriorityHex(task.priority) : 'hsl(var(--muted-foreground))' }}
                 >
                   {task.priority && task.priority !== 'none' ? getPriorityName(task.priority) : 'None'}
@@ -925,19 +926,21 @@ export const TaskDetailPage = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <button onClick={() => setShowDateTimePage(true)} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
+          <button type="button" onClick={(e) => { e.stopPropagation(); setShowDateTimePage(true); }} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
             <span className="flex-shrink-0 h-3.5 w-3.5 flex items-center justify-center">
               <CalendarIcon className="h-3.5 w-3.5" />
             </span>
-            <span className="flex-1 text-[13px] font-normal leading-none text-black">Due Date</span>
-            <span className="text-[12px] leading-none text-muted-foreground">
+            <span className="flex-1 text-[13.5px] font-normal leading-none text-black">Due Date</span>
+            <span className="text-[12.5px] leading-none text-muted-foreground">
               {task.dueDate ? format(new Date(task.dueDate), 'EEE, MMM d, yyyy') : 'None'}
             </span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/70 ml-0.5" />
           </button>
 
           <button
-            onClick={() => {
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
               const currentList = (task as any).extraReminders as unknown[] | undefined;
               const currentCount = Array.isArray(currentList) ? currentList.length : task.extraReminderTime ? 1 : 0;
               if (currentCount >= 1 && !requireCapacity('remindersPerTask', currentCount)) return;
@@ -948,8 +951,8 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-3.5 w-3.5 flex items-center justify-center">
               <Bell className="h-3.5 w-3.5" />
             </span>
-            <span className="flex-1 text-[13px] font-normal leading-none text-black">Reminder</span>
-            <span className="text-[12px] leading-none text-muted-foreground truncate max-w-[50%]">
+            <span className="flex-1 text-[13.5px] font-normal leading-none text-black">Reminder</span>
+            <span className="text-[12.5px] leading-none text-muted-foreground truncate max-w-[50%]">
               {(() => {
                 const list = (task as any).extraReminders as Array<{ time: Date }> | undefined;
                 if (list && list.length) return list.length === 1 ? format(new Date(list[0].time), 'MMM d, h:mm a') : `${list.length} reminders`;
@@ -964,29 +967,31 @@ export const TaskDetailPage = ({
         {/* Card 2 — Focus & Time */}
         <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <button
+            type="button"
             data-tour="task-detail-focus-mode"
-            onClick={() => { if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }}
+            onClick={(e) => { e.stopPropagation(); if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <Target className="h-4 w-4 text-primary" />
             </span>
-            <span className="flex-1 min-w-0 flex items-center gap-1 text-[13px] font-normal leading-none text-black truncate">
+            <span className="flex-1 min-w-0 flex items-center gap-1 text-[13.5px] font-normal leading-none text-black truncate">
               Focus Mode {!isPro && <PremiumCrown size={12} />}
             </span>
-            <span className="text-[12px] leading-none text-muted-foreground truncate">Deep Work</span>
+            <span className="text-[12.5px] leading-none text-muted-foreground truncate">Deep Work</span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 flex-shrink-0 ml-0.5" />
           </button>
 
           <button
-            onClick={() => { if (!requireFeature('time_tracking')) return; }}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); if (!requireFeature('time_tracking')) return; setShowTimeTracker(true); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <Clock className="h-4 w-4 text-info" />
             </span>
-            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Time Tracking</span>
-            <span className="text-[12px] leading-none text-muted-foreground tabular-nums truncate">
+            <span className="flex-1 min-w-0 text-[13.5px] font-normal leading-none text-black truncate">Time Tracking</span>
+            <span className="text-[12.5px] leading-none text-muted-foreground tabular-nums truncate">
               {formatPomodoroDuration(pomodoroStats.taskFocusedSec)}
             </span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 flex-shrink-0 ml-0.5" />
@@ -996,28 +1001,30 @@ export const TaskDetailPage = ({
         {/* Card 3 — Subtasks / Tags / Convert to Notes */}
         <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <button
-            onClick={() => setIsSubtaskInputSheetOpen(true)}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setIsSubtaskInputSheetOpen(true); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <List className="h-4 w-4 text-success" strokeWidth={2.25} />
             </span>
-            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Subtasks</span>
-            <span className="text-[12px] leading-none text-muted-foreground tabular-nums truncate">
+            <span className="flex-1 min-w-0 text-[13.5px] font-normal leading-none text-black truncate">Subtasks</span>
+            <span className="text-[12.5px] leading-none text-muted-foreground tabular-nums truncate">
               {task.subtasks?.length ?? 0}
             </span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 flex-shrink-0 ml-0.5" />
           </button>
 
           <button
-            onClick={() => setShowTagInput(true)}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowTagInput(true); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <Tag className="h-4 w-4 text-info scale-x-[-1]" />
             </span>
-            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Tags</span>
-            <span className="text-[12px] leading-none text-muted-foreground truncate max-w-[50%]">
+            <span className="flex-1 min-w-0 text-[13.5px] font-normal leading-none text-black truncate">Tags</span>
+            <span className="text-[12.5px] leading-none text-muted-foreground truncate max-w-[50%]">
               {task.coloredTags && task.coloredTags.length > 0
                 ? task.coloredTags.map(t => t.name).join(', ')
                 : 'None'}
@@ -1026,13 +1033,14 @@ export const TaskDetailPage = ({
           </button>
 
           <button
-            onClick={() => onConvertToNote(task)}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onConvertToNote(task); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <FileEdit className="h-4 w-4 text-warning" />
             </span>
-            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Convert to Notes</span>
+            <span className="flex-1 min-w-0 text-[13.5px] font-normal leading-none text-black truncate">Convert to Notes</span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 flex-shrink-0 ml-0.5" />
           </button>
         </div>
@@ -1120,7 +1128,7 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
               <Clock className="h-5 w-5 text-muted-foreground" />
             </span>
-            <span className="flex-1 min-w-0 text-[10px] font-medium truncate">
+            <span className="flex-1 min-w-0 text-[13.5px] font-medium truncate">
               {t('taskDetail.taskHistory', 'Task History')}
             </span>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
@@ -1258,7 +1266,98 @@ export const TaskDetailPage = ({
         folders={folders}
         selectedFolderId={task.folderId}
         onCreateFolder={() => {}}
+        preventBackdropClose={true}
       />
+
+      {/* Time Tracker Sheet */}
+      {showTimeTracker && (
+        <div
+          className="fixed inset-0 z-[65] bg-black/40 flex items-end sm:items-center justify-center pointer-events-auto"
+          onClick={() => setShowTimeTracker(false)}
+        >
+          <div
+            className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-5 space-y-4"
+            style={{ paddingBottom: 'calc(var(--safe-bottom, 0px) + 20px)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">{t('taskDetail.timeTracking', 'Time Tracking')}</h3>
+              <button onClick={() => setShowTimeTracker(false)} className="p-1 rounded-full hover:bg-muted"><X className="h-5 w-5" /></button>
+            </div>
+            <TaskTimeTracker
+              timeTracking={task.timeTracking}
+              onUpdate={(tracking) => onUpdate({ ...task, timeTracking: tracking })}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Tag Input Sheet */}
+      {showTagInput && (
+        <div
+          className="fixed inset-0 z-[65] bg-black/40 flex items-end sm:items-center justify-center pointer-events-auto"
+          onClick={() => { setShowTagInput(false); setNewTagName(''); }}
+        >
+          <div
+            className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-5 space-y-4"
+            style={{ paddingBottom: 'calc(var(--safe-bottom, 0px) + 20px)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">{t('taskDetail.tags', 'Tags')}</h3>
+              <button onClick={() => { setShowTagInput(false); setNewTagName(''); }} className="p-1 rounded-full hover:bg-muted"><X className="h-5 w-5" /></button>
+            </div>
+
+            {task.coloredTags && task.coloredTags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {task.coloredTags.map((tag) => (
+                  <span
+                    key={tag.name}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-white"
+                    style={{ backgroundColor: tag.color }}
+                  >
+                    {tag.name}
+                    <button onClick={() => handleRemoveTag(tag.name)} className="hover:opacity-80"><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <Input
+              autoFocus
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
+              placeholder={t('taskDetail.newTagPlaceholder', 'New tag name')}
+              className="h-10"
+            />
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {TAG_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setNewTagColor(c)}
+                  aria-label={`Color ${c}`}
+                  className={cn(
+                    "h-7 w-7 rounded-full border-2 transition-transform",
+                    newTagColor === c ? "border-foreground scale-110" : "border-transparent"
+                  )}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+
+            <Button
+              onClick={handleAddTag}
+              disabled={!newTagName.trim()}
+              className="w-full h-10"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              {t('taskDetail.addTag', 'Add Tag')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Subtask Detail Sheet */}
       <SubtaskDetailSheet
