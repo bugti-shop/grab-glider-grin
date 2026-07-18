@@ -14,17 +14,8 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <!-- Foreground Service — only SPECIAL_USE is needed for the Focus timer.
-         MEDIA_PLAYBACK and LOCATION are explicitly removed so Play Console
-         does not flag them as undeclared foreground service types. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission
-        android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
-        tools:node="remove" />
-    <uses-permission
-        android:name="android.permission.FOREGROUND_SERVICE_LOCATION"
-        tools:node="remove" />
+    <!-- Foreground service & location permissions intentionally removed. -->
+
 
     <!-- Microphone (for voice notes/recording) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -165,12 +156,8 @@
         </activity>
 
 
-        <service
-            android:name=".FocusForegroundService"
-            android:foregroundServiceType="specialUse"
-            android:exported="false">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="focus_timer" />
-        </service>
+
+
 
         <provider
             android:name="androidx.core.content.FileProvider"
