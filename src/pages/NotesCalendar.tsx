@@ -146,7 +146,7 @@ const NotesCalendar = () => {
         incomingNote.updatedAt,
         existingNote?.updatedAt,
       );
-      if (!guard.ok) {
+      if (guard.ok === false) {
         console.warn(
           '[NotesCalendar] Skipped stale save for note',
           currentEditingId,
