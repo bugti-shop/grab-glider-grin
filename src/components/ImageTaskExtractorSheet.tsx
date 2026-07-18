@@ -68,7 +68,7 @@ interface Props {
   currentFolderId?: string | null;
   currentSectionId?: string | null;
   /** Resolve an AI-proposed folder name → id (creating one if needed). */
-  onEnsureFolder?: (name: string) => string | null;
+  onEnsureFolder?: (name: string, color?: string) => string | null;
   /** Resolve an AI-proposed section name → id (creating one if needed). */
   onEnsureSection?: (name: string, folderId?: string | null) => string | null;
 }
@@ -390,23 +390,53 @@ export const ImageTaskExtractorSheet = ({
       return;
     }
 
+    // Pre-resolve AI-proposed folder names ONCE per unique name so the same
+    // "Work" label from two tasks lands in a single folder (stale-closure safe).
+    // Folder color = majority task-priority color within the group.
+    const priorityColor: Record<string, string> = {
+      high: '#ef4444', medium: '#f59e0b', low: '#10b981', none: '#3b82f6',
+    };
+    const folderGroups = new Map<string, { name: string; counts: Record<string, number> }>();
+    for (const it of selected) {
+      if (it.folderId) continue;
+      const raw = (it.folderName || '').trim();
+      if (!raw) continue;
+      const key = raw.toLowerCase();
+      let g = folderGroups.get(key);
+      if (!g) { g = { name: raw, counts: {} }; folderGroups.set(key, g); }
+      g.counts[it.priority] = (g.counts[it.priority] || 0) + 1;
+    }
+    const nameToId = new Map<string, string>();
+    if (onEnsureFolder) {
+      for (const [key, g] of folderGroups) {
+        const top = Object.entries(g.counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'none';
+        const id = onEnsureFolder(g.name, priorityColor[top]);
+        if (id) nameToId.set(key, id);
+      }
+    }
+
     const newTasks: Array<Omit<TodoItem, 'id' | 'completed'>> = selected.map(
       (it) => {
-        // Resolve AI-proposed folder/section names to real ids (auto-creating).
         let resolvedFolderId = it.folderId || null;
-        if (!resolvedFolderId && it.folderName && onEnsureFolder) {
-          resolvedFolderId = onEnsureFolder(it.folderName);
+        if (!resolvedFolderId && it.folderName) {
+          resolvedFolderId = nameToId.get(it.folderName.trim().toLowerCase()) || null;
         }
         let resolvedSectionId = it.sectionId || null;
         if (!resolvedSectionId && it.sectionName && onEnsureSection) {
           resolvedSectionId = onEnsureSection(it.sectionName, resolvedFolderId);
         }
+        // Auto-attach the due date/time as a reminder if the writer didn't
+        // specify a separate one — user wants every dated task to nudge.
+        const dueDate = it.dueDateIso ? new Date(it.dueDateIso) : undefined;
+        const reminderTime = it.reminderIso
+          ? new Date(it.reminderIso)
+          : dueDate;
         return {
           text: it.title.trim(),
           description: it.description || undefined,
           priority: it.priority,
-          dueDate: it.dueDateIso ? new Date(it.dueDateIso) : undefined,
-          reminderTime: it.reminderIso ? new Date(it.reminderIso) : undefined,
+          dueDate,
+          reminderTime,
           repeatType: it.repeatType,
           repeatDays: it.repeatDays && it.repeatDays.length ? it.repeatDays : undefined,
           tags: it.tags && it.tags.length ? it.tags : undefined,
