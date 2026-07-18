@@ -260,6 +260,11 @@ const NotesCalendar = () => {
                 <span className="flex-1">Editorial timeline</span>
                 {layout === 'editorial' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeLayout('timeline')} className="gap-2">
+                <Clock className="h-4 w-4" />
+                <span className="flex-1">Timeline (hour rail)</span>
+                {layout === 'timeline' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
                 <ImageIcon className="h-4 w-4" />
