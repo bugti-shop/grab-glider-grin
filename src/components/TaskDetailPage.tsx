@@ -834,7 +834,7 @@ export const TaskDetailPage = ({
 
         {/* Description — plain paragraph, no label, no box */}
         <div
-          className="-mt-1"
+          className="-mt-3"
           style={{
             color: '#adadad',
             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif',
