@@ -222,12 +222,10 @@ export const CameraScannerScreen = ({
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: facingMode },
-            width: { ideal: 3840 },
-            height: { ideal: 2160 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
             // @ts-ignore — non-standard but widely supported hints
             frameRate: { ideal: 30 },
-            // @ts-ignore
-            resizeMode: 'none',
           } as MediaTrackConstraints,
           audio: false,
         });
