@@ -6,9 +6,10 @@ import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStri
 import { NotesCalendarDashboard } from '@/components/notes/NotesCalendarDashboard';
 import { NotesCalendarYearHeatmap } from '@/components/notes/NotesCalendarYearHeatmap';
 import { NotesCalendarDarkHero } from '@/components/notes/NotesCalendarDarkHero';
+import { NotesCalendarDayWeekMonth } from '@/components/notes/NotesCalendarDayWeekMonth';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3, Moon } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3, Moon, CalendarDays } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
