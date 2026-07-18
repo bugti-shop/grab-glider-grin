@@ -21,10 +21,17 @@ import { NoteCard } from '@/components/NoteCard';
 interface Props {
   selectedDate: Date;
   onDateSelect: (d: Date) => void;
-  notes: Note[];
-  onEditNote: (n: Note) => void;
-  onDeleteNote: (id: string) => void;
+  notes?: Note[];
+  onEditNote?: (n: Note) => void;
+  onDeleteNote?: (id: string) => void;
+  // Accepted for compatibility; ignored by this layout
+  highlightedDates?: Date[];
+  onBackgroundSettingsClick?: () => void;
+  onAddClick?: () => void;
+  onMonthClick?: () => void;
+  onAddNote?: () => void;
 }
+
 
 type Mode = 'day' | 'week' | 'month';
 
@@ -34,7 +41,8 @@ const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 export const NotesCalendarDayWeekMonth = ({
   selectedDate,
   onDateSelect,
-  notes,
+  notes = [],
+
   onEditNote,
   onDeleteNote,
 }: Props) => {
