@@ -990,8 +990,8 @@ export const TaskDetailPage = ({
           </div>
         </div>
 
-        {/* Card 3 — Subtasks / Tags / Convert to Notes */}
-        <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
+        {/* Card 3 — Subtasks */}
+        <div className="rounded-2xl bg-white border border-border/60 overflow-hidden shadow-sm">
           <button
             onClick={() => setIsSubtaskInputSheetOpen(true)}
             className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
@@ -1003,30 +1003,8 @@ export const TaskDetailPage = ({
             <span className="text-[13px] text-muted-foreground">{task.subtasks?.length ?? 0}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
           </button>
-          <button
-            onClick={() => setShowTagInput(true)}
-            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
-          >
-            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
-              <Tag className="h-5 w-5 text-info" />
-            </span>
-            <span className="flex-1 text-[14px] font-medium">Tags</span>
-            <span className="text-[13px] text-muted-foreground truncate max-w-[50%]">
-              {task.coloredTags && task.coloredTags.length > 0 ? task.coloredTags.map(tt => tt.name).join(', ') : 'None'}
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
-          </button>
-          <button
-            onClick={handleConvertToNote}
-            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
-          >
-            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
-              <FileEdit className="h-5 w-5 text-warning" />
-            </span>
-            <span className="flex-1 text-[14px] font-medium">Convert to Notes</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
-          </button>
         </div>
+
 
 
 
