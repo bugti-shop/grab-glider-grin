@@ -1128,7 +1128,7 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
               <Clock className="h-5 w-5 text-muted-foreground" />
             </span>
-            <span className="flex-1 min-w-0 text-[10px] font-medium truncate">
+            <span className="flex-1 min-w-0 text-[13.5px] font-medium truncate">
               {t('taskDetail.taskHistory', 'Task History')}
             </span>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
