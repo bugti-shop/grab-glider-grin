@@ -169,7 +169,7 @@ export async function flushQueue(): Promise<void> {
           return sanitized ? { ...entry, ...sanitized } : null;
         })
         .filter((entry): entry is QueuedWrite => !!entry);
-      const flushingKeys = new Map(q.map((entry) => [`${entry.table}:${entry.row.id}`, entry.enqueuedAt] as const));
+      const flushingKeys = new Map<string, number>(q.map((entry) => [`${entry.table}:${entry.row.id}`, entry.enqueuedAt] as const));
       const remaining: QueuedWrite[] = [];
       const groups = new Map<string, QueuedWrite[]>();
       for (const entry of q) {
