@@ -215,7 +215,7 @@ export const TaskDetailPage = ({
 
   useHardwareBackButton({
     onBack: handleBack,
-    enabled: isOpen && !showDateTimePage && !showDependencySheet,
+    enabled: isOpen && !showDateTimePage && !showDependencySheet && !isSubtaskInputSheetOpen && !showSubtaskDetailSheet && !showExtraReminderSheet && !showTimeTracker && !showPomodoro,
     priority: 'sheet',
   });
 

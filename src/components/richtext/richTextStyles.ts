@@ -69,15 +69,15 @@ export const RICH_TEXT_EDITOR_STYLES = `
     touch-action: pan-y;
   }
   .title-input {
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    line-height: 1.15;
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
     border: none;
     outline: none;
     background: transparent;
     width: 100%;
-    padding: 0.75rem 1rem 0.25rem 1rem;
+    padding: 0.625rem 1rem 0.25rem 1rem;
   }
   .title-input::placeholder {
     color: rgba(0, 0, 0, 0.25);
