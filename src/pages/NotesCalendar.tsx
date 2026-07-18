@@ -75,6 +75,7 @@ const NotesCalendar = () => {
   
   // Use ref to track editing note ID to prevent stale reference issues
   const editingNoteIdRef = useRef<string | null>(null);
+  const editLockTokenRef = useRef<EditLockToken | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [defaultType, setDefaultType] = useState<NoteType>('regular');
   const [selectedNoteTypes] = useState<NoteType[]>([
