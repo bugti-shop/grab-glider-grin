@@ -361,8 +361,35 @@ export const ImageTaskExtractorSheet = ({
     );
   };
 
+  const patchItem = (uid: string, patch: Partial<ReviewItem>) => {
+    setItems((prev) => prev.map((it) => (it.uid === uid ? { ...it, ...patch } : it)));
+  };
+
+  /** Split an ISO string into `<input type="date">` and `<input type="time">` values in LOCAL time. */
+  const splitIso = (iso: string | null): { date: string; time: string } => {
+    if (!iso) return { date: '', time: '' };
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return { date: '', time: '' };
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return {
+      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    };
+  };
+
+  /** Rebuild an ISO from user-edited date+time inputs (both local). */
+  const joinIso = (date: string, time: string): string | null => {
+    if (!date) return null;
+    const [y, m, d] = date.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    const [hh, mm] = (time || '09:00').split(':').map(Number);
+    const dt = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
+    return isNaN(dt.getTime()) ? null : dt.toISOString();
+  };
+
   const removeItem = (uid: string) => {
     setItems((prev) => prev.filter((it) => it.uid !== uid));
+    if (expandedUid === uid) setExpandedUid(null);
   };
 
   const selectedCount = items.filter((i) => i.selected && i.title.trim()).length;
