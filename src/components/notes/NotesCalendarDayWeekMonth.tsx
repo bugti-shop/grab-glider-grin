@@ -30,6 +30,8 @@ interface Props {
   onAddClick?: () => void;
   onMonthClick?: () => void;
   onAddNote?: () => void;
+  itemLabel?: string; // e.g. "Notes" or "Tasks"
+
 }
 
 
@@ -45,6 +47,7 @@ export const NotesCalendarDayWeekMonth = ({
 
   onEditNote,
   onDeleteNote,
+  itemLabel = 'Notes',
 }: Props) => {
   const [mode, setMode] = useState<Mode>('day');
 
@@ -236,7 +239,7 @@ export const NotesCalendarDayWeekMonth = ({
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="text-[16px] font-bold text-foreground">
-            Notes on {format(selectedDate, 'MMM d')}
+            {itemLabel} on {format(selectedDate, 'MMM d')}
           </h3>
           {selectedNotes.length > 0 && (
             <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-muted text-[11px] font-semibold text-foreground/70 tabular-nums">
@@ -256,7 +259,7 @@ export const NotesCalendarDayWeekMonth = ({
       <div className="px-4 pb-24">
         {selectedNotes.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
-            No notes for this date yet.
+            No {itemLabel.toLowerCase()} for this date yet.
           </div>
         ) : (
           <div className="space-y-3">
