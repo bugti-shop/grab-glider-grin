@@ -18,7 +18,7 @@ export function taskToPseudoNote(task: TodoItem): Note {
   return {
     id: task.id,
     title: task.text || 'Untitled task',
-    content: task.notes || '',
+    content: (task as any).notes || (task as any).description || '',
     type,
     createdAt: dueDate,
     updatedAt: task.modifiedAt ? new Date(task.modifiedAt) : dueDate,
