@@ -148,7 +148,7 @@ const NotesCalendar = () => {
         // Use the editor's draft id so the editor's own safety persistence
         // overwrites the same row instead of creating a second note.
         id: incomingNote.id || genId(),
-        title: incomingNote.title || `Note - ${format(date || new Date(), 'MMM dd, yyyy')}`,
+        title: incomingNote.title || `Note - ${format(activeDate, 'MMM dd, yyyy')}`,
         createdAt: incomingNote.createdAt || activeDate,
         updatedAt: new Date(),
       });
