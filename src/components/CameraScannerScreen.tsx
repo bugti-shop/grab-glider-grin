@@ -219,16 +219,64 @@ export const CameraScannerScreen = ({
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error('Camera API not available');
         }
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: facingMode },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            // @ts-ignore — non-standard but widely supported hints
-            frameRate: { ideal: 30 },
-          } as MediaTrackConstraints,
-          audio: false,
-        });
+
+        // Detect device capability to pick a resolution/framerate tier that
+        // stays smooth like a native camera. Weak devices get 720p@24, mid
+        // devices 1080p@30, high-end 1080p@30 with a 1440p attempt first.
+        const nav: any = navigator;
+        const mem = typeof nav.deviceMemory === 'number' ? nav.deviceMemory : 4;
+        const cores = typeof nav.hardwareConcurrency === 'number' ? nav.hardwareConcurrency : 4;
+        const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+        const saveData = !!nav.connection?.saveData;
+        const smallScreen = typeof window !== 'undefined'
+          ? Math.min(window.innerWidth, window.innerHeight) < 380
+          : false;
+
+        type Tier = { w: number; h: number; fps: number };
+        let tiers: Tier[];
+        if (saveData || mem <= 2 || cores <= 4 || smallScreen) {
+          tiers = [{ w: 1280, h: 720, fps: 24 }, { w: 960, h: 540, fps: 24 }];
+        } else if (mem >= 6 && cores >= 8 && dpr >= 2) {
+          tiers = [
+            { w: 2560, h: 1440, fps: 30 },
+            { w: 1920, h: 1080, fps: 30 },
+            { w: 1280, h: 720, fps: 30 },
+          ];
+        } else {
+          tiers = [
+            { w: 1920, h: 1080, fps: 30 },
+            { w: 1280, h: 720, fps: 30 },
+          ];
+        }
+
+        let stream: MediaStream | null = null;
+        let lastErr: any = null;
+        for (const t of tiers) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: { ideal: facingMode },
+                width: { ideal: t.w },
+                height: { ideal: t.h },
+                // @ts-ignore — non-standard but widely supported hint
+                frameRate: { ideal: t.fps, max: t.fps },
+              } as MediaTrackConstraints,
+              audio: false,
+            });
+            if (stream) break;
+          } catch (err) {
+            lastErr = err;
+          }
+        }
+        if (!stream) {
+          // Final fallback: let the browser choose sensible defaults.
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: facingMode } },
+            audio: false,
+          }).catch((err) => { lastErr = err; return null as any; });
+        }
+        if (!stream) throw lastErr || new Error('Camera unavailable');
+
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -240,6 +288,7 @@ export const CameraScannerScreen = ({
           (videoRef.current as any).playsInline = true;
           await videoRef.current.play().catch(() => { /* ignore autoplay errors */ });
         }
+
         try {
           const track = stream.getVideoTracks()[0];
           const caps = (track.getCapabilities?.() as any) || {};
