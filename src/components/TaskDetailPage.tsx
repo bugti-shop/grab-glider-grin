@@ -830,20 +830,9 @@ export const TaskDetailPage = ({
           />
         </div>
 
-        {/* Description Section with @mention support — moved directly below title */}
-        <div className="space-y-2">
+        {/* Description — plain paragraph, no label, no box */}
+        <div>
           <style>{RICH_TEXT_EDITOR_STYLES}</style>
-          <div className="flex items-center justify-between gap-2 text-[13px] font-medium text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              {t('taskDetail.description')}
-            </div>
-            {descText && !isEditingDesc && (
-              <button type="button" className="text-xs text-primary font-medium" onClick={() => setIsEditingDesc(true)}>
-                {t('common.edit', 'Edit')}
-              </button>
-            )}
-          </div>
           {isEditingDesc || !descText ? (
             <MentionDescriptionEditor
               value={descText}
@@ -854,12 +843,13 @@ export const TaskDetailPage = ({
               onFocus={() => setIsEditingDesc(true)}
               onBlur={() => setTimeout(() => setIsEditingDesc(false), 200)}
               placeholder={t('taskDetail.descriptionPlaceholder')}
-              className="rounded-xl bg-white border-border/50 focus:ring-primary/20"
-              minHeight={100}
+              className="bg-transparent border-none focus:ring-0 focus-visible:ring-0 shadow-none px-0"
+              minHeight={40}
             />
           ) : (
             <div
-              className="rich-text-editor w-full min-h-[60px] p-3 rounded-xl bg-white border border-border/50 text-sm whitespace-pre-wrap"
+              onClick={() => setIsEditingDesc(true)}
+              className="rich-text-editor w-full text-[14px] text-muted-foreground/90 whitespace-pre-wrap leading-relaxed cursor-text"
               dangerouslySetInnerHTML={{ __html: descriptionToDisplayHtml(descText) }}
             />
           )}
@@ -869,15 +859,15 @@ export const TaskDetailPage = ({
         <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button data-tour="task-detail-status" className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left">
-                <span className="flex-shrink-0 h-6 w-6 rounded-full border-[1.5px] border-foreground/80 flex items-center justify-center">
-                  <MoreHorizontal className="h-3 w-3" />
+              <button data-tour="task-detail-status" className="w-full flex items-center gap-3 px-4 py-4 hover:bg-muted/40 transition-colors text-left">
+                <span className="flex-shrink-0 h-4 w-4 rounded-full border-[1.5px] border-foreground/80 flex items-center justify-center">
+                  <MoreHorizontal className="h-2.5 w-2.5" />
                 </span>
                 <span className="flex-1 text-[10px] font-medium">Status</span>
-                <span className="text-[12px] px-2.5 py-0.5 rounded-full bg-info/15 text-info font-medium">
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-info/15 text-info font-medium">
                   {getStatusConfig(task.status || 'not_started').label}
                 </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/70 ml-1" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -898,10 +888,10 @@ export const TaskDetailPage = ({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left">
-                <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
+              <button className="w-full flex items-center gap-3 px-4 py-4 hover:bg-muted/40 transition-colors text-left">
+                <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
                   <Flag
-                    className="h-5 w-5"
+                    className="h-4 w-4"
                     style={{
                       color: task.priority && task.priority !== 'none' ? getPriorityHex(task.priority) : 'hsl(var(--muted-foreground))',
                       fill: task.priority && task.priority !== 'none' ? getPriorityHex(task.priority) : 'transparent',
@@ -910,12 +900,12 @@ export const TaskDetailPage = ({
                 </span>
                 <span className="flex-1 text-[10px] font-medium">Priority</span>
                 <span
-                  className="text-[13px] font-medium capitalize"
+                  className="text-[11px] font-medium capitalize"
                   style={{ color: task.priority && task.priority !== 'none' ? getPriorityHex(task.priority) : 'hsl(var(--muted-foreground))' }}
                 >
                   {task.priority && task.priority !== 'none' ? getPriorityName(task.priority) : 'None'}
                 </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/70 ml-1" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44 z-[60]">
@@ -926,15 +916,15 @@ export const TaskDetailPage = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <button onClick={() => setShowDateTimePage(true)} className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left">
-            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
-              <CalendarIcon className="h-5 w-5" />
+          <button onClick={() => setShowDateTimePage(true)} className="w-full flex items-center gap-3 px-4 py-4 hover:bg-muted/40 transition-colors text-left">
+            <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
+              <CalendarIcon className="h-4 w-4" />
             </span>
             <span className="flex-1 text-[10px] font-medium">Due Date</span>
             <span className="text-[9px] text-muted-foreground">
               {task.dueDate ? format(new Date(task.dueDate), 'EEE, MMM d, yyyy') : 'None'}
             </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/70 ml-1" />
           </button>
 
           <button
@@ -944,10 +934,10 @@ export const TaskDetailPage = ({
               if (currentCount >= 1 && !requireCapacity('remindersPerTask', currentCount)) return;
               setShowExtraReminderSheet(true);
             }}
-            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
           >
-            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
-              <Bell className="h-5 w-5" />
+            <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
+              <Bell className="h-4 w-4" />
             </span>
             <span className="flex-1 text-[10px] font-medium">Reminder</span>
             <span className="text-[9px] text-muted-foreground truncate max-w-[50%]">
@@ -958,53 +948,83 @@ export const TaskDetailPage = ({
                 return 'None';
               })()}
             </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/70 ml-1" />
           </button>
         </div>
 
-        {/* Card 2 — Focus, Time & Subtasks */}
+        {/* Card 2 — Focus & Time */}
         <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <button
             data-tour="task-detail-focus-mode"
             onClick={() => { if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }}
             className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
           >
-            <span className="flex-shrink-0 h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Target className="h-[18px] w-[18px] text-primary" />
+            <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
+              <Target className="h-5 w-5 text-primary" />
             </span>
             <span className="flex-1 min-w-0 flex items-center gap-1 text-[10px] font-medium truncate">
               Focus Mode {!isPro && <PremiumCrown size={12} />}
             </span>
             <span className="text-[9px] text-muted-foreground truncate">Deep Work</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
           </button>
 
           <button
             onClick={() => { if (!requireFeature('time_tracking')) return; }}
             className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
           >
-            <span className="flex-shrink-0 h-8 w-8 rounded-lg bg-info/10 flex items-center justify-center">
-              <Clock className="h-[18px] w-[18px] text-info" />
+            <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-info" />
             </span>
             <span className="flex-1 min-w-0 text-[10px] font-medium truncate">Time Tracking</span>
             <span className="text-[9px] text-muted-foreground tabular-nums truncate">
               {formatPomodoroDuration(pomodoroStats.taskFocusedSec)}
             </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
           </button>
+        </div>
 
+        {/* Card 3 — Subtasks / Tags / Convert to Notes */}
+        <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <button
             onClick={() => setIsSubtaskInputSheetOpen(true)}
             className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
           >
-            <span className="flex-shrink-0 h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
-              <ListChecks className="h-[18px] w-[18px] text-success" />
+            <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
+              <ListChecks className="h-5 w-5 text-success" strokeWidth={2} />
             </span>
             <span className="flex-1 min-w-0 text-[10px] font-medium truncate">Subtasks</span>
             <span className="text-[9px] text-muted-foreground tabular-nums truncate">
               {task.subtasks?.length ?? 0}
             </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
+          </button>
+
+          <button
+            onClick={() => setShowTagInput(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
+              <Tag className="h-5 w-5 text-info" />
+            </span>
+            <span className="flex-1 min-w-0 text-[10px] font-medium truncate">Tags</span>
+            <span className="text-[9px] text-muted-foreground truncate max-w-[50%]">
+              {task.coloredTags && task.coloredTags.length > 0
+                ? task.coloredTags.map(t => t.name).join(', ')
+                : 'None'}
+            </span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
+          </button>
+
+          <button
+            onClick={() => onConvertToNote(task)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
+              <FileEdit className="h-5 w-5 text-warning" />
+            </span>
+            <span className="flex-1 min-w-0 text-[10px] font-medium truncate">Convert to Notes</span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
           </button>
         </div>
 
