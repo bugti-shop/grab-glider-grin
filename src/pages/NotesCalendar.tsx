@@ -1,18 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { genId } from '@/utils/genId';
 import { useTranslation } from 'react-i18next';
-import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
-import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStrip';
-import { NotesCalendarDashboard } from '@/components/notes/NotesCalendarDashboard';
-import { NotesCalendarYearHeatmap } from '@/components/notes/NotesCalendarYearHeatmap';
-import { NotesCalendarDarkHero } from '@/components/notes/NotesCalendarDarkHero';
 import { NotesCalendarDayWeekMonth } from '@/components/notes/NotesCalendarDayWeekMonth';
-import { NotesCalendarCardGrid } from '@/components/notes/NotesCalendarCardGrid';
-import { NotesCalendarEditorial } from '@/components/notes/NotesCalendarEditorial';
-import { NotesCalendarTimeline } from '@/components/notes/NotesCalendarTimeline';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3, Moon, CalendarDays, LayoutPanelTop, BookOpen, Clock } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon } from 'lucide-react';
+
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -67,29 +60,21 @@ const NotesCalendar = () => {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [calendarBackground, setCalendarBackground] = useState<string>('none');
   const [isBackgroundSheetOpen, setIsBackgroundSheetOpen] = useState(false);
-  
-  
-  const [layout, setLayout] = useState<CalendarLayout>('month');
 
-  // Load folders, background preference, and calendar layout
+  // Load folders and background preference
   useEffect(() => {
     const loadSettings = async () => {
-      const [savedFolders, savedBackground, savedLayout] = await Promise.all([
+      const [savedFolders, savedBackground] = await Promise.all([
         getSetting<Folder[]>('folders', []),
         getSetting<string>('calendarBackground', 'none'),
-        getSetting<CalendarLayout>('notesCalendarLayout', 'month'),
       ]);
       setFolders(savedFolders);
       setCalendarBackground(savedBackground);
-      setLayout(savedLayout);
     };
     loadSettings();
   }, []);
 
-  const changeLayout = useCallback((next: CalendarLayout) => {
-    setLayout(next);
-    setSetting('notesCalendarLayout', next);
-  }, []);
+
 
 
   const selectedDateNotes = useMemo(() => {
@@ -210,62 +195,13 @@ const NotesCalendar = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                aria-label="Switch calendar layout"
+                aria-label="Calendar options"
                 className="h-9 w-9 flex items-center justify-center rounded-full border border-border/60 bg-card active:bg-muted transition-colors"
               >
-                <LayoutGrid className="h-[17px] w-[17px] text-foreground/80" />
+                <MoreHorizontal className="h-[17px] w-[17px] text-foreground/80" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-card">
-              <DropdownMenuLabel className="text-[11px] tracking-wider text-muted-foreground">
-                CALENDAR LAYOUT
-              </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => changeLayout('month')} className="gap-2">
-                <CalendarRange className="h-4 w-4" />
-                <span className="flex-1">Month grid</span>
-                {layout === 'month' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLayout('weekStrip')} className="gap-2">
-                <LayoutGrid className="h-4 w-4" />
-                <span className="flex-1">Week strip</span>
-                {layout === 'weekStrip' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLayout('dashboard')} className="gap-2">
-                <LayoutDashboard className="h-4 w-4" />
-                <span className="flex-1">Dashboard</span>
-                {layout === 'dashboard' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLayout('yearHeatmap')} className="gap-2">
-                <Grid3x3 className="h-4 w-4" />
-                <span className="flex-1">Year heatmap</span>
-                {layout === 'yearHeatmap' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLayout('darkHero')} className="gap-2">
-                <Moon className="h-4 w-4" />
-                <span className="flex-1">Dark hero</span>
-                {layout === 'darkHero' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLayout('dayWeekMonth')} className="gap-2">
-                <CalendarDays className="h-4 w-4" />
-                <span className="flex-1">Day / Week / Month</span>
-                {layout === 'dayWeekMonth' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLayout('cardGrid')} className="gap-2">
-                <LayoutPanelTop className="h-4 w-4" />
-                <span className="flex-1">Card grid</span>
-                {layout === 'cardGrid' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLayout('editorial')} className="gap-2">
-                <BookOpen className="h-4 w-4" />
-                <span className="flex-1">Editorial timeline</span>
-                {layout === 'editorial' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => changeLayout('timeline')} className="gap-2">
-                <Clock className="h-4 w-4" />
-                <span className="flex-1">Timeline (hour rail)</span>
-                {layout === 'timeline' && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
                 <ImageIcon className="h-4 w-4" />
                 {t('calendar.changeBackground', 'Change Background')}
@@ -277,148 +213,19 @@ const NotesCalendar = () => {
           </DropdownMenu>
         </div>
 
-        {/* Scrollable area: calendar + notes list scroll together so the full month is revealed */}
+        {/* Scrollable area */}
         <div className="flex-1 min-h-0 overflow-y-auto">
-          {layout === 'weekStrip' ? (
-            <ErrorBoundary fallback={<CalendarPanelFallback />}>
-              <NotesCalendarWeekStrip
-                selectedDate={date || new Date()}
-                onDateSelect={setDate}
-                notes={notes}
-                onMonthClick={() => changeLayout('month')}
-              />
-            </ErrorBoundary>
-          ) : layout === 'dashboard' ? (
-            <ErrorBoundary fallback={<CalendarPanelFallback />}>
-              <NotesCalendarDashboard
-                selectedDate={date || new Date()}
-                onDateSelect={setDate}
-                notes={notes}
-                onEditNote={handleEditNote}
-                onDeleteNote={handleDeleteNote}
-              />
-            </ErrorBoundary>
-          ) : layout === 'yearHeatmap' ? (
-            <ErrorBoundary fallback={<CalendarPanelFallback />}>
-              <NotesCalendarYearHeatmap
-                selectedDate={date || new Date()}
-                onDateSelect={setDate}
-                notes={notes}
-                onEditNote={handleEditNote}
-                onDeleteNote={handleDeleteNote}
-              />
-            </ErrorBoundary>
-          ) : layout === 'darkHero' ? (
-            <ErrorBoundary fallback={<CalendarPanelFallback />}>
-              <NotesCalendarDarkHero
-                selectedDate={date || new Date()}
-                onDateSelect={setDate}
-                notes={notes}
-                onEditNote={handleEditNote}
-                onDeleteNote={handleDeleteNote}
-              />
-            </ErrorBoundary>
-          ) : layout === 'dayWeekMonth' ? (
-            <ErrorBoundary fallback={<CalendarPanelFallback />}>
-              <NotesCalendarDayWeekMonth
-                selectedDate={date || new Date()}
-                onDateSelect={setDate}
-                notes={notes}
-                onEditNote={handleEditNote}
-                onDeleteNote={handleDeleteNote}
-              />
-            </ErrorBoundary>
-          ) : layout === 'cardGrid' ? (
-            <ErrorBoundary fallback={<CalendarPanelFallback />}>
-              <NotesCalendarCardGrid
-                selectedDate={date || new Date()}
-                onDateSelect={setDate}
-                notes={notes}
-                onEditNote={handleEditNote}
-                onDeleteNote={handleDeleteNote}
-                onAddNote={() => handleCreateNote('regular')}
-              />
-            </ErrorBoundary>
-          ) : layout === 'editorial' ? (
-            <ErrorBoundary fallback={<CalendarPanelFallback />}>
-              <NotesCalendarEditorial
-                selectedDate={date || new Date()}
-                onDateSelect={setDate}
-                notes={notes}
-                onEditNote={handleEditNote}
-                onDeleteNote={handleDeleteNote}
-              />
-            </ErrorBoundary>
-          ) : layout === 'timeline' ? (
-            <ErrorBoundary fallback={<CalendarPanelFallback />}>
-              <NotesCalendarTimeline
-                selectedDate={date || new Date()}
-                onDateSelect={setDate}
-                notes={notes}
-                onEditNote={handleEditNote}
-                onDeleteNote={handleDeleteNote}
-              />
-            </ErrorBoundary>
-          ) : (
-            <>
-              <ErrorBoundary fallback={<CalendarPanelFallback />}>
-                <NotesCalendarPremium
-                  selectedDate={date}
-                  onDateSelect={setDate}
-                  highlightedDates={noteDates}
-                  onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
-                  onAddClick={() => handleCreateNote('regular')}
-                />
-              </ErrorBoundary>
-
-              <div className="mt-2 rounded-t-[28px] bg-card shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.08)] pt-3 pb-6 px-4">
-                {/* Drag handle */}
-                <div className="mx-auto mb-3 h-[5px] w-10 rounded-full bg-muted-foreground/25" />
-                {/* Section header: "Today, Nov 14" + options */}
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-[19px] font-bold text-foreground tracking-tight">
-                    {date && isTodayFn(date) ? (
-                      <>
-                        {t('common.today', 'Today')},{' '}
-                        <span className="text-[#2563eb]">{format(date, 'MMM d')}</span>
-                      </>
-                    ) : (
-                      <span className="text-[#2563eb]">{format(date || new Date(), 'EEEE, MMM d')}</span>
-                    )}
-                    {selectedDateNotes.length > 0 && (
-                      <span className="ml-2 text-[13px] font-medium text-muted-foreground align-middle">
-                        {selectedDateNotes.length}
-                      </span>
-                    )}
-                  </h2>
-                </div>
-                <ErrorBoundary fallback={<NotesListFallback />}>
-                  {selectedDateNotes.length > 0 ? (
-                    <div className="space-y-3">
-                      <NotesVirtualGrid
-                        notes={selectedDateNotes}
-                        estimatedRowHeight={190}
-                        useWindowing={false}
-                        getRowKey={(row) => row.map((n) => `${n.id}:${n.updatedAt instanceof Date ? n.updatedAt.getTime() : new Date(n.updatedAt).getTime()}`).join('|')}
-                        renderCard={(note) => (
-                          <NoteCard
-                            note={note}
-                            onEdit={handleEditNote}
-                            onDelete={handleDeleteNote}
-                          />
-                        )}
-                      />
-                    </div>
-                  ) : (
-                    <div className="py-10 text-center text-sm text-muted-foreground">
-                      {t('notes.noNotesForDate', 'No notes for this date yet.')}
-                    </div>
-                  )}
-                </ErrorBoundary>
-              </div>
-            </>
-          )}
+          <ErrorBoundary fallback={<CalendarPanelFallback />}>
+            <NotesCalendarDayWeekMonth
+              selectedDate={date || new Date()}
+              onDateSelect={setDate}
+              notes={notes}
+              onEditNote={handleEditNote}
+              onDeleteNote={handleDeleteNote}
+            />
+          </ErrorBoundary>
         </div>
+
 
       </div>
 

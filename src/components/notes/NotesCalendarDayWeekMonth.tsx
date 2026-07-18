@@ -101,7 +101,7 @@ export const NotesCalendarDayWeekMonth = ({
         onClick={() => onDateSelect(d)}
         className={cn(
           'relative flex flex-col items-center justify-center gap-[2px] rounded-[14px] py-2 min-w-0 transition-colors',
-          selected && 'bg-[#5B4BE1] text-white shadow-[0_6px_14px_-6px_rgba(91,75,225,0.55)]',
+          selected && 'bg-black text-white shadow-[0_6px_14px_-6px_rgba(0,0,0,0.45)]',
         )}
       >
         <span
@@ -111,11 +111,9 @@ export const NotesCalendarDayWeekMonth = ({
               ? 'text-white'
               : dim
                 ? 'text-muted-foreground/35'
-                : isSat
+                : has
                   ? 'text-[#2563eb]'
-                  : isSun
-                    ? 'text-[#ef4444]'
-                    : 'text-foreground',
+                  : 'text-foreground',
           )}
         >
           {format(d, 'd')}
@@ -136,13 +134,14 @@ export const NotesCalendarDayWeekMonth = ({
             has
               ? selected
                 ? 'bg-white/85'
-                : 'bg-muted-foreground/50'
+                : 'bg-[#2563eb]'
               : 'bg-transparent',
           )}
         />
       </button>
     );
   };
+
 
   return (
     <div className="w-full bg-background">
@@ -195,22 +194,16 @@ export const NotesCalendarDayWeekMonth = ({
         <div className="px-3">
           {/* Weekday labels */}
           <div className="grid grid-cols-7 mb-1">
-            {WEEK_LABELS.map((l, i) => (
+            {WEEK_LABELS.map((l) => (
               <div
                 key={l}
-                className={cn(
-                  'text-center text-[10.5px] font-semibold tracking-wider pb-1',
-                  i === 5
-                    ? 'text-[#2563eb]/70'
-                    : i === 6
-                      ? 'text-[#ef4444]/70'
-                      : 'text-muted-foreground/70',
-                )}
+                className="text-center text-[10.5px] font-semibold tracking-wider pb-1 text-muted-foreground/70"
               >
                 {l}
               </div>
             ))}
           </div>
+
 
           {/* Row 1 */}
           <div className="grid grid-cols-7 gap-1">
