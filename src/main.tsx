@@ -60,7 +60,8 @@ if (Capacitor.isNativePlatform()) {
   );
 }
 
-// Prevent PWA service worker in preview/iframe contexts
+// Remove the old app-shell service worker. Flowist keeps home-screen install
+// metadata, but app JS/CSS must come from the network on every normal refresh.
 const isInIframe = (() => {
   try { return window.self !== window.top; } catch { return true; }
 })();
@@ -68,63 +69,44 @@ const isPreviewHost =
   window.location.hostname.includes("id-preview--") ||
   window.location.hostname.includes("lovableproject.com");
 
-if (isPreviewHost || isInIframe) {
-  navigator.serviceWorker?.getRegistrations().then((registrations) => {
-    registrations.forEach((r) => r.unregister());
-  });
-} else {
-  // Production: force the newest service worker to activate ASAP and evict
-  // legacy runtime cache buckets so returning users never get stuck on old
-  // JS/CSS bundles referencing removed UI (e.g. old calendar layouts).
-  const SW_CACHE_PURGE_KEY = 'nota_sw_cache_purge_v4';
-  try {
-    if (localStorage.getItem(SW_CACHE_PURGE_KEY) !== 'done') {
-      if ('caches' in window) {
-        caches.keys().then((names) => {
-          names
-            .filter((n) =>
-              n === 'js-chunks' ||
-              n === 'js-chunks-v2' ||
-              n === 'css-chunks-v2' ||
-              n === 'workbox-precache-v2' ||
-              /^html-shell-v[1-3]$/.test(n) ||
-              /^js-chunks-v[1-3]$/.test(n) ||
-              /^css-chunks-v[1-3]$/.test(n) ||
-              /^workbox-/.test(n)
-            )
-            .forEach((n) => caches.delete(n).catch(() => {}));
-        }).catch(() => {});
-      }
-      navigator.serviceWorker?.getRegistrations().then((regs) => {
-        regs.forEach((r) => { try { r.update(); } catch {} });
-      }).catch(() => {});
-      localStorage.setItem(SW_CACHE_PURGE_KEY, 'done');
-    }
-  } catch {}
+const isOldAppShellCache = (name: string) =>
+  name === 'js-chunks' ||
+  name === 'js-chunks-v2' ||
+  name === 'css-chunks-v2' ||
+  /^html-shell-v\d+$/.test(name) ||
+  /^js-chunks-v\d+$/.test(name) ||
+  /^css-chunks-v\d+$/.test(name) ||
+  /^workbox-/.test(name) ||
+  /(^|-)precache-v\d+-/.test(name) ||
+  /(^|-)runtime-/.test(name);
 
-  // Web/PWA: when a fresh service worker arrives, activate it immediately and
-  // reload once so signed-in users don't keep running an old JS/CSS bundle.
-  try {
-    if ('serviceWorker' in navigator) {
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshing) return;
-        refreshing = true;
-        window.location.reload();
-      });
-      const checkForAppUpdate = () => {
-        navigator.serviceWorker.getRegistrations()
-          .then((regs) => regs.forEach((r) => { try { r.update(); } catch {} }))
-          .catch(() => {});
-      };
-      window.addEventListener('focus', checkForAppUpdate, { passive: true });
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) checkForAppUpdate();
-      });
-      setInterval(checkForAppUpdate, 15 * 60 * 1000);
-    }
-  } catch {}
-}
+const isAppShellWorker = (registration: ServiceWorkerRegistration) => {
+  const worker = registration.active ?? registration.waiting ?? registration.installing;
+  return /\/(sw|service-worker)\.js(?:$|[?#])/.test(worker?.scriptURL ?? '');
+};
+
+const cleanupOldAppShellCache = () => {
+  if (isPreviewHost || isInIframe) {
+    navigator.serviceWorker?.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => registration.unregister().catch(() => {}));
+    }).catch(() => {});
+    return;
+  }
+
+  if ('caches' in window) {
+    caches.keys().then((names) => {
+      names.filter(isOldAppShellCache).forEach((name) => caches.delete(name).catch(() => {}));
+    }).catch(() => {});
+  }
+
+  navigator.serviceWorker?.getRegistrations().then((registrations) => {
+    registrations
+      .filter(isAppShellWorker)
+      .forEach((registration) => registration.unregister().catch(() => {}));
+  }).catch(() => {});
+};
+
+cleanupOldAppShellCache();
 import { migrateLocalStorageToIndexedDB, getSetting, warmSettingsCache } from "./utils/settingsStorage";
 import { migrateNotesToIndexedDB } from "./utils/noteStorage";
 import { initializeProtectionSettings } from "./utils/noteProtection";
