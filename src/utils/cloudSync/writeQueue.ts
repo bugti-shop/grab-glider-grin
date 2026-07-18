@@ -239,8 +239,11 @@ export async function flushQueue(): Promise<void> {
               .eq('user_id', userId);
             if (error) throw error;
           } else {
-            const payload = chunk
-              .filter(e => !(e.table === 'notes' && (e.row as any).__bodyOmittedFromQueue))
+            const skipped = chunk.filter(e => e.table === 'notes' && (e.row as any).__bodyOmittedFromQueue);
+            if (skipped.length) keepForRetry(skipped, new Error('note body not rehydrated'));
+            const uploadable = chunk.filter(e => !(e.table === 'notes' && (e.row as any).__bodyOmittedFromQueue));
+            if (!uploadable.length) continue;
+            const payload = uploadable
               .map(e => {
                 const { __bodyOmittedFromQueue: _omitted, ...row } = e.row as any;
                 return {
@@ -249,10 +252,6 @@ export async function flushQueue(): Promise<void> {
                   updated_at: e.row.updated_at ?? new Date().toISOString(),
                 };
               });
-            if (!payload.length) {
-              keepForRetry(chunk, new Error('note body not rehydrated'));
-              continue;
-            }
             const { error } = await supabase
               .from(entry.table as any)
               .upsert(payload as any, { onConflict: 'id' });
