@@ -4,10 +4,20 @@ import { recordCompletion, TASK_STREAK_KEY } from '@/utils/streakStorage';
 
 import { NotesCalendarView } from '@/components/NotesCalendarView';
 import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
+import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStrip';
+import { NotesCalendarDashboard } from '@/components/notes/NotesCalendarDashboard';
+import { NotesCalendarYearHeatmap } from '@/components/notes/NotesCalendarYearHeatmap';
+import { NotesCalendarDarkHero } from '@/components/notes/NotesCalendarDarkHero';
+import { NotesCalendarDayWeekMonth } from '@/components/notes/NotesCalendarDayWeekMonth';
+import { NotesCalendarCardGrid } from '@/components/notes/NotesCalendarCardGrid';
+import { NotesCalendarEditorial } from '@/components/notes/NotesCalendarEditorial';
+import { NotesCalendarTimeline } from '@/components/notes/NotesCalendarTimeline';
+import { tasksToPseudoNotes } from '@/utils/tasksToNotesAdapter';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TaskTimeGridView, TimeViewMode } from '@/components/TaskTimeGridView';
 import { YearCalendarView } from '@/components/YearCalendarView';
 
-import { Plus, ListTodo, CalendarDays, Clock, MapPin, Repeat, Trash2, Edit, MoreVertical, X, GripVertical, LayoutList, Columns3, GitBranch, Flag, ListChecks, ChevronRight, ChevronDown, TrendingUp, History, CheckCircle2, Circle, Loader2, Sun, AlertCircle, Crown, Check, Grid3x3, Calendar as CalendarIconLucide, Columns2, Square, Rows3 } from 'lucide-react';
+import { Plus, ListTodo, CalendarDays, Clock, MapPin, Repeat, Trash2, Edit, MoreVertical, X, GripVertical, LayoutList, Columns3, GitBranch, Flag, ListChecks, ChevronRight, ChevronDown, TrendingUp, History, CheckCircle2, Circle, Loader2, Sun, AlertCircle, Crown, Check, Grid3x3, Calendar as CalendarIconLucide, Columns2, Square, Rows3, LayoutGrid, LayoutDashboard, Moon, LayoutPanelTop, BookOpen, CalendarRange } from 'lucide-react';
 import { useSubscription, FREE_LIMITS } from '@/contexts/SubscriptionContext';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { Button } from '@/components/ui/button';
