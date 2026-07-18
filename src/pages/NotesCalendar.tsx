@@ -349,6 +349,16 @@ const NotesCalendar = () => {
                 onDeleteNote={handleDeleteNote}
               />
             </ErrorBoundary>
+          ) : layout === 'timeline' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarTimeline
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
+              />
+            </ErrorBoundary>
           ) : (
             <>
               <ErrorBoundary fallback={<CalendarPanelFallback />}>
