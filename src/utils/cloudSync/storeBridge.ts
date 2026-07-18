@@ -321,16 +321,12 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
 
 async function applyNotesFromCloud(rows: SyncRow[]) {
   const { loadNotesMetadataFromDB, loadNoteFromDB, saveNoteToDBSingle, deleteNoteFromDB } = await import('@/utils/noteStorage');
-  // Metadata read is light (no multi-MB web-clip HTML). We only need the
-  // updated_at to decide if the cloud row is newer than what we already have;
-  // the full local note is fetched lazily per-id when we actually apply.
   const meta = await loadNotesMetadataFromDB();
   const metaById = new Map(meta.map(n => [n.id, n]));
   const clipIdsToPurgeFromCloud: string[] = [];
+  let didWrite = false;
+  let didDelete = false;
   for (const r of rows) {
-    // Detect web-clipper rows (identified by fullPageSnapshot in the payload).
-    // Per user preference, web clips are LOCAL-ONLY and must be purged from
-    // the cloud on sight so they never round-trip again.
     const payload = (r as any).payload as any;
     const isWebClip = !!(payload && payload.fullPageSnapshot);
     const cloudTs = +new Date(r.updated_at ?? Date.now());
@@ -338,15 +334,14 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
     if (r.is_deleted) {
       markDeleted('notes', r.id, cloudTs);
       await deleteNoteFromDB(r.id, true);
+      didDelete = true;
       continue;
     }
     if (isWebClip) {
       clipIdsToPurgeFromCloud.push(r.id);
       continue;
     }
-    // Suppress resurrections after a local delete.
     if (isTombstoned('notes', r.id, cloudTs)) {
-      // Cloud still has a stale row — re-issue the delete so it clears.
       enqueueWrite('notes', 'delete', { id: r.id } as any);
       continue;
     }
@@ -358,12 +353,20 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
       }
       continue;
     }
-    // Cloud wins — merge against the full local row (heavy fields preserved).
     const existingFull = existingMeta ? await loadNoteFromDB(r.id) : undefined;
     const merged = mappers.notes.mergeCloud(existingFull ?? undefined, r) as Note;
     clearTombstone('notes', r.id);
     await saveNoteToDBSingle(merged, true);
+    didWrite = true;
   }
+
+  // Coalesced UI refresh so lists / editors reload from IDB after realtime.
+  if (didWrite || didDelete) {
+    window.dispatchEvent(new Event('notesUpdated'));
+    // Also notify open editors so they can hot-refresh the current note body.
+    window.dispatchEvent(new CustomEvent('flowist:notes:cloudApplied'));
+  }
+
 
   // Best-effort: purge legacy web-clip rows from the cloud on idle so the
   // sync table stops carrying multi-MB HTML snapshots. This does NOT touch
