@@ -145,9 +145,12 @@ async function rehydratePersistedNoteBodies(entries: QueuedWrite[]): Promise<Que
     }
     try {
       const note = await loadNoteFromDB(entry.row.id);
-      if (typeof note?.content === 'string') {
+      if (note && typeof note.content === 'string') {
         const { __bodyOmittedFromQueue: _omitted, ...row } = entry.row as any;
         next.push({ ...entry, row: { ...row, body: note.content } });
+      } else if (note) {
+        const { __bodyOmittedFromQueue: _omitted, ...row } = entry.row as any;
+        next.push({ ...entry, row: { ...row, body: '' } });
       } else {
         // Never upload a null body just because the compact localStorage queue
         // omitted it. Keep the write queued until the note can be rehydrated.
