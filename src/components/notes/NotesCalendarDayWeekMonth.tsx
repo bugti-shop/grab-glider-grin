@@ -47,6 +47,7 @@ export const NotesCalendarDayWeekMonth = ({
 
   onEditNote,
   onDeleteNote,
+  itemLabel = 'Notes',
 }: Props) => {
   const [mode, setMode] = useState<Mode>('day');
 
