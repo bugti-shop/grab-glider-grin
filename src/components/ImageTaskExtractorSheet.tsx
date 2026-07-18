@@ -624,67 +624,248 @@ export const ImageTaskExtractorSheet = ({
               <div className="space-y-2">
                 {items.map((it) => {
                   const dateChip = formatDateChip(it.dueDateIso);
-                  const fName = folderName(it.folderId);
+                  const fName = folderName(it.folderId) || it.folderName || null;
+                  const isExpanded = expandedUid === it.uid;
+                  const due = splitIso(it.dueDateIso);
+                  const rem = splitIso(it.reminderIso || it.dueDateIso);
                   return (
                     <div
                       key={it.uid}
                       className={cn(
-                        'flex items-start gap-2 p-3 rounded-xl border bg-card transition-colors',
-                        it.selected
-                          ? 'border-primary/30'
-                          : 'border-border opacity-60',
+                        'rounded-xl border bg-card transition-colors',
+                        it.selected ? 'border-primary/30' : 'border-border opacity-60',
                       )}
                     >
-                      <Checkbox
-                        checked={it.selected}
-                        onCheckedChange={() => toggleSelect(it.uid)}
-                        className="mt-1 flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <Input
-                          value={it.title}
-                          onChange={(e) => updateTitle(it.uid, e.target.value)}
-                          className="h-8 text-sm border-0 px-0 focus-visible:ring-0 shadow-none bg-transparent"
+                      <div className="flex items-start gap-2 p-3">
+                        <Checkbox
+                          checked={it.selected}
+                          onCheckedChange={() => toggleSelect(it.uid)}
+                          className="mt-1 flex-shrink-0"
                         />
-                        {(dateChip || fName || it.priority !== 'none' || it.repeatType !== 'none') && (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {dateChip && (
-                              <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                                {dateChip}
-                              </span>
-                            )}
-                            {it.priority !== 'none' && (
-                              <span
-                                className={cn(
-                                  'text-[11px] px-1.5 py-0.5 rounded-full',
-                                  it.priority === 'high' && 'bg-destructive/10 text-destructive',
-                                  it.priority === 'medium' && 'bg-warning/10 text-warning',
-                                  it.priority === 'low' && 'bg-success/10 text-success',
-                                )}
-                              >
-                                {it.priority}
-                              </span>
-                            )}
-                            {it.repeatType !== 'none' && (
-                              <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-accent-purple/10 text-accent-purple">
-                                {it.repeatType}
-                              </span>
-                            )}
-                            {fName && (
-                              <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-streak/10 text-streak">
-                                {fName}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          <Input
+                            value={it.title}
+                            onChange={(e) => updateTitle(it.uid, e.target.value)}
+                            placeholder={t('imageExtract.titlePlaceholder', 'Task title')}
+                            className="h-8 text-sm border-0 px-0 focus-visible:ring-0 shadow-none bg-transparent font-medium"
+                          />
+                          {(dateChip || fName || it.priority !== 'none' || it.repeatType !== 'none') && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {dateChip && (
+                                <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                                  {dateChip}
+                                </span>
+                              )}
+                              {it.priority !== 'none' && (
+                                <span
+                                  className={cn(
+                                    'text-[11px] px-1.5 py-0.5 rounded-full capitalize',
+                                    it.priority === 'high' && 'bg-destructive/10 text-destructive',
+                                    it.priority === 'medium' && 'bg-warning/10 text-warning',
+                                    it.priority === 'low' && 'bg-success/10 text-success',
+                                  )}
+                                >
+                                  {it.priority}
+                                </span>
+                              )}
+                              {it.repeatType !== 'none' && (
+                                <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-accent-purple/10 text-accent-purple">
+                                  {it.repeatType}
+                                </span>
+                              )}
+                              {fName && (
+                                <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-streak/10 text-streak">
+                                  {fName}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setExpandedUid(isExpanded ? null : it.uid)}
+                          className={cn(
+                            'flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center',
+                            isExpanded ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground',
+                          )}
+                          aria-label={t('imageExtract.edit', 'Edit task')}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => removeItem(it.uid)}
+                          className="flex-shrink-0 w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground"
+                          aria-label={t('common.remove', 'Remove')}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => removeItem(it.uid)}
-                        className="flex-shrink-0 w-7 h-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground"
-                        aria-label={t('common.remove', 'Remove')}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+
+                      {isExpanded && (
+                        <div className="px-3 pb-3 pt-1 space-y-3 border-t border-border/60">
+                          {/* Description */}
+                          <div>
+                            <label className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {t('imageExtract.description', 'Description')}
+                            </label>
+                            <Input
+                              value={it.description || ''}
+                              onChange={(e) => patchItem(it.uid, { description: e.target.value })}
+                              placeholder={t('imageExtract.addNotes', 'Add notes (optional)')}
+                              className="h-8 text-sm mt-1"
+                            />
+                          </div>
+
+                          {/* Due date + exact time */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                                <CalendarIcon className="h-3 w-3" />
+                                {t('imageExtract.dueDate', 'Due date')}
+                              </label>
+                              <input
+                                type="date"
+                                value={due.date}
+                                onChange={(e) => {
+                                  const iso = joinIso(e.target.value, due.time || '09:00');
+                                  patchItem(it.uid, {
+                                    dueDateIso: iso,
+                                    // Keep reminder aligned with due date if it was mirroring it.
+                                    reminderIso: it.reminderIso === it.dueDateIso || !it.reminderIso ? iso : it.reminderIso,
+                                  });
+                                }}
+                                className="mt-1 w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {t('imageExtract.exactTime', 'Exact time')}
+                              </label>
+                              <input
+                                type="time"
+                                value={due.time}
+                                onChange={(e) => {
+                                  const iso = joinIso(due.date || splitIso(new Date().toISOString()).date, e.target.value);
+                                  patchItem(it.uid, {
+                                    dueDateIso: iso,
+                                    reminderIso: it.reminderIso === it.dueDateIso || !it.reminderIso ? iso : it.reminderIso,
+                                  });
+                                }}
+                                className="mt-1 w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Reminder time (defaults to due) */}
+                          <div>
+                            <label className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {t('imageExtract.reminder', 'Reminder')}
+                            </label>
+                            <div className="grid grid-cols-2 gap-2 mt-1">
+                              <input
+                                type="date"
+                                value={rem.date}
+                                onChange={(e) => patchItem(it.uid, { reminderIso: joinIso(e.target.value, rem.time || '09:00') })}
+                                className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                              />
+                              <input
+                                type="time"
+                                value={rem.time}
+                                onChange={(e) => patchItem(it.uid, { reminderIso: joinIso(rem.date || splitIso(new Date().toISOString()).date, e.target.value) })}
+                                className="w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Priority chips */}
+                          <div>
+                            <label className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                              <Flag className="h-3 w-3" />
+                              {t('imageExtract.priority', 'Priority')}
+                            </label>
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              {(['none', 'low', 'medium', 'high'] as Priority[]).map((p) => {
+                                const active = it.priority === p;
+                                return (
+                                  <button
+                                    key={p}
+                                    type="button"
+                                    onClick={() => patchItem(it.uid, { priority: p })}
+                                    className={cn(
+                                      'text-[11px] px-2.5 py-1 rounded-full border capitalize transition-colors',
+                                      active
+                                        ? p === 'high'
+                                          ? 'bg-destructive text-destructive-foreground border-destructive'
+                                          : p === 'medium'
+                                          ? 'bg-warning text-warning-foreground border-warning'
+                                          : p === 'low'
+                                          ? 'bg-success text-success-foreground border-success'
+                                          : 'bg-foreground text-background border-foreground'
+                                        : 'bg-transparent text-muted-foreground border-border hover:bg-muted',
+                                    )}
+                                  >
+                                    {p}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Folder + Section */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                                <FolderIcon className="h-3 w-3" />
+                                {t('imageExtract.folder', 'Folder')}
+                              </label>
+                              <select
+                                value={it.folderId || `__name__:${(it.folderName || '').toLowerCase()}`}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  if (v.startsWith('__name__:')) return;
+                                  if (v === '__none__') {
+                                    patchItem(it.uid, { folderId: null, folderName: null });
+                                  } else {
+                                    const f = folders.find((x) => x.id === v);
+                                    patchItem(it.uid, { folderId: v, folderName: f?.name || null });
+                                  }
+                                }}
+                                className="mt-1 w-full h-8 text-sm rounded-md border border-input bg-background px-2"
+                              >
+                                <option value="__none__">{t('imageExtract.inbox', 'Inbox / none')}</option>
+                                {it.folderName && !it.folderId && (
+                                  <option value={`__name__:${it.folderName.toLowerCase()}`}>
+                                    {t('imageExtract.newFolder', 'New: {{name}}', { name: it.folderName })}
+                                  </option>
+                                )}
+                                {folders.map((f) => (
+                                  <option key={f.id} value={f.id}>{f.name}</option>
+                                ))}
+                              </select>
+                              {!it.folderId && (
+                                <Input
+                                  value={it.folderName || ''}
+                                  onChange={(e) => patchItem(it.uid, { folderName: e.target.value })}
+                                  placeholder={t('imageExtract.newFolderName', 'or new folder name')}
+                                  className="h-7 text-xs mt-1"
+                                />
+                              )}
+                            </div>
+                            <div>
+                              <label className="text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                {t('imageExtract.section', 'Section')}
+                              </label>
+                              <Input
+                                value={it.sectionName || ''}
+                                onChange={(e) => patchItem(it.uid, { sectionName: e.target.value, sectionId: null })}
+                                placeholder={t('imageExtract.sectionOptional', 'Optional')}
+                                className="h-8 text-sm mt-1"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
