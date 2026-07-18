@@ -1102,309 +1102,82 @@ export const TaskDetailPage = ({
         )}
 
 
-        {/* Subtasks - Bullet Point Structure */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <span className="text-lg">•</span>
-              {t('taskDetail.subtasks')}
-            </div>
-            <button
-              onClick={() => setIsSubtaskInputSheetOpen(true)}
-              className="flex items-center gap-1 text-primary text-sm font-medium"
-            >
-              <Plus className="h-4 w-4" />
-              {t('taskDetail.addSubtask')}
-            </button>
-          </div>
-
-          {task.subtasks && task.subtasks.length > 0 && (
-            <DragDropContext onDragEnd={handleSubtaskDragEnd}>
-              <Droppable droppableId="subtasks-list">
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="rounded-lg overflow-hidden bg-background"
-                  >
-                    {task.subtasks.map((subtask, index) => (
-                      <Draggable key={subtask.id} draggableId={subtask.id} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={cn(
-                              "flex items-start gap-3 py-2.5 px-2 border-b border-border/50 bg-background group cursor-pointer",
-                              snapshot.isDragging && "shadow-lg ring-2 ring-primary/20"
-                            )}
-                            onClick={() => handleOpenSubtaskDetail(subtask)}
-                          >
-                            <Checkbox
-                              checked={subtask.completed}
-                              onCheckedChange={() => handleToggleSubtask(subtask.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              className={cn(
-                                "h-5 w-5 transition-all flex-shrink-0 mt-0.5 rounded-full border-2",
-                                subtask.completed
-                                  ? "bg-muted-foreground/30 border-0 rounded-sm"
-                                  : subtask.priority === 'high' ? 'border-red-500' :
-                                    subtask.priority === 'medium' ? 'border-orange-500' :
-                                    subtask.priority === 'low' ? 'border-green-500' :
-                                    'border-primary'
-                              )}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className={cn(
-                                  "text-sm transition-all duration-300",
-                                  subtask.completed && "line-through text-muted-foreground"
-                                )}>
-                                  {subtask.text}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                {subtask.status && subtask.status !== 'not_started' && (
-                                  <TaskStatusBadge status={subtask.status} size="sm" />
-                                )}
-                                {subtask.dueDate && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {format(new Date(subtask.dueDate), 'MMM d')}
-                                  </span>
-                                )}
-                                {subtask.coloredTags && subtask.coloredTags.length > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    {subtask.coloredTags.slice(0, 2).map((tag) => (
-                                      <span
-                                        key={tag.name}
-                                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded-full"
-                                        style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
-                                      >
-                                        <Tag className="h-2.5 w-2.5" />
-                                        {tag.name}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                                {subtask.subtasks && subtask.subtasks.length > 0 && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {subtask.subtasks.filter(st => st.completed).length}/{subtask.subtasks.length} subtasks
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {subtask.imageUrl && (
-                              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-border flex-shrink-0">
-                                <ResolvedTaskImage srcRef={subtask.imageUrl} alt="Subtask" className="w-full h-full object-cover" />
-                              </div>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteSubtask(subtask.id);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity p-1"
-                            >
-                              <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                            </button>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                    <p className="text-xs text-muted-foreground px-2 py-2">
-                      {t('taskDetail.subtasksCompleted', { completed: task.subtasks.filter(st => st.completed).length, total: task.subtasks.length })}
-                    </p>
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-          )}
+        {/* Task History — clickable, opens detail page */}
+        <div className="rounded-2xl bg-white border border-border/60 shadow-sm overflow-hidden">
+          <button
+            onClick={() => setShowHistoryPage(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+            </span>
+            <span className="flex-1 min-w-0 text-[10px] font-medium truncate">
+              {t('taskDetail.taskHistory', 'Task History')}
+            </span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
+          </button>
         </div>
+      </div>
 
-        {/* Time Tracking editor (kept below cards for full functionality) */}
-        <div className="space-y-2" onClick={() => { if (!requireFeature('time_tracking')) return; }}>
-          <TaskTimeTracker
-            timeTracking={task.timeTracking}
-            onUpdate={(tracking) => { if (!requireFeature('time_tracking')) return; onUpdate({ ...task, timeTracking: tracking }); }}
-          />
-        </div>
-
-
-
-        {/* Deadline & Scheduled date (distinct from dueDate) */}
-        {(task.deadline || task.scheduledDate) && (
-          <div className="bg-muted/30 rounded-xl p-4 space-y-2">
-            {task.deadline && (() => {
-              const dl = new Date(task.deadline);
-              const overdue = !task.completed && dl.getTime() < Date.now();
-              const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-              return (
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className={`h-4 w-4 ${overdue ? 'text-destructive' : 'text-rose-500'}`} />
-                    <div>
-                      <p className="text-xs text-muted-foreground">{t('taskDetail.deadline', { defaultValue: 'Deadline' })}</p>
-                      <p className={`text-sm font-medium ${overdue ? 'text-destructive' : ''}`}>
-                        {format(dl, 'EEE, MMM d yyyy • h:mm a')}
-                        <span className="ml-1 text-xs text-muted-foreground">({tz})</span>
-                        {overdue && <span className="ml-2 text-[10px] uppercase tracking-wide text-destructive">Overdue</span>}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-            {task.scheduledDate && (
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="h-4 w-4 text-violet-500" />
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('taskDetail.scheduled', { defaultValue: 'Scheduled to work on' })}</p>
-                  <p className="text-sm font-medium">{format(new Date(task.scheduledDate), 'EEE, MMM d • h:mm a')}</p>
-                </div>
-              </div>
-            )}
+      {/* Task History full-page overlay */}
+      {showHistoryPage && (
+        <div className="fixed inset-0 z-[70] bg-[#f8f8f6] flex flex-col overflow-y-auto" style={{ paddingTop: 'var(--safe-top, 0px)' }}>
+          <div className="flex items-center gap-2 px-2 py-3">
+            <Button variant="ghost" size="icon" onClick={() => setShowHistoryPage(false)} aria-label="Back">
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            <h2 className="text-lg font-semibold">{t('taskDetail.taskHistory', 'Task History')}</h2>
           </div>
-        )}
-
-
-
-
-        <div className="space-y-2 border-t border-border pt-4">
-          {/* Reminders — one section, per-item edit/delete, multiple times per task */}
-          <div className="px-2">
-            <h3 className="text-base font-semibold mb-2">{t('taskDetail.reminders', 'Reminders')}</h3>
-            {(() => {
-              const list = (task as any).extraReminders as Array<{ id?: string; time: Date; recurring: string; daysOfWeek?: number[] }> | undefined;
-              const items = list && list.length > 0
-                ? list
-                : task.extraReminderTime
-                  ? [{ time: task.extraReminderTime as Date, recurring: (task.extraReminderRecurring as string) || 'none' }]
-                  : [];
-              if (items.length === 0) return null;
-
-              const deleteOne = async (idx: number) => {
-                const next = items.filter((_, i) => i !== idx).map((r, i) => ({
-                  id: (r as any).id ?? `rem-${i}-${new Date(r.time).getTime()}`,
-                  time: new Date(r.time),
-                  recurring: (r.recurring as any) || 'none',
-                  daysOfWeek: (r as any).daysOfWeek,
-                }));
-                if (next.length === 0) {
-                  await handleRemoveExtraReminder();
-                } else {
-                  await handleSaveExtraRemindersList(next);
-                }
-              };
-
-              return (
-                <div className="space-y-1 mb-2">
-                  {items.map((r, idx) => (
-                    <div
-                      key={(r as any).id ?? idx}
-                      className="w-full flex items-start gap-2 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <button
-                        onClick={() => setShowExtraReminderSheet(true)}
-                        className="flex-1 flex items-start gap-3 text-left min-w-0"
-                        aria-label={t('taskDetail.editReminder', 'Edit reminder')}
-                      >
-                        <Bell className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <span className="flex-1 min-w-0 flex flex-col">
-                          <span className="text-sm">
-                            {format(new Date(r.time), 'MMM d, h:mm a')}
-                            {r.recurring && r.recurring !== 'none' ? ` • ${r.recurring}` : ''}
-                          </span>
-                          <ReminderCountdown
-                            time={r.time}
-                            recurring={(r.recurring as any) || 'none'}
-                            daysOfWeek={(r as any).daysOfWeek}
-                          />
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => deleteOne(idx)}
-                        className="p-1.5 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                        aria-label={t('taskDetail.deleteReminder', 'Delete reminder')}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-            {(() => {
-              // Free plan is capped to N reminders per task (remindersPerTask,
-              // currently 1). Any attempt to add another must surface the
-              // paywall INSTEAD of opening the reminder sheet.
-              const currentList = (task as any).extraReminders as unknown[] | undefined;
-              const currentCount = Array.isArray(currentList)
-                ? currentList.length
-                : task.extraReminderTime
-                  ? 1
-                  : 0;
-              return (
-                <button
-                  onClick={() => {
-                    if (!requireCapacity('remindersPerTask', currentCount)) return;
-                    setShowExtraReminderSheet(true);
-                  }}
-                  className="w-full flex items-center gap-2 py-2 px-2 rounded-lg hover:bg-muted/50 transition-colors text-primary"
-                >
-                  <Plus className="h-5 w-5" />
-                  <span className="text-sm font-medium flex items-center gap-1">
-                    {t('taskDetail.addReminder', 'Add reminder')}
-                    {!isPro && currentCount >= 1 && <PremiumCrown size={12} />}
-                  </span>
-                </button>
-              );
-            })()}
-          </div>
-
-
-
-
-
-          {/* Task History Card - Premium */}
-          <div className="rounded-2xl bg-white border border-border/60 shadow-sm p-4 space-y-3">
-            <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              {t('taskDetail.taskHistory')}
-            </div>
-            <div
-              className={cn("space-y-2 text-[13px]", !isPro && "select-none cursor-pointer")}
-              onClick={() => { if (!isPro) requireFeature('time_tracking'); }}
-            >
-              <div className="flex items-center justify-between py-2 px-3 bg-muted/20 rounded-lg">
-                <span className="text-muted-foreground">{t('taskDetail.created')}</span>
+          <div className="px-4 pb-8 space-y-3">
+            <div className="rounded-2xl bg-white border border-border/60 shadow-sm divide-y divide-border/60">
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <span className="text-[13px] text-muted-foreground">{t('taskDetail.created', 'Created')}</span>
                 {isPro ? (
-                  <span className="font-medium">
+                  <span className="text-[13px] font-medium">
                     {task.createdAt ? format(new Date(task.createdAt), 'MMM d, yyyy • h:mm a') : '—'}
                   </span>
                 ) : (
-                  <span className="font-medium blur-[6px] select-none">Jan 1, 2025 • 12:00 PM</span>
+                  <span className="text-[13px] font-medium blur-[6px] select-none">Jan 1, 2025 • 12:00 PM</span>
                 )}
               </div>
-              <div className="flex items-center justify-between py-2 px-3 bg-muted/20 rounded-lg">
-                <span className="text-muted-foreground">{t('taskDetail.lastModified')}</span>
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <span className="text-[13px] text-muted-foreground">{t('taskDetail.lastModified', 'Last Modified')}</span>
                 {isPro ? (
-                  <span className="font-medium">
+                  <span className="text-[13px] font-medium">
                     {task.modifiedAt ? format(new Date(task.modifiedAt), 'MMM d, yyyy • h:mm a') : '—'}
                   </span>
                 ) : (
-                  <span className="font-medium blur-[6px] select-none">Jan 5, 2025 • 3:45 PM</span>
+                  <span className="text-[13px] font-medium blur-[6px] select-none">Jan 5, 2025 • 3:45 PM</span>
                 )}
               </div>
-              {isPro && task.completed && task.completedAt && (
-                <div className="flex items-center justify-between py-2 px-3 bg-success/10 rounded-lg">
-                  <span className="text-success">{t('taskDetail.completed')}</span>
-                  <span className="font-medium text-success">{format(new Date(task.completedAt), 'MMM d, yyyy • h:mm a')}</span>
+              {task.dueDate && (
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <span className="text-[13px] text-muted-foreground">{t('taskDetail.dueDate', 'Due Date')}</span>
+                  <span className="text-[13px] font-medium">
+                    {format(new Date(task.dueDate), 'MMM d, yyyy • h:mm a')}
+                  </span>
+                </div>
+              )}
+              {task.completed && task.completedAt && (
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <span className="text-[13px] text-success">{t('taskDetail.completed', 'Completed')}</span>
+                  <span className="text-[13px] font-medium text-success">
+                    {format(new Date(task.completedAt), 'MMM d, yyyy • h:mm a')}
+                  </span>
                 </div>
               )}
             </div>
+            {!isPro && (
+              <button
+                onClick={() => requireFeature('time_tracking')}
+                className="w-full text-[12px] text-primary font-medium py-2"
+              >
+                Unlock full history with Premium
+              </button>
+            )}
           </div>
         </div>
+      )}
       </div>
 
 
