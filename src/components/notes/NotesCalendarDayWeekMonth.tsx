@@ -331,7 +331,7 @@ export const NotesCalendarDayWeekMonth = ({
                   <li key={task.id}>
                     <button
                       onClick={() => onTaskClick?.(task)}
-                      className="w-full flex items-center gap-2.5 py-2.5 text-left active:bg-muted/40 rounded-md transition-colors"
+                      className="w-full flex items-center gap-3 py-3.5 text-left active:bg-muted/40 rounded-md transition-colors"
                     >
                       <span
                         role="checkbox"
@@ -340,14 +340,14 @@ export const NotesCalendarDayWeekMonth = ({
                           e.stopPropagation();
                           onTaskToggle?.(task);
                         }}
-                        className="shrink-0 h-[22px] w-[22px] rounded-full flex items-center justify-center transition-colors"
+                        className="shrink-0 h-[26px] w-[26px] rounded-full flex items-center justify-center transition-colors"
                         style={{
-                          border: `1.75px solid ${ring}`,
+                          border: `1.5px solid ${ring}`,
                           background: task.completed ? ring : 'transparent',
                         }}
                       >
                         {task.completed && (
-                          <svg viewBox="0 0 12 12" className="h-[10px] w-[10px] text-white">
+                          <svg viewBox="0 0 12 12" className="h-[12px] w-[12px] text-white">
                             <path
                               d="M2 6.5l2.5 2.5L10 3.5"
                               fill="none"
@@ -361,7 +361,7 @@ export const NotesCalendarDayWeekMonth = ({
                       </span>
                       <span
                         className={cn(
-                          'flex-1 min-w-0 truncate text-[15px] leading-[1.35] font-normal',
+                          'flex-1 min-w-0 truncate text-[17px] leading-[1.35] font-medium',
                           task.completed
                             ? 'text-muted-foreground line-through'
                             : 'text-foreground',
@@ -370,8 +370,7 @@ export const NotesCalendarDayWeekMonth = ({
                         {task.text}
                       </span>
                       {time && (
-                        <span className="shrink-0 text-[12.5px] text-muted-foreground tabular-nums">
-
+                        <span className="shrink-0 text-[14px] text-muted-foreground tabular-nums">
                           {time}
                         </span>
                       )}
@@ -380,6 +379,7 @@ export const NotesCalendarDayWeekMonth = ({
                 );
               })}
             </ul>
+
           )
         ) : selectedNotes.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
