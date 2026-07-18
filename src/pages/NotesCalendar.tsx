@@ -192,25 +192,6 @@ const NotesCalendar = () => {
             <AppLogo />
             <h1 className="text-lg font-bold text-foreground truncate">{t('nav.calendar', 'Calendar')}</h1>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                aria-label="Calendar options"
-                className="h-9 w-9 flex items-center justify-center rounded-full border border-border/60 bg-card active:bg-muted transition-colors"
-              >
-                <MoreHorizontal className="h-[17px] w-[17px] text-foreground/80" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-card">
-              <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
-                <ImageIcon className="h-4 w-4" />
-                {t('calendar.changeBackground', 'Change Background')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDate(new Date())}>
-                {t('calendar.goToToday', 'Go to Today')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         {/* Scrollable area */}
