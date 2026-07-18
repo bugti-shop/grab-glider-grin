@@ -404,11 +404,13 @@ REPEAT:
 - Recognize "every day", "daily", "every Monday", "weekly", "M-F", "weekdays", "Sat & Sun", "every month", "monthly bill", "yearly", "annual", "हर रोज़", "tous les jours", "毎日".
 - "repeatDays": for weekly/weekdays/weekends, return array of 0-6 (Sun=0..Sat=6) when specific days are written.
 
-FOLDER / SECTION — the writer usually groups tasks under a heading:
-- Detect a folder/section label written near or above the task (page heading, "[Work]", "Personal:", "#Home", a circled category, project name).
-- If a matching folder/section already exists in the lists above, return its id in "folderId" / "sectionId".
-- If the label is NEW (not in the lists), leave "folderId"/"sectionId" null AND return the label in "folderName"/"sectionName" so the app can create it. Keep names short (≤ 30 chars), Title Case, in the writer's language.
-- If no grouping cue exists at all, leave all four null.
+FOLDER (STRONGLY PREFER FOLDERS OVER SECTIONS — sections should almost never be used):
+- Treat any heading, title, category label, or grouping cue as a FOLDER, not a section. Do NOT split tasks into multiple sections just because they appear on separate lines under the same heading.
+- If the page/note has ONE top title (e.g. "To-Do List", "Groceries", "Work", "Monday Plan") written above a list of tasks, put ALL those tasks in a SINGLE folder using that title as the folder name. Never create a new folder or section per task in that case.
+- If an individual task explicitly names its own folder/project (e.g. "Call John [Work]", "Buy milk — Groceries", "#Home fix door", "Personal: gym"), place ONLY that task in that named folder. Other tasks without their own explicit folder stay in the page's overall folder (or Inbox).
+- If a matching folder already exists in the list above, return its id in "folderId". Otherwise leave "folderId" null and put the label in "folderName" (short ≤ 30 chars, Title Case, writer's language).
+- If a task has NO grouping cue at all AND the page has no overall title, set "folderName" to "Inbox" (or return the existing Inbox folder's id if present above). Do NOT leave folder empty.
+- "sectionId" / "sectionName": leave BOTH null unless the writer very clearly drew a sub-grouping *inside* an already-named folder (rare). Default is null.
 
 TAGS:
 - "tags": any hashtags or @-tags ("#work", "#errand", "@home", "@call"). Return as plain strings WITHOUT the # or @.
