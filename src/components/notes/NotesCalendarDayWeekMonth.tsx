@@ -13,10 +13,11 @@ import {
   addMonths,
   subMonths,
 } from 'date-fns';
-import { SlidersHorizontal } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Note, TodoItem } from '@/types/note';
 import { NoteCard } from '@/components/NoteCard';
+import { TASK_CHECK_ICON, TASK_CIRCLE } from '@/utils/taskItemStyles';
 
 interface Props {
   selectedDate: Date;
@@ -37,6 +38,8 @@ interface Props {
   tasks?: TodoItem[];
   onTaskToggle?: (task: TodoItem) => void;
   onTaskClick?: (task: TodoItem) => void;
+  onSubtaskToggle?: (parent: TodoItem, subtask: TodoItem) => void;
+  onSubtaskClick?: (parent: TodoItem, subtask: TodoItem) => void;
   getPriorityColor?: (priorityId: string) => string;
 }
 
@@ -64,9 +67,12 @@ export const NotesCalendarDayWeekMonth = ({
   tasks,
   onTaskToggle,
   onTaskClick,
+  onSubtaskToggle,
+  onSubtaskClick,
   getPriorityColor,
 }: Props) => {
   const [mode, setMode] = useState<Mode>('day');
+  const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set());
 
   const isTaskMode = Array.isArray(tasks);
 
@@ -147,6 +153,111 @@ export const NotesCalendarDayWeekMonth = ({
       if (c) return c;
     }
     return DEFAULT_PRIORITY_COLORS[id] || DEFAULT_PRIORITY_COLORS.none;
+  };
+
+  const toggleExpanded = (taskId: string) => {
+    setExpandedTaskIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
+  const renderTodayStyleTask = (task: TodoItem, parent?: TodoItem) => {
+    const hasSubtasks = !parent && !!task.subtasks?.length;
+    const isExpanded = expandedTaskIds.has(task.id);
+    const completedSubtasks = task.subtasks?.filter((st) => st.completed).length || 0;
+    const totalSubtasks = task.subtasks?.length || 0;
+    const priorityColor = ringColorFor(task);
+
+    const handleToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      if (parent) onSubtaskToggle?.(parent, task);
+      else onTaskToggle?.(task);
+    };
+
+    const handleOpen = () => {
+      if (parent) onSubtaskClick?.(parent, task);
+      else onTaskClick?.(task);
+    };
+
+    return (
+      <div key={task.id} className="relative">
+        <div className="relative overflow-hidden">
+          <div className="flex items-start gap-3 border-b border-border/50 bg-background relative z-10 py-2.5 px-2">
+            <button
+              type="button"
+              aria-label={task.completed ? 'Mark incomplete' : 'Mark complete'}
+              aria-pressed={task.completed}
+              onClick={handleToggle}
+              className={cn(
+                TASK_CIRCLE.base,
+                TASK_CIRCLE.marginTop,
+                TASK_CIRCLE.size,
+                task.completed && TASK_CIRCLE.completed,
+              )}
+              style={{ borderColor: task.completed ? undefined : priorityColor }}
+            >
+              {task.completed && (
+                <Check
+                  className={cn(TASK_CHECK_ICON.base, TASK_CHECK_ICON.size)}
+                  style={{ color: TASK_CHECK_ICON.completedColor }}
+                  strokeWidth={TASK_CHECK_ICON.strokeWidth}
+                />
+              )}
+            </button>
+
+            <div className="flex-1 min-w-0" onClick={handleOpen}>
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className={cn(
+                    'text-sm min-w-0 truncate transition-all duration-300 font-normal',
+                    task.completed && 'text-muted-foreground line-through',
+                  )}
+                >
+                  {task.text}
+                </span>
+              </div>
+              {task.dueDate && (
+                <p className="text-muted-foreground text-xs mt-1">
+                  {new Date(task.dueDate).toLocaleDateString()}
+                </p>
+              )}
+              {hasSubtasks && !isExpanded && (
+                <p className="text-muted-foreground text-xs mt-1">
+                  {completedSubtasks}/{totalSubtasks} subtasks
+                </p>
+              )}
+            </div>
+
+            {hasSubtasks && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpanded(task.id);
+                }}
+                className="rounded hover:bg-muted transition-colors flex-shrink-0 p-1 mt-0.5"
+                aria-label={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {hasSubtasks && isExpanded && (
+          <div className="ml-3 sm:ml-4 md:ml-5 pl-3 sm:pl-4 border-l-2 border-border/50">
+            {task.subtasks!.map((subtask) => renderTodayStyleTask(subtask, task))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const goPrev = () => {
@@ -295,90 +406,36 @@ export const NotesCalendarDayWeekMonth = ({
         </div>
       )}
 
-      {/* List header */}
-      <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[16px] font-bold text-foreground">
-            {itemLabel} on {format(selectedDate, 'MMM d')}
-          </h3>
-          {(isTaskMode ? sortedSelectedTasks.length : selectedNotes.length) > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-muted text-[11px] font-semibold text-foreground/70 tabular-nums">
-              {isTaskMode ? sortedSelectedTasks.length : selectedNotes.length}
-            </span>
-          )}
+      {!isTaskMode && (
+        <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="text-[16px] font-bold text-foreground">
+              {itemLabel} on {format(selectedDate, 'MMM d')}
+            </h3>
+            {selectedNotes.length > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-muted text-[11px] font-semibold text-foreground/70 tabular-nums">
+                {selectedNotes.length}
+              </span>
+            )}
+          </div>
+          <button
+            aria-label="Filter"
+            className="h-9 w-9 flex items-center justify-center rounded-full border border-border/60 active:bg-muted transition-colors"
+          >
+            <SlidersHorizontal className="h-[15px] w-[15px] text-foreground/70" />
+          </button>
         </div>
-        <button
-          aria-label="Filter"
-          className="h-9 w-9 flex items-center justify-center rounded-full border border-border/60 active:bg-muted transition-colors"
-        >
-          <SlidersHorizontal className="h-[15px] w-[15px] text-foreground/70" />
-        </button>
-      </div>
+      )}
 
       {/* List body */}
-      <div className="px-4 pb-24">
+      <div className={cn('pb-24', isTaskMode ? 'px-2 pt-3' : 'px-4')}>
         {isTaskMode ? (
           sortedSelectedTasks.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
               No tasks for this date yet.
             </div>
           ) : (
-            <ul className="divide-y divide-border/60">
-              {sortedSelectedTasks.map((task) => {
-                const ring = ringColorFor(task);
-                const time = formatTaskTime(task);
-                return (
-                  <li key={task.id}>
-                    <button
-                      onClick={() => onTaskClick?.(task)}
-                      className="w-full flex items-center gap-3 py-3 text-left active:bg-muted/40 rounded-md transition-colors"
-                    >
-                      <span
-                        role="checkbox"
-                        aria-checked={task.completed}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onTaskToggle?.(task);
-                        }}
-                        className="shrink-0 h-[23px] w-[23px] rounded-full flex items-center justify-center transition-colors"
-                        style={{
-                          border: `1.5px solid ${ring}`,
-                          background: task.completed ? ring : 'transparent',
-                        }}
-                      >
-                        {task.completed && (
-                          <svg viewBox="0 0 12 12" className="h-[11px] w-[11px] text-white">
-                            <path
-                              d="M2 6.5l2.5 2.5L10 3.5"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        )}
-                      </span>
-                      <span
-                        className={cn(
-                          'flex-1 min-w-0 truncate text-[15px] leading-[1.25] font-normal',
-                          task.completed
-                            ? 'text-muted-foreground line-through'
-                            : 'text-foreground',
-                        )}
-                      >
-                        {task.text}
-                      </span>
-                      {time && (
-                        <span className="shrink-0 text-[14px] font-normal text-muted-foreground tabular-nums">
-                          {time}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <div>{sortedSelectedTasks.map((task) => renderTodayStyleTask(task))}</div>
 
           )
         ) : selectedNotes.length === 0 ? (
