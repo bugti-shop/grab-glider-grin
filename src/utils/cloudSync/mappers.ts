@@ -55,7 +55,6 @@ export const mappers = {
     fromCloud(r: any): any | null {
       if (!r?.id) return null;
       const payload = reviveDates(payloadObject(r), ['createdAt', 'updatedAt', 'modifiedAt']);
-      const updatedAt = iso(n.updatedAt) ?? iso(n.createdAt) ?? nowIso();
       return {
         ...(payload ?? {}),
         id: r.id,
@@ -105,6 +104,7 @@ export const mappers = {
       const body = isMetadataStub || (typeof n.content === 'string' && n.content.length > HEAVY_BODY_LIMIT)
         ? null
         : (n.content ?? null);
+      const updatedAt = iso(n.updatedAt) ?? iso(n.createdAt) ?? nowIso();
       return {
         id: n.id,
         title: n.title ?? null,
@@ -121,7 +121,6 @@ export const mappers = {
     /** Partial merge — only fields the cloud row owns. */
     mergeCloud(local: Note | undefined, r: any): Partial<Note> & { id: string } {
       const payload = reviveDates(payloadObject(r), ['createdAt', 'updatedAt', 'archivedAt', 'deletedAt', 'reminderTime']);
-      const updatedAt = iso((t as any).modifiedAt) ?? iso((t as any).updatedAt) ?? iso((t as any).createdAt) ?? nowIso();
       return {
         ...(local ?? {}),
         ...(payload ?? {}),
@@ -156,6 +155,7 @@ export const mappers = {
         attachments: _a,
         ...sanitizedPayload
       } = t as any;
+      const updatedAt = iso((t as any).modifiedAt) ?? iso((t as any).updatedAt) ?? iso((t as any).createdAt) ?? nowIso();
       return {
         id: t.id,
         title: (t as any).text ?? (t as any).title ?? '',
@@ -186,7 +186,6 @@ export const mappers = {
         (rawPayload ?? {}) as any;
       const { estimatedHours: _le, escalationRule: _ls, attachments: _la, ...localClean } =
         (local ?? {}) as any;
-      const updatedAt = iso((s as any).updatedAt) ?? iso((s as any).createdAt) ?? nowIso();
       return {
         ...(localClean ?? {}),
         ...payload,
@@ -211,6 +210,7 @@ export const mappers = {
   sections: {
     toCloud(s: TaskSection) {
       if (!isUuid(s.id)) return null;
+      const updatedAt = iso((s as any).updatedAt) ?? iso((s as any).createdAt) ?? nowIso();
       return {
         id: s.id,
         name: s.name,
@@ -225,7 +225,6 @@ export const mappers = {
     fromCloud(r: any): TaskSection | null {
       if (!r?.id) return null;
       const payload = payloadObject(r) as Partial<TaskSection> | null;
-      const updatedAt = iso((h as any).updatedAt) ?? iso((h as any).createdAt) ?? nowIso();
       return {
         ...(payload ?? {}),
         id: r.id,
@@ -241,6 +240,7 @@ export const mappers = {
   habits: {
     toCloud(h: Habit) {
       if (!isUuid(h.id)) return null;
+      const updatedAt = iso((h as any).updatedAt) ?? iso((h as any).createdAt) ?? nowIso();
       return {
         id: h.id,
         name: (h as any).name ?? (h as any).title ?? '',
@@ -258,7 +258,6 @@ export const mappers = {
     },
     mergeCloud(local: Habit | undefined, r: any): Partial<Habit> & { id: string } {
       const payload = (payloadObject(r) ?? {}) as any;
-      const updatedAt = c.updatedAt ? new Date(c.updatedAt).toISOString() : (c.createdAt ? new Date(c.createdAt).toISOString() : nowIso());
       return {
         ...(local ?? {}),
         ...payload,
@@ -278,6 +277,7 @@ export const mappers = {
   countdowns: {
     toCloud(c: any) {
       if (!isUuid(c.id)) return null;
+      const updatedAt = c.updatedAt ? new Date(c.updatedAt).toISOString() : (c.createdAt ? new Date(c.createdAt).toISOString() : nowIso());
       return {
         id: c.id,
         name: c.name ?? '',
@@ -292,7 +292,6 @@ export const mappers = {
     },
     mergeCloud(local: any | undefined, r: any): any {
       const payload = (payloadObject(r) ?? {}) as any;
-      const updatedAt = iso(s.updatedAt) ?? iso(s.createdAt) ?? nowIso();
       return {
         ...(local ?? {}),
         ...payload,
@@ -310,6 +309,7 @@ export const mappers = {
   habitSections: {
     toCloud(s: any) {
       if (!isUuid(s.id)) return null;
+      const updatedAt = iso(s.updatedAt) ?? iso(s.createdAt) ?? nowIso();
       return {
         id: s.id,
         name: s.name ?? '',
