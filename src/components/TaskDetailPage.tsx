@@ -755,8 +755,8 @@ export const TaskDetailPage = ({
     >
       {/* Header — back / share / comments / more */}
       <header className="flex items-center justify-between px-4 py-2">
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Back" className="rounded-full h-12 w-12 -ml-2.5">
-          <ChevronLeft className="!h-9 !w-9" style={{ strokeWidth: 2.5 }} />
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Back" className="rounded-full h-11 w-11 -ml-2">
+          <ChevronLeft className="!h-8 !w-8" strokeWidth={2} />
 
         </Button>
         <div className="flex items-center gap-0.5 -mr-2">
