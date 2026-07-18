@@ -12,12 +12,13 @@
  */
 import { enqueueWrite, enqueueWrites } from './writeQueue';
 import { mappers, type MappedTable } from './mappers';
-import type { SyncRow } from './syncTables';
+import type { SyncRow, SyncTable } from './syncTables';
 import type { SyncChangeDetail } from './syncEngine';
 import type { Folder } from '@/utils/folderStorage';
 import type { Note, TodoItem } from '@/types/note';
 import type { Habit } from '@/types/habit';
 import { recordConflict, recordListenerEvent } from './diagnostics';
+import { isTombstoned, markDeleted, markDeletedMany, clearTombstone } from './tombstones';
 
 let installed = false;
 
