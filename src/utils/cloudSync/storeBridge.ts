@@ -95,11 +95,18 @@ export async function runInitialFullUpload(userId: string): Promise<void> {
 
 // ---------- Local → Cloud ----------
 
+// Any upsert helper filters out rows the user just deleted so a stale editor
+// autosave / batch save can never resurrect a tombstoned row.
+const notTombstoned = (table: SyncTable, id: string, ts?: number) =>
+  !isTombstoned(table, id, ts);
+
 export function pushFolders(folders: Folder[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const f of folders) {
     const row = mappers.folders.toCloud(f, 'notes');
-    if (row) writes.push({ table: 'folders', op: 'upsert', row: row as any });
+    if (row && notTombstoned('folders', (row as any).id, +new Date((row as any).updated_at ?? Date.now()))) {
+      writes.push({ table: 'folders', op: 'upsert', row: row as any });
+    }
   }
   if (writes.length) enqueueWrites(writes);
 }
@@ -107,11 +114,14 @@ export function pushTaskFolders(folders: any[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const f of folders) {
     const row = mappers.folders.toCloud(f, 'tasks');
-    if (row) writes.push({ table: 'folders', op: 'upsert', row: row as any });
+    if (row && notTombstoned('folders', (row as any).id, +new Date((row as any).updated_at ?? Date.now()))) {
+      writes.push({ table: 'folders', op: 'upsert', row: row as any });
+    }
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushFolderDelete(id: string): void {
+  markDeleted('folders', id);
   enqueueWrite('folders', 'delete', { id });
 }
 
@@ -119,11 +129,14 @@ export function pushSections(sections: any[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const s of sections) {
     const row = mappers.sections.toCloud(s);
-    if (row) writes.push({ table: 'sections', op: 'upsert', row: row as any });
+    if (row && notTombstoned('sections', (row as any).id, +new Date((row as any).updated_at ?? Date.now()))) {
+      writes.push({ table: 'sections', op: 'upsert', row: row as any });
+    }
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushSectionDelete(id: string): void {
+  markDeleted('sections', id);
   enqueueWrite('sections', 'delete', { id });
 }
 
@@ -131,14 +144,25 @@ export function pushNotes(notes: Note[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const n of notes) {
     const row = mappers.notes.toCloud(n);
-    if (row) writes.push({ table: 'notes', op: n.isDeleted ? 'delete' : 'upsert', row: row as any });
+    if (!row) continue;
+    if (n.isDeleted) {
+      markDeleted('notes', row.id);
+      writes.push({ table: 'notes', op: 'delete', row: row as any });
+      continue;
+    }
+    const ts = +new Date((row as any).updated_at ?? (n as any).updatedAt ?? Date.now());
+    if (notTombstoned('notes', row.id, ts)) {
+      writes.push({ table: 'notes', op: 'upsert', row: row as any });
+    }
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushNoteDelete(id: string): void {
+  markDeleted('notes', id);
   enqueueWrite('notes', 'delete', { id });
 }
 export function pushNoteDeletes(ids: string[]): void {
+  markDeletedMany('notes', ids);
   enqueueWrites(ids.map((id) => ({ table: 'notes', op: 'delete', row: { id } })) as any);
 }
 
@@ -146,14 +170,25 @@ export function pushTasks(tasks: TodoItem[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const t of tasks) {
     const row = mappers.tasks.toCloud(t as any);
-    if (row) writes.push({ table: 'tasks', op: (t as any).isDeleted ? 'delete' : 'upsert', row: row as any });
+    if (!row) continue;
+    if ((t as any).isDeleted) {
+      markDeleted('tasks', row.id);
+      writes.push({ table: 'tasks', op: 'delete', row: row as any });
+      continue;
+    }
+    const ts = +new Date((row as any).updated_at ?? (t as any).modifiedAt ?? Date.now());
+    if (notTombstoned('tasks', row.id, ts)) {
+      writes.push({ table: 'tasks', op: 'upsert', row: row as any });
+    }
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushTaskDelete(id: string): void {
+  markDeleted('tasks', id);
   enqueueWrite('tasks', 'delete', { id });
 }
 export function pushTaskDeletes(ids: string[]): void {
+  markDeletedMany('tasks', ids);
   enqueueWrites(ids.map((id) => ({ table: 'tasks', op: 'delete', row: { id } })) as any);
 }
 
@@ -161,11 +196,21 @@ export function pushHabits(habits: Habit[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const h of habits) {
     const row = mappers.habits.toCloud(h);
-    if (row) writes.push({ table: 'habits', op: (h as any).isDeleted ? 'delete' : 'upsert', row: row as any });
+    if (!row) continue;
+    if ((h as any).isDeleted) {
+      markDeleted('habits', row.id);
+      writes.push({ table: 'habits', op: 'delete', row: row as any });
+      continue;
+    }
+    const ts = +new Date((row as any).updated_at ?? (h as any).updatedAt ?? Date.now());
+    if (notTombstoned('habits', row.id, ts)) {
+      writes.push({ table: 'habits', op: 'upsert', row: row as any });
+    }
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushHabitDelete(id: string): void {
+  markDeleted('habits', id);
   enqueueWrite('habits', 'delete', { id });
 }
 
@@ -173,11 +218,14 @@ export function pushCountdowns(items: any[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const c of items) {
     const row = (mappers as any).countdowns.toCloud(c);
-    if (row) writes.push({ table: 'countdowns', op: 'upsert', row });
+    if (row && notTombstoned('countdowns', (row as any).id, +new Date((row as any).updated_at ?? Date.now()))) {
+      writes.push({ table: 'countdowns', op: 'upsert', row });
+    }
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushCountdownDelete(id: string): void {
+  markDeleted('countdowns', id);
   enqueueWrite('countdowns', 'delete', { id });
 }
 
@@ -185,11 +233,14 @@ export function pushHabitSections(items: any[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const s of items) {
     const row = (mappers as any).habitSections.toCloud(s);
-    if (row) writes.push({ table: 'habit_sections', op: 'upsert', row });
+    if (row && notTombstoned('habit_sections', (row as any).id, +new Date((row as any).updated_at ?? Date.now()))) {
+      writes.push({ table: 'habit_sections', op: 'upsert', row });
+    }
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushHabitSectionDelete(id: string): void {
+  markDeleted('habit_sections', id);
   enqueueWrite('habit_sections', 'delete', { id });
 }
 
