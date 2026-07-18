@@ -89,7 +89,10 @@ export async function runInitialFullUpload(userId: string): Promise<void> {
       if (cs?.length) pushCountdowns(cs as any);
     } catch (e) { console.warn('[initialUpload] countdowns failed', e); }
 
-    await flushQueue().catch(() => {});
+    for (let i = 0; i < 12; i++) {
+      await flushQueue().catch(() => {});
+      if (getQueueLength() === 0) break;
+    }
     if (getQueueLength() === 0) {
       try { localStorage.setItem(flagKey, '1'); } catch {}
       console.info('[initialUpload] complete for', userId);
