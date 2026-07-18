@@ -1403,6 +1403,10 @@ const TodoCalendar = () => {
             selectedDate={date}
             onDateSelect={setDate}
             highlightedDates={highlightedCalendarDates}
+            tasks={items}
+            getPriorityColor={getPriorityColor}
+            onTaskClick={(t) => setSelectedTask(t)}
+            onTaskToggle={(t) => handleUpdateTask(t.id, { completed: !t.completed, completedAt: !t.completed ? new Date() : undefined })}
             onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
             onAddClick={() => setIsInputOpen(true)}
           />

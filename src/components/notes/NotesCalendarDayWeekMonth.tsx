@@ -15,7 +15,7 @@ import {
 } from 'date-fns';
 import { SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Note } from '@/types/note';
+import { Note, TodoItem } from '@/types/note';
 import { NoteCard } from '@/components/NoteCard';
 
 interface Props {
@@ -32,6 +32,12 @@ interface Props {
   onAddNote?: () => void;
   itemLabel?: string; // e.g. "Notes" or "Tasks"
 
+  // Task rendering (optional). When provided, tasks display below the calendar
+  // instead of notes, using a checklist row with a priority-colored ring.
+  tasks?: TodoItem[];
+  onTaskToggle?: (task: TodoItem) => void;
+  onTaskClick?: (task: TodoItem) => void;
+  getPriorityColor?: (priorityId: string) => string;
 }
 
 
@@ -39,6 +45,13 @@ type Mode = 'day' | 'week' | 'month';
 
 const WEEK_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+const DEFAULT_PRIORITY_COLORS: Record<string, string> = {
+  high: '#ef4444',
+  medium: '#f59e0b',
+  low: '#3b82f6',
+  none: '#d1d5db',
+};
 
 export const NotesCalendarDayWeekMonth = ({
   selectedDate,
@@ -48,14 +61,26 @@ export const NotesCalendarDayWeekMonth = ({
   onEditNote,
   onDeleteNote,
   itemLabel = 'Notes',
+  tasks,
+  onTaskToggle,
+  onTaskClick,
+  getPriorityColor,
 }: Props) => {
   const [mode, setMode] = useState<Mode>('day');
 
+  const isTaskMode = Array.isArray(tasks);
+
   const noteDateSet = useMemo(() => {
     const s = new Set<string>();
-    for (const n of notes) s.add(dateKey(new Date(n.createdAt)));
+    if (isTaskMode) {
+      for (const t of tasks!) {
+        if (t.dueDate) s.add(dateKey(new Date(t.dueDate)));
+      }
+    } else {
+      for (const n of notes) s.add(dateKey(new Date(n.createdAt)));
+    }
     return s;
-  }, [notes]);
+  }, [notes, tasks, isTaskMode]);
 
   // Anchor: start of week containing selectedDate (Monday-start)
   const weekStart = useMemo(
@@ -88,6 +113,41 @@ export const NotesCalendarDayWeekMonth = ({
     () => notes.filter((n) => isSameDay(new Date(n.createdAt), selectedDate)),
     [notes, selectedDate],
   );
+
+  const selectedTasks = useMemo(
+    () =>
+      (tasks || []).filter(
+        (t) => t.dueDate && isSameDay(new Date(t.dueDate), selectedDate),
+      ),
+    [tasks, selectedDate],
+  );
+
+  const sortedSelectedTasks = useMemo(() => {
+    const withTime = selectedTasks.filter((t) => !!t.reminderTime);
+    const withoutTime = selectedTasks.filter((t) => !t.reminderTime);
+    withTime.sort((a, b) => new Date(a.reminderTime!).getTime() - new Date(b.reminderTime!).getTime());
+    return [...withTime, ...withoutTime];
+  }, [selectedTasks]);
+
+  const formatTaskTime = (task: TodoItem): string => {
+    if (!task.reminderTime) return '';
+    const d = new Date(task.reminderTime);
+    if (isNaN(d.getTime())) return '';
+    const h = d.getHours();
+    const m = d.getMinutes();
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour12 = ((h + 11) % 12) + 1;
+    return m === 0 ? `${hour12} ${period}` : `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+  };
+
+  const ringColorFor = (task: TodoItem): string => {
+    const id = (task.priority as string) || 'none';
+    if (getPriorityColor) {
+      const c = getPriorityColor(id);
+      if (c) return c;
+    }
+    return DEFAULT_PRIORITY_COLORS[id] || DEFAULT_PRIORITY_COLORS.none;
+  };
 
   const goPrev = () => {
     if (mode === 'month') onDateSelect(subMonths(selectedDate, 1));
@@ -235,15 +295,15 @@ export const NotesCalendarDayWeekMonth = ({
         </div>
       )}
 
-      {/* Notes header */}
+      {/* List header */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="text-[16px] font-bold text-foreground">
             {itemLabel} on {format(selectedDate, 'MMM d')}
           </h3>
-          {selectedNotes.length > 0 && (
+          {(isTaskMode ? sortedSelectedTasks.length : selectedNotes.length) > 0 && (
             <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-muted text-[11px] font-semibold text-foreground/70 tabular-nums">
-              {selectedNotes.length}
+              {isTaskMode ? sortedSelectedTasks.length : selectedNotes.length}
             </span>
           )}
         </div>
@@ -255,9 +315,72 @@ export const NotesCalendarDayWeekMonth = ({
         </button>
       </div>
 
-      {/* Notes list */}
+      {/* List body */}
       <div className="px-4 pb-24">
-        {selectedNotes.length === 0 ? (
+        {isTaskMode ? (
+          sortedSelectedTasks.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              No tasks for this date yet.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {sortedSelectedTasks.map((task) => {
+                const ring = ringColorFor(task);
+                const time = formatTaskTime(task);
+                return (
+                  <li key={task.id}>
+                    <button
+                      onClick={() => onTaskClick?.(task)}
+                      className="w-full flex items-center gap-3 py-3.5 text-left active:bg-muted/40 rounded-md transition-colors"
+                    >
+                      <span
+                        role="checkbox"
+                        aria-checked={task.completed}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTaskToggle?.(task);
+                        }}
+                        className="shrink-0 h-[22px] w-[22px] rounded-full flex items-center justify-center transition-colors"
+                        style={{
+                          border: `2px solid ${ring}`,
+                          background: task.completed ? ring : 'transparent',
+                        }}
+                      >
+                        {task.completed && (
+                          <svg viewBox="0 0 12 12" className="h-[10px] w-[10px] text-white">
+                            <path
+                              d="M2 6.5l2.5 2.5L10 3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </span>
+                      <span
+                        className={cn(
+                          'flex-1 min-w-0 truncate text-[16px] leading-tight',
+                          task.completed
+                            ? 'text-muted-foreground line-through'
+                            : 'text-foreground font-medium',
+                        )}
+                      >
+                        {task.text}
+                      </span>
+                      {time && (
+                        <span className="shrink-0 text-[13px] text-muted-foreground tabular-nums">
+                          {time}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : selectedNotes.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
             No {itemLabel.toLowerCase()} for this date yet.
           </div>
