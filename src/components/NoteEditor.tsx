@@ -167,6 +167,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [isLocationInputOpen, setIsLocationInputOpen] = useState(false);
   const [content, setContentState] = useState('');
   const contentRef = useRef('');
+  // Snapshot of initial title/content/codeContent when a note is opened.
+  // Autosave is skipped until the user actually edits something so that
+  // simply opening a note does not bump `updatedAt`.
+  const initialSnapshotRef = useRef<{ title: string; content: string; codeContent: string } | null>(null);
   const setContent = useCallback((val: React.SetStateAction<string>) => {
     setContentState(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
@@ -546,6 +550,16 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       setCodeLanguage(note.codeLanguage || 'auto');
       setMetaDescription(note.metaDescription || '');
       setLocation(note.location || '');
+
+      // Capture snapshot AFTER state setters queue so autosave can compare.
+      initialSnapshotRef.current = {
+        title: note.title || '',
+        content: (recoveredContent && WEB_CLIP_RE.test(recoveredContent))
+          ? normalizeWebClipHtmlForFastOffline(recoveredContent)
+          : (recoveredContent || ''),
+        codeContent: note.codeContent || '',
+      };
+      
       
     } else {
       // Reset draft ID for new notes to prevent overwriting
@@ -614,6 +628,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       // Reset code fields
       setCodeContent('');
       setCodeLanguage('auto');
+
+      // New note snapshot: empty. Any typed character will flip dirty=true.
+      initialSnapshotRef.current = { title: '', content: '', codeContent: '' };
       
       // Auto-open voice recorder for new voice notes
       if (defaultType === 'voice') {
@@ -868,6 +885,13 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
 
     const hasText = (title?.trim() || '') !== '' || (content?.trim() || '') !== '' || (codeContent?.trim() || '') !== '';
     if (!hasText) return;
+
+    // Skip autosave when the user hasn't actually edited anything — merely
+    // opening a note must NOT bump `updatedAt`.
+    const snap = initialSnapshotRef.current;
+    if (snap && title === snap.title && content === snap.content && codeContent === snap.codeContent) {
+      return;
+    }
 
     // For sketch notes, don't auto-save if content looks like default empty sketch
     // (no strokes in any layer). This prevents overwriting real data on mount.

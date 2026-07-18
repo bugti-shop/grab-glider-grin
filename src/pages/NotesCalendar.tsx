@@ -178,7 +178,7 @@ const NotesCalendar = () => {
         // overwrites the same row instead of creating a second note.
         id: incomingNote.id || genId(),
         title: incomingNote.title || `Note - ${format(activeDate, 'MMM dd, yyyy')}`,
-        createdAt: incomingNote.createdAt || activeDate,
+        createdAt: activeDate,
         updatedAt: new Date(),
       });
       const updatedNotes = currentNotes.some(n => n.id === newNote.id)
