@@ -129,8 +129,9 @@ const TodoCalendar = () => {
   // Order version for force re-render
   const [orderVersion, setOrderVersion] = useState(0);
 
-  // Calendar layout mode: list / year / month / week / 3day / day
-  type CalendarLayout = 'list' | 'year' | TimeViewMode;
+  // Calendar layout mode: list / year / month / week / 3day / day + notes-style layouts
+  type NotesLayout = 'notesMonth' | 'notesWeekStrip' | 'notesDashboard' | 'notesYearHeatmap' | 'notesDarkHero' | 'notesDayWeekMonth' | 'notesCardGrid' | 'notesEditorial' | 'notesTimeline';
+  type CalendarLayout = 'list' | 'year' | TimeViewMode | NotesLayout;
   const [calendarLayout, setCalendarLayout] = useState<CalendarLayout>('list');
   // Prefilled due date when quick-adding from a calendar time slot
   const [quickAddDate, setQuickAddDate] = useState<Date | null>(null);
