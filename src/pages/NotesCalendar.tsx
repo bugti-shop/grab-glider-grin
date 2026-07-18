@@ -7,9 +7,10 @@ import { NotesCalendarDashboard } from '@/components/notes/NotesCalendarDashboar
 import { NotesCalendarYearHeatmap } from '@/components/notes/NotesCalendarYearHeatmap';
 import { NotesCalendarDarkHero } from '@/components/notes/NotesCalendarDarkHero';
 import { NotesCalendarDayWeekMonth } from '@/components/notes/NotesCalendarDayWeekMonth';
+import { NotesCalendarCardGrid } from '@/components/notes/NotesCalendarCardGrid';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3, Moon, CalendarDays } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3, Moon, CalendarDays, LayoutPanelTop } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
@@ -28,7 +29,7 @@ import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NotesCalendarFab } from '@/components/notes/NotesCalendarFab';
 
-type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap' | 'darkHero' | 'dayWeekMonth';
+type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap' | 'darkHero' | 'dayWeekMonth' | 'cardGrid';
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
@@ -247,6 +248,11 @@ const NotesCalendar = () => {
                 <span className="flex-1">Day / Week / Month</span>
                 {layout === 'dayWeekMonth' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeLayout('cardGrid')} className="gap-2">
+                <LayoutPanelTop className="h-4 w-4" />
+                <span className="flex-1">Card grid</span>
+                {layout === 'cardGrid' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
                 <ImageIcon className="h-4 w-4" />
@@ -308,6 +314,17 @@ const NotesCalendar = () => {
                 notes={notes}
                 onEditNote={handleEditNote}
                 onDeleteNote={handleDeleteNote}
+              />
+            </ErrorBoundary>
+          ) : layout === 'cardGrid' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarCardGrid
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
+                onAddNote={() => handleCreateNote('regular')}
               />
             </ErrorBoundary>
           ) : (
