@@ -75,6 +75,12 @@ interface FocusModeProps {
 const BACKGROUNDS = [bgMountain, bgAlpine, bgForest, bgOcean];
 const DURATION_OPTIONS = [15, 25, 30, 45, 60, 90, 120];
 
+// Preload focus backgrounds immediately so opening Focus Mode paints instantly
+// instead of flashing a half-transparent state while the JPG streams in.
+if (typeof window !== 'undefined') {
+  BACKGROUNDS.forEach((src) => { try { const img = new Image(); img.decoding = 'async'; img.src = src; } catch {} });
+}
+
 // ---- Persistence -----------------------------------------------------------
 const PREFS_KEY = 'focus:prefs:v1';
 const SESSION_KEY = 'focus:session:v1';
