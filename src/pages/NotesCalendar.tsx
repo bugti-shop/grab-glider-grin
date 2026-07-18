@@ -23,6 +23,13 @@ import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NotesCalendarFab } from '@/components/notes/NotesCalendarFab';
+import {
+  acquireEditLock,
+  releaseEditLock,
+  checkRevision,
+  recordRevision,
+  type EditLockToken,
+} from '@/utils/noteEditLock';
 
 type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap' | 'darkHero' | 'dayWeekMonth' | 'cardGrid' | 'editorial' | 'timeline';
 
