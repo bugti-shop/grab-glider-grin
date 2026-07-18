@@ -1381,10 +1381,12 @@ export const TaskDetailPage = ({
             </div>
           </div>
         </div>
+      </div>
 
 
       {/* Safe area padding for bottom */}
       <div style={{ paddingBottom: 'var(--safe-bottom, 0px)' }} />
+
 
       {/* TaskDateTimePage */}
       <TaskDateTimePage
