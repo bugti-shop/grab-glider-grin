@@ -60,29 +60,21 @@ const NotesCalendar = () => {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [calendarBackground, setCalendarBackground] = useState<string>('none');
   const [isBackgroundSheetOpen, setIsBackgroundSheetOpen] = useState(false);
-  
-  
-  const [layout, setLayout] = useState<CalendarLayout>('month');
 
-  // Load folders, background preference, and calendar layout
+  // Load folders and background preference
   useEffect(() => {
     const loadSettings = async () => {
-      const [savedFolders, savedBackground, savedLayout] = await Promise.all([
+      const [savedFolders, savedBackground] = await Promise.all([
         getSetting<Folder[]>('folders', []),
         getSetting<string>('calendarBackground', 'none'),
-        getSetting<CalendarLayout>('notesCalendarLayout', 'month'),
       ]);
       setFolders(savedFolders);
       setCalendarBackground(savedBackground);
-      setLayout(savedLayout);
     };
     loadSettings();
   }, []);
 
-  const changeLayout = useCallback((next: CalendarLayout) => {
-    setLayout(next);
-    setSetting('notesCalendarLayout', next);
-  }, []);
+
 
 
   const selectedDateNotes = useMemo(() => {
