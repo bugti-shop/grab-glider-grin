@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type MouseEvent } from 'react';
 import {
   format,
   startOfWeek,
@@ -171,7 +171,7 @@ export const NotesCalendarDayWeekMonth = ({
     const totalSubtasks = task.subtasks?.length || 0;
     const priorityColor = ringColorFor(task);
 
-    const handleToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleToggle = (e: MouseEvent<HTMLButtonElement>) => {
       e.stopPropagation();
       if (parent) onSubtaskToggle?.(parent, task);
       else onTaskToggle?.(task);
