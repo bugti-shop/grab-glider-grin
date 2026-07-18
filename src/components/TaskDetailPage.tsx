@@ -962,48 +962,52 @@ export const TaskDetailPage = ({
           </button>
         </div>
 
-        {/* Card 2 — Focus Mode / Time Tracking */}
+        {/* Card 2 — Focus, Time & Subtasks */}
         <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <button
             data-tour="task-detail-focus-mode"
             onClick={() => { if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }}
-            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
           >
-            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
-              <Target className="h-5 w-5 text-primary" />
+            <span className="flex-shrink-0 h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Target className="h-[18px] w-[18px] text-primary" />
             </span>
-            <span className="flex-1 text-[14px] font-medium flex items-center gap-1">
+            <span className="flex-1 min-w-0 flex items-center gap-1 text-[14px] font-medium truncate">
               Focus Mode {!isPro && <PremiumCrown size={12} />}
             </span>
-            <span className="text-[13px] text-muted-foreground">Deep Work</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+            <span className="text-[12px] text-muted-foreground truncate">Deep Work</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
           </button>
-          <div className="w-full flex items-center gap-4 px-4 py-4">
-            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-info" />
+
+          <button
+            onClick={() => { if (!requireFeature('time_tracking')) return; }}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-8 w-8 rounded-lg bg-info/10 flex items-center justify-center">
+              <Clock className="h-[18px] w-[18px] text-info" />
             </span>
-            <span className="flex-1 text-[14px] font-medium">Time Tracking</span>
-            <span className="text-[13px] text-muted-foreground">
+            <span className="flex-1 min-w-0 text-[14px] font-medium truncate">Time Tracking</span>
+            <span className="text-[12px] text-muted-foreground tabular-nums truncate">
               {formatPomodoroDuration(pomodoroStats.taskFocusedSec)}
             </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
-          </div>
-        </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+          </button>
 
-        {/* Card 3 — Subtasks */}
-        <div className="rounded-2xl bg-white border border-border/60 overflow-hidden shadow-sm">
           <button
             onClick={() => setIsSubtaskInputSheetOpen(true)}
-            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
           >
-            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
-              <ListChecks className="h-5 w-5 text-success" />
+            <span className="flex-shrink-0 h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+              <ListChecks className="h-[18px] w-[18px] text-success" />
             </span>
-            <span className="flex-1 text-[14px] font-medium">Subtasks</span>
-            <span className="text-[13px] text-muted-foreground">{task.subtasks?.length ?? 0}</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+            <span className="flex-1 min-w-0 text-[14px] font-medium truncate">Subtasks</span>
+            <span className="text-[12px] text-muted-foreground tabular-nums truncate">
+              {task.subtasks?.length ?? 0}
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
           </button>
         </div>
+
 
 
 
