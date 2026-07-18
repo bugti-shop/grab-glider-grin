@@ -290,9 +290,17 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
     if (!mapped) continue;
     const store = (mapped as any).__flowistFolderStore === 'tasks' ? 'tasks' : 'notes';
     const byId = store === 'tasks' ? taskById : noteById;
-    if (r.is_deleted) { if (byId.delete(r.id)) store === 'tasks' ? taskChanged = true : noteChanged = true; continue; }
+    const cloudTs = +new Date(r.updated_at ?? Date.now());
+    if (r.is_deleted) {
+      markDeleted('folders', r.id, cloudTs);
+      if (byId.delete(r.id)) store === 'tasks' ? taskChanged = true : noteChanged = true;
+      continue;
+    }
+    // Suppress resurrections: local tombstone newer than this cloud row.
+    if (isTombstoned('folders', r.id, cloudTs)) continue;
     const existing = byId.get(r.id) as any;
     if (!existing || new Date(existing.updatedAt ?? existing.createdAt ?? 0).getTime() < mapped.updatedAt.getTime()) {
+      clearTombstone('folders', r.id);
       byId.set(r.id, mapped);
       store === 'tasks' ? taskChanged = true : noteChanged = true;
     } else if (new Date(existing.updatedAt ?? existing.createdAt ?? 0).getTime() > mapped.updatedAt.getTime()) {
