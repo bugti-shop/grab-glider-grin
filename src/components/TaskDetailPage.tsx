@@ -851,8 +851,8 @@ export const TaskDetailPage = ({
               onFocus={() => setIsEditingDesc(true)}
               onBlur={() => setTimeout(() => setIsEditingDesc(false), 200)}
               placeholder={t('taskDetail.descriptionPlaceholder')}
-              className="bg-transparent border-none focus:ring-0 focus-visible:ring-0 shadow-none px-0"
-              minHeight={40}
+              className="bg-transparent border-none focus:ring-0 focus-visible:ring-0 shadow-none px-0 py-0 text-[13px]"
+              minHeight={28}
             />
           ) : (
             <div
