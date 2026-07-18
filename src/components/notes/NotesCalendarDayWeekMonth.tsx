@@ -219,11 +219,6 @@ export const NotesCalendarDayWeekMonth = ({
                   {task.text}
                 </span>
               </div>
-              {task.dueDate && (
-                <p className="text-muted-foreground text-xs mt-1">
-                  {new Date(task.dueDate).toLocaleDateString()}
-                </p>
-              )}
               {hasSubtasks && !isExpanded && (
                 <p className="text-muted-foreground text-xs mt-1">
                   {completedSubtasks}/{totalSubtasks} subtasks
