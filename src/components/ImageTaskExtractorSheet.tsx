@@ -7,7 +7,7 @@ import { useAiFeatureGuard } from '@/utils/aiFeatureGuard';
  */
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image as ImageIcon, Loader2, Sparkles, X, Check, Trash2, RotateCcw, Minus, Plus, Maximize2, Camera } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Sparkles, X, Check, Trash2, RotateCcw, Minus, Plus, Maximize2, Camera, Pencil, Calendar as CalendarIcon, Clock, Flag, Folder as FolderIcon } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { Sheet, SheetDescription, SheetHeader, SheetTitle, SheetPortal } from '@/components/ui/sheet';
 import * as SheetPrimitive from '@radix-ui/react-dialog';
@@ -98,6 +98,7 @@ export const ImageTaskExtractorSheet = ({
   const [errorLabel, setErrorLabel] = useState<string | null>(null);
   const captureLockRef = useRef(false);
   const capturedRef = useRef(false);
+  const [expandedUid, setExpandedUid] = useState<string | null>(null);
 
 
   // Reset on close
