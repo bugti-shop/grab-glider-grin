@@ -15,7 +15,7 @@ import {
 } from 'date-fns';
 import { SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Note } from '@/types/note';
+import { Note, TodoItem } from '@/types/note';
 import { NoteCard } from '@/components/NoteCard';
 
 interface Props {
@@ -32,6 +32,12 @@ interface Props {
   onAddNote?: () => void;
   itemLabel?: string; // e.g. "Notes" or "Tasks"
 
+  // Task rendering (optional). When provided, tasks display below the calendar
+  // instead of notes, using a checklist row with a priority-colored ring.
+  tasks?: TodoItem[];
+  onTaskToggle?: (task: TodoItem) => void;
+  onTaskClick?: (task: TodoItem) => void;
+  getPriorityColor?: (priorityId: string) => string;
 }
 
 
@@ -39,6 +45,13 @@ type Mode = 'day' | 'week' | 'month';
 
 const WEEK_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+const DEFAULT_PRIORITY_COLORS: Record<string, string> = {
+  high: '#ef4444',
+  medium: '#f59e0b',
+  low: '#3b82f6',
+  none: '#d1d5db',
+};
 
 export const NotesCalendarDayWeekMonth = ({
   selectedDate,
@@ -48,14 +61,26 @@ export const NotesCalendarDayWeekMonth = ({
   onEditNote,
   onDeleteNote,
   itemLabel = 'Notes',
+  tasks,
+  onTaskToggle,
+  onTaskClick,
+  getPriorityColor,
 }: Props) => {
   const [mode, setMode] = useState<Mode>('day');
 
+  const isTaskMode = Array.isArray(tasks);
+
   const noteDateSet = useMemo(() => {
     const s = new Set<string>();
-    for (const n of notes) s.add(dateKey(new Date(n.createdAt)));
+    if (isTaskMode) {
+      for (const t of tasks!) {
+        if (t.dueDate) s.add(dateKey(new Date(t.dueDate)));
+      }
+    } else {
+      for (const n of notes) s.add(dateKey(new Date(n.createdAt)));
+    }
     return s;
-  }, [notes]);
+  }, [notes, tasks, isTaskMode]);
 
   // Anchor: start of week containing selectedDate (Monday-start)
   const weekStart = useMemo(
