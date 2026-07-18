@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
 import { componentTagger } from "lovable-tagger";
+import { compression } from "vite-plugin-compression2";
+
 
 // Resolve `sonner-real` to the installed package when present, otherwise to a
 // local no-op fallback. Prevents `ENOENT: node_modules/sonner` build failures
