@@ -506,12 +506,21 @@ async function applyHabitsFromCloud(rows: SyncRow[]) {
   const local = await loadHabits();
   const byId = new Map(local.map(h => [h.id, h]));
   for (const r of rows) {
-    if (r.is_deleted) { await deleteHabit(r.id).catch(() => {}); continue; }
+    const rowCloudTs = +new Date(r.updated_at ?? Date.now());
+    if (r.is_deleted) {
+      markDeleted('habits', r.id, rowCloudTs);
+      await deleteHabit(r.id).catch(() => {});
+      continue;
+    }
+    if (isTombstoned('habits', r.id, rowCloudTs)) {
+      enqueueWrite('habits', 'delete', { id: r.id } as any);
+      continue;
+    }
     const merged = mappers.habits.mergeCloud(byId.get(r.id), r) as Habit;
     const existing = byId.get(r.id);
     const localTs = existing ? new Date((existing as any).updatedAt ?? 0).getTime() : 0;
     const cloudTs = new Date((merged as any).updatedAt ?? 0).getTime();
-    if (!existing || localTs < cloudTs) await saveHabit(merged);
+    if (!existing || localTs < cloudTs) { clearTombstone('habits', r.id); await saveHabit(merged); }
     else if (localTs > cloudTs) {
       recordConflict({ table: 'habits', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
     }
