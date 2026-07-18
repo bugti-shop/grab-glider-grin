@@ -125,16 +125,16 @@ export const NotesCalendarDayWeekMonth = ({
   const sortedSelectedTasks = useMemo(() => {
     const withTime = selectedTasks.filter((t) => !!t.reminderTime);
     const withoutTime = selectedTasks.filter((t) => !t.reminderTime);
-    withTime.sort((a, b) => (a.reminderTime! < b.reminderTime! ? -1 : 1));
+    withTime.sort((a, b) => new Date(a.reminderTime!).getTime() - new Date(b.reminderTime!).getTime());
     return [...withTime, ...withoutTime];
   }, [selectedTasks]);
 
   const formatTaskTime = (task: TodoItem): string => {
     if (!task.reminderTime) return '';
-    const [hStr, mStr] = task.reminderTime.split(':');
-    const h = parseInt(hStr, 10);
-    const m = parseInt(mStr, 10);
-    if (isNaN(h)) return '';
+    const d = new Date(task.reminderTime);
+    if (isNaN(d.getTime())) return '';
+    const h = d.getHours();
+    const m = d.getMinutes();
     const period = h >= 12 ? 'PM' : 'AM';
     const hour12 = ((h + 11) % 12) + 1;
     return m === 0 ? `${hour12} ${period}` : `${hour12}:${String(m).padStart(2, '0')} ${period}`;
