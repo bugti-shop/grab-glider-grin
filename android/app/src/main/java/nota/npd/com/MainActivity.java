@@ -20,7 +20,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        registerPlugin(FocusTimerPlugin.class);
+        // FocusTimerPlugin removed on Android to avoid foreground-service permissions.
         registerPlugin(FlowistShareIntentPlugin.class);
         storeWidgetPath(getIntent());
         // Store the widget target BEFORE BridgeActivity boots the WebView so
