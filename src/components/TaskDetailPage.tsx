@@ -1128,7 +1128,27 @@ export const TaskDetailPage = ({
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
           </button>
         </div>
+
+        {/* Subtasks — placed below Task History */}
+        <div className="rounded-2xl bg-white border border-border/60 shadow-sm overflow-hidden">
+          <button
+            type="button"
+            onPointerDown={stopNestedTap}
+            onClick={(e) => { e.stopPropagation(); setIsSubtaskInputSheetOpen(true); }}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
+              <List className="h-5 w-5 text-success" strokeWidth={2.25} />
+            </span>
+            <span className="flex-1 min-w-0 text-[13.5px] font-medium truncate">Subtasks</span>
+            <span className="text-[12.5px] leading-none text-muted-foreground tabular-nums truncate">
+              {task.subtasks?.length ?? 0}
+            </span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
+          </button>
+        </div>
       </div>
+
 
       {/* Task History full-page overlay */}
       {showHistoryPage && (
