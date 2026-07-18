@@ -81,37 +81,40 @@ export const NotesCalendarEditorial = ({
   };
 
   return (
-    <div className="px-5 pt-3 pb-24 bg-[#F7F3EC] min-h-full">
+    <div
+      className="px-4 sm:px-5 pt-2 pb-24 bg-[#F7F3EC] min-h-full overflow-x-hidden overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+      style={{ scrollBehavior: 'smooth' }}
+    >
       {/* Header: Serif month + year + icons */}
-      <div className="flex items-start justify-between gap-3 mb-5">
-        <h1 className="font-serif text-[42px] leading-[1.02] tracking-tight text-foreground">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <h1 className="font-serif leading-[1.02] tracking-tight text-foreground text-[clamp(30px,9vw,42px)] min-w-0 break-words">
           {titleMonth}
-          <span className="ml-2 text-[22px] font-normal text-[#B8A88A] align-top">
+          <span className="ml-1.5 font-normal text-[#B8A88A] align-top text-[clamp(16px,4.8vw,22px)]">
             {titleYear}
           </span>
         </h1>
-        <div className="flex items-center gap-2 flex-shrink-0 pt-2">
+        <div className="flex items-center gap-1.5 flex-shrink-0 pt-1">
           <button
             aria-label="Search"
-            className="h-10 w-10 rounded-full border border-[#E5DFD3] bg-transparent flex items-center justify-center active:bg-[#EFE8DA]"
+            className="h-11 w-11 rounded-full border border-[#E5DFD3] bg-transparent flex items-center justify-center active:bg-[#EFE8DA] touch-manipulation"
           >
             <Search className="h-[17px] w-[17px] text-foreground/70" />
           </button>
           <button
             aria-label="Menu"
-            className="h-10 w-10 rounded-full border border-[#E5DFD3] bg-transparent flex items-center justify-center active:bg-[#EFE8DA]"
+            className="h-11 w-11 rounded-full border border-[#E5DFD3] bg-transparent flex items-center justify-center active:bg-[#EFE8DA] touch-manipulation"
           >
             <Menu className="h-[17px] w-[17px] text-foreground/70" />
           </button>
         </div>
       </div>
 
-      {/* Week pills */}
-      <div className="flex items-center gap-2 mb-6">
+      {/* Week pills — horizontal scroll if cramped */}
+      <div className="flex items-center gap-2 mb-5 -mx-4 px-4 overflow-x-auto no-scrollbar snap-x snap-mandatory">
         <button
           onClick={() => setWeekOffset(0)}
           className={cn(
-            'inline-flex items-center gap-2 rounded-full h-10 px-4 text-[14px] font-medium transition-colors',
+            'snap-start inline-flex items-center gap-2 rounded-full h-11 px-4 text-[14px] font-medium transition-colors flex-shrink-0 touch-manipulation',
             weekOffset === 0
               ? 'bg-foreground text-background'
               : 'bg-transparent text-foreground border border-[#E5DFD3]',
@@ -123,7 +126,7 @@ export const NotesCalendarEditorial = ({
         <button
           onClick={() => setWeekOffset(1)}
           className={cn(
-            'inline-flex items-center gap-2 rounded-full h-10 px-4 text-[14px] font-medium transition-colors',
+            'snap-start inline-flex items-center gap-2 rounded-full h-11 px-4 text-[14px] font-medium transition-colors flex-shrink-0 touch-manipulation',
             weekOffset === 1
               ? 'bg-foreground text-background'
               : 'bg-transparent text-foreground border border-[#E5DFD3]',
@@ -137,7 +140,7 @@ export const NotesCalendarEditorial = ({
       {/* Timeline */}
       <div className="relative">
         {/* Vertical rail */}
-        <div className="absolute left-[5px] top-2 bottom-2 w-px bg-[#E1D9C8]" />
+        <div className="absolute left-[5px] top-3 bottom-3 w-px bg-[#E1D9C8]" />
 
         {days.map((d) => {
           const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -148,37 +151,38 @@ export const NotesCalendarEditorial = ({
           if (dayNotes.length === 0) return null;
 
           return (
-            <section key={key} className={cn('relative pl-6 mb-6', active && '')}>
+            <section key={key} className="relative pl-5 mb-5">
               {/* Dot */}
               <span
                 className={cn(
-                  'absolute left-0 top-[6px] h-[11px] w-[11px] rounded-full border-2 border-[#F7F3EC]',
+                  'absolute left-0 top-[14px] h-[11px] w-[11px] rounded-full border-2 border-[#F7F3EC]',
                   active ? 'bg-foreground' : 'bg-[#C9BDA5]',
                 )}
               />
 
-              {/* Day header */}
+              {/* Day header — full-width tap target, min 44px */}
               <button
                 onClick={() => {
                   onDateSelect(d);
                   toggleDay(key);
                 }}
-                className="w-full flex items-center justify-between mb-3"
+                aria-expanded={!collapsed}
+                className="w-full min-h-11 flex items-center justify-between mb-2.5 py-1.5 -mx-1 px-1 rounded-lg active:bg-[#EFE8DA]/60 touch-manipulation"
               >
-                <div className="flex items-baseline gap-2">
-                  <span className="text-[13px] font-bold tracking-[0.14em] text-foreground uppercase">
+                <div className="flex items-baseline gap-2 min-w-0">
+                  <span className="text-[12.5px] font-bold tracking-[0.14em] text-foreground uppercase">
                     {format(d, 'EEE')}
                   </span>
-                  <span className="text-[13px] font-medium tracking-wide text-[#9E9179] uppercase">
+                  <span className="text-[12.5px] font-medium tracking-wide text-[#9E9179] uppercase truncate">
                     {format(d, 'MMM d')}
                   </span>
                   {isToday(d) && (
-                    <span className="ml-1 text-[10px] font-semibold uppercase tracking-wider text-[#B8A88A]">
+                    <span className="ml-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#B8A88A] flex-shrink-0">
                       Today
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-[13px] text-[#9E9179]">
+                <div className="flex items-center gap-2 text-[13px] text-[#9E9179] flex-shrink-0">
                   <span>{dayNotes.length}</span>
                   <svg
                     className={cn(
@@ -201,7 +205,7 @@ export const NotesCalendarEditorial = ({
 
               {/* Note cards */}
               {!collapsed && (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2.5">
                   {dayNotes.map((n, idx) => {
                     const seed = hashKey(n.id);
                     const tagA = TAG_COLORS[seed % TAG_COLORS.length];
@@ -223,31 +227,30 @@ export const NotesCalendarEditorial = ({
                       <button
                         key={n.id}
                         onClick={() => onEditNote(n)}
-                        className="w-full text-left rounded-2xl bg-[#FBF8F1] border border-[#EDE5D2] px-4 pt-3.5 pb-3 shadow-[0_1px_1px_rgba(0,0,0,0.02)] active:opacity-90 transition-opacity"
+                        className="w-full text-left rounded-2xl bg-[#FBF8F1] border border-[#EDE5D2] px-3.5 pt-3 pb-2.5 shadow-[0_1px_1px_rgba(0,0,0,0.02)] active:scale-[0.99] active:bg-[#F7F1E4] transition-[transform,background-color] touch-manipulation min-h-11"
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <h3 className="font-serif text-[17px] leading-tight text-foreground flex-1">
+                        <div className="flex items-start justify-between gap-2.5">
+                          <h3 className="font-serif text-[16px] leading-tight text-foreground flex-1 min-w-0 break-words">
                             {n.title || 'Untitled note'}
                           </h3>
                           <div className="flex items-center gap-1.5 flex-shrink-0 pt-[2px]">
-                            <span className="text-[12px] text-[#9E9179]">
+                            <span className="text-[11.5px] text-[#9E9179] tabular-nums">
                               {format(created, 'h:mm a')}
                             </span>
                             {pinned && <Pin className="h-3.5 w-3.5 text-[#B8A88A] fill-[#B8A88A]" />}
                           </div>
                         </div>
                         {preview && (
-                          <p className="mt-1.5 text-[13.5px] leading-[1.45] text-[#7A7060]">
+                          <p className="mt-1 text-[13px] leading-[1.45] text-[#7A7060] line-clamp-2">
                             {preview}
-                            {preview.length >= 110 && '…'}
                           </p>
                         )}
-                        <div className="mt-2.5 flex items-center flex-wrap gap-1.5">
+                        <div className="mt-2 flex items-center flex-wrap gap-1.5">
                           {tags.map((tg, i) => (
                             <span
                               key={`${tg}-${i}`}
                               className={cn(
-                                'inline-flex items-center rounded-full px-2.5 py-[3px] text-[11px] font-medium',
+                                'inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium',
                                 i === 0 ? tagA : tagB,
                               )}
                             >
