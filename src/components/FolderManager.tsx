@@ -55,6 +55,8 @@ interface FolderManagerProps {
   // Grid view toggle
   isGridView?: boolean;
   onToggleGridView?: () => void;
+  // Open unified manage folders sheet
+  onOpenManageFolders?: () => void;
 }
 
 const folderColors = [
@@ -87,6 +89,7 @@ export const FolderManager = ({
   archivedNotesCount = 0,
   isGridView = false,
   onToggleGridView,
+  onOpenManageFolders,
 }: FolderManagerProps) => {
   const { t } = useTranslation();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -344,10 +347,10 @@ export const FolderManager = ({
             
             <DropdownMenuSeparator />
             
-            {/* Create Folder */}
-            <DropdownMenuItem onClick={() => setIsCreateOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('notesMenu.createFolder')}
+            {/* Manage Folders (create/edit/delete including Inbox) */}
+            <DropdownMenuItem onClick={() => (onOpenManageFolders ? onOpenManageFolders() : setIsCreateOpen(true))}>
+              <FolderIcon className="h-4 w-4 mr-2" />
+              {t('folders.manageFolders', 'Manage Folders')}
             </DropdownMenuItem>
 
             {/* Import Notes */}

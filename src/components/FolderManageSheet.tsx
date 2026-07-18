@@ -328,16 +328,12 @@ export const FolderManageSheet = ({
                                       <Star className={cn("h-4 w-4", folder.isFavorite ? "fill-warning text-warning" : "text-muted-foreground")} />
                                     </Button>
                                   )}
-                                  {!folder.isDefault && (
-                                    <Button size="icon" variant="ghost" onClick={() => startEdit(folder)}>
-                                      <Edit2 className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                  {!folder.isDefault && (
-                                    <Button size="icon" variant="ghost" onClick={() => setFolderToDelete(folder)} title="Delete folder">
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                  )}
+                                  <Button size="icon" variant="ghost" onClick={() => startEdit(folder)}>
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" onClick={() => setFolderToDelete(folder)} title="Delete folder">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
                                 </div>
                               </div>
                             )}

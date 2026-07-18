@@ -12,6 +12,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 
 
 import { FolderManager } from '@/components/FolderManager';
+import { FolderManageSheet } from '@/components/FolderManageSheet';
 import { MoveToFolderSheet } from '@/components/MoveToFolderSheet';
 import { NoteTemplateSheet } from '@/components/NoteTemplateSheet';
 
@@ -113,6 +114,7 @@ const Index = () => {
   const [upcomingReminders, setUpcomingReminders] = useState<any[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'type'>('date');
+  const [isFolderManageOpen, setIsFolderManageOpen] = useState(false);
   const [filterByType, setFilterByType] = useState<NoteType | null>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
@@ -699,12 +701,7 @@ const Index = () => {
   };
 
   const handleDeleteFolder = async (folderId: string) => {
-    const target = folders.find(f => f.id === folderId);
     const remaining = folders.filter(f => f.id !== folderId);
-    if (target?.isDefault && remaining.length > 0) {
-      toast.error('Inbox cannot be deleted while other folders exist.');
-      return;
-    }
     if (remaining.length === 0) {
       toast.error('Cannot delete your last folder.');
       return;
@@ -729,14 +726,9 @@ const Index = () => {
     }
   };
 
-  const handleEditFolder = (folderId: string, name: string) => {
-    const target = folders.find(f => f.id === folderId);
-    if (target?.isDefault) {
-      toast.error('Inbox is a system folder and cannot be renamed.');
-      return;
-    }
+  const handleEditFolder = (folderId: string, name: string, color?: string) => {
     setFolders(prev => {
-      const updated = prev.map(f => f.id === folderId ? { ...f, name, updatedAt: new Date() } as Folder : f);
+      const updated = prev.map(f => f.id === folderId ? { ...f, name, ...(color ? { color } : {}), updatedAt: new Date() } as Folder : f);
       persistFolders(updated);
       return updated;
     });
@@ -1253,6 +1245,16 @@ const Index = () => {
           archivedNotesCount={archivedNotes.length}
           isGridView={isGridView}
           onToggleGridView={handleToggleGridView}
+          onOpenManageFolders={() => setIsFolderManageOpen(true)}
+        />
+
+        <FolderManageSheet
+          isOpen={isFolderManageOpen}
+          onClose={() => setIsFolderManageOpen(false)}
+          folders={folders}
+          onCreateFolder={(name, color) => handleCreateFolder(name, color)}
+          onEditFolder={(folderId, name, color) => handleEditFolder(folderId, name, color)}
+          onDeleteFolder={handleDeleteFolder}
         />
 
         {/* Bulk Selection Mode Bar */}
