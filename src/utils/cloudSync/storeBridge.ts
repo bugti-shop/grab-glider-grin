@@ -392,7 +392,17 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
   const byId = new Map(local.map((t: any) => [t.id, t]));
   let changed = false;
   for (const r of rows) {
-    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
+    const cloudTs = new Date(r.updated_at ?? Date.now()).getTime();
+    if (r.is_deleted) {
+      markDeleted('tasks', r.id, cloudTs);
+      if (byId.delete(r.id)) changed = true;
+      continue;
+    }
+    // Suppress resurrections.
+    if (isTombstoned('tasks', r.id, cloudTs)) {
+      enqueueWrite('tasks', 'delete', { id: r.id } as any);
+      continue;
+    }
     const existing = byId.get(r.id) as any;
     const cloudMerged = mappers.tasks.mergeCloud(existing, r) as TodoItem;
     const localTs = new Date(existing?.modifiedAt ?? existing?.updatedAt ?? existing?.createdAt ?? 0).getTime();
