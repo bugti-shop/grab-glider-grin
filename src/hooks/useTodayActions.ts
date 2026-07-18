@@ -246,18 +246,24 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
    * Used by AI task extractors so folders proposed by the AI auto-materialize.
    * Returns the resolved folder id, or null if creation was blocked by caps.
    */
-  const ensureFolderByName = useCallback((rawName: string): string | null => {
+  const ensureFolderByName = useCallback((rawName: string, colorOverride?: string): string | null => {
     const name = (rawName || '').trim();
     if (!name) return null;
     const existing = folders.find(f => (f.name || '').trim().toLowerCase() === name.toLowerCase());
     if (existing) return existing.id;
     if (!requireCapacity('taskFolders', folders.length)) return null;
     const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-    const color = palette[folders.length % palette.length];
+    const color = colorOverride || palette[folders.length % palette.length];
     const id = genId();
     const now = new Date();
     const newFolder: Folder = { id, name, color, isDefault: false, createdAt: now, updatedAt: now } as Folder;
-    setFolders(prev => [...prev, newFolder]);
+    // Functional update guards against stale-closure duplicates when this is
+    // called multiple times in the same tick (e.g. AI batch import).
+    setFolders(prev => {
+      const dup = prev.find(f => (f.name || '').trim().toLowerCase() === name.toLowerCase());
+      if (dup) return prev;
+      return [...prev, newFolder];
+    });
     return id;
   }, [folders, requireCapacity, setFolders]);
 
