@@ -361,16 +361,16 @@ export const NotesCalendarDayWeekMonth = ({
                       </span>
                       <span
                         className={cn(
-                          'flex-1 min-w-0 truncate text-[16px] leading-tight',
+                          'flex-1 min-w-0 truncate text-[13.5px] leading-tight font-normal',
                           task.completed
                             ? 'text-muted-foreground line-through'
-                            : 'text-foreground font-medium',
+                            : 'text-foreground',
                         )}
                       >
                         {task.text}
                       </span>
                       {time && (
-                        <span className="shrink-0 text-[13px] text-muted-foreground tabular-nums">
+                        <span className="shrink-0 text-[11.5px] text-muted-foreground tabular-nums">
                           {time}
                         </span>
                       )}
