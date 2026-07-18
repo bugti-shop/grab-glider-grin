@@ -16,6 +16,7 @@ const iso = (v: unknown): string | null => {
   if (typeof v === 'string') { const d = new Date(v); return isNaN(+d) ? null : d.toISOString(); }
   return null;
 };
+const nowIso = () => new Date().toISOString();
 const isUuid = (s: unknown): s is string =>
   typeof s === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
@@ -37,6 +38,7 @@ export const mappers = {
   folders: {
     toCloud(f: any, store: 'notes' | 'tasks' = 'notes') {
       if (!isUuid(f.id)) return null;
+      const updatedAt = iso(f.updatedAt) ?? iso(f.modifiedAt) ?? iso(f.createdAt) ?? nowIso();
       return {
         id: f.id,
         name: f.name,
@@ -46,13 +48,14 @@ export const mappers = {
         order_index: typeof f.order === 'number' ? f.order : 0,
         payload: { ...f, __flowistFolderStore: store },
         is_deleted: false,
-        created_at: iso(f.createdAt),
-        updated_at: iso(f.updatedAt) ?? iso(f.modifiedAt) ?? iso(f.createdAt) ?? new Date().toISOString(),
+        created_at: iso(f.createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     fromCloud(r: any): any | null {
       if (!r?.id) return null;
       const payload = reviveDates(payloadObject(r), ['createdAt', 'updatedAt', 'modifiedAt']);
+      const updatedAt = iso(n.updatedAt) ?? iso(n.createdAt) ?? nowIso();
       return {
         ...(payload ?? {}),
         id: r.id,
@@ -111,13 +114,14 @@ export const mappers = {
         tags: Array.isArray(n.tagIds) ? n.tagIds : [],
         payload: lightPayload,
         is_deleted: !!n.isDeleted,
-        created_at: iso(n.createdAt),
-        updated_at: iso(n.updatedAt) ?? new Date().toISOString(),
+        created_at: iso(n.createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     /** Partial merge — only fields the cloud row owns. */
     mergeCloud(local: Note | undefined, r: any): Partial<Note> & { id: string } {
       const payload = reviveDates(payloadObject(r), ['createdAt', 'updatedAt', 'archivedAt', 'deletedAt', 'reminderTime']);
+      const updatedAt = iso((t as any).modifiedAt) ?? iso((t as any).updatedAt) ?? iso((t as any).createdAt) ?? nowIso();
       return {
         ...(local ?? {}),
         ...(payload ?? {}),
@@ -170,8 +174,8 @@ export const mappers = {
         assignee_id: isUuid((t as any).assigneeId) ? (t as any).assigneeId : null,
         payload: sanitizedPayload,
         is_deleted: !!(t as any).isDeleted,
-        created_at: iso((t as any).createdAt),
-        updated_at: iso((t as any).modifiedAt) ?? iso((t as any).updatedAt) ?? iso((t as any).createdAt) ?? new Date().toISOString(),
+        created_at: iso((t as any).createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     mergeCloud(local: TodoItem | undefined, r: any): Partial<TodoItem> & { id: string } {
@@ -182,6 +186,7 @@ export const mappers = {
         (rawPayload ?? {}) as any;
       const { estimatedHours: _le, escalationRule: _ls, attachments: _la, ...localClean } =
         (local ?? {}) as any;
+      const updatedAt = iso((s as any).updatedAt) ?? iso((s as any).createdAt) ?? nowIso();
       return {
         ...(localClean ?? {}),
         ...payload,
@@ -213,12 +218,14 @@ export const mappers = {
         folder_id: isUuid(s.folderId) ? s.folderId : null,
         payload: s,
         is_deleted: false,
-        updated_at: new Date().toISOString(),
+        created_at: iso((s as any).createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     fromCloud(r: any): TaskSection | null {
       if (!r?.id) return null;
       const payload = payloadObject(r) as Partial<TaskSection> | null;
+      const updatedAt = iso((h as any).updatedAt) ?? iso((h as any).createdAt) ?? nowIso();
       return {
         ...(payload ?? {}),
         id: r.id,
@@ -245,12 +252,13 @@ export const mappers = {
         icon: (h as any).emoji ?? (h as any).icon ?? null,
         payload: h,
         is_deleted: !!(h as any).isArchived || !!(h as any).isDeleted,
-        created_at: iso((h as any).createdAt),
-        updated_at: iso((h as any).updatedAt) ?? new Date().toISOString(),
+        created_at: iso((h as any).createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     mergeCloud(local: Habit | undefined, r: any): Partial<Habit> & { id: string } {
       const payload = (payloadObject(r) ?? {}) as any;
+      const updatedAt = c.updatedAt ? new Date(c.updatedAt).toISOString() : (c.createdAt ? new Date(c.createdAt).toISOString() : nowIso());
       return {
         ...(local ?? {}),
         ...payload,
@@ -278,12 +286,13 @@ export const mappers = {
         repeat: c.repeat ?? 'none',
         payload: c,
         is_deleted: false,
-        created_at: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
-        updated_at: c.updatedAt ? new Date(c.updatedAt).toISOString() : new Date().toISOString(),
+        created_at: c.createdAt ? new Date(c.createdAt).toISOString() : updatedAt,
+        updated_at: updatedAt,
       };
     },
     mergeCloud(local: any | undefined, r: any): any {
       const payload = (payloadObject(r) ?? {}) as any;
+      const updatedAt = iso(s.updatedAt) ?? iso(s.createdAt) ?? nowIso();
       return {
         ...(local ?? {}),
         ...payload,
@@ -307,7 +316,8 @@ export const mappers = {
         order_index: typeof s.order === 'number' ? s.order : 0,
         payload: s,
         is_deleted: false,
-        updated_at: new Date().toISOString(),
+        created_at: iso(s.createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     fromCloud(r: any): any | null {
