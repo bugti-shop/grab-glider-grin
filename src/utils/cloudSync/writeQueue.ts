@@ -54,7 +54,7 @@ function save(q: QueuedWrite[]): void {
         tail = tail.slice(Math.floor(tail.length / 2));
         raw = JSON.stringify(tail);
       }
-      return;
+      if (raw.length > MAX_QUEUE_STORAGE_CHARS) return;
     }
     localStorage.setItem(STORAGE_KEY, raw);
   } catch {}
