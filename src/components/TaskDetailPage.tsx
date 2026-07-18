@@ -828,11 +828,18 @@ export const TaskDetailPage = ({
               "text-[28px] leading-[1.15] font-bold border-none shadow-none px-0 h-auto py-0 focus-visible:ring-0 placeholder:text-muted-foreground/50 bg-transparent",
               task.completed && "line-through opacity-60"
             )}
+            style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif' }}
           />
         </div>
 
         {/* Description — plain paragraph, no label, no box */}
-        <div className="-mt-1 font-sans" style={{ color: '#adadad' }}>
+        <div
+          className="-mt-1"
+          style={{
+            color: '#adadad',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif',
+          }}
+        >
           <style>{RICH_TEXT_EDITOR_STYLES}</style>
           {isEditingDesc || !descText ? (
             <MentionDescriptionEditor
@@ -844,14 +851,14 @@ export const TaskDetailPage = ({
               onFocus={() => setIsEditingDesc(true)}
               onBlur={() => setTimeout(() => setIsEditingDesc(false), 200)}
               placeholder={t('taskDetail.descriptionPlaceholder')}
-              className="bg-transparent border-none focus:ring-0 focus-visible:ring-0 shadow-none px-0 font-sans"
+              className="bg-transparent border-none focus:ring-0 focus-visible:ring-0 shadow-none px-0"
               minHeight={40}
             />
           ) : (
             <div
               onClick={() => setIsEditingDesc(true)}
-              className="rich-text-editor w-full text-[14px] whitespace-pre-wrap leading-relaxed cursor-text font-sans"
-              style={{ color: '#adadad' }}
+              className="rich-text-editor w-full text-[15px] whitespace-pre-wrap leading-[1.45] cursor-text"
+              style={{ color: '#adadad', fontFamily: 'inherit' }}
               dangerouslySetInnerHTML={{ __html: descriptionToDisplayHtml(descText) }}
             />
           )}
