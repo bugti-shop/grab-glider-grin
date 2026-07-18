@@ -85,7 +85,7 @@ const NotesCalendar = () => {
   const [calendarBackground, setCalendarBackground] = useState<string>('none');
   const [isBackgroundSheetOpen, setIsBackgroundSheetOpen] = useState(false);
 
-  // Load folders and background preference
+  // Load folders and background preference (refresh on realtime folder events)
   useEffect(() => {
     const loadSettings = async () => {
       const [savedFolders, savedBackground] = await Promise.all([
@@ -96,6 +96,13 @@ const NotesCalendar = () => {
       setCalendarBackground(savedBackground);
     };
     loadSettings();
+    const onFolders = () => { getSetting<Folder[]>('folders', []).then(setFolders); };
+    window.addEventListener('foldersUpdated', onFolders);
+    window.addEventListener('foldersRestored', onFolders);
+    return () => {
+      window.removeEventListener('foldersUpdated', onFolders);
+      window.removeEventListener('foldersRestored', onFolders);
+    };
   }, []);
 
 
