@@ -33,7 +33,16 @@ function loadPersisted(): QueuedWrite[] {
       localStorage.removeItem(STORAGE_KEY);
       return [];
     }
-    return raw ? JSON.parse(raw) as QueuedWrite[] : [];
+    const parsed = raw ? JSON.parse(raw) as QueuedWrite[] : [];
+    // Older builds compacted persisted large notes by writing body:null without
+    // a marker. Treat those queued upserts as omitted bodies so they rehydrate
+    // from IndexedDB instead of uploading an empty note to the backend.
+    return parsed.map((entry) => {
+      if (entry.table === 'notes' && entry.op === 'upsert' && (entry.row as any).body === null && !(entry.row as any).__bodyOmittedFromQueue) {
+        return { ...entry, row: { ...(entry.row as any), __bodyOmittedFromQueue: true } };
+      }
+      return entry;
+    });
   } catch { return []; }
 }
 function save(q: QueuedWrite[]): void {
