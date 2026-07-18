@@ -740,7 +740,7 @@ export const TaskDetailPage = ({
   return (
     <div 
       className={cn(
-        "fixed inset-y-0 right-0 left-0 z-50 flex flex-col transition-transform duration-300 border-l border-border",
+        "fixed inset-y-0 right-0 left-0 z-50 flex flex-col transition-transform duration-300 border-l border-border pointer-events-auto",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}
       style={{
