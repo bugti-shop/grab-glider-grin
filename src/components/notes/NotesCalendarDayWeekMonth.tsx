@@ -331,7 +331,7 @@ export const NotesCalendarDayWeekMonth = ({
                   <li key={task.id}>
                     <button
                       onClick={() => onTaskClick?.(task)}
-                      className="w-full flex items-center gap-3 py-3.5 text-left active:bg-muted/40 rounded-md transition-colors"
+                      className="w-full flex items-center gap-2.5 py-2.5 text-left active:bg-muted/40 rounded-md transition-colors"
                     >
                       <span
                         role="checkbox"
@@ -340,14 +340,14 @@ export const NotesCalendarDayWeekMonth = ({
                           e.stopPropagation();
                           onTaskToggle?.(task);
                         }}
-                        className="shrink-0 h-[22px] w-[22px] rounded-full flex items-center justify-center transition-colors"
+                        className="shrink-0 h-[17px] w-[17px] rounded-full flex items-center justify-center transition-colors"
                         style={{
-                          border: `2px solid ${ring}`,
+                          border: `1.5px solid ${ring}`,
                           background: task.completed ? ring : 'transparent',
                         }}
                       >
                         {task.completed && (
-                          <svg viewBox="0 0 12 12" className="h-[10px] w-[10px] text-white">
+                          <svg viewBox="0 0 12 12" className="h-[8px] w-[8px] text-white">
                             <path
                               d="M2 6.5l2.5 2.5L10 3.5"
                               fill="none"
