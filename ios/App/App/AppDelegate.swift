@@ -11,10 +11,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Install compressed asset handler + long-cache headers for the WKWebView
+        // that serves our bundled `dist/` output. See WebViewAssetHandler+Compression.swift.
+        FlowistAssetCompression.install()
+
         // Manually register the Focus timer plugin (auto-discovery only picks up
         // Objective-C wrapped classes; our Swift plugin is exposed via @objc).
         return true
     }
+
 
     func application(_ app: UIApplication, open url: URL,
                      options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
