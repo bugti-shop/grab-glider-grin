@@ -550,6 +550,16 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
       setCodeLanguage(note.codeLanguage || 'auto');
       setMetaDescription(note.metaDescription || '');
       setLocation(note.location || '');
+
+      // Capture snapshot AFTER state setters queue so autosave can compare.
+      initialSnapshotRef.current = {
+        title: note.title || '',
+        content: (recoveredContent && WEB_CLIP_RE.test(recoveredContent))
+          ? normalizeWebClipHtmlForFastOffline(recoveredContent)
+          : (recoveredContent || ''),
+        codeContent: note.codeContent || '',
+      };
+      
       
     } else {
       // Reset draft ID for new notes to prevent overwriting
