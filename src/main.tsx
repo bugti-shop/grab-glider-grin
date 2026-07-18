@@ -67,6 +67,26 @@ if (isPreviewHost || isInIframe) {
   navigator.serviceWorker?.getRegistrations().then((registrations) => {
     registrations.forEach((r) => r.unregister());
   });
+} else {
+  // Production: force the newest service worker to activate ASAP and evict
+  // legacy runtime cache buckets so returning users never get stuck on old
+  // JS/CSS bundles referencing removed UI (e.g. old calendar layouts).
+  const SW_CACHE_PURGE_KEY = 'nota_sw_cache_purge_v2';
+  try {
+    if (localStorage.getItem(SW_CACHE_PURGE_KEY) !== 'done') {
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          names
+            .filter((n) => n === 'js-chunks' || n === 'workbox-precache-v2' || /^workbox-/.test(n))
+            .forEach((n) => caches.delete(n).catch(() => {}));
+        }).catch(() => {});
+      }
+      navigator.serviceWorker?.getRegistrations().then((regs) => {
+        regs.forEach((r) => { try { r.update(); } catch {} });
+      }).catch(() => {});
+      localStorage.setItem(SW_CACHE_PURGE_KEY, 'done');
+    }
+  } catch {}
 }
 import { migrateLocalStorageToIndexedDB, getSetting, warmSettingsCache } from "./utils/settingsStorage";
 import { migrateNotesToIndexedDB } from "./utils/noteStorage";

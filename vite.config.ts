@@ -31,15 +31,45 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       injectRegister: "script-defer",
       workbox: {
+        // Force the new SW to take over immediately for returning users
+        // and evict any stale precache from the previous deploy.
+        clientsClaim: true,
+        skipWaiting: true,
+        cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         globPatterns: ["**/*.{css,html,ico,png,svg,woff2,webp,webmanifest}"],
+        // HTML must be network-first so users always see the newest
+        // index.html referencing the latest hashed JS/CSS bundle.
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
           {
-            urlPattern: /\.js$/i,
-            handler: "StaleWhileRevalidate",
+            // App shell navigations: always try network first so a fresh
+            // deploy is picked up on the very next page load.
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
             options: {
-              cacheName: "js-chunks",
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheName: "html-shell",
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
+          {
+            // Hashed JS chunks are content-addressed, so cache-first is
+            // safe and fast. Old chunk names simply stop being requested.
+            urlPattern: /\/assets\/.*\.js$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "js-chunks-v2",
+              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+          {
+            urlPattern: /\/assets\/.*\.css$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "css-chunks-v2",
+              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
           {
@@ -59,7 +89,6 @@ export default defineConfig(({ mode }) => ({
             },
           },
         ],
-        navigateFallbackDenylist: [/^\/~oauth/],
       },
       manifest: {
         name: "Flowist - Notes & Todo",
