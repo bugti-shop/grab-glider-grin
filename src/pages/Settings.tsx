@@ -35,6 +35,7 @@ const Settings = () => {
   const { openPaywall } = useSubscription();
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [showHeaderOffsetSheet, setShowHeaderOffsetSheet] = useState(false);
+  const [showAccessibilityZoomSheet, setShowAccessibilityZoomSheet] = useState(false);
 
   // Unified row style component
   const SettingsRow = ({ label, onClick, showCrown }: { label: React.ReactNode; onClick: () => void; showCrown?: boolean }) => (
@@ -98,6 +99,7 @@ const Settings = () => {
             <SettingsRow label={t('settings.tasksSettings', 'Tasks Settings')} showCrown onClick={() => { if (requireFeature('tasks_settings')) state.setShowTasksSettingsSheet(true); }} />
             <SettingsRow label={t('settings.customizeNavigation', 'Customize Navigation')} showCrown onClick={() => state.setShowCustomizeNavigationSheet(true)} />
             <SettingsRow label={t('settings.headerOffset', 'Header Offset (Status Bar)')} onClick={() => setShowHeaderOffsetSheet(true)} />
+            <SettingsRow label={t('settings.accessibilityZoom', 'Accessibility · App Zoom')} onClick={() => setShowAccessibilityZoomSheet(true)} />
           </div>
 
           {/* Security Section */}
@@ -213,6 +215,7 @@ const Settings = () => {
       
       <FeedbackDialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog} />
       <HeaderOffsetSheet isOpen={showHeaderOffsetSheet} onClose={() => setShowHeaderOffsetSheet(false)} />
+      <AccessibilityZoomSheet isOpen={showAccessibilityZoomSheet} onClose={() => setShowAccessibilityZoomSheet(false)} />
     </div>
   );
 };
