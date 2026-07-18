@@ -738,13 +738,14 @@ export const TaskDetailPage = ({
   return (
     <div 
       className={cn(
-        "fixed inset-y-0 right-0 left-0 bg-background z-50 flex flex-col transition-transform duration-300 border-l border-border",
+        "fixed inset-y-0 right-0 left-0 z-50 flex flex-col transition-transform duration-300 border-l border-border",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}
       style={{
         paddingTop: 'var(--safe-top, 0px)',
         paddingBottom: 'var(--safe-bottom, 0px)',
         left: 'var(--desktop-sidebar-width, 0px)',
+        backgroundColor: '#f8f8f6',
       }}
     >
       {/* Header — back / share / comments / more */}
@@ -815,7 +816,7 @@ export const TaskDetailPage = ({
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 py-2 space-y-4">
 
-        {/* Title + Description */}
+        {/* Title */}
         <div className="pt-1 space-y-2">
           <Input
             value={title}
@@ -823,27 +824,57 @@ export const TaskDetailPage = ({
             onBlur={handleTitleBlur}
             placeholder={t('taskDetail.taskTitle')}
             className={cn(
-              "text-[28px] leading-[1.15] font-bold border-none shadow-none px-0 h-auto py-0 focus-visible:ring-0 placeholder:text-muted-foreground/50",
+              "text-[28px] leading-[1.15] font-bold border-none shadow-none px-0 h-auto py-0 focus-visible:ring-0 placeholder:text-muted-foreground/50 bg-transparent",
               task.completed && "line-through opacity-60"
             )}
           />
-          {descText && !isEditingDesc && (
-            <p className="text-[15px] leading-relaxed text-muted-foreground">
-              {descText.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()}
-            </p>
+        </div>
+
+        {/* Description Section with @mention support — moved directly below title */}
+        <div className="space-y-2">
+          <style>{RICH_TEXT_EDITOR_STYLES}</style>
+          <div className="flex items-center justify-between gap-2 text-[13px] font-medium text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              {t('taskDetail.description')}
+            </div>
+            {descText && !isEditingDesc && (
+              <button type="button" className="text-xs text-primary font-medium" onClick={() => setIsEditingDesc(true)}>
+                {t('common.edit', 'Edit')}
+              </button>
+            )}
+          </div>
+          {isEditingDesc || !descText ? (
+            <MentionDescriptionEditor
+              value={descText}
+              onChange={(next) => {
+                setDescText(next);
+                onUpdate({ ...task, description: next });
+              }}
+              onFocus={() => setIsEditingDesc(true)}
+              onBlur={() => setTimeout(() => setIsEditingDesc(false), 200)}
+              placeholder={t('taskDetail.descriptionPlaceholder')}
+              className="rounded-xl bg-white border-border/50 focus:ring-primary/20"
+              minHeight={100}
+            />
+          ) : (
+            <div
+              className="rich-text-editor w-full min-h-[60px] p-3 rounded-xl bg-white border border-border/50 text-sm whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: descriptionToDisplayHtml(descText) }}
+            />
           )}
         </div>
 
         {/* Card 1 — Status / Priority / Due Date / Reminder */}
-        <div className="rounded-2xl bg-card border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
+        <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button data-tour="task-detail-status" className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
+              <button data-tour="task-detail-status" className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left">
                 <span className="flex-shrink-0 h-6 w-6 rounded-full border-[1.5px] border-foreground/80 flex items-center justify-center">
                   <MoreHorizontal className="h-3 w-3" />
                 </span>
-                <span className="flex-1 text-[16px] font-semibold">Status</span>
-                <span className="text-[13px] px-2.5 py-0.5 rounded-full bg-info/15 text-info font-medium">
+                <span className="flex-1 text-[14px] font-medium">Status</span>
+                <span className="text-[12px] px-2.5 py-0.5 rounded-full bg-info/15 text-info font-medium">
                   {getStatusConfig(task.status || 'not_started').label}
                 </span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
@@ -867,7 +898,7 @@ export const TaskDetailPage = ({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
+              <button className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left">
                 <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
                   <Flag
                     className="h-5 w-5"
@@ -877,9 +908,9 @@ export const TaskDetailPage = ({
                     }}
                   />
                 </span>
-                <span className="flex-1 text-[16px] font-semibold">Priority</span>
+                <span className="flex-1 text-[14px] font-medium">Priority</span>
                 <span
-                  className="text-[15px] font-medium capitalize"
+                  className="text-[13px] font-medium capitalize"
                   style={{ color: task.priority && task.priority !== 'none' ? getPriorityHex(task.priority) : 'hsl(var(--muted-foreground))' }}
                 >
                   {task.priority && task.priority !== 'none' ? getPriorityName(task.priority) : 'None'}
@@ -895,12 +926,12 @@ export const TaskDetailPage = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <button onClick={() => setShowDateTimePage(true)} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
+          <button onClick={() => setShowDateTimePage(true)} className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left">
             <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
               <CalendarIcon className="h-5 w-5" />
             </span>
-            <span className="flex-1 text-[16px] font-semibold">Due Date</span>
-            <span className="text-[15px] text-muted-foreground">
+            <span className="flex-1 text-[14px] font-medium">Due Date</span>
+            <span className="text-[13px] text-muted-foreground">
               {task.dueDate ? format(new Date(task.dueDate), 'EEE, MMM d, yyyy') : 'None'}
             </span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
@@ -913,13 +944,13 @@ export const TaskDetailPage = ({
               if (currentCount >= 1 && !requireCapacity('remindersPerTask', currentCount)) return;
               setShowExtraReminderSheet(true);
             }}
-            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
               <Bell className="h-5 w-5" />
             </span>
-            <span className="flex-1 text-[16px] font-semibold">Reminder</span>
-            <span className="text-[15px] text-muted-foreground truncate max-w-[50%]">
+            <span className="flex-1 text-[14px] font-medium">Reminder</span>
+            <span className="text-[13px] text-muted-foreground truncate max-w-[50%]">
               {(() => {
                 const list = (task as any).extraReminders as Array<{ time: Date }> | undefined;
                 if (list && list.length) return list.length === 1 ? format(new Date(list[0].time), 'MMM d, h:mm a') : `${list.length} reminders`;
@@ -932,27 +963,27 @@ export const TaskDetailPage = ({
         </div>
 
         {/* Card 2 — Focus Mode / Time Tracking */}
-        <div className="rounded-2xl bg-card border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
+        <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <button
             data-tour="task-detail-focus-mode"
             onClick={() => { if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }}
-            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
               <Target className="h-5 w-5 text-primary" />
             </span>
-            <span className="flex-1 text-[16px] font-semibold flex items-center gap-1">
+            <span className="flex-1 text-[14px] font-medium flex items-center gap-1">
               Focus Mode {!isPro && <PremiumCrown size={12} />}
             </span>
-            <span className="text-[15px] text-muted-foreground">Deep Work</span>
+            <span className="text-[13px] text-muted-foreground">Deep Work</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
           </button>
-          <div className="w-full flex items-center gap-3 px-4 py-3.5">
+          <div className="w-full flex items-center gap-4 px-4 py-4">
             <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
               <Clock className="h-5 w-5 text-info" />
             </span>
-            <span className="flex-1 text-[16px] font-semibold">Time Tracking</span>
-            <span className="text-[15px] text-muted-foreground">
+            <span className="flex-1 text-[14px] font-medium">Time Tracking</span>
+            <span className="text-[13px] text-muted-foreground">
               {formatPomodoroDuration(pomodoroStats.taskFocusedSec)}
             </span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
@@ -960,42 +991,43 @@ export const TaskDetailPage = ({
         </div>
 
         {/* Card 3 — Subtasks / Tags / Convert to Notes */}
-        <div className="rounded-2xl bg-card border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
+        <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <button
             onClick={() => setIsSubtaskInputSheetOpen(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
               <ListChecks className="h-5 w-5 text-success" />
             </span>
-            <span className="flex-1 text-[16px] font-semibold">Subtasks</span>
-            <span className="text-[15px] text-muted-foreground">{task.subtasks?.length ?? 0}</span>
+            <span className="flex-1 text-[14px] font-medium">Subtasks</span>
+            <span className="text-[13px] text-muted-foreground">{task.subtasks?.length ?? 0}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
           </button>
           <button
             onClick={() => setShowTagInput(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
               <Tag className="h-5 w-5 text-info" />
             </span>
-            <span className="flex-1 text-[16px] font-semibold">Tags</span>
-            <span className="text-[15px] text-muted-foreground truncate max-w-[50%]">
+            <span className="flex-1 text-[14px] font-medium">Tags</span>
+            <span className="text-[13px] text-muted-foreground truncate max-w-[50%]">
               {task.coloredTags && task.coloredTags.length > 0 ? task.coloredTags.map(tt => tt.name).join(', ') : 'None'}
             </span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
           </button>
           <button
             onClick={handleConvertToNote}
-            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
               <FileEdit className="h-5 w-5 text-warning" />
             </span>
-            <span className="flex-1 text-[16px] font-semibold">Convert to Notes</span>
+            <span className="flex-1 text-[14px] font-medium">Convert to Notes</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
           </button>
         </div>
+
 
 
         {/* Voice Recording Display */}
@@ -1401,40 +1433,6 @@ export const TaskDetailPage = ({
             )}
           </div>
 
-          {/* Description Section with @mention support */}
-          <div className="space-y-2 border-t border-border pt-4">
-            <style>{RICH_TEXT_EDITOR_STYLES}</style>
-            <div className="flex items-center justify-between gap-2 text-sm font-medium text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                {t('taskDetail.description')}
-              </div>
-              {descText && !isEditingDesc && (
-                <button type="button" className="text-xs text-primary font-medium" onClick={() => setIsEditingDesc(true)}>
-                  {t('common.edit', 'Edit')}
-                </button>
-              )}
-            </div>
-            {isEditingDesc || !descText ? (
-              <MentionDescriptionEditor
-                value={descText}
-                onChange={(next) => {
-                  setDescText(next);
-                  onUpdate({ ...task, description: next });
-                }}
-                onFocus={() => setIsEditingDesc(true)}
-                onBlur={() => setTimeout(() => setIsEditingDesc(false), 200)}
-                placeholder={t('taskDetail.descriptionPlaceholder')}
-                className="rounded-xl bg-muted/30 border-border/50 focus:ring-primary/20"
-                minHeight={120}
-              />
-            ) : (
-              <div
-                className="rich-text-editor w-full min-h-[60px] p-3 rounded-xl bg-muted/30 border border-border/50 text-sm whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{ __html: descriptionToDisplayHtml(descText) }}
-              />
-            )}
-          </div>
 
           {/* Comments & Activity Thread */}
           <div id="td-comments" />
