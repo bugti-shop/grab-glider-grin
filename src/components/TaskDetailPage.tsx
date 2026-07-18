@@ -1001,28 +1001,30 @@ export const TaskDetailPage = ({
         {/* Card 3 — Subtasks / Tags / Convert to Notes */}
         <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
           <button
-            onClick={() => setIsSubtaskInputSheetOpen(true)}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setIsSubtaskInputSheetOpen(true); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <List className="h-4 w-4 text-success" strokeWidth={2.25} />
             </span>
-            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Subtasks</span>
-            <span className="text-[12px] leading-none text-muted-foreground tabular-nums truncate">
+            <span className="flex-1 min-w-0 text-[13.5px] font-normal leading-none text-black truncate">Subtasks</span>
+            <span className="text-[12.5px] leading-none text-muted-foreground tabular-nums truncate">
               {task.subtasks?.length ?? 0}
             </span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 flex-shrink-0 ml-0.5" />
           </button>
 
           <button
-            onClick={() => setShowTagInput(true)}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setShowTagInput(true); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <Tag className="h-4 w-4 text-info scale-x-[-1]" />
             </span>
-            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Tags</span>
-            <span className="text-[12px] leading-none text-muted-foreground truncate max-w-[50%]">
+            <span className="flex-1 min-w-0 text-[13.5px] font-normal leading-none text-black truncate">Tags</span>
+            <span className="text-[12.5px] leading-none text-muted-foreground truncate max-w-[50%]">
               {task.coloredTags && task.coloredTags.length > 0
                 ? task.coloredTags.map(t => t.name).join(', ')
                 : 'None'}
@@ -1031,13 +1033,14 @@ export const TaskDetailPage = ({
           </button>
 
           <button
-            onClick={() => onConvertToNote(task)}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onConvertToNote(task); }}
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <FileEdit className="h-4 w-4 text-warning" />
             </span>
-            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Convert to Notes</span>
+            <span className="flex-1 min-w-0 text-[13.5px] font-normal leading-none text-black truncate">Convert to Notes</span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 flex-shrink-0 ml-0.5" />
           </button>
         </div>
