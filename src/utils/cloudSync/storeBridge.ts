@@ -10,7 +10,7 @@
  * Only rows whose local id is a UUID round-trip to the cloud. Legacy non-UUID
  * ids stay local-only until they are migrated.
  */
-import { enqueueWrite, enqueueWrites } from './writeQueue';
+import { enqueueWrite, enqueueWrites, flushQueue, getQueueLength } from './writeQueue';
 import { mappers, type MappedTable } from './mappers';
 import type { SyncRow, SyncTable } from './syncTables';
 import type { SyncChangeDetail } from './syncEngine';
@@ -34,7 +34,10 @@ let installed = false;
  * Individual upserts are keyed by row id so re-runs don't duplicate anything.
  */
 export async function runInitialFullUpload(userId: string): Promise<void> {
-  const flagKey = `flowist:initialUpload:done:${userId}`;
+  // v2 deliberately ignores the earlier “queued” marker. Older builds marked
+  // upload done before the queue had actually reached the backend, so users who
+  // hit permission/queue failures never retried their notes/tasks/habits.
+  const flagKey = `flowist:initialUpload:v2:done:${userId}`;
   try { if (localStorage.getItem(flagKey) === '1') return; } catch {}
 
   try {
@@ -86,8 +89,16 @@ export async function runInitialFullUpload(userId: string): Promise<void> {
       if (cs?.length) pushCountdowns(cs as any);
     } catch (e) { console.warn('[initialUpload] countdowns failed', e); }
 
-    try { localStorage.setItem(flagKey, '1'); } catch {}
-    console.info('[initialUpload] complete for', userId);
+    for (let i = 0; i < 12; i++) {
+      await flushQueue().catch(() => {});
+      if (getQueueLength() === 0) break;
+    }
+    if (getQueueLength() === 0) {
+      try { localStorage.setItem(flagKey, '1'); } catch {}
+      console.info('[initialUpload] complete for', userId);
+    } else {
+      console.warn('[initialUpload] queued writes remain; will retry next start', getQueueLength());
+    }
   } catch (e) {
     console.warn('[initialUpload] aborted', e);
   }

@@ -10,6 +10,7 @@ import type { SyncTable, SyncRow } from './syncTables';
 const STORAGE_KEY = 'flowist_sync_write_queue_v1';
 const MAX_RETRIES = 8;
 const MAX_QUEUE_STORAGE_CHARS = 5 * 1024 * 1024;
+const MAX_PERSISTED_QUEUE_ENTRIES = 500;
 
 interface QueuedWrite {
   id: string;          // queue entry id
@@ -20,7 +21,9 @@ interface QueuedWrite {
   enqueuedAt: number;
 }
 
-function load(): QueuedWrite[] {
+let inMemoryQueue: QueuedWrite[] = [];
+
+function loadPersisted(): QueuedWrite[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw && raw.length > MAX_QUEUE_STORAGE_CHARS) {
@@ -30,18 +33,49 @@ function load(): QueuedWrite[] {
       localStorage.removeItem(STORAGE_KEY);
       return [];
     }
-    return raw ? JSON.parse(raw) as QueuedWrite[] : [];
+    const parsed = raw ? JSON.parse(raw) as QueuedWrite[] : [];
+    // Older builds compacted persisted large notes by writing body:null without
+    // a marker. Treat those queued upserts as omitted bodies so they rehydrate
+    // from IndexedDB instead of uploading an empty note to the backend.
+    return parsed.map((entry) => {
+      if (entry.table === 'notes' && entry.op === 'upsert' && (entry.row as any).body === null && !(entry.row as any).__bodyOmittedFromQueue) {
+        return { ...entry, row: { ...(entry.row as any), __bodyOmittedFromQueue: true } };
+      }
+      return entry;
+    });
   } catch { return []; }
 }
 function save(q: QueuedWrite[]): void {
   try {
-    const raw = JSON.stringify(q);
+    // Persist only a compact tail for crash/reload recovery. Large first-sync
+    // uploads can contain 40k+ notes/tasks; stringifying the whole queue both
+    // freezes the UI and previously dropped most rows before they ever flushed.
+    let tail = q.slice(-MAX_PERSISTED_QUEUE_ENTRIES).map((entry) => {
+      const row: any = { ...entry.row };
+      if (entry.table === 'notes' && typeof row.body === 'string' && row.body.length > 200 * 1024) {
+        row.body = null;
+        row.__bodyOmittedFromQueue = true;
+      }
+      return { ...entry, row };
+    });
+    let raw = JSON.stringify(tail);
     if (raw.length > MAX_QUEUE_STORAGE_CHARS) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(q.slice(-500)));
-      return;
+      while (tail.length > 50 && raw.length > MAX_QUEUE_STORAGE_CHARS) {
+        tail = tail.slice(Math.floor(tail.length / 2));
+        raw = JSON.stringify(tail);
+      }
+      if (raw.length > MAX_QUEUE_STORAGE_CHARS) return;
     }
     localStorage.setItem(STORAGE_KEY, raw);
   } catch {}
+}
+
+function mergeQueuedEntries(...groups: QueuedWrite[][]): QueuedWrite[] {
+  const byKey = new Map<string, QueuedWrite>();
+  for (const group of groups) {
+    for (const entry of group) byKey.set(`${entry.table}:${entry.row.id}`, entry);
+  }
+  return Array.from(byKey.values());
 }
 
 let flushing = false;
@@ -69,15 +103,12 @@ const sanitizeWriteForQueue = (write: WriteInput): WriteInput | null => {
       row.payload = payload;
     }
 
-    if (typeof row.body === 'string' && row.body.length > 200 * 1024) {
-      row.body = null;
-    }
   }
 
   try {
-    // Never let one oversized localStorage queue entry freeze the whole app.
-    // The local IndexedDB copy remains the source of truth for huge note bodies.
-    if (JSON.stringify(row).length > 260 * 1024) return null;
+    // Guard only truly pathological single rows. Normal note bodies must sync;
+    // the persistent localStorage copy is compacted separately in save().
+    if (JSON.stringify(row).length > 10 * 1024 * 1024) return null;
   } catch {
     return null;
   }
@@ -94,6 +125,44 @@ const scheduleFlush = () => {
   }, 250);
 };
 
+async function rehydratePersistedNoteBodies(entries: QueuedWrite[]): Promise<QueuedWrite[]> {
+  if (!entries.some((entry) => entry.table === 'notes' && (entry.row as any).__bodyOmittedFromQueue)) {
+    return entries;
+  }
+
+  let loadNoteFromDB: ((id: string) => Promise<any | null>) | null = null;
+  try {
+    loadNoteFromDB = (await import('@/utils/noteStorage')).loadNoteFromDB;
+  } catch {
+    return entries;
+  }
+
+  const next: QueuedWrite[] = [];
+  for (const entry of entries) {
+    if (entry.table !== 'notes' || !(entry.row as any).__bodyOmittedFromQueue) {
+      next.push(entry);
+      continue;
+    }
+    try {
+      const note = await loadNoteFromDB(entry.row.id);
+      if (note && typeof note.content === 'string') {
+        const { __bodyOmittedFromQueue: _omitted, ...row } = entry.row as any;
+        next.push({ ...entry, row: { ...row, body: note.content } });
+      } else if (note) {
+        const { __bodyOmittedFromQueue: _omitted, ...row } = entry.row as any;
+        next.push({ ...entry, row: { ...row, body: '' } });
+      } else {
+        // Never upload a null body just because the compact localStorage queue
+        // omitted it. Keep the write queued until the note can be rehydrated.
+        next.push(entry);
+      }
+    } catch {
+      next.push(entry);
+    }
+  }
+  return next;
+}
+
 export function enqueueWrite(
   table: SyncTable,
   op: 'upsert' | 'delete',
@@ -104,7 +173,7 @@ export function enqueueWrite(
 
 export function enqueueWrites(writes: WriteInput[]): void {
   if (!writes.length) return;
-  const q = load()
+  const q = mergeQueuedEntries(loadPersisted(), inMemoryQueue)
     .map((entry) => {
       const sanitized = sanitizeWriteForQueue({ table: entry.table, op: entry.op, row: entry.row });
       return sanitized ? { ...entry, ...sanitized } : null;
@@ -124,12 +193,13 @@ export function enqueueWrites(writes: WriteInput[]): void {
       enqueuedAt: now,
     });
   }
-  save(Array.from(byKey.values()));
+  inMemoryQueue = Array.from(byKey.values());
+  save(inMemoryQueue);
   scheduleFlush();
 }
 
 export function getQueueLength(): number {
-  return load().length;
+  return mergeQueuedEntries(loadPersisted(), inMemoryQueue).length;
 }
 
 export async function flushQueue(): Promise<void> {
@@ -141,12 +211,14 @@ export async function flushQueue(): Promise<void> {
       if (!session?.user) return;
       const userId = session.user.id;
 
-      let q = load()
+      let q = mergeQueuedEntries(loadPersisted(), inMemoryQueue)
         .map((entry) => {
           const sanitized = sanitizeWriteForQueue({ table: entry.table, op: entry.op, row: entry.row });
           return sanitized ? { ...entry, ...sanitized } : null;
         })
         .filter((entry): entry is QueuedWrite => !!entry);
+      q = await rehydratePersistedNoteBodies(q);
+      const flushingKeys = new Map<string, number>(q.map((entry) => [`${entry.table}:${entry.row.id}`, entry.enqueuedAt] as const));
       const remaining: QueuedWrite[] = [];
       const groups = new Map<string, QueuedWrite[]>();
       for (const entry of q) {
@@ -179,11 +251,19 @@ export async function flushQueue(): Promise<void> {
               .eq('user_id', userId);
             if (error) throw error;
           } else {
-            const payload = chunk.map(e => ({
-              ...e.row,
-              user_id: userId,
-              updated_at: e.row.updated_at ?? new Date().toISOString(),
-            }));
+            const skipped = chunk.filter(e => e.table === 'notes' && (e.row as any).__bodyOmittedFromQueue);
+            if (skipped.length) keepForRetry(skipped, new Error('note body not rehydrated'));
+            const uploadable = chunk.filter(e => !(e.table === 'notes' && (e.row as any).__bodyOmittedFromQueue));
+            if (!uploadable.length) continue;
+            const payload = uploadable
+              .map(e => {
+                const { __bodyOmittedFromQueue: _omitted, ...row } = e.row as any;
+                return {
+                  ...row,
+                  user_id: userId,
+                  updated_at: e.row.updated_at ?? new Date().toISOString(),
+                };
+              });
             const { error } = await supabase
               .from(entry.table as any)
               .upsert(payload as any, { onConflict: 'id' });
@@ -194,7 +274,20 @@ export async function flushQueue(): Promise<void> {
         }
         }
       }
-      save(remaining);
+      const failedKeys = new Set(remaining.map((entry) => `${entry.table}:${entry.row.id}`));
+      // Keep writes that were enqueued while this flush was in flight. Without
+      // this, a first-login upload can start flushing notes, then queue tasks,
+      // and the notes flush completion would overwrite the task queue.
+      const current = mergeQueuedEntries(loadPersisted(), inMemoryQueue);
+      inMemoryQueue = mergeQueuedEntries(
+        current.filter((entry) => {
+          const key = `${entry.table}:${entry.row.id}`;
+          const startedAt = flushingKeys.get(key);
+          return startedAt === undefined || failedKeys.has(key) || entry.enqueuedAt > startedAt;
+        }),
+        remaining,
+      );
+      save(inMemoryQueue);
     } finally {
       flushing = false;
       flushPromise = null;

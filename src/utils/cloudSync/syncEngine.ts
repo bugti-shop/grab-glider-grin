@@ -54,21 +54,33 @@ async function registerDevice(userId: string): Promise<void> {
 
 /** Fetch all rows for a table since `since` (ISO) and emit them. */
 async function fetchSince(userId: string, table: SyncTable, since: string | null, source: SyncChangeDetail['source']): Promise<void> {
-  let query = supabase.from(table as any).select('*').eq('user_id', userId);
-  if (since) query = query.gt('updated_at', since);
-  const { data, error } = await query.order('updated_at', { ascending: true }).limit(5000);
-  if (error) {
-    console.warn('[sync] fetch failed', table, error);
-    return;
-  }
-  const rows = ((data ?? []) as unknown) as SyncRow[];
-  if (rows.length > 0) {
+  const PAGE_SIZE = 5000;
+  let offset = 0;
+  let newest: string | null = null;
+
+  while (true) {
+    let query = supabase.from(table as any).select('*').eq('user_id', userId);
+    if (since) query = query.gt('updated_at', since);
+    const { data, error } = await query
+      .order('updated_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      console.warn('[sync] fetch failed', table, error);
+      return;
+    }
+
+    const rows = ((data ?? []) as unknown) as SyncRow[];
+    if (!rows.length) break;
+
     emit({ table, rows, source });
-    const newest = rows[rows.length - 1].updated_at;
-    if (newest) setLastSync(userId, table, newest);
-  } else if (!since) {
-    setLastSync(userId, table, new Date().toISOString());
+    newest = rows[rows.length - 1].updated_at ?? newest;
+    if (rows.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
   }
+
+  if (newest) setLastSync(userId, table, newest);
 }
 
 async function bootstrap(userId: string): Promise<void> {

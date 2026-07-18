@@ -16,6 +16,7 @@ const iso = (v: unknown): string | null => {
   if (typeof v === 'string') { const d = new Date(v); return isNaN(+d) ? null : d.toISOString(); }
   return null;
 };
+const nowIso = () => new Date().toISOString();
 const isUuid = (s: unknown): s is string =>
   typeof s === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
@@ -37,6 +38,7 @@ export const mappers = {
   folders: {
     toCloud(f: any, store: 'notes' | 'tasks' = 'notes') {
       if (!isUuid(f.id)) return null;
+      const updatedAt = iso(f.updatedAt) ?? iso(f.modifiedAt) ?? iso(f.createdAt) ?? nowIso();
       return {
         id: f.id,
         name: f.name,
@@ -46,8 +48,8 @@ export const mappers = {
         order_index: typeof f.order === 'number' ? f.order : 0,
         payload: { ...f, __flowistFolderStore: store },
         is_deleted: false,
-        created_at: iso(f.createdAt),
-        updated_at: iso(f.updatedAt) ?? iso(f.modifiedAt) ?? iso(f.createdAt) ?? new Date().toISOString(),
+        created_at: iso(f.createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     fromCloud(r: any): any | null {
@@ -94,14 +96,15 @@ export const mappers = {
         codeContent: _codeContent,
         ...lightPayload
       } = n as any;
-      // Body is the note's HTML content. For full-page web clips this can also
-      // be huge (the parsed article HTML). Skip it from the cloud row when it
-      // exceeds a sane cap — the note still restores from the local snapshot.
-      const HEAVY_BODY_LIMIT = 200 * 1024; // 200 KB
+      // Body is the note's HTML content. Keep normal notes fully synced; only
+      // skip truly huge clip/article bodies that would make every realtime
+      // refetch too large for mobile WebViews.
+      const HEAVY_BODY_LIMIT = 10 * 1024 * 1024; // 10 MB
       const isMetadataStub = Boolean((n as any).__contentStub);
       const body = isMetadataStub || (typeof n.content === 'string' && n.content.length > HEAVY_BODY_LIMIT)
         ? null
         : (n.content ?? null);
+      const updatedAt = iso(n.updatedAt) ?? iso(n.createdAt) ?? nowIso();
       return {
         id: n.id,
         title: n.title ?? null,
@@ -111,8 +114,8 @@ export const mappers = {
         tags: Array.isArray(n.tagIds) ? n.tagIds : [],
         payload: lightPayload,
         is_deleted: !!n.isDeleted,
-        created_at: iso(n.createdAt),
-        updated_at: iso(n.updatedAt) ?? new Date().toISOString(),
+        created_at: iso(n.createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     /** Partial merge — only fields the cloud row owns. */
@@ -152,6 +155,7 @@ export const mappers = {
         attachments: _a,
         ...sanitizedPayload
       } = t as any;
+      const updatedAt = iso((t as any).modifiedAt) ?? iso((t as any).updatedAt) ?? iso((t as any).createdAt) ?? nowIso();
       return {
         id: t.id,
         title: (t as any).text ?? (t as any).title ?? '',
@@ -170,8 +174,8 @@ export const mappers = {
         assignee_id: isUuid((t as any).assigneeId) ? (t as any).assigneeId : null,
         payload: sanitizedPayload,
         is_deleted: !!(t as any).isDeleted,
-        created_at: iso((t as any).createdAt),
-        updated_at: iso((t as any).modifiedAt) ?? iso((t as any).updatedAt) ?? iso((t as any).createdAt) ?? new Date().toISOString(),
+        created_at: iso((t as any).createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     mergeCloud(local: TodoItem | undefined, r: any): Partial<TodoItem> & { id: string } {
@@ -206,6 +210,7 @@ export const mappers = {
   sections: {
     toCloud(s: TaskSection) {
       if (!isUuid(s.id)) return null;
+      const updatedAt = iso((s as any).updatedAt) ?? iso((s as any).createdAt) ?? nowIso();
       return {
         id: s.id,
         name: s.name,
@@ -213,7 +218,8 @@ export const mappers = {
         folder_id: isUuid(s.folderId) ? s.folderId : null,
         payload: s,
         is_deleted: false,
-        updated_at: new Date().toISOString(),
+        created_at: iso((s as any).createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     fromCloud(r: any): TaskSection | null {
@@ -234,6 +240,7 @@ export const mappers = {
   habits: {
     toCloud(h: Habit) {
       if (!isUuid(h.id)) return null;
+      const updatedAt = iso((h as any).updatedAt) ?? iso((h as any).createdAt) ?? nowIso();
       return {
         id: h.id,
         name: (h as any).name ?? (h as any).title ?? '',
@@ -245,8 +252,8 @@ export const mappers = {
         icon: (h as any).emoji ?? (h as any).icon ?? null,
         payload: h,
         is_deleted: !!(h as any).isArchived || !!(h as any).isDeleted,
-        created_at: iso((h as any).createdAt),
-        updated_at: iso((h as any).updatedAt) ?? new Date().toISOString(),
+        created_at: iso((h as any).createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     mergeCloud(local: Habit | undefined, r: any): Partial<Habit> & { id: string } {
@@ -270,6 +277,7 @@ export const mappers = {
   countdowns: {
     toCloud(c: any) {
       if (!isUuid(c.id)) return null;
+      const updatedAt = c.updatedAt ? new Date(c.updatedAt).toISOString() : (c.createdAt ? new Date(c.createdAt).toISOString() : nowIso());
       return {
         id: c.id,
         name: c.name ?? '',
@@ -278,8 +286,8 @@ export const mappers = {
         repeat: c.repeat ?? 'none',
         payload: c,
         is_deleted: false,
-        created_at: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
-        updated_at: c.updatedAt ? new Date(c.updatedAt).toISOString() : new Date().toISOString(),
+        created_at: c.createdAt ? new Date(c.createdAt).toISOString() : updatedAt,
+        updated_at: updatedAt,
       };
     },
     mergeCloud(local: any | undefined, r: any): any {
@@ -301,13 +309,15 @@ export const mappers = {
   habitSections: {
     toCloud(s: any) {
       if (!isUuid(s.id)) return null;
+      const updatedAt = iso(s.updatedAt) ?? iso(s.createdAt) ?? nowIso();
       return {
         id: s.id,
         name: s.name ?? '',
         order_index: typeof s.order === 'number' ? s.order : 0,
         payload: s,
         is_deleted: false,
-        updated_at: new Date().toISOString(),
+        created_at: iso(s.createdAt) ?? updatedAt,
+        updated_at: updatedAt,
       };
     },
     fromCloud(r: any): any | null {
