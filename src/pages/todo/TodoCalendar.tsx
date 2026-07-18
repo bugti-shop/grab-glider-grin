@@ -266,9 +266,8 @@ const TodoCalendar = () => {
     const savedViewMode = await getSetting<ViewMode>('calendarViewMode', 'flat');
     setViewMode(savedViewMode);
 
-    const savedLayoutRaw = await getSetting<string>('calendarLayoutMode', 'list');
-    const savedLayout = (savedLayoutRaw === 'classic' ? 'list' : savedLayoutRaw) as CalendarLayout;
-    setCalendarLayout(savedLayout);
+    // Force unified Day/Week/Month layout for all users (override any legacy stored value)
+    setCalendarLayout('notesDayWeekMonth');
 
 
   }, [filterType]);
