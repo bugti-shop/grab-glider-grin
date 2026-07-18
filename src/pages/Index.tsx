@@ -1245,6 +1245,16 @@ const Index = () => {
           archivedNotesCount={archivedNotes.length}
           isGridView={isGridView}
           onToggleGridView={handleToggleGridView}
+          onOpenManageFolders={() => setIsFolderManageOpen(true)}
+        />
+
+        <FolderManageSheet
+          isOpen={isFolderManageOpen}
+          onClose={() => setIsFolderManageOpen(false)}
+          folders={folders}
+          onCreateFolder={(name, color) => handleCreateFolder(name, color)}
+          onEditFolder={(folderId, name, color) => handleEditFolder(folderId, name, color)}
+          onDeleteFolder={handleDeleteFolder}
         />
 
         {/* Bulk Selection Mode Bar */}
