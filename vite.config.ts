@@ -28,7 +28,24 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
+    // Pre-generate .gz and .br variants for every JS/CSS/HTML/SVG asset.
+    // The iOS WebViewAssetHandler category (see ios/App/App/WebViewAssetHandler+Compression.swift)
+    // picks the best-encoded sibling at request time and serves it with the
+    // matching Content-Encoding + long-cache headers.
+    compression({
+      algorithm: 'gzip',
+      exclude: [/\.(br|gz)$/, /\.(png|jpe?g|webp|avif|ico|mp4|woff2?)$/i],
+      threshold: 1024,
+      deleteOriginalAssets: false,
+    }),
+    compression({
+      algorithm: 'brotliCompress',
+      exclude: [/\.(br|gz)$/, /\.(png|jpe?g|webp|avif|ico|mp4|woff2?)$/i],
+      threshold: 1024,
+      deleteOriginalAssets: false,
+    }),
   ].filter(Boolean),
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
