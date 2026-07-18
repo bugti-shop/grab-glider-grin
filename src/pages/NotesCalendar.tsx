@@ -23,6 +23,13 @@ import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { NotesVirtualGrid } from '@/components/notes/NotesVirtualGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NotesCalendarFab } from '@/components/notes/NotesCalendarFab';
+import {
+  acquireEditLock,
+  releaseEditLock,
+  checkRevision,
+  recordRevision,
+  type EditLockToken,
+} from '@/utils/noteEditLock';
 
 type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap' | 'darkHero' | 'dayWeekMonth' | 'cardGrid' | 'editorial' | 'timeline';
 
@@ -68,6 +75,7 @@ const NotesCalendar = () => {
   
   // Use ref to track editing note ID to prevent stale reference issues
   const editingNoteIdRef = useRef<string | null>(null);
+  const editLockTokenRef = useRef<EditLockToken | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [defaultType, setDefaultType] = useState<NoteType>('regular');
   const [selectedNoteTypes] = useState<NoteType[]>([
@@ -128,6 +136,26 @@ const NotesCalendar = () => {
     if (currentEditingId) {
       if (!softRequireMutate()) return false;
       const existingNote = currentNotes.find(n => n.id === currentEditingId);
+
+      // Revision guard: if another surface persisted a newer version of this
+      // note while we were typing, refuse to overwrite it with our older
+      // snapshot. The editor will pick up the newer version on its next
+      // autosave tick.
+      const guard = checkRevision(
+        currentEditingId,
+        incomingNote.updatedAt,
+        existingNote?.updatedAt,
+      );
+      if (guard.ok === false) {
+        console.warn(
+          '[NotesCalendar] Skipped stale save for note',
+          currentEditingId,
+          '- newer revision exists at',
+          guard.latest,
+        );
+        return false;
+      }
+
       const updatedNote: Note = stripMetadataFlags({
         ...(existingNote || incomingNote),
         ...incomingNote,
@@ -141,6 +169,7 @@ const NotesCalendar = () => {
       notesRef.current = updatedNotes;
       setNotes(updatedNotes);
       await saveNoteToDBSingle(updatedNote);
+      recordRevision(updatedNote.id, updatedNote.updatedAt);
     } else {
       if (!isPro && !softRequireCreate('notes', currentNotes.length)) return false;
       const newNote: Note = stripMetadataFlags({
@@ -158,30 +187,52 @@ const NotesCalendar = () => {
       notesRef.current = updatedNotes;
       setNotes(updatedNotes);
       editingNoteIdRef.current = newNote.id;
+
+      // First save for this draft — take the edit lock now that we have a
+      // real id, so a second surface opening this note reuses this session.
+      if (!editLockTokenRef.current) {
+        const { token } = acquireEditLock(newNote.id, 'NotesCalendar');
+        editLockTokenRef.current = token;
+      }
+
       await saveNoteToDBSingle(newNote);
+      recordRevision(newNote.id, newNote.updatedAt);
     }
 
     return true;
   }, [setNotes, isPro, softRequireCreate, softRequireMutate]);
 
-  const handleEditNote = useCallback((note: Note) => {
-    // Store the note ID in ref to prevent stale reference
+  const openWithLock = useCallback((note: Note) => {
+    // Release any previous session first.
+    if (editingNoteIdRef.current && editLockTokenRef.current) {
+      releaseEditLock(editingNoteIdRef.current, editLockTokenRef.current);
+      editLockTokenRef.current = null;
+    }
     editingNoteIdRef.current = note.id;
-    if (isNoteContentStub(note)) {
-      loadNoteFromDB(note.id).then((fullNote) => {
-        if (editingNoteIdRef.current !== note.id) return;
-        setEditingNote(fullNote || note);
-        setIsEditorOpen(true);
-      }).catch(() => {
-        if (editingNoteIdRef.current !== note.id) return;
-        setEditingNote(note);
-        setIsEditorOpen(true);
-      });
-      return;
+    const { token, alreadyHeld } = acquireEditLock(note.id, 'NotesCalendar');
+    editLockTokenRef.current = token;
+    if (alreadyHeld) {
+      // Another surface already has this note open in this tab. Reuse its id
+      // (which we do — same note.id) so we don't spawn a duplicate row on
+      // the next autosave.
+      console.info('[NotesCalendar] Reusing existing edit session for', note.id);
     }
     setEditingNote(note);
     setIsEditorOpen(true);
   }, []);
+
+  const handleEditNote = useCallback((note: Note) => {
+    if (isNoteContentStub(note)) {
+      loadNoteFromDB(note.id).then((fullNote) => {
+        if (editingNoteIdRef.current && editingNoteIdRef.current !== note.id) return;
+        openWithLock(fullNote || note);
+      }).catch(() => {
+        openWithLock(note);
+      });
+      return;
+    }
+    openWithLock(note);
+  }, [openWithLock]);
 
   const handleCreateNote = useCallback((type: NoteType) => {
     if (!canCreateWithinSoftLimit('notes', notes.length)) {
@@ -189,7 +240,11 @@ const NotesCalendar = () => {
       return;
     }
     setDefaultType(type);
+    if (editingNoteIdRef.current && editLockTokenRef.current) {
+      releaseEditLock(editingNoteIdRef.current, editLockTokenRef.current);
+    }
     editingNoteIdRef.current = null;
+    editLockTokenRef.current = null;
     setEditingNote(null);
     setIsEditorOpen(true);
   }, [canCreateWithinSoftLimit, notes.length, softRequireCreate]);
@@ -203,9 +258,25 @@ const NotesCalendar = () => {
 
   const handleCloseEditor = useCallback(() => {
     setIsEditorOpen(false);
+    if (editingNoteIdRef.current && editLockTokenRef.current) {
+      releaseEditLock(editingNoteIdRef.current, editLockTokenRef.current);
+    }
     editingNoteIdRef.current = null;
+    editLockTokenRef.current = null;
     setEditingNote(null);
   }, []);
+
+  // Release the lock if this page unmounts with the editor still open.
+  useEffect(() => {
+    return () => {
+      if (editingNoteIdRef.current && editLockTokenRef.current) {
+        releaseEditLock(editingNoteIdRef.current, editLockTokenRef.current);
+        editingNoteIdRef.current = null;
+        editLockTokenRef.current = null;
+      }
+    };
+  }, []);
+
 
   const handleBackgroundChange = useCallback((background: string) => {
     setCalendarBackground(background);
