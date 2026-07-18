@@ -266,8 +266,17 @@ const TodoCalendar = () => {
     const savedViewMode = await getSetting<ViewMode>('calendarViewMode', 'flat');
     setViewMode(savedViewMode);
 
-    // Force unified Day/Week/Month layout for all users (override any legacy stored value)
+    // Force unified Day/Week/Month layout for all users and purge any
+    // legacy stored value (localStorage + settings store) so it never
+    // resurrects the old layout on next launch.
     setCalendarLayout('notesDayWeekMonth');
+    try {
+      await setSetting('calendarLayoutMode', 'notesDayWeekMonth');
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('calendarLayoutMode');
+        localStorage.removeItem('setting:calendarLayoutMode');
+      }
+    } catch {}
 
 
   }, [filterType]);
