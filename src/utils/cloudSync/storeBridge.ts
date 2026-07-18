@@ -406,7 +406,7 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
     const existing = byId.get(r.id) as any;
     const cloudMerged = mappers.tasks.mergeCloud(existing, r) as TodoItem;
     const localTs = new Date(existing?.modifiedAt ?? existing?.updatedAt ?? existing?.createdAt ?? 0).getTime();
-    const cloudTs = new Date((cloudMerged as any).modifiedAt ?? (cloudMerged as any).updatedAt ?? (cloudMerged as any).createdAt ?? r.updated_at ?? 0).getTime();
+    const mergedCloudTs = new Date((cloudMerged as any).modifiedAt ?? (cloudMerged as any).updatedAt ?? (cloudMerged as any).createdAt ?? r.updated_at ?? 0).getTime();
 
     // Field-level conflict resolution so completion + calendar fields never diverge:
     //   - completion is monotonic-preferring-true (and the later completedAt wins when both completed)
