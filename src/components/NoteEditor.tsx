@@ -167,6 +167,10 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const [isLocationInputOpen, setIsLocationInputOpen] = useState(false);
   const [content, setContentState] = useState('');
   const contentRef = useRef('');
+  // Snapshot of initial title/content/codeContent when a note is opened.
+  // Autosave is skipped until the user actually edits something so that
+  // simply opening a note does not bump `updatedAt`.
+  const initialSnapshotRef = useRef<{ title: string; content: string; codeContent: string } | null>(null);
   const setContent = useCallback((val: React.SetStateAction<string>) => {
     setContentState(prev => {
       const next = typeof val === 'function' ? val(prev) : val;
