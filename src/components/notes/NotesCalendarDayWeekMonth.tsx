@@ -194,22 +194,16 @@ export const NotesCalendarDayWeekMonth = ({
         <div className="px-3">
           {/* Weekday labels */}
           <div className="grid grid-cols-7 mb-1">
-            {WEEK_LABELS.map((l, i) => (
+            {WEEK_LABELS.map((l) => (
               <div
                 key={l}
-                className={cn(
-                  'text-center text-[10.5px] font-semibold tracking-wider pb-1',
-                  i === 5
-                    ? 'text-[#2563eb]/70'
-                    : i === 6
-                      ? 'text-[#ef4444]/70'
-                      : 'text-muted-foreground/70',
-                )}
+                className="text-center text-[10.5px] font-semibold tracking-wider pb-1 text-muted-foreground/70"
               >
                 {l}
               </div>
             ))}
           </div>
+
 
           {/* Row 1 */}
           <div className="grid grid-cols-7 gap-1">
