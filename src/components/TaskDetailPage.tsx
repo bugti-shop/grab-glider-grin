@@ -990,8 +990,8 @@ export const TaskDetailPage = ({
           </div>
         </div>
 
-        {/* Card 3 — Subtasks / Tags / Convert to Notes */}
-        <div className="rounded-2xl bg-white border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
+        {/* Card 3 — Subtasks */}
+        <div className="rounded-2xl bg-white border border-border/60 overflow-hidden shadow-sm">
           <button
             onClick={() => setIsSubtaskInputSheetOpen(true)}
             className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
@@ -1003,30 +1003,8 @@ export const TaskDetailPage = ({
             <span className="text-[13px] text-muted-foreground">{task.subtasks?.length ?? 0}</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
           </button>
-          <button
-            onClick={() => setShowTagInput(true)}
-            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
-          >
-            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
-              <Tag className="h-5 w-5 text-info" />
-            </span>
-            <span className="flex-1 text-[14px] font-medium">Tags</span>
-            <span className="text-[13px] text-muted-foreground truncate max-w-[50%]">
-              {task.coloredTags && task.coloredTags.length > 0 ? task.coloredTags.map(tt => tt.name).join(', ') : 'None'}
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
-          </button>
-          <button
-            onClick={handleConvertToNote}
-            className="w-full flex items-center gap-4 px-4 py-4 hover:bg-muted/40 transition-colors text-left"
-          >
-            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
-              <FileEdit className="h-5 w-5 text-warning" />
-            </span>
-            <span className="flex-1 text-[14px] font-medium">Convert to Notes</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
-          </button>
         </div>
+
 
 
 
@@ -1364,111 +1342,14 @@ export const TaskDetailPage = ({
 
 
 
-          {/* Convert to Notes */}
-          <button 
-            onClick={handleConvertToNote}
-            className="w-full flex items-center gap-3 py-3 hover:bg-muted/50 rounded-lg px-2 transition-colors"
-          >
-            <FileText className="h-5 w-5 text-info" />
-            <span className="flex-1 text-left">{t('taskDetail.convertToNotes')}</span>
-          </button>
-
-
-
-          <div className="space-y-2">
-            <Popover open={showTagInput} onOpenChange={setShowTagInput}>
-              <PopoverTrigger asChild>
-                <button className="w-full flex items-center gap-3 py-3 hover:bg-muted/50 rounded-lg px-2 transition-colors">
-                  <Tag className="h-5 w-5 text-warning" />
-                  <span className="flex-1 text-left">{t('taskDetail.tag')}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {t('taskDetail.tagsCount', { count: task.coloredTags?.length || 0 })}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 z-[60]" align="start">
-                <div className="space-y-3">
-                  <Input
-                    value={newTagName}
-                    onChange={(e) => setNewTagName(e.target.value)}
-                    placeholder={t('taskDetail.tagName')}
-                    className="h-9"
-                  />
-                  <div className="flex gap-1 flex-wrap">
-                    {TAG_COLORS.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setNewTagColor(color)}
-                        className={cn(
-                          "w-6 h-6 rounded-full transition-transform",
-                          newTagColor === color && "ring-2 ring-offset-2 ring-primary scale-110"
-                        )}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                  <Button onClick={handleAddTag} size="sm" className="w-full">
-                    {t('taskDetail.addTag')}
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            {/* Display existing tags */}
-            {task.coloredTags && task.coloredTags.length > 0 && (
-              <div className="flex flex-wrap gap-2 pl-10">
-                {task.coloredTags.map((tag) => (
-                  <span
-                    key={tag.name}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full"
-                    style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
-                  >
-                    {tag.name}
-                    <button onClick={() => handleRemoveTag(tag.name)}>
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-
-          {/* Comments & Activity Thread */}
-          <div id="td-comments" />
-
-          <TaskCommentsSection
-            comments={task.comments || []}
-            onAddComment={(comment: TaskComment) => {
-              onUpdate({
-                ...task,
-                comments: [...(task.comments || []), comment],
-              });
-            }}
-            onDeleteComment={(commentId: string) => {
-              onUpdate({
-                ...task,
-                comments: (task.comments || []).filter(c => c.id !== commentId),
-              });
-            }}
-          />
-
-          {/* Comments */}
-          <div className="border-t border-border pt-4">
-            <TaskComments taskId={task.id} projectId={null} />
-          </div>
-
-
-          {/* Task Timestamps Section - Premium */}
-          <div className="space-y-2 border-t border-border pt-4">
-
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
+          {/* Task History Card - Premium */}
+          <div className="rounded-2xl bg-white border border-border/60 shadow-sm p-4 space-y-3">
+            <div className="flex items-center gap-2 text-[14px] font-medium text-muted-foreground">
               <Clock className="h-4 w-4" />
               {t('taskDetail.taskHistory')}
-              
             </div>
-            <div 
-              className={cn("space-y-2 text-sm", !isPro && "select-none cursor-pointer")}
+            <div
+              className={cn("space-y-2 text-[13px]", !isPro && "select-none cursor-pointer")}
               onClick={() => { if (!isPro) requireFeature('time_tracking'); }}
             >
               <div className="flex items-center justify-between py-2 px-3 bg-muted/20 rounded-lg">
@@ -1502,8 +1383,10 @@ export const TaskDetailPage = ({
         </div>
       </div>
 
+
       {/* Safe area padding for bottom */}
       <div style={{ paddingBottom: 'var(--safe-bottom, 0px)' }} />
+
 
       {/* TaskDateTimePage */}
       <TaskDateTimePage
