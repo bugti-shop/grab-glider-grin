@@ -1266,7 +1266,98 @@ export const TaskDetailPage = ({
         folders={folders}
         selectedFolderId={task.folderId}
         onCreateFolder={() => {}}
+        preventBackdropClose={true}
       />
+
+      {/* Time Tracker Sheet */}
+      {showTimeTracker && (
+        <div
+          className="fixed inset-0 z-[65] bg-black/40 flex items-end sm:items-center justify-center pointer-events-auto"
+          onClick={() => setShowTimeTracker(false)}
+        >
+          <div
+            className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-5 space-y-4"
+            style={{ paddingBottom: 'calc(var(--safe-bottom, 0px) + 20px)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">{t('taskDetail.timeTracking', 'Time Tracking')}</h3>
+              <button onClick={() => setShowTimeTracker(false)} className="p-1 rounded-full hover:bg-muted"><X className="h-5 w-5" /></button>
+            </div>
+            <TaskTimeTracker
+              timeTracking={task.timeTracking}
+              onUpdate={(tracking) => onUpdate({ ...task, timeTracking: tracking })}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Tag Input Sheet */}
+      {showTagInput && (
+        <div
+          className="fixed inset-0 z-[65] bg-black/40 flex items-end sm:items-center justify-center pointer-events-auto"
+          onClick={() => { setShowTagInput(false); setNewTagName(''); }}
+        >
+          <div
+            className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-5 space-y-4"
+            style={{ paddingBottom: 'calc(var(--safe-bottom, 0px) + 20px)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">{t('taskDetail.tags', 'Tags')}</h3>
+              <button onClick={() => { setShowTagInput(false); setNewTagName(''); }} className="p-1 rounded-full hover:bg-muted"><X className="h-5 w-5" /></button>
+            </div>
+
+            {task.coloredTags && task.coloredTags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {task.coloredTags.map((tag) => (
+                  <span
+                    key={tag.name}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs text-white"
+                    style={{ backgroundColor: tag.color }}
+                  >
+                    {tag.name}
+                    <button onClick={() => handleRemoveTag(tag.name)} className="hover:opacity-80"><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <Input
+              autoFocus
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
+              placeholder={t('taskDetail.newTagPlaceholder', 'New tag name')}
+              className="h-10"
+            />
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {TAG_COLORS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setNewTagColor(c)}
+                  aria-label={`Color ${c}`}
+                  className={cn(
+                    "h-7 w-7 rounded-full border-2 transition-transform",
+                    newTagColor === c ? "border-foreground scale-110" : "border-transparent"
+                  )}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+
+            <Button
+              onClick={handleAddTag}
+              disabled={!newTagName.trim()}
+              className="w-full h-10"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              {t('taskDetail.addTag', 'Add Tag')}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Subtask Detail Sheet */}
       <SubtaskDetailSheet
