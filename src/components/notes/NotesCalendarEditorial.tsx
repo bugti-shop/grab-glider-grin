@@ -213,8 +213,9 @@ export const NotesCalendarEditorial = ({
                       .trim()
                       .slice(0, 110);
                     const pinned = idx === 0 && dayNotes.length > 2;
-                    const tags = (n.tags && n.tags.length > 0
-                      ? n.tags
+                    const rawTags = (n as unknown as { tags?: string[] }).tags;
+                    const tags = (rawTags && rawTags.length > 0
+                      ? rawTags
                       : ['Note']
                     ).slice(0, 2);
 
