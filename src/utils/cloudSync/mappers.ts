@@ -94,10 +94,10 @@ export const mappers = {
         codeContent: _codeContent,
         ...lightPayload
       } = n as any;
-      // Body is the note's HTML content. For full-page web clips this can also
-      // be huge (the parsed article HTML). Skip it from the cloud row when it
-      // exceeds a sane cap — the note still restores from the local snapshot.
-      const HEAVY_BODY_LIMIT = 200 * 1024; // 200 KB
+      // Body is the note's HTML content. Keep normal notes fully synced; only
+      // skip truly huge clip/article bodies that would make every realtime
+      // refetch too large for mobile WebViews.
+      const HEAVY_BODY_LIMIT = 10 * 1024 * 1024; // 10 MB
       const isMetadataStub = Boolean((n as any).__contentStub);
       const body = isMetadataStub || (typeof n.content === 'string' && n.content.length > HEAVY_BODY_LIMIT)
         ? null
