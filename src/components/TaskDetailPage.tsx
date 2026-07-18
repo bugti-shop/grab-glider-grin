@@ -1280,8 +1280,8 @@ export const TaskDetailPage = ({
         folders={folders}
         selectedFolderId={task.folderId}
         onCreateFolder={() => {}}
-        preventBackdropClose={true}
       />
+
 
       {/* Time Tracker Sheet */}
       {showTimeTracker && (
