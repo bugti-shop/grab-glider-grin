@@ -533,8 +533,17 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
     setTimeout(() => {
       setTaskText('');
       setPriority(tasksSettings?.defaultPriority || 'none');
-      setDueDate(tasksSettings?.defaultDueDate === 'today' ? new Date() : 
-                 tasksSettings?.defaultDueDate === 'tomorrow' ? new Date(Date.now() + 86400000) : undefined);
+      // Preserve calendar-selected date across multiple adds so users can
+      // keep adding tasks to the same date without re-picking it each time.
+      setDueDate(
+        defaultDate
+          ? defaultDate
+          : tasksSettings?.defaultDueDate === 'today'
+            ? new Date()
+            : tasksSettings?.defaultDueDate === 'tomorrow'
+              ? new Date(Date.now() + 86400000)
+              : undefined
+      );
       setReminderTime(undefined);
       setRepeatType('none');
       setRepeatDays([]);
