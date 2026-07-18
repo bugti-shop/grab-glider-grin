@@ -55,6 +55,8 @@ interface FolderManagerProps {
   // Grid view toggle
   isGridView?: boolean;
   onToggleGridView?: () => void;
+  // Open unified manage folders sheet
+  onOpenManageFolders?: () => void;
 }
 
 const folderColors = [
