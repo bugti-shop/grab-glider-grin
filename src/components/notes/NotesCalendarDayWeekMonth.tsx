@@ -30,6 +30,8 @@ interface Props {
   onAddClick?: () => void;
   onMonthClick?: () => void;
   onAddNote?: () => void;
+  itemLabel?: string; // e.g. "Notes" or "Tasks"
+
 }
 
 
