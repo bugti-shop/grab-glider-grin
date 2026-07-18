@@ -461,7 +461,6 @@ export const CameraScannerScreen = ({
           playsInline
           className={cn(
             'absolute inset-0 w-full h-full object-cover',
-            !ready && 'opacity-0',
           )}
         />
       )}
