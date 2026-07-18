@@ -1427,6 +1427,9 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   return (
     <div
       className={cn("fixed inset-0 z-50 flex flex-col")}
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
       style={{ backgroundColor: getEditorBackgroundColor() }}
     >
       {/* Top Header */}

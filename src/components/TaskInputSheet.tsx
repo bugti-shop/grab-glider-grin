@@ -954,6 +954,7 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
             : (swipeOffset > 0 ? `translateY(${swipeOffset}px)` : undefined),
           opacity: swipeOffset > 60 ? 0.6 : 1,
         }}
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={handleSwipeTouchStart}
         onTouchMove={handleSwipeTouchMove}

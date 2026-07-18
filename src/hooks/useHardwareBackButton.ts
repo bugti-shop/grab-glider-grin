@@ -19,6 +19,9 @@ let globalListenerSetup = false;
 
 // Tracks sheet closures initiated by browser back (popstate) so we don't call history.back() again on cleanup
 const webPopstateClosures = new Set<string>();
+// When we programmatically pop a synthetic sheet history entry during UI close,
+// ignore that popstate so it cannot close the parent sheet behind it.
+let suppressedProgrammaticPopstates = 0;
 
 const setupGlobalListener = () => {
   if (globalListenerSetup) return;
@@ -52,6 +55,11 @@ const setupGlobalListener = () => {
   // Web (browser back / Android back in Chrome)
   if (typeof window !== 'undefined') {
     window.addEventListener('popstate', () => {
+      if (suppressedProgrammaticPopstates > 0) {
+        suppressedProgrammaticPopstates -= 1;
+        return;
+      }
+
       if (backHandlerStack.length === 0) return;
 
       // Close the most recent sheet first (prevents leaving the current page)
@@ -125,8 +133,13 @@ export const useHardwareBackButton = ({
         } else {
           // Best-effort cleanup; if this causes a navigation, it will be within the same URL state we pushed.
           try {
+            suppressedProgrammaticPopstates += 1;
             window.history.back();
+            window.setTimeout(() => {
+              if (suppressedProgrammaticPopstates > 0) suppressedProgrammaticPopstates -= 1;
+            }, 500);
           } catch {
+            if (suppressedProgrammaticPopstates > 0) suppressedProgrammaticPopstates -= 1;
             // ignore
           }
         }
