@@ -738,13 +738,14 @@ export const TaskDetailPage = ({
   return (
     <div 
       className={cn(
-        "fixed inset-y-0 right-0 left-0 bg-background z-50 flex flex-col transition-transform duration-300 border-l border-border",
+        "fixed inset-y-0 right-0 left-0 z-50 flex flex-col transition-transform duration-300 border-l border-border",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}
       style={{
         paddingTop: 'var(--safe-top, 0px)',
         paddingBottom: 'var(--safe-bottom, 0px)',
         left: 'var(--desktop-sidebar-width, 0px)',
+        backgroundColor: '#f8f8f6',
       }}
     >
       {/* Header — back / share / comments / more */}
