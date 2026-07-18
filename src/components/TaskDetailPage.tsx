@@ -1123,11 +1123,16 @@ export const TaskDetailPage = ({
       {/* Task History full-page overlay */}
       {showHistoryPage && (
         <div className="fixed inset-0 z-[70] bg-[#f8f8f6] flex flex-col overflow-y-auto" style={{ paddingTop: 'var(--safe-top, 0px)' }}>
-          <div className="flex items-center gap-2 px-2 py-3">
-            <Button variant="ghost" size="icon" onClick={() => setShowHistoryPage(false)} aria-label="Back">
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-            <h2 className="text-lg font-semibold">{t('taskDetail.taskHistory', 'Task History')}</h2>
+          <div className="sticky top-0 z-10 bg-[#f8f8f6]/95 backdrop-blur-sm border-b border-border/40 flex items-center gap-2 px-3 py-3">
+            <button
+              onClick={() => setShowHistoryPage(false)}
+              aria-label="Back to task"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-white border border-border/60 shadow-sm hover:bg-muted/40 active:scale-95 transition-all"
+            >
+              <ChevronLeft className="h-5 w-5" />
+              <span className="text-[13px] font-medium">Back</span>
+            </button>
+            <h2 className="text-lg font-semibold ml-1">{t('taskDetail.taskHistory', 'Task History')}</h2>
           </div>
           <div className="px-4 pb-8 space-y-3">
             <div className="rounded-2xl bg-white border border-border/60 shadow-sm divide-y divide-border/60">
