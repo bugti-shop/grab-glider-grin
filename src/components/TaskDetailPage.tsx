@@ -1190,51 +1190,14 @@ export const TaskDetailPage = ({
           )}
         </div>
 
-        {/* Focus Mode */}
-        <div data-tour="task-detail-focus-mode" className="space-y-2">
-
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <TimerIcon className="h-4 w-4" />
-            Focus Mode
-            {!isPro && <PremiumCrown size={14} />}
-          </div>
-          <button
-            type="button"
-            onClick={() => { if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }}
-            className="w-full flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors text-left"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                <TimerIcon className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <div className="text-sm font-medium flex items-center gap-1">Start focus session {!isPro && <PremiumCrown size={12} />}</div>
-                <div className="text-xs text-muted-foreground">
-                  {pomodoroStats.taskPomodoros} sessions · {formatPomodoroDuration(pomodoroStats.taskFocusedSec)} on this task
-                </div>
-              </div>
-            </div>
-            <div className="text-xs text-muted-foreground text-right">
-              <div>Today</div>
-              <div className="font-medium text-foreground">{formatPomodoroDuration(pomodoroStats.todayFocusedSec)}</div>
-            </div>
-          </button>
-        </div>
-
-
-
-        {/* Time Tracking - Premium */}
+        {/* Time Tracking editor (kept below cards for full functionality) */}
         <div className="space-y-2" onClick={() => { if (!requireFeature('time_tracking')) return; }}>
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            {t('taskDetail.timeTracking')}
-            
-          </div>
           <TaskTimeTracker
             timeTracking={task.timeTracking}
             onUpdate={(tracking) => { if (!requireFeature('time_tracking')) return; onUpdate({ ...task, timeTracking: tracking }); }}
           />
         </div>
+
 
 
         {/* Deadline & Scheduled date (distinct from dueDate) */}
