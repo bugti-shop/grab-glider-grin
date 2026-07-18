@@ -1433,40 +1433,6 @@ export const TaskDetailPage = ({
             )}
           </div>
 
-          {/* Description Section with @mention support */}
-          <div className="space-y-2 border-t border-border pt-4">
-            <style>{RICH_TEXT_EDITOR_STYLES}</style>
-            <div className="flex items-center justify-between gap-2 text-sm font-medium text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                {t('taskDetail.description')}
-              </div>
-              {descText && !isEditingDesc && (
-                <button type="button" className="text-xs text-primary font-medium" onClick={() => setIsEditingDesc(true)}>
-                  {t('common.edit', 'Edit')}
-                </button>
-              )}
-            </div>
-            {isEditingDesc || !descText ? (
-              <MentionDescriptionEditor
-                value={descText}
-                onChange={(next) => {
-                  setDescText(next);
-                  onUpdate({ ...task, description: next });
-                }}
-                onFocus={() => setIsEditingDesc(true)}
-                onBlur={() => setTimeout(() => setIsEditingDesc(false), 200)}
-                placeholder={t('taskDetail.descriptionPlaceholder')}
-                className="rounded-xl bg-muted/30 border-border/50 focus:ring-primary/20"
-                minHeight={120}
-              />
-            ) : (
-              <div
-                className="rich-text-editor w-full min-h-[60px] p-3 rounded-xl bg-muted/30 border border-border/50 text-sm whitespace-pre-wrap"
-                dangerouslySetInnerHTML={{ __html: descriptionToDisplayHtml(descText) }}
-              />
-            )}
-          </div>
 
           {/* Comments & Activity Thread */}
           <div id="td-comments" />
