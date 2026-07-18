@@ -333,17 +333,24 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
     // the cloud on sight so they never round-trip again.
     const payload = (r as any).payload as any;
     const isWebClip = !!(payload && payload.fullPageSnapshot);
+    const cloudTs = +new Date(r.updated_at ?? Date.now());
 
-    if (r.is_deleted) { await deleteNoteFromDB(r.id, true); continue; }
+    if (r.is_deleted) {
+      markDeleted('notes', r.id, cloudTs);
+      await deleteNoteFromDB(r.id, true);
+      continue;
+    }
     if (isWebClip) {
       clipIdsToPurgeFromCloud.push(r.id);
-      // Skip applying the cloud row: local IndexedDB is the source of truth
-      // for web clips. If the note doesn't exist locally, it was already
-      // deleted here — leaving cloud out of sync is the desired behavior.
+      continue;
+    }
+    // Suppress resurrections after a local delete.
+    if (isTombstoned('notes', r.id, cloudTs)) {
+      // Cloud still has a stale row — re-issue the delete so it clears.
+      enqueueWrite('notes', 'delete', { id: r.id } as any);
       continue;
     }
     const existingMeta = metaById.get(r.id);
-    const cloudTs = +new Date(r.updated_at ?? Date.now());
     const localTs = existingMeta ? +new Date(existingMeta.updatedAt as any) : 0;
     if (existingMeta && localTs >= cloudTs) {
       if (localTs > cloudTs) {
@@ -354,6 +361,7 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
     // Cloud wins — merge against the full local row (heavy fields preserved).
     const existingFull = existingMeta ? await loadNoteFromDB(r.id) : undefined;
     const merged = mappers.notes.mergeCloud(existingFull ?? undefined, r) as Note;
+    clearTombstone('notes', r.id);
     await saveNoteToDBSingle(merged, true);
   }
 
