@@ -221,7 +221,7 @@ export const CameraScannerScreen = ({
         }
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: { ideal: 'environment' },
+            facingMode: { ideal: facingMode },
             width: { ideal: 3840 },
             height: { ideal: 2160 },
             // @ts-ignore — non-standard but widely supported hints
