@@ -1334,7 +1334,7 @@ const TodoCalendar = () => {
             <ErrorBoundary fallback={Fallback}>
               {calendarLayout === 'notesMonth' && (
                 <>
-                  <NotesCalendarDayWeekMonth
+                  <NotesCalendarDayWeekMonth itemLabel="Tasks"
                     selectedDate={sel}
                     onDateSelect={onSel}
                     highlightedDates={highlightedCalendarDates}
@@ -1344,7 +1344,7 @@ const TodoCalendar = () => {
                 </>
               )}
               {calendarLayout === 'notesWeekStrip' && (
-                <NotesCalendarDayWeekMonth
+                <NotesCalendarDayWeekMonth itemLabel="Tasks"
                   selectedDate={sel}
                   onDateSelect={onSel}
                   notes={pseudoNotes}
@@ -1352,44 +1352,44 @@ const TodoCalendar = () => {
                 />
               )}
               {calendarLayout === 'notesDashboard' && (
-                <NotesCalendarDayWeekMonth
+                <NotesCalendarDayWeekMonth itemLabel="Tasks"
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
               )}
               {calendarLayout === 'notesYearHeatmap' && (
-                <NotesCalendarDayWeekMonth
+                <NotesCalendarDayWeekMonth itemLabel="Tasks"
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
               )}
               {calendarLayout === 'notesDarkHero' && (
-                <NotesCalendarDayWeekMonth
+                <NotesCalendarDayWeekMonth itemLabel="Tasks"
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
               )}
               {calendarLayout === 'notesDayWeekMonth' && (
-                <NotesCalendarDayWeekMonth
+                <NotesCalendarDayWeekMonth itemLabel="Tasks"
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
               )}
               {calendarLayout === 'notesCardGrid' && (
-                <NotesCalendarDayWeekMonth
+                <NotesCalendarDayWeekMonth itemLabel="Tasks"
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                   onAddNote={() => setIsInputOpen(true)}
                 />
               )}
               {calendarLayout === 'notesEditorial' && (
-                <NotesCalendarDayWeekMonth
+                <NotesCalendarDayWeekMonth itemLabel="Tasks"
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
               )}
               {calendarLayout === 'notesTimeline' && (
-                <NotesCalendarDayWeekMonth
+                <NotesCalendarDayWeekMonth itemLabel="Tasks"
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
@@ -1399,7 +1399,7 @@ const TodoCalendar = () => {
         })()}
 
         {calendarLayout === 'list' ? (
-          <NotesCalendarDayWeekMonth
+          <NotesCalendarDayWeekMonth itemLabel="Tasks"
             selectedDate={date}
             onDateSelect={setDate}
             highlightedDates={highlightedCalendarDates}
