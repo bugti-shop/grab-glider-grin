@@ -1334,7 +1334,7 @@ const TodoCalendar = () => {
             <ErrorBoundary fallback={Fallback}>
               {calendarLayout === 'notesMonth' && (
                 <>
-                  <NotesCalendarPremium
+                  <NotesCalendarDayWeekMonth
                     selectedDate={sel}
                     onDateSelect={onSel}
                     highlightedDates={highlightedCalendarDates}
@@ -1344,7 +1344,7 @@ const TodoCalendar = () => {
                 </>
               )}
               {calendarLayout === 'notesWeekStrip' && (
-                <NotesCalendarWeekStrip
+                <NotesCalendarDayWeekMonth
                   selectedDate={sel}
                   onDateSelect={onSel}
                   notes={pseudoNotes}
@@ -1352,19 +1352,19 @@ const TodoCalendar = () => {
                 />
               )}
               {calendarLayout === 'notesDashboard' && (
-                <NotesCalendarDashboard
+                <NotesCalendarDayWeekMonth
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
               )}
               {calendarLayout === 'notesYearHeatmap' && (
-                <NotesCalendarYearHeatmap
+                <NotesCalendarDayWeekMonth
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
               )}
               {calendarLayout === 'notesDarkHero' && (
-                <NotesCalendarDarkHero
+                <NotesCalendarDayWeekMonth
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
@@ -1376,20 +1376,20 @@ const TodoCalendar = () => {
                 />
               )}
               {calendarLayout === 'notesCardGrid' && (
-                <NotesCalendarCardGrid
+                <NotesCalendarDayWeekMonth
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                   onAddNote={() => setIsInputOpen(true)}
                 />
               )}
               {calendarLayout === 'notesEditorial' && (
-                <NotesCalendarEditorial
+                <NotesCalendarDayWeekMonth
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
               )}
               {calendarLayout === 'notesTimeline' && (
-                <NotesCalendarTimeline
+                <NotesCalendarDayWeekMonth
                   selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
                   onEditNote={openTaskById} onDeleteNote={deleteById}
                 />
@@ -1399,7 +1399,7 @@ const TodoCalendar = () => {
         })()}
 
         {calendarLayout === 'list' ? (
-          <NotesCalendarPremium
+          <NotesCalendarDayWeekMonth
             selectedDate={date}
             onDateSelect={setDate}
             highlightedDates={highlightedCalendarDates}
