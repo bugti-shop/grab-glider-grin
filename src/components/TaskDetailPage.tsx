@@ -1178,7 +1178,6 @@ export const TaskDetailPage = ({
           </div>
         </div>
       )}
-      </div>
 
 
       {/* Safe area padding for bottom */}
