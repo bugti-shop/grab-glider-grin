@@ -361,7 +361,7 @@ export const NotesCalendarDayWeekMonth = ({
                       </span>
                       <span
                         className={cn(
-                          'flex-1 min-w-0 truncate text-[13.5px] leading-tight font-normal',
+                          'flex-1 min-w-0 truncate text-[13.5px] leading-[1.35] font-normal',
                           task.completed
                             ? 'text-muted-foreground line-through'
                             : 'text-foreground',
