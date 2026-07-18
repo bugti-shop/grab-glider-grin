@@ -2,10 +2,8 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { genId } from '@/utils/genId';
 import { recordCompletion, TASK_STREAK_KEY } from '@/utils/streakStorage';
 
-import { NotesCalendarView } from '@/components/NotesCalendarView';
 import { NotesCalendarDayWeekMonth } from '@/components/notes/NotesCalendarDayWeekMonth';
 
-import { tasksToPseudoNotes } from '@/utils/tasksToNotesAdapter';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TaskTimeGridView, TimeViewMode } from '@/components/TaskTimeGridView';
 import { YearCalendarView } from '@/components/YearCalendarView';
@@ -122,10 +120,8 @@ const TodoCalendar = () => {
   // Order version for force re-render
   const [orderVersion, setOrderVersion] = useState(0);
 
-  // Calendar layout mode: list / year / month / week / 3day / day + notes-style layouts
-  type NotesLayout = 'notesMonth' | 'notesWeekStrip' | 'notesDashboard' | 'notesYearHeatmap' | 'notesDarkHero' | 'notesDayWeekMonth' | 'notesCardGrid' | 'notesEditorial' | 'notesTimeline';
-  type CalendarLayout = 'list' | 'year' | TimeViewMode | NotesLayout;
-  const [calendarLayout, setCalendarLayout] = useState<CalendarLayout>('notesDayWeekMonth');
+  // Calendar task list is forced to the Today.tsx task-row layout for every user.
+  const [calendarLayout, setCalendarLayout] = useState<'list'>('list');
   // Prefilled due date when quick-adding from a calendar time slot
   const [quickAddDate, setQuickAddDate] = useState<Date | null>(null);
   // Calendar chip filters — which sections (and events) appear as chips in list view
@@ -266,12 +262,11 @@ const TodoCalendar = () => {
     const savedViewMode = await getSetting<ViewMode>('calendarViewMode', 'flat');
     setViewMode(savedViewMode);
 
-    // Force unified Day/Week/Month layout for all users and purge any
-    // legacy stored value (localStorage + settings store) so it never
-    // resurrects the old layout on next launch.
-    setCalendarLayout('notesDayWeekMonth');
+    // Force Today-style task list layout for all users and overwrite any
+    // legacy stored/cloud value so old signed-in layouts cannot return.
+    setCalendarLayout('list');
     try {
-      await setSetting('calendarLayoutMode', 'notesDayWeekMonth');
+      await setSetting('calendarLayoutMode', 'list');
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('calendarLayoutMode');
         localStorage.removeItem('setting:calendarLayoutMode');
@@ -1225,108 +1220,32 @@ const TodoCalendar = () => {
         {/* Calendar layout switcher removed — only Day/Week/Month view is used */}
 
 
-        {(() => {
-          // Notes-style layouts render tasks as pseudo-notes
-          const notesLayouts = new Set<CalendarLayout>([
-            'notesMonth','notesWeekStrip','notesDashboard','notesYearHeatmap',
-            'notesDarkHero','notesDayWeekMonth','notesCardGrid','notesEditorial','notesTimeline',
-          ]);
-          if (!notesLayouts.has(calendarLayout)) return null;
-
-          const pseudoNotes = tasksToPseudoNotes(items);
-          const openTaskById = (n: any) => {
-            const t = items.find(i => i.id === n.id);
-            if (t) setSelectedTask(t);
-          };
-          const deleteById = (id: string) => handleDeleteTask(id);
-          const sel = date || new Date();
-          const onSel = (d: Date) => setDate(d);
-          const Fallback = (
-            <div className="mx-4 my-4 rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
-              This layout couldn’t render. Try another layout.
-            </div>
-          );
-
-          return (
-            <ErrorBoundary fallback={Fallback}>
-              {calendarLayout === 'notesMonth' && (
-                <>
-                  <NotesCalendarDayWeekMonth itemLabel="Tasks"
-                    selectedDate={sel}
-                    onDateSelect={onSel}
-                    highlightedDates={highlightedCalendarDates}
-                    onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
-                    onAddClick={() => setIsInputOpen(true)}
-                  />
-                </>
-              )}
-              {calendarLayout === 'notesWeekStrip' && (
-                <NotesCalendarDayWeekMonth itemLabel="Tasks"
-                  selectedDate={sel}
-                  onDateSelect={onSel}
-                  notes={pseudoNotes}
-                  onMonthClick={() => setCalendarLayout('notesMonth')}
-                />
-              )}
-              {calendarLayout === 'notesDashboard' && (
-                <NotesCalendarDayWeekMonth itemLabel="Tasks"
-                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
-                  onEditNote={openTaskById} onDeleteNote={deleteById}
-                />
-              )}
-              {calendarLayout === 'notesYearHeatmap' && (
-                <NotesCalendarDayWeekMonth itemLabel="Tasks"
-                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
-                  onEditNote={openTaskById} onDeleteNote={deleteById}
-                />
-              )}
-              {calendarLayout === 'notesDarkHero' && (
-                <NotesCalendarDayWeekMonth itemLabel="Tasks"
-                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
-                  onEditNote={openTaskById} onDeleteNote={deleteById}
-                />
-              )}
-              {calendarLayout === 'notesDayWeekMonth' && (
-                <NotesCalendarDayWeekMonth itemLabel="Tasks"
-                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
-                  onEditNote={openTaskById} onDeleteNote={deleteById}
-                />
-              )}
-              {calendarLayout === 'notesCardGrid' && (
-                <NotesCalendarDayWeekMonth itemLabel="Tasks"
-                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
-                  onEditNote={openTaskById} onDeleteNote={deleteById}
-                  onAddNote={() => setIsInputOpen(true)}
-                />
-              )}
-              {calendarLayout === 'notesEditorial' && (
-                <NotesCalendarDayWeekMonth itemLabel="Tasks"
-                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
-                  onEditNote={openTaskById} onDeleteNote={deleteById}
-                />
-              )}
-              {calendarLayout === 'notesTimeline' && (
-                <NotesCalendarDayWeekMonth itemLabel="Tasks"
-                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
-                  onEditNote={openTaskById} onDeleteNote={deleteById}
-                />
-              )}
-            </ErrorBoundary>
-          );
-        })()}
-
-        {calendarLayout === 'list' ? (
+        <ErrorBoundary fallback={(
+          <div className="mx-4 my-4 rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+            This layout couldn’t render.
+          </div>
+        )}>
           <NotesCalendarDayWeekMonth itemLabel="Tasks"
-            selectedDate={date}
+            selectedDate={date || new Date()}
             onDateSelect={setDate}
             highlightedDates={highlightedCalendarDates}
             tasks={items}
             getPriorityColor={getPriorityColor}
-            onTaskClick={(t) => setSelectedTask(t)}
-            onTaskToggle={(t) => handleUpdateTask(t.id, { completed: !t.completed, completedAt: !t.completed ? new Date() : undefined })}
+            onTaskClick={(task) => setSelectedTask(task)}
+            onTaskToggle={(task) => handleUpdateTask(task.id, { completed: !task.completed, completedAt: !task.completed ? new Date() : undefined })}
+            onSubtaskClick={(parent, subtask) => setSelectedSubtask({ parentId: parent.id, subtask })}
+            onSubtaskToggle={(parent, subtask) => handleUpdateTask(parent.id, {
+              subtasks: parent.subtasks?.map((st) => st.id === subtask.id
+                ? { ...st, completed: !st.completed, completedAt: !st.completed ? new Date() : undefined }
+                : st),
+            })}
             onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
             onAddClick={() => setIsInputOpen(true)}
           />
+        </ErrorBoundary>
+
+        {false ? (
+          null
         ) : calendarLayout === 'year' ? (
           <div className="px-4 py-3">
             <YearCalendarView
