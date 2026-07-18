@@ -12,6 +12,7 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 
 
 import { FolderManager } from '@/components/FolderManager';
+import { FolderManageSheet } from '@/components/FolderManageSheet';
 import { MoveToFolderSheet } from '@/components/MoveToFolderSheet';
 import { NoteTemplateSheet } from '@/components/NoteTemplateSheet';
 
