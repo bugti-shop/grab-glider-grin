@@ -34,10 +34,10 @@ let installed = false;
  * Individual upserts are keyed by row id so re-runs don't duplicate anything.
  */
 export async function runInitialFullUpload(userId: string): Promise<void> {
-  // v2 deliberately ignores the earlier “queued” marker. Older builds marked
+  // v3 deliberately ignores the earlier “queued” marker. Older builds marked
   // upload done before the queue had actually reached the backend, so users who
-  // hit permission/queue failures never retried their notes/tasks/habits.
-  const flagKey = `flowist:initialUpload:v2:done:${userId}`;
+  // hit permission/queue/schema failures never retried their notes/tasks/habits.
+  const flagKey = `flowist:initialUpload:v3:done:${userId}`;
   try { if (localStorage.getItem(flagKey) === '1') return; } catch {}
 
   try {
@@ -58,12 +58,15 @@ export async function runInitialFullUpload(userId: string): Promise<void> {
     // Note folders + Task folders + Task sections
     try {
       const { getSetting } = await import('@/utils/settingsStorage');
-      const [noteFolders, taskFolders, sections] = await Promise.all([
+      const [noteFolders, legacyNoteFolders, taskFolders, sections] = await Promise.all([
+        getSetting<any[]>('nota_folders', []),
         getSetting<any[]>('folders', []),
         getSetting<any[]>('todoFolders', []),
         getSetting<any[]>('todoSections', []),
       ]);
-      if (noteFolders?.length) pushFolders(noteFolders as any);
+      const mergedNoteFolders = [...(noteFolders ?? []), ...(legacyNoteFolders ?? [])]
+        .filter((folder, index, all) => folder?.id && all.findIndex((item) => item?.id === folder.id) === index);
+      if (mergedNoteFolders?.length) pushFolders(mergedNoteFolders as any);
       if (taskFolders?.length) pushTaskFolders(taskFolders as any);
       if (sections?.length) pushSections(sections as any);
     } catch (e) { console.warn('[initialUpload] folders/sections failed', e); }
@@ -290,9 +293,12 @@ export function pushSettingsSnapshot(snapshot: Record<string, unknown>): void {
 
 async function applyFoldersFromCloud(rows: SyncRow[]) {
   const { getSetting, setSetting } = await import('@/utils/settingsStorage');
-  const noteLocal = await getSetting<any[]>('folders', []);
+  const [noteLocal, legacyNoteLocal] = await Promise.all([
+    getSetting<any[]>('nota_folders', []),
+    getSetting<any[]>('folders', []),
+  ]);
   const taskLocalRaw = await getSetting<any[]>('todoFolders', []);
-  const noteById = new Map((noteLocal ?? []).map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
+  const noteById = new Map([...(noteLocal ?? []), ...(legacyNoteLocal ?? [])].map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
   const taskById = new Map((taskLocalRaw ?? []).map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
   let noteChanged = false;
   let taskChanged = false;
@@ -319,7 +325,7 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
     }
   }
   if (noteChanged) {
-    await setSetting('folders', Array.from(noteById.values()), { skipCloudSync: true });
+    await setSetting('nota_folders', Array.from(noteById.values()), { skipCloudSync: true });
     window.dispatchEvent(new Event('foldersRestored'));
     window.dispatchEvent(new Event('foldersUpdated'));
   }
@@ -513,14 +519,15 @@ async function applySectionsFromCloud(rows: SyncRow[]) {
 }
 
 async function applyHabitsFromCloud(rows: SyncRow[]) {
-  const { loadHabits, saveHabit, deleteHabit } = await import('@/utils/habitStorage');
+  const { loadHabits, _applyCloudHabits } = await import('@/utils/habitStorage');
   const local = await loadHabits();
   const byId = new Map(local.map(h => [h.id, h]));
+  let changed = false;
   for (const r of rows) {
     const rowCloudTs = +new Date(r.updated_at ?? Date.now());
     if (r.is_deleted) {
       markDeleted('habits', r.id, rowCloudTs);
-      await deleteHabit(r.id).catch(() => {});
+      if (byId.delete(r.id)) changed = true;
       continue;
     }
     if (isTombstoned('habits', r.id, rowCloudTs)) {
@@ -531,11 +538,12 @@ async function applyHabitsFromCloud(rows: SyncRow[]) {
     const existing = byId.get(r.id);
     const localTs = existing ? new Date((existing as any).updatedAt ?? 0).getTime() : 0;
     const cloudTs = new Date((merged as any).updatedAt ?? 0).getTime();
-    if (!existing || localTs < cloudTs) { clearTombstone('habits', r.id); await saveHabit(merged); }
+    if (!existing || localTs < cloudTs) { clearTombstone('habits', r.id); byId.set(r.id, merged); changed = true; }
     else if (localTs > cloudTs) {
       recordConflict({ table: 'habits', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
     }
   }
+  if (changed) await _applyCloudHabits(Array.from(byId.values()));
 }
 
 async function applySettingsFromCloud(rows: SyncRow[]) {
@@ -546,6 +554,7 @@ async function applySettingsFromCloud(rows: SyncRow[]) {
   const { setManySettings } = await import('@/utils/settingsStorage');
   const safeDisplay = { ...display };
   delete safeDisplay.folders;
+  delete safeDisplay.nota_folders;
   delete safeDisplay.todoFolders;
   delete safeDisplay.todoSections;
   // Calendar layout is app-controlled, not a user preference. Prevent stale
