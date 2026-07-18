@@ -27,7 +27,7 @@ import {
   Share,
   MessageSquare,
   Target,
-  ListChecks,
+  ListTodo,
   FileEdit,
   Check,
   Flag,
@@ -993,7 +993,7 @@ export const TaskDetailPage = ({
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
-              <ListChecks className="h-4 w-4 text-success" strokeWidth={2} />
+              <ListTodo className="h-4 w-4 text-success" strokeWidth={2} />
             </span>
             <span className="flex-1 min-w-0 text-[12px] font-medium leading-none truncate">Subtasks</span>
             <span className="text-[10px] leading-none text-muted-foreground tabular-nums truncate">
@@ -1007,7 +1007,7 @@ export const TaskDetailPage = ({
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
-              <Tag className="h-4 w-4 text-info" />
+              <Tag className="h-4 w-4 text-info -scale-x-100" />
             </span>
             <span className="flex-1 min-w-0 text-[12px] font-medium leading-none truncate">Tags</span>
             <span className="text-[10px] leading-none text-muted-foreground truncate max-w-[50%]">
