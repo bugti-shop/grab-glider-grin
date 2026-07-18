@@ -136,37 +136,136 @@ export function NotesCalendarTimeline({
         </button>
       </div>
 
-      {/* Hour rail + cards */}
-      <div className="mt-3 relative pb-8">
-        <div className="grid grid-cols-[46px_1fr] gap-x-2">
-          {HOURS.map((h, idx) => {
-            const items = notesByHour.get(h) || [];
-            return (
-              <div key={h} className="contents">
-                {/* Hour label */}
-                <div className="relative pt-1">
-                  <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
-                    {fmtHour(h)}
-                  </span>
-                  {/* dot */}
-                  <span className="absolute right-[-6px] top-[10px] h-[6px] w-[6px] rounded-full bg-muted-foreground/40" />
-                </div>
-                {/* Cards column */}
-                <div className={['relative', idx < HOURS.length - 1 ? 'min-h-[68px]' : 'min-h-[24px]'].join(' ')}>
-                  {/* vertical rail line */}
-                  <span className="absolute left-[-8px] top-0 bottom-0 w-px bg-border/70" />
-                  {items.length > 0 && (
-                    <div className="space-y-3 pb-3">
-                      {items.map((n) => (
-                        <NoteRow key={n.id} note={n} onOpen={() => onEditNote(n)} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+      {/* Snapping hour rail */}
+      <TimelineRail hours={HOURS} notesByHour={notesByHour} onEditNote={onEditNote} />
+
+      {dayNotes.length === 0 && (
+        <div className="py-8 text-center text-sm text-muted-foreground">
+          No notes for this day yet.
         </div>
+      )}
+    </div>
+  );
+}
+
+function TimelineRail({
+  hours,
+  notesByHour,
+  onEditNote,
+}: {
+  hours: number[];
+  notesByHour: Map<number, Note[]>;
+  onEditNote: (n: Note) => void;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const [activeHour, setActiveHour] = useState<number>(hours[0]);
+  const rafRef = useRef<number | null>(null);
+
+  const setRowRef = useCallback((h: number) => (el: HTMLDivElement | null) => {
+    if (el) rowRefs.current.set(h, el);
+    else rowRefs.current.delete(h);
+  }, []);
+
+  // Track nearest hour to the top guide line
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    const compute = () => {
+      const containerTop = el.getBoundingClientRect().top;
+      // Guide line ~28px below the top of the scroller
+      const guide = containerTop + 28;
+      let bestHour = hours[0];
+      let bestDist = Infinity;
+      rowRefs.current.forEach((node, h) => {
+        const top = node.getBoundingClientRect().top;
+        const dist = Math.abs(top - guide);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestHour = h;
+        }
+      });
+      setActiveHour(bestHour);
+    };
+
+    const onScroll = () => {
+      if (rafRef.current !== null) return;
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        compute();
+      });
+    };
+
+    compute();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [hours]);
+
+  return (
+    <div
+      ref={scrollerRef}
+      className="mt-3 relative max-h-[62vh] overflow-y-auto snap-y snap-mandatory overscroll-contain no-scrollbar rounded-[16px]"
+      style={{ scrollPaddingTop: 12 }}
+    >
+      <div className="grid grid-cols-[46px_1fr] gap-x-2">
+        {hours.map((h, idx) => {
+          const items = notesByHour.get(h) || [];
+          const isActive = h === activeHour;
+          return (
+            <div
+              key={h}
+              ref={setRowRef(h)}
+              className="contents"
+            >
+              {/* Hour label */}
+              <div className="relative pt-1 snap-start" style={{ scrollSnapAlign: 'start' }}>
+                <span
+                  className={[
+                    'text-[11px] tabular-nums transition-all duration-150',
+                    isActive
+                      ? 'text-foreground font-semibold text-[12px]'
+                      : 'text-muted-foreground font-medium',
+                  ].join(' ')}
+                >
+                  {fmtHour(h)}
+                </span>
+                <span
+                  className={[
+                    'absolute right-[-6px] top-[10px] rounded-full transition-all duration-150',
+                    isActive
+                      ? 'h-[8px] w-[8px] bg-foreground ring-4 ring-foreground/10'
+                      : 'h-[6px] w-[6px] bg-muted-foreground/40',
+                  ].join(' ')}
+                />
+              </div>
+              {/* Cards column */}
+              <div className={['relative snap-start', idx < hours.length - 1 ? 'min-h-[68px]' : 'min-h-[24px]'].join(' ')}>
+                <span
+                  className={[
+                    'absolute left-[-8px] top-0 bottom-0 w-px transition-colors',
+                    isActive ? 'bg-foreground/40' : 'bg-border/70',
+                  ].join(' ')}
+                />
+                {items.length > 0 && (
+                  <div className="space-y-3 pb-3">
+                    {items.map((n) => (
+                      <NoteRow key={n.id} note={n} onOpen={() => onEditNote(n)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
         {dayNotes.length === 0 && (
           <div className="py-8 text-center text-sm text-muted-foreground">
