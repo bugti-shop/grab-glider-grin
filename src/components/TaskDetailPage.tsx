@@ -147,6 +147,7 @@ export const TaskDetailPage = ({
   const [previewAttachment, setPreviewAttachment] = useState<{ url: string; name: string; type: string } | null>(null);
   const [showPomodoro, setShowPomodoro] = useState(false);
   const [showHistoryPage, setShowHistoryPage] = useState(false);
+  const [showTimeTracker, setShowTimeTracker] = useState(false);
   const [pomodoroStats, setPomodoroStats] = useState(() => getPomodoroStats(task?.id));
   useEffect(() => {
     setPomodoroStats(getPomodoroStats(task?.id));
