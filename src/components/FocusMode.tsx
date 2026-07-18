@@ -643,7 +643,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
 
   const content = (
     <div
-      className="fixed inset-0 z-[100] text-white"
+      className="fixed inset-0 z-[100] text-white bg-black"
       role="dialog"
       aria-modal="true"
       style={backgrounded ? { opacity: 0, pointerEvents: 'none' } : undefined}
@@ -653,6 +653,7 @@ export const FocusMode = ({ open, onClose, taskId, taskTitle, onComplete }: Focu
         <div className="absolute inset-0 bg-black" />
       ) : (
         <>
+          <div className="absolute inset-0 bg-black" />
           <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: `url(${bg})` }} />
           <div className="absolute inset-0 bg-black/35" />
         </>
