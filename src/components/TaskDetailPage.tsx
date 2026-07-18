@@ -873,7 +873,7 @@ export const TaskDetailPage = ({
                 <span className="flex-shrink-0 h-6 w-6 rounded-full border-[1.5px] border-foreground/80 flex items-center justify-center">
                   <MoreHorizontal className="h-3 w-3" />
                 </span>
-                <span className="flex-1 text-[14px] font-medium">Status</span>
+                <span className="flex-1 text-[10px] font-medium">Status</span>
                 <span className="text-[12px] px-2.5 py-0.5 rounded-full bg-info/15 text-info font-medium">
                   {getStatusConfig(task.status || 'not_started').label}
                 </span>
@@ -908,7 +908,7 @@ export const TaskDetailPage = ({
                     }}
                   />
                 </span>
-                <span className="flex-1 text-[14px] font-medium">Priority</span>
+                <span className="flex-1 text-[10px] font-medium">Priority</span>
                 <span
                   className="text-[13px] font-medium capitalize"
                   style={{ color: task.priority && task.priority !== 'none' ? getPriorityHex(task.priority) : 'hsl(var(--muted-foreground))' }}
@@ -930,8 +930,8 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
               <CalendarIcon className="h-5 w-5" />
             </span>
-            <span className="flex-1 text-[14px] font-medium">Due Date</span>
-            <span className="text-[13px] text-muted-foreground">
+            <span className="flex-1 text-[10px] font-medium">Due Date</span>
+            <span className="text-[9px] text-muted-foreground">
               {task.dueDate ? format(new Date(task.dueDate), 'EEE, MMM d, yyyy') : 'None'}
             </span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
@@ -949,8 +949,8 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
               <Bell className="h-5 w-5" />
             </span>
-            <span className="flex-1 text-[14px] font-medium">Reminder</span>
-            <span className="text-[13px] text-muted-foreground truncate max-w-[50%]">
+            <span className="flex-1 text-[10px] font-medium">Reminder</span>
+            <span className="text-[9px] text-muted-foreground truncate max-w-[50%]">
               {(() => {
                 const list = (task as any).extraReminders as Array<{ time: Date }> | undefined;
                 if (list && list.length) return list.length === 1 ? format(new Date(list[0].time), 'MMM d, h:mm a') : `${list.length} reminders`;
@@ -972,10 +972,10 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Target className="h-[18px] w-[18px] text-primary" />
             </span>
-            <span className="flex-1 min-w-0 flex items-center gap-1 text-[14px] font-medium truncate">
+            <span className="flex-1 min-w-0 flex items-center gap-1 text-[10px] font-medium truncate">
               Focus Mode {!isPro && <PremiumCrown size={12} />}
             </span>
-            <span className="text-[12px] text-muted-foreground truncate">Deep Work</span>
+            <span className="text-[9px] text-muted-foreground truncate">Deep Work</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
           </button>
 
@@ -986,8 +986,8 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-8 w-8 rounded-lg bg-info/10 flex items-center justify-center">
               <Clock className="h-[18px] w-[18px] text-info" />
             </span>
-            <span className="flex-1 min-w-0 text-[14px] font-medium truncate">Time Tracking</span>
-            <span className="text-[12px] text-muted-foreground tabular-nums truncate">
+            <span className="flex-1 min-w-0 text-[10px] font-medium truncate">Time Tracking</span>
+            <span className="text-[9px] text-muted-foreground tabular-nums truncate">
               {formatPomodoroDuration(pomodoroStats.taskFocusedSec)}
             </span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
@@ -1000,8 +1000,8 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
               <ListChecks className="h-[18px] w-[18px] text-success" />
             </span>
-            <span className="flex-1 min-w-0 text-[14px] font-medium truncate">Subtasks</span>
-            <span className="text-[12px] text-muted-foreground tabular-nums truncate">
+            <span className="flex-1 min-w-0 text-[10px] font-medium truncate">Subtasks</span>
+            <span className="text-[9px] text-muted-foreground tabular-nums truncate">
               {task.subtasks?.length ?? 0}
             </span>
             <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
@@ -1348,7 +1348,7 @@ export const TaskDetailPage = ({
 
           {/* Task History Card - Premium */}
           <div className="rounded-2xl bg-white border border-border/60 shadow-sm p-4 space-y-3">
-            <div className="flex items-center gap-2 text-[14px] font-medium text-muted-foreground">
+            <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground">
               <Clock className="h-4 w-4" />
               {t('taskDetail.taskHistory')}
             </div>
