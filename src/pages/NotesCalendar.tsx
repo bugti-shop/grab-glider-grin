@@ -9,9 +9,10 @@ import { NotesCalendarDarkHero } from '@/components/notes/NotesCalendarDarkHero'
 import { NotesCalendarDayWeekMonth } from '@/components/notes/NotesCalendarDayWeekMonth';
 import { NotesCalendarCardGrid } from '@/components/notes/NotesCalendarCardGrid';
 import { NotesCalendarEditorial } from '@/components/notes/NotesCalendarEditorial';
+import { NotesCalendarTimeline } from '@/components/notes/NotesCalendarTimeline';
 
 import { AppLogo } from '@/components/AppLogo';
-import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3, Moon, CalendarDays, LayoutPanelTop, BookOpen } from 'lucide-react';
+import { Plus, StickyNote, FileText, FileEdit, Pen, FileCode, Mic, Image, MoreHorizontal, Search, Image as ImageIcon, LayoutGrid, CalendarRange, Check, LayoutDashboard, Grid3x3, Moon, CalendarDays, LayoutPanelTop, BookOpen, Clock } from 'lucide-react';
 import { isToday as isTodayFn } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { NoteEditor } from '@/components/NoteEditor';
