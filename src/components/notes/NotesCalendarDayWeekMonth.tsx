@@ -340,14 +340,14 @@ export const NotesCalendarDayWeekMonth = ({
                           e.stopPropagation();
                           onTaskToggle?.(task);
                         }}
-                        className="shrink-0 h-[26px] w-[26px] rounded-full flex items-center justify-center transition-colors"
+                        className="shrink-0 h-[23px] w-[23px] rounded-full flex items-center justify-center transition-colors"
                         style={{
                           border: `1.5px solid ${ring}`,
                           background: task.completed ? ring : 'transparent',
                         }}
                       >
                         {task.completed && (
-                          <svg viewBox="0 0 12 12" className="h-[12px] w-[12px] text-white">
+                          <svg viewBox="0 0 12 12" className="h-[11px] w-[11px] text-white">
                             <path
                               d="M2 6.5l2.5 2.5L10 3.5"
                               fill="none"
@@ -361,7 +361,7 @@ export const NotesCalendarDayWeekMonth = ({
                       </span>
                       <span
                         className={cn(
-                          'flex-1 min-w-0 truncate text-[17px] leading-[1.25] font-normal',
+                          'flex-1 min-w-0 truncate text-[15px] leading-[1.25] font-normal',
                           task.completed
                             ? 'text-muted-foreground line-through'
                             : 'text-foreground',
