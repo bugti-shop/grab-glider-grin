@@ -33,17 +33,18 @@ export default defineConfig(({ mode }) => ({
     // picks the best-encoded sibling at request time and serves it with the
     // matching Content-Encoding + long-cache headers.
     compression({
-      algorithm: 'gzip',
+      algorithms: ['gzip'],
       exclude: [/\.(br|gz)$/, /\.(png|jpe?g|webp|avif|ico|mp4|woff2?)$/i],
       threshold: 1024,
       deleteOriginalAssets: false,
     }),
     compression({
-      algorithm: 'brotliCompress',
+      algorithms: ['brotliCompress'],
       exclude: [/\.(br|gz)$/, /\.(png|jpe?g|webp|avif|ico|mp4|woff2?)$/i],
       threshold: 1024,
       deleteOriginalAssets: false,
     }),
+
   ].filter(Boolean),
 
   resolve: {
