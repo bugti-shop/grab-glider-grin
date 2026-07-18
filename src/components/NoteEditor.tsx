@@ -886,6 +886,13 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     const hasText = (title?.trim() || '') !== '' || (content?.trim() || '') !== '' || (codeContent?.trim() || '') !== '';
     if (!hasText) return;
 
+    // Skip autosave when the user hasn't actually edited anything — merely
+    // opening a note must NOT bump `updatedAt`.
+    const snap = initialSnapshotRef.current;
+    if (snap && title === snap.title && content === snap.content && codeContent === snap.codeContent) {
+      return;
+    }
+
     // For sketch notes, don't auto-save if content looks like default empty sketch
     // (no strokes in any layer). This prevents overwriting real data on mount.
     if (noteType === 'sketch' && content) {
