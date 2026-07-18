@@ -114,6 +114,41 @@ export const NotesCalendarDayWeekMonth = ({
     [notes, selectedDate],
   );
 
+  const selectedTasks = useMemo(
+    () =>
+      (tasks || []).filter(
+        (t) => t.dueDate && isSameDay(new Date(t.dueDate), selectedDate),
+      ),
+    [tasks, selectedDate],
+  );
+
+  const sortedSelectedTasks = useMemo(() => {
+    const withTime = selectedTasks.filter((t) => !!t.reminderTime);
+    const withoutTime = selectedTasks.filter((t) => !t.reminderTime);
+    withTime.sort((a, b) => (a.reminderTime! < b.reminderTime! ? -1 : 1));
+    return [...withTime, ...withoutTime];
+  }, [selectedTasks]);
+
+  const formatTaskTime = (task: TodoItem): string => {
+    if (!task.reminderTime) return '';
+    const [hStr, mStr] = task.reminderTime.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (isNaN(h)) return '';
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour12 = ((h + 11) % 12) + 1;
+    return m === 0 ? `${hour12} ${period}` : `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+  };
+
+  const ringColorFor = (task: TodoItem): string => {
+    const id = (task.priority as string) || 'none';
+    if (getPriorityColor) {
+      const c = getPriorityColor(id);
+      if (c) return c;
+    }
+    return DEFAULT_PRIORITY_COLORS[id] || DEFAULT_PRIORITY_COLORS.none;
+  };
+
   const goPrev = () => {
     if (mode === 'month') onDateSelect(subMonths(selectedDate, 1));
     else onDateSelect(subWeeks(selectedDate, mode === 'day' ? 1 : 2));
