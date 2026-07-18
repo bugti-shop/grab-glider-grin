@@ -110,6 +110,7 @@ const NotesCalendar = () => {
         };
         const updatedNotes = notes.map(n => n.id === currentEditingId ? updatedNote : n);
         setNotes(updatedNotes);
+        setEditingNote(updatedNote);
         await saveNoteToDBSingle(updatedNote);
       }
     } else {
@@ -123,12 +124,11 @@ const NotesCalendar = () => {
       };
       const updatedNotes = [...notes, newNote];
       setNotes(updatedNotes);
+      editingNoteIdRef.current = newNote.id;
+      setEditingNote(newNote);
       await saveNoteToDBSingle(newNote);
     }
 
-    setIsEditorOpen(false);
-    editingNoteIdRef.current = null;
-    setEditingNote(null);
     window.dispatchEvent(new Event('notesUpdated'));
     return true;
   }, [notes, setNotes, date, isPro, softRequireCreate, softRequireMutate]);
