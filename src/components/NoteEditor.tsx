@@ -904,9 +904,14 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     };
 
     window.addEventListener('popstate', onPopState);
+    const ignoreSyntheticSheetPop = () => {
+      isPoppingHistoryRef.current = true;
+    };
+    window.addEventListener('flowist:synthetic-sheet-history-pop', ignoreSyntheticSheetPop);
     return () => {
       clearTimeout(timeoutId);
       window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('flowist:synthetic-sheet-history-pop', ignoreSyntheticSheetPop);
     };
   }, [isOpen]);
 
@@ -1427,9 +1432,6 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   return (
     <div
       className={cn("fixed inset-0 z-50 flex flex-col")}
-      onPointerDown={(e) => e.stopPropagation()}
-      onTouchStart={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
       style={{ backgroundColor: getEditorBackgroundColor() }}
     >
       {/* Top Header */}

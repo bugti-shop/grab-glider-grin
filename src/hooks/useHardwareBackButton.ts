@@ -134,6 +134,7 @@ export const useHardwareBackButton = ({
           // Best-effort cleanup; if this causes a navigation, it will be within the same URL state we pushed.
           try {
             suppressedProgrammaticPopstates += 1;
+            window.dispatchEvent(new Event('flowist:synthetic-sheet-history-pop'));
             window.history.back();
             window.setTimeout(() => {
               if (suppressedProgrammaticPopstates > 0) suppressedProgrammaticPopstates -= 1;

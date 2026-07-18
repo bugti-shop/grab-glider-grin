@@ -746,8 +746,6 @@ export const TaskDetailPage = ({
         "fixed inset-y-0 right-0 left-0 z-50 flex flex-col transition-transform duration-300 border-l border-border pointer-events-auto",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}
-      onPointerDown={stopNestedTap}
-      onClick={stopNestedTap}
       style={{
         paddingTop: 'var(--safe-top, 0px)',
         paddingBottom: 'var(--safe-bottom, 0px)',

@@ -2760,9 +2760,6 @@ export const RichTextEditor = ({
           className="title-input"
           autoCapitalize="sentences"
           enterKeyHint="next"
-          onPointerDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -2838,9 +2835,6 @@ export const RichTextEditor = ({
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         onCopy={handleCopy}
-        onPointerDown={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
         data-gramm="false"
         data-gramm_editor="false"
         data-enable-grammarly="false"
