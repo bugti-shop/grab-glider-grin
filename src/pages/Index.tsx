@@ -114,6 +114,7 @@ const Index = () => {
   const [upcomingReminders, setUpcomingReminders] = useState<any[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'type'>('date');
+  const [isFolderManageOpen, setIsFolderManageOpen] = useState(false);
   const [filterByType, setFilterByType] = useState<NoteType | null>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
