@@ -5,8 +5,6 @@ import { recordCompletion, TASK_STREAK_KEY } from '@/utils/streakStorage';
 import { NotesCalendarDayWeekMonth } from '@/components/notes/NotesCalendarDayWeekMonth';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { TaskTimeGridView, TimeViewMode } from '@/components/TaskTimeGridView';
-import { YearCalendarView } from '@/components/YearCalendarView';
 
 import { Plus, ListTodo, CalendarDays, Clock, MapPin, Repeat, Trash2, Edit, MoreVertical, X, GripVertical, LayoutList, Columns3, GitBranch, Flag, ListChecks, ChevronRight, ChevronDown, TrendingUp, History, CheckCircle2, Circle, Loader2, Sun, AlertCircle, Crown, Check, Grid3x3, Calendar as CalendarIconLucide, Columns2, Square, Rows3, LayoutGrid, LayoutDashboard, Moon, LayoutPanelTop, BookOpen, CalendarRange } from 'lucide-react';
 import { useSubscription, FREE_LIMITS } from '@/contexts/SubscriptionContext';
@@ -1243,51 +1241,6 @@ const TodoCalendar = () => {
             onAddClick={() => setIsInputOpen(true)}
           />
         </ErrorBoundary>
-
-        {false ? (
-          null
-        ) : calendarLayout === 'year' ? (
-          <div className="px-4 py-3">
-            <YearCalendarView
-              selectedDate={date || new Date()}
-              onDateSelect={(d) => setDate(d)}
-              tasks={items}
-            />
-          </div>
-        ) : (calendarLayout === 'month' || calendarLayout === 'week' || calendarLayout === '3day' || calendarLayout === 'day') ? (
-          <div className="px-4 py-3">
-            <TaskTimeGridView
-              mode={calendarLayout as TimeViewMode}
-              selectedDate={date || new Date()}
-              onDateSelect={(d) => setDate(d)}
-              tasks={itemsWithCountdowns}
-              onTaskClick={(task) => {
-                if (task.id?.startsWith('countdown:')) {
-                  const cid = task.id.split(':')[1];
-                  navigate(`/todo/countdown/${cid}`);
-                  return;
-                }
-                setSelectedTask(task);
-              }}
-              onReschedule={(taskId, newDate) => {
-                if (taskId.startsWith('countdown:')) {
-                  toast.info(t('calendar.countdownNotReschedulable', 'Edit countdown from its detail page'));
-                  return;
-                }
-                handleUpdateTask(taskId, { dueDate: newDate });
-                toast.success(t('calendar.taskRescheduled', 'Task rescheduled'));
-              }}
-              onQuickAdd={(d) => {
-                setDate(d);
-                setQuickAddDate(d);
-                setIsInputOpen(true);
-              }}
-            />
-
-          </div>
-        ) : null}
-
-
 
         {/* Events/Tasks list below calendar removed per request */}
 
