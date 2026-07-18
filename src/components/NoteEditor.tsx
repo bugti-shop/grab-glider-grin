@@ -141,8 +141,6 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   
   const draftIdRef = useRef<string | null>(null);
   const isOpenRef = useRef(isOpen);
-  const pushedHistoryRef = useRef(false);
-  const isPoppingHistoryRef = useRef(false);
   const returnToRef = useRef(returnTo);
 
   useEffect(() => {
@@ -797,13 +795,6 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   const handleSaveRef = useRef(handleSave);
   handleSaveRef.current = handleSave;
 
-  const closeHistoryOverlay = useCallback(() => {
-    if (!pushedHistoryRef.current) return;
-    pushedHistoryRef.current = false;
-    isPoppingHistoryRef.current = true;
-    window.history.back();
-  }, []);
-
   // The actual close logic (called after sketch meta dialog if needed)
   const performClose = useCallback(async () => {
     // Mark as closing to prevent re-entry
@@ -817,13 +808,6 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
     
     // Close first, then handle navigation
     onClose();
-    
-    // Clean up history state
-    if (pushedHistoryRef.current) {
-      pushedHistoryRef.current = false;
-      isPoppingHistoryRef.current = true;
-      window.history.back();
-    }
     
     // Navigate back to the origin screen if provided (after a small delay to avoid race)
     if (returnToRef.current) {
@@ -877,43 +861,6 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   useEffect(() => {
     handleCloseRef.current = handleClose;
   }, [handleClose]);
-
-  // When editor opens, push a history entry so "Back" closes editor instead of leaving/exiting
-  useEffect(() => {
-    if (!isOpen || skipHistory) return;
-    if (typeof window === 'undefined') return;
-
-    // Small delay to ensure component is fully mounted
-    const timeoutId = setTimeout(() => {
-      if (isOpenRef.current) {
-        pushedHistoryRef.current = true;
-        window.history.pushState({ __noteEditor: true }, '');
-      }
-    }, 50);
-
-    const onPopState = () => {
-      if (isPoppingHistoryRef.current) {
-        isPoppingHistoryRef.current = false;
-        return;
-      }
-
-      if (!isOpenRef.current) return;
-
-      // Don't push another state, just close
-      void handleCloseRef.current();
-    };
-
-    window.addEventListener('popstate', onPopState);
-    const ignoreSyntheticSheetPop = () => {
-      isPoppingHistoryRef.current = true;
-    };
-    window.addEventListener('flowist:synthetic-sheet-history-pop', ignoreSyntheticSheetPop);
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('popstate', onPopState);
-      window.removeEventListener('flowist:synthetic-sheet-history-pop', ignoreSyntheticSheetPop);
-    };
-  }, [isOpen]);
 
   // Auto-save as user types (debounced) - shorter debounce for sketch
   useEffect(() => {
@@ -1005,7 +952,7 @@ export const NoteEditor = ({ note, isOpen, onClose, onSave, defaultType = 'regul
   // Handle hardware back button on Android - save and close editor (parent keeps correct screen)
   useHardwareBackButton({
     onBack: handleClose,
-    enabled: isOpen,
+    enabled: isOpen && !skipHistory,
     priority: 'sheet',
   });
 
