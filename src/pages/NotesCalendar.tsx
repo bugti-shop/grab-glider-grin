@@ -28,6 +28,14 @@ type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap' | 'dar
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
+const stripMetadataFlags = (note: Note): Note => {
+  const fullNote = { ...note } as Note & Record<string, unknown>;
+  delete fullNote.__contentStub;
+  delete fullNote.__contentPreview;
+  delete fullNote.__contentLength;
+  return fullNote as Note;
+};
+
 
 const CalendarPanelFallback = () => (
   <div className="mx-4 my-4 rounded-lg border border-border bg-card p-4 text-center">
@@ -111,13 +119,13 @@ const NotesCalendar = () => {
     if (currentEditingId) {
       if (!softRequireMutate()) return false;
       const existingNote = notes.find(n => n.id === currentEditingId);
-      const updatedNote: Note = {
+      const updatedNote: Note = stripMetadataFlags({
         ...(existingNote || incomingNote),
         ...incomingNote,
         id: currentEditingId,
         createdAt: existingNote?.createdAt || incomingNote.createdAt || date || new Date(),
         updatedAt: new Date(),
-      };
+      });
       const updatedNotes = notes.some(n => n.id === currentEditingId)
         ? notes.map(n => n.id === currentEditingId ? updatedNote : n)
         : [updatedNote, ...notes.filter(n => n.id !== currentEditingId)];
@@ -126,7 +134,7 @@ const NotesCalendar = () => {
       await saveNoteToDBSingle(updatedNote);
     } else {
       if (!isPro && !softRequireCreate('notes', notes.length)) return false;
-      const newNote: Note = {
+      const newNote: Note = stripMetadataFlags({
         ...incomingNote,
         // Use the editor's draft id so the editor's own safety persistence
         // overwrites the same row instead of creating a second note.
@@ -134,7 +142,7 @@ const NotesCalendar = () => {
         title: incomingNote.title || `Note - ${format(date || new Date(), 'MMM dd, yyyy')}`,
         createdAt: incomingNote.createdAt || date || new Date(),
         updatedAt: new Date(),
-      };
+      });
       const updatedNotes = notes.some(n => n.id === newNote.id)
         ? notes.map(n => n.id === newNote.id ? newNote : n)
         : [...notes, newNote];
