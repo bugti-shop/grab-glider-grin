@@ -295,15 +295,15 @@ export const NotesCalendarDayWeekMonth = ({
         </div>
       )}
 
-      {/* Notes header */}
+      {/* List header */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h3 className="text-[16px] font-bold text-foreground">
             {itemLabel} on {format(selectedDate, 'MMM d')}
           </h3>
-          {selectedNotes.length > 0 && (
+          {(isTaskMode ? sortedSelectedTasks.length : selectedNotes.length) > 0 && (
             <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-muted text-[11px] font-semibold text-foreground/70 tabular-nums">
-              {selectedNotes.length}
+              {isTaskMode ? sortedSelectedTasks.length : selectedNotes.length}
             </span>
           )}
         </div>
@@ -315,9 +315,72 @@ export const NotesCalendarDayWeekMonth = ({
         </button>
       </div>
 
-      {/* Notes list */}
+      {/* List body */}
       <div className="px-4 pb-24">
-        {selectedNotes.length === 0 ? (
+        {isTaskMode ? (
+          sortedSelectedTasks.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              No tasks for this date yet.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {sortedSelectedTasks.map((task) => {
+                const ring = ringColorFor(task);
+                const time = formatTaskTime(task);
+                return (
+                  <li key={task.id}>
+                    <button
+                      onClick={() => onTaskClick?.(task)}
+                      className="w-full flex items-center gap-3 py-3.5 text-left active:bg-muted/40 rounded-md transition-colors"
+                    >
+                      <span
+                        role="checkbox"
+                        aria-checked={task.completed}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTaskToggle?.(task);
+                        }}
+                        className="shrink-0 h-[22px] w-[22px] rounded-full flex items-center justify-center transition-colors"
+                        style={{
+                          border: `2px solid ${ring}`,
+                          background: task.completed ? ring : 'transparent',
+                        }}
+                      >
+                        {task.completed && (
+                          <svg viewBox="0 0 12 12" className="h-[10px] w-[10px] text-white">
+                            <path
+                              d="M2 6.5l2.5 2.5L10 3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </span>
+                      <span
+                        className={cn(
+                          'flex-1 min-w-0 truncate text-[16px] leading-tight',
+                          task.completed
+                            ? 'text-muted-foreground line-through'
+                            : 'text-foreground font-medium',
+                        )}
+                      >
+                        {task.text}
+                      </span>
+                      {time && (
+                        <span className="shrink-0 text-[13px] text-muted-foreground tabular-nums">
+                          {time}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : selectedNotes.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
             No {itemLabel.toLowerCase()} for this date yet.
           </div>
