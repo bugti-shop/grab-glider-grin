@@ -20,9 +20,6 @@ self.addEventListener('activate', (event) => {
     try {
       const names = await caches.keys();
       await Promise.allSettled(names.filter(isOldAppShellCache).map((name) => caches.delete(name)));
-      await self.clients.claim();
-      const clients = await self.clients.matchAll({ type: 'window' });
-      await Promise.allSettled(clients.map((client) => client.navigate(client.url)));
     } finally {
       await self.registration.unregister();
     }
