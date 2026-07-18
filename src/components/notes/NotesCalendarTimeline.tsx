@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from 'react';
+import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { format, isSameDay, startOfWeek, addDays, getHours } from 'date-fns';
 import { FileText, MoreHorizontal, SlidersHorizontal } from 'lucide-react';
 import { Note } from '@/types/note';
