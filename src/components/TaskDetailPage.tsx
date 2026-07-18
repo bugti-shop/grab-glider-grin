@@ -834,7 +834,7 @@ export const TaskDetailPage = ({
 
         {/* Description — plain paragraph, no label, no box */}
         <div
-          className="-mt-1"
+          className="-mt-3"
           style={{
             color: '#adadad',
             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif',
@@ -851,13 +851,13 @@ export const TaskDetailPage = ({
               onFocus={() => setIsEditingDesc(true)}
               onBlur={() => setTimeout(() => setIsEditingDesc(false), 200)}
               placeholder={t('taskDetail.descriptionPlaceholder')}
-              className="bg-transparent border-none focus:ring-0 focus-visible:ring-0 shadow-none px-0"
-              minHeight={40}
+              className="bg-transparent border-none focus:ring-0 focus-visible:ring-0 shadow-none px-0 py-0 text-[13px]"
+              minHeight={28}
             />
           ) : (
             <div
               onClick={() => setIsEditingDesc(true)}
-              className="rich-text-editor w-full text-[15px] whitespace-pre-wrap leading-[1.45] cursor-text"
+              className="rich-text-editor w-full text-[13px] whitespace-pre-wrap leading-[1.45] cursor-text"
               style={{ color: '#adadad', fontFamily: 'inherit' }}
               dangerouslySetInnerHTML={{ __html: descriptionToDisplayHtml(descText) }}
             />
@@ -872,8 +872,8 @@ export const TaskDetailPage = ({
                 <span className="flex-shrink-0 h-3.5 w-3.5 rounded-full border-[1.25px] border-foreground/80 flex items-center justify-center">
                   <MoreHorizontal className="h-2 w-2" />
                 </span>
-                <span className="flex-1 text-[12px] font-medium leading-none">Status</span>
-                <span className="text-[11px] leading-none px-2 py-1 rounded-full bg-info/15 text-info font-medium">
+                <span className="flex-1 text-[13px] font-normal leading-none text-black">Status</span>
+                <span className="text-[12px] leading-none px-2 py-1 rounded-full bg-info/15 text-info font-medium">
                   {getStatusConfig(task.status || 'not_started').label}
                 </span>
                 <ChevronRight className="h-3 w-3 text-muted-foreground/70 ml-0.5" />
@@ -907,9 +907,9 @@ export const TaskDetailPage = ({
                     }}
                   />
                 </span>
-                <span className="flex-1 text-[12px] font-medium leading-none">Priority</span>
+                <span className="flex-1 text-[13px] font-normal leading-none text-black">Priority</span>
                 <span
-                  className="text-[11px] leading-none font-medium capitalize"
+                  className="text-[12px] leading-none font-medium capitalize"
                   style={{ color: task.priority && task.priority !== 'none' ? getPriorityHex(task.priority) : 'hsl(var(--muted-foreground))' }}
                 >
                   {task.priority && task.priority !== 'none' ? getPriorityName(task.priority) : 'None'}
@@ -929,8 +929,8 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-3.5 w-3.5 flex items-center justify-center">
               <CalendarIcon className="h-3.5 w-3.5" />
             </span>
-            <span className="flex-1 text-[12px] font-medium leading-none">Due Date</span>
-            <span className="text-[10px] leading-none text-muted-foreground">
+            <span className="flex-1 text-[13px] font-normal leading-none text-black">Due Date</span>
+            <span className="text-[12px] leading-none text-muted-foreground">
               {task.dueDate ? format(new Date(task.dueDate), 'EEE, MMM d, yyyy') : 'None'}
             </span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/70 ml-0.5" />
@@ -948,8 +948,8 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-3.5 w-3.5 flex items-center justify-center">
               <Bell className="h-3.5 w-3.5" />
             </span>
-            <span className="flex-1 text-[12px] font-medium leading-none">Reminder</span>
-            <span className="text-[10px] leading-none text-muted-foreground truncate max-w-[50%]">
+            <span className="flex-1 text-[13px] font-normal leading-none text-black">Reminder</span>
+            <span className="text-[12px] leading-none text-muted-foreground truncate max-w-[50%]">
               {(() => {
                 const list = (task as any).extraReminders as Array<{ time: Date }> | undefined;
                 if (list && list.length) return list.length === 1 ? format(new Date(list[0].time), 'MMM d, h:mm a') : `${list.length} reminders`;
@@ -971,10 +971,10 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <Target className="h-4 w-4 text-primary" />
             </span>
-            <span className="flex-1 min-w-0 flex items-center gap-1 text-[12px] font-medium leading-none truncate">
+            <span className="flex-1 min-w-0 flex items-center gap-1 text-[13px] font-normal leading-none text-black truncate">
               Focus Mode {!isPro && <PremiumCrown size={12} />}
             </span>
-            <span className="text-[10px] leading-none text-muted-foreground truncate">Deep Work</span>
+            <span className="text-[12px] leading-none text-muted-foreground truncate">Deep Work</span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 flex-shrink-0 ml-0.5" />
           </button>
 
@@ -985,8 +985,8 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <Clock className="h-4 w-4 text-info" />
             </span>
-            <span className="flex-1 min-w-0 text-[12px] font-medium leading-none truncate">Time Tracking</span>
-            <span className="text-[10px] leading-none text-muted-foreground tabular-nums truncate">
+            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Time Tracking</span>
+            <span className="text-[12px] leading-none text-muted-foreground tabular-nums truncate">
               {formatPomodoroDuration(pomodoroStats.taskFocusedSec)}
             </span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 flex-shrink-0 ml-0.5" />
@@ -1002,8 +1002,8 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <List className="h-4 w-4 text-success" strokeWidth={2.25} />
             </span>
-            <span className="flex-1 min-w-0 text-[12px] font-medium leading-none truncate">Subtasks</span>
-            <span className="text-[10px] leading-none text-muted-foreground tabular-nums truncate">
+            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Subtasks</span>
+            <span className="text-[12px] leading-none text-muted-foreground tabular-nums truncate">
               {task.subtasks?.length ?? 0}
             </span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 flex-shrink-0 ml-0.5" />
@@ -1014,10 +1014,10 @@ export const TaskDetailPage = ({
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
-              <Tag className="h-4 w-4 text-info" />
+              <Tag className="h-4 w-4 text-info scale-x-[-1]" />
             </span>
-            <span className="flex-1 min-w-0 text-[12px] font-medium leading-none truncate">Tags</span>
-            <span className="text-[10px] leading-none text-muted-foreground truncate max-w-[50%]">
+            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Tags</span>
+            <span className="text-[12px] leading-none text-muted-foreground truncate max-w-[50%]">
               {task.coloredTags && task.coloredTags.length > 0
                 ? task.coloredTags.map(t => t.name).join(', ')
                 : 'None'}
@@ -1032,7 +1032,7 @@ export const TaskDetailPage = ({
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
               <FileEdit className="h-4 w-4 text-warning" />
             </span>
-            <span className="flex-1 min-w-0 text-[12px] font-medium leading-none truncate">Convert to Notes</span>
+            <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Convert to Notes</span>
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 flex-shrink-0 ml-0.5" />
           </button>
         </div>
