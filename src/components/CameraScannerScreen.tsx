@@ -265,7 +265,7 @@ export const CameraScannerScreen = ({
       cancelled = true;
       stopStream();
     };
-  }, [isOpen, stopStream, objReviewFrame]);
+  }, [isOpen, stopStream, objReviewFrame, facingMode]);
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
