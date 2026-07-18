@@ -8,7 +8,7 @@
  * - Persists via the regular save APIs so the writeQueue mirrors them to cloud.
  * - Guarded by a localStorage flag so it runs at most once per device.
  */
-const FLAG_KEY = 'flowist:legacyIdMigration:v3';
+const FLAG_KEY = 'flowist:legacyIdMigration:v2';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid = (s: unknown): s is string => typeof s === 'string' && UUID_RE.test(s);
@@ -126,7 +126,7 @@ async function doMigrate(report: MigrationReport): Promise<void> {
       // --- Note + task folders stored in settings ---
       try {
         const { getSetting, setSetting } = await import('@/utils/settingsStorage');
-        const migrateFolderKey = async (key: 'nota_folders' | 'folders' | 'todoFolders') => {
+        const migrateFolderKey = async (key: 'folders' | 'todoFolders') => {
           const folders = await getSetting<any[]>(key, []);
           let changed = false;
           for (const f of folders) {
@@ -145,7 +145,6 @@ async function doMigrate(report: MigrationReport): Promise<void> {
           }
           if (changed) await setSetting(key, folders);
         };
-        await migrateFolderKey('nota_folders');
         await migrateFolderKey('folders');
         await migrateFolderKey('todoFolders');
       } catch (e) { console.warn('[legacyIdMigration] folders failed', e); }

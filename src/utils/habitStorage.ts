@@ -78,24 +78,6 @@ export const saveHabitsBatch = async (habits: Habit[]): Promise<void> => {
   });
 };
 
-/** Apply cloud snapshot without pushing the same rows back to Lovable Cloud. */
-export const _applyCloudHabits = async (habits: Habit[]): Promise<void> => {
-  const database = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = database.transaction([STORE_NAME], 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    store.clear();
-    for (const habit of habits) {
-      store.put(normalizeHabit(habit));
-    }
-    tx.oncomplete = () => {
-      window.dispatchEvent(new Event('habitsUpdated'));
-      resolve();
-    };
-    tx.onerror = () => reject(tx.error);
-  });
-};
-
 export const deleteHabit = async (id: string): Promise<void> => {
   // Mirror delete to Lovable Cloud
   import('@/utils/cloudSync/storeBridge').then(({ pushHabitDelete }) => {

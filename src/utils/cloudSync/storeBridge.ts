@@ -10,117 +10,24 @@
  * Only rows whose local id is a UUID round-trip to the cloud. Legacy non-UUID
  * ids stay local-only until they are migrated.
  */
-import { enqueueWrite, enqueueWrites, flushQueue, getQueueLength } from './writeQueue';
+import { enqueueWrite, enqueueWrites } from './writeQueue';
 import { mappers, type MappedTable } from './mappers';
-import type { SyncRow, SyncTable } from './syncTables';
+import type { SyncRow } from './syncTables';
 import type { SyncChangeDetail } from './syncEngine';
 import type { Folder } from '@/utils/folderStorage';
 import type { Note, TodoItem } from '@/types/note';
 import type { Habit } from '@/types/habit';
 import { recordConflict, recordListenerEvent } from './diagnostics';
-import { isTombstoned, markDeleted, markDeletedMany, clearTombstone } from './tombstones';
 
 let installed = false;
 
-// ---------- Initial full upload (post sign-in) ----------
-
-/**
- * Push every locally-stored row up to the cloud once per (user, device).
- * Runs after startSync's bootstrap so users who created data BEFORE signing
- * in (or on a fresh install pre-auth) actually get their notes / tasks /
- * habits / sections / countdowns / settings mirrored to the cloud.
- *
- * Idempotent: keyed by localStorage flag `flowist:initialUpload:done:<uid>`.
- * Individual upserts are keyed by row id so re-runs don't duplicate anything.
- */
-export async function runInitialFullUpload(userId: string): Promise<void> {
-  // v3 deliberately ignores the earlier “queued” marker. Older builds marked
-  // upload done before the queue had actually reached the backend, so users who
-  // hit permission/queue/schema failures never retried their notes/tasks/habits.
-  const flagKey = `flowist:initialUpload:v3:done:${userId}`;
-  try { if (localStorage.getItem(flagKey) === '1') return; } catch {}
-
-  try {
-    // Notes
-    try {
-      const { loadNotesFromDB } = await import('@/utils/noteStorage');
-      const notes = await loadNotesFromDB();
-      if (notes.length) pushNotes(notes as any);
-    } catch (e) { console.warn('[initialUpload] notes failed', e); }
-
-    // Tasks
-    try {
-      const { loadTasksFromDB } = await import('@/utils/taskStorage');
-      const tasks = await loadTasksFromDB();
-      if (tasks.length) pushTasks(tasks as any);
-    } catch (e) { console.warn('[initialUpload] tasks failed', e); }
-
-    // Note folders + Task folders + Task sections
-    try {
-      const { getSetting } = await import('@/utils/settingsStorage');
-      const [noteFolders, legacyNoteFolders, taskFolders, sections] = await Promise.all([
-        getSetting<any[]>('nota_folders', []),
-        getSetting<any[]>('folders', []),
-        getSetting<any[]>('todoFolders', []),
-        getSetting<any[]>('todoSections', []),
-      ]);
-      const mergedNoteFolders = [...(noteFolders ?? []), ...(legacyNoteFolders ?? [])]
-        .filter((folder, index, all) => folder?.id && all.findIndex((item) => item?.id === folder.id) === index);
-      if (mergedNoteFolders?.length) pushFolders(mergedNoteFolders as any);
-      if (taskFolders?.length) pushTaskFolders(taskFolders as any);
-      if (sections?.length) pushSections(sections as any);
-    } catch (e) { console.warn('[initialUpload] folders/sections failed', e); }
-
-    // Habits
-    try {
-      const { loadHabits } = await import('@/utils/habitStorage');
-      const habits = await loadHabits();
-      if (habits.length) pushHabits(habits as any);
-    } catch (e) { console.warn('[initialUpload] habits failed', e); }
-
-    // Habit sections
-    try {
-      const { loadHabitSections } = await import('@/utils/habitSectionsStorage');
-      const hs = loadHabitSections();
-      if (hs?.length) pushHabitSections(hs as any);
-    } catch (e) { console.warn('[initialUpload] habit sections failed', e); }
-
-    // Countdowns
-    try {
-      const { loadCountdowns } = await import('@/utils/countdownStorage');
-      const cs = await loadCountdowns();
-      if (cs?.length) pushCountdowns(cs as any);
-    } catch (e) { console.warn('[initialUpload] countdowns failed', e); }
-
-    for (let i = 0; i < 12; i++) {
-      await flushQueue().catch(() => {});
-      if (getQueueLength() === 0) break;
-    }
-    if (getQueueLength() === 0) {
-      try { localStorage.setItem(flagKey, '1'); } catch {}
-      console.info('[initialUpload] complete for', userId);
-    } else {
-      console.warn('[initialUpload] queued writes remain; will retry next start', getQueueLength());
-    }
-  } catch (e) {
-    console.warn('[initialUpload] aborted', e);
-  }
-}
-
 // ---------- Local → Cloud ----------
-
-// Any upsert helper filters out rows the user just deleted so a stale editor
-// autosave / batch save can never resurrect a tombstoned row.
-const notTombstoned = (table: SyncTable, id: string, ts?: number) =>
-  !isTombstoned(table, id, ts);
 
 export function pushFolders(folders: Folder[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const f of folders) {
     const row = mappers.folders.toCloud(f, 'notes');
-    if (row && notTombstoned('folders', (row as any).id, +new Date((row as any).updated_at ?? Date.now()))) {
-      writes.push({ table: 'folders', op: 'upsert', row: row as any });
-    }
+    if (row) writes.push({ table: 'folders', op: 'upsert', row: row as any });
   }
   if (writes.length) enqueueWrites(writes);
 }
@@ -128,14 +35,11 @@ export function pushTaskFolders(folders: any[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const f of folders) {
     const row = mappers.folders.toCloud(f, 'tasks');
-    if (row && notTombstoned('folders', (row as any).id, +new Date((row as any).updated_at ?? Date.now()))) {
-      writes.push({ table: 'folders', op: 'upsert', row: row as any });
-    }
+    if (row) writes.push({ table: 'folders', op: 'upsert', row: row as any });
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushFolderDelete(id: string): void {
-  markDeleted('folders', id);
   enqueueWrite('folders', 'delete', { id });
 }
 
@@ -143,14 +47,11 @@ export function pushSections(sections: any[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const s of sections) {
     const row = mappers.sections.toCloud(s);
-    if (row && notTombstoned('sections', (row as any).id, +new Date((row as any).updated_at ?? Date.now()))) {
-      writes.push({ table: 'sections', op: 'upsert', row: row as any });
-    }
+    if (row) writes.push({ table: 'sections', op: 'upsert', row: row as any });
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushSectionDelete(id: string): void {
-  markDeleted('sections', id);
   enqueueWrite('sections', 'delete', { id });
 }
 
@@ -158,25 +59,14 @@ export function pushNotes(notes: Note[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const n of notes) {
     const row = mappers.notes.toCloud(n);
-    if (!row) continue;
-    if (n.isDeleted) {
-      markDeleted('notes', row.id);
-      writes.push({ table: 'notes', op: 'delete', row: row as any });
-      continue;
-    }
-    const ts = +new Date((row as any).updated_at ?? (n as any).updatedAt ?? Date.now());
-    if (notTombstoned('notes', row.id, ts)) {
-      writes.push({ table: 'notes', op: 'upsert', row: row as any });
-    }
+    if (row) writes.push({ table: 'notes', op: n.isDeleted ? 'delete' : 'upsert', row: row as any });
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushNoteDelete(id: string): void {
-  markDeleted('notes', id);
   enqueueWrite('notes', 'delete', { id });
 }
 export function pushNoteDeletes(ids: string[]): void {
-  markDeletedMany('notes', ids);
   enqueueWrites(ids.map((id) => ({ table: 'notes', op: 'delete', row: { id } })) as any);
 }
 
@@ -184,25 +74,14 @@ export function pushTasks(tasks: TodoItem[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const t of tasks) {
     const row = mappers.tasks.toCloud(t as any);
-    if (!row) continue;
-    if ((t as any).isDeleted) {
-      markDeleted('tasks', row.id);
-      writes.push({ table: 'tasks', op: 'delete', row: row as any });
-      continue;
-    }
-    const ts = +new Date((row as any).updated_at ?? (t as any).modifiedAt ?? Date.now());
-    if (notTombstoned('tasks', row.id, ts)) {
-      writes.push({ table: 'tasks', op: 'upsert', row: row as any });
-    }
+    if (row) writes.push({ table: 'tasks', op: (t as any).isDeleted ? 'delete' : 'upsert', row: row as any });
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushTaskDelete(id: string): void {
-  markDeleted('tasks', id);
   enqueueWrite('tasks', 'delete', { id });
 }
 export function pushTaskDeletes(ids: string[]): void {
-  markDeletedMany('tasks', ids);
   enqueueWrites(ids.map((id) => ({ table: 'tasks', op: 'delete', row: { id } })) as any);
 }
 
@@ -210,21 +89,11 @@ export function pushHabits(habits: Habit[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const h of habits) {
     const row = mappers.habits.toCloud(h);
-    if (!row) continue;
-    if ((h as any).isDeleted) {
-      markDeleted('habits', row.id);
-      writes.push({ table: 'habits', op: 'delete', row: row as any });
-      continue;
-    }
-    const ts = +new Date((row as any).updated_at ?? (h as any).updatedAt ?? Date.now());
-    if (notTombstoned('habits', row.id, ts)) {
-      writes.push({ table: 'habits', op: 'upsert', row: row as any });
-    }
+    if (row) writes.push({ table: 'habits', op: (h as any).isDeleted ? 'delete' : 'upsert', row: row as any });
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushHabitDelete(id: string): void {
-  markDeleted('habits', id);
   enqueueWrite('habits', 'delete', { id });
 }
 
@@ -232,14 +101,11 @@ export function pushCountdowns(items: any[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const c of items) {
     const row = (mappers as any).countdowns.toCloud(c);
-    if (row && notTombstoned('countdowns', (row as any).id, +new Date((row as any).updated_at ?? Date.now()))) {
-      writes.push({ table: 'countdowns', op: 'upsert', row });
-    }
+    if (row) writes.push({ table: 'countdowns', op: 'upsert', row });
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushCountdownDelete(id: string): void {
-  markDeleted('countdowns', id);
   enqueueWrite('countdowns', 'delete', { id });
 }
 
@@ -247,14 +113,11 @@ export function pushHabitSections(items: any[]): void {
   const writes = [] as Parameters<typeof enqueueWrites>[0];
   for (const s of items) {
     const row = (mappers as any).habitSections.toCloud(s);
-    if (row && notTombstoned('habit_sections', (row as any).id, +new Date((row as any).updated_at ?? Date.now()))) {
-      writes.push({ table: 'habit_sections', op: 'upsert', row });
-    }
+    if (row) writes.push({ table: 'habit_sections', op: 'upsert', row });
   }
   if (writes.length) enqueueWrites(writes);
 }
 export function pushHabitSectionDelete(id: string): void {
-  markDeleted('habit_sections', id);
   enqueueWrite('habit_sections', 'delete', { id });
 }
 
@@ -293,12 +156,9 @@ export function pushSettingsSnapshot(snapshot: Record<string, unknown>): void {
 
 async function applyFoldersFromCloud(rows: SyncRow[]) {
   const { getSetting, setSetting } = await import('@/utils/settingsStorage');
-  const [noteLocal, legacyNoteLocal] = await Promise.all([
-    getSetting<any[]>('nota_folders', []),
-    getSetting<any[]>('folders', []),
-  ]);
+  const noteLocal = await getSetting<any[]>('folders', []);
   const taskLocalRaw = await getSetting<any[]>('todoFolders', []);
-  const noteById = new Map([...(noteLocal ?? []), ...(legacyNoteLocal ?? [])].map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
+  const noteById = new Map((noteLocal ?? []).map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
   const taskById = new Map((taskLocalRaw ?? []).map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt), updatedAt: f.updatedAt ? new Date(f.updatedAt) : new Date(f.createdAt ?? Date.now()) }]));
   let noteChanged = false;
   let taskChanged = false;
@@ -307,17 +167,9 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
     if (!mapped) continue;
     const store = (mapped as any).__flowistFolderStore === 'tasks' ? 'tasks' : 'notes';
     const byId = store === 'tasks' ? taskById : noteById;
-    const cloudTs = +new Date(r.updated_at ?? Date.now());
-    if (r.is_deleted) {
-      markDeleted('folders', r.id, cloudTs);
-      if (byId.delete(r.id)) store === 'tasks' ? taskChanged = true : noteChanged = true;
-      continue;
-    }
-    // Suppress resurrections: local tombstone newer than this cloud row.
-    if (isTombstoned('folders', r.id, cloudTs)) continue;
+    if (r.is_deleted) { if (byId.delete(r.id)) store === 'tasks' ? taskChanged = true : noteChanged = true; continue; }
     const existing = byId.get(r.id) as any;
     if (!existing || new Date(existing.updatedAt ?? existing.createdAt ?? 0).getTime() < mapped.updatedAt.getTime()) {
-      clearTombstone('folders', r.id);
       byId.set(r.id, mapped);
       store === 'tasks' ? taskChanged = true : noteChanged = true;
     } else if (new Date(existing.updatedAt ?? existing.createdAt ?? 0).getTime() > mapped.updatedAt.getTime()) {
@@ -325,7 +177,7 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
     }
   }
   if (noteChanged) {
-    await setSetting('nota_folders', Array.from(noteById.values()), { skipCloudSync: true });
+    await setSetting('folders', Array.from(noteById.values()), { skipCloudSync: true });
     window.dispatchEvent(new Event('foldersRestored'));
     window.dispatchEvent(new Event('foldersUpdated'));
   }
@@ -338,31 +190,29 @@ async function applyFoldersFromCloud(rows: SyncRow[]) {
 
 async function applyNotesFromCloud(rows: SyncRow[]) {
   const { loadNotesMetadataFromDB, loadNoteFromDB, saveNoteToDBSingle, deleteNoteFromDB } = await import('@/utils/noteStorage');
+  // Metadata read is light (no multi-MB web-clip HTML). We only need the
+  // updated_at to decide if the cloud row is newer than what we already have;
+  // the full local note is fetched lazily per-id when we actually apply.
   const meta = await loadNotesMetadataFromDB();
   const metaById = new Map(meta.map(n => [n.id, n]));
   const clipIdsToPurgeFromCloud: string[] = [];
-  let didWrite = false;
-  let didDelete = false;
   for (const r of rows) {
+    // Detect web-clipper rows (identified by fullPageSnapshot in the payload).
+    // Per user preference, web clips are LOCAL-ONLY and must be purged from
+    // the cloud on sight so they never round-trip again.
     const payload = (r as any).payload as any;
     const isWebClip = !!(payload && payload.fullPageSnapshot);
-    const cloudTs = +new Date(r.updated_at ?? Date.now());
 
-    if (r.is_deleted) {
-      markDeleted('notes', r.id, cloudTs);
-      await deleteNoteFromDB(r.id, true);
-      didDelete = true;
-      continue;
-    }
+    if (r.is_deleted) { await deleteNoteFromDB(r.id, true); continue; }
     if (isWebClip) {
       clipIdsToPurgeFromCloud.push(r.id);
-      continue;
-    }
-    if (isTombstoned('notes', r.id, cloudTs)) {
-      enqueueWrite('notes', 'delete', { id: r.id } as any);
+      // Skip applying the cloud row: local IndexedDB is the source of truth
+      // for web clips. If the note doesn't exist locally, it was already
+      // deleted here — leaving cloud out of sync is the desired behavior.
       continue;
     }
     const existingMeta = metaById.get(r.id);
+    const cloudTs = +new Date(r.updated_at ?? Date.now());
     const localTs = existingMeta ? +new Date(existingMeta.updatedAt as any) : 0;
     if (existingMeta && localTs >= cloudTs) {
       if (localTs > cloudTs) {
@@ -370,20 +220,11 @@ async function applyNotesFromCloud(rows: SyncRow[]) {
       }
       continue;
     }
+    // Cloud wins — merge against the full local row (heavy fields preserved).
     const existingFull = existingMeta ? await loadNoteFromDB(r.id) : undefined;
     const merged = mappers.notes.mergeCloud(existingFull ?? undefined, r) as Note;
-    clearTombstone('notes', r.id);
     await saveNoteToDBSingle(merged, true);
-    didWrite = true;
   }
-
-  // Coalesced UI refresh so lists / editors reload from IDB after realtime.
-  if (didWrite || didDelete) {
-    window.dispatchEvent(new Event('notesUpdated'));
-    // Also notify open editors so they can hot-refresh the current note body.
-    window.dispatchEvent(new CustomEvent('flowist:notes:cloudApplied'));
-  }
-
 
   // Best-effort: purge legacy web-clip rows from the cloud on idle so the
   // sync table stops carrying multi-MB HTML snapshots. This does NOT touch
@@ -409,22 +250,11 @@ async function applyTasksFromCloud(rows: SyncRow[]) {
   const byId = new Map(local.map((t: any) => [t.id, t]));
   let changed = false;
   for (const r of rows) {
-    const rowCloudTs = new Date(r.updated_at ?? Date.now()).getTime();
-    if (r.is_deleted) {
-      markDeleted('tasks', r.id, rowCloudTs);
-      if (byId.delete(r.id)) changed = true;
-      continue;
-    }
-    // Suppress resurrections.
-    if (isTombstoned('tasks', r.id, rowCloudTs)) {
-      enqueueWrite('tasks', 'delete', { id: r.id } as any);
-      continue;
-    }
+    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
     const existing = byId.get(r.id) as any;
     const cloudMerged = mappers.tasks.mergeCloud(existing, r) as TodoItem;
     const localTs = new Date(existing?.modifiedAt ?? existing?.updatedAt ?? existing?.createdAt ?? 0).getTime();
     const cloudTs = new Date((cloudMerged as any).modifiedAt ?? (cloudMerged as any).updatedAt ?? (cloudMerged as any).createdAt ?? r.updated_at ?? 0).getTime();
-    if (existing && localTs < cloudTs) clearTombstone('tasks', r.id);
 
     // Field-level conflict resolution so completion + calendar fields never diverge:
     //   - completion is monotonic-preferring-true (and the later completedAt wins when both completed)
@@ -495,19 +325,9 @@ async function applySectionsFromCloud(rows: SyncRow[]) {
   const byId = new Map((local ?? []).map((s: any) => [s.id, s]));
   let changed = false;
   for (const r of rows) {
-    const cloudTs = +new Date(r.updated_at ?? Date.now());
-    if (r.is_deleted) {
-      markDeleted('sections', r.id, cloudTs);
-      if (byId.delete(r.id)) changed = true;
-      continue;
-    }
-    if (isTombstoned('sections', r.id, cloudTs)) {
-      enqueueWrite('sections', 'delete', { id: r.id } as any);
-      continue;
-    }
+    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
     const mapped = mappers.sections.fromCloud(r);
     if (!mapped) continue;
-    clearTombstone('sections', r.id);
     byId.set(r.id, mapped);
     changed = true;
   }
@@ -519,31 +339,20 @@ async function applySectionsFromCloud(rows: SyncRow[]) {
 }
 
 async function applyHabitsFromCloud(rows: SyncRow[]) {
-  const { loadHabits, _applyCloudHabits } = await import('@/utils/habitStorage');
+  const { loadHabits, saveHabit, deleteHabit } = await import('@/utils/habitStorage');
   const local = await loadHabits();
   const byId = new Map(local.map(h => [h.id, h]));
-  let changed = false;
   for (const r of rows) {
-    const rowCloudTs = +new Date(r.updated_at ?? Date.now());
-    if (r.is_deleted) {
-      markDeleted('habits', r.id, rowCloudTs);
-      if (byId.delete(r.id)) changed = true;
-      continue;
-    }
-    if (isTombstoned('habits', r.id, rowCloudTs)) {
-      enqueueWrite('habits', 'delete', { id: r.id } as any);
-      continue;
-    }
+    if (r.is_deleted) { await deleteHabit(r.id).catch(() => {}); continue; }
     const merged = mappers.habits.mergeCloud(byId.get(r.id), r) as Habit;
     const existing = byId.get(r.id);
     const localTs = existing ? new Date((existing as any).updatedAt ?? 0).getTime() : 0;
     const cloudTs = new Date((merged as any).updatedAt ?? 0).getTime();
-    if (!existing || localTs < cloudTs) { clearTombstone('habits', r.id); byId.set(r.id, merged); changed = true; }
+    if (!existing || localTs < cloudTs) await saveHabit(merged);
     else if (localTs > cloudTs) {
       recordConflict({ table: 'habits', rowId: r.id, localUpdatedAt: localTs, cloudUpdatedAt: cloudTs, resolution: 'kept_local' });
     }
   }
-  if (changed) await _applyCloudHabits(Array.from(byId.values()));
 }
 
 async function applySettingsFromCloud(rows: SyncRow[]) {
@@ -554,7 +363,6 @@ async function applySettingsFromCloud(rows: SyncRow[]) {
   const { setManySettings } = await import('@/utils/settingsStorage');
   const safeDisplay = { ...display };
   delete safeDisplay.folders;
-  delete safeDisplay.nota_folders;
   delete safeDisplay.todoFolders;
   delete safeDisplay.todoSections;
   // Calendar layout is app-controlled, not a user preference. Prevent stale

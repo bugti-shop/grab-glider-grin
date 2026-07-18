@@ -1,53 +1,21 @@
-# R8 / ProGuard rules for Flowist (Capacitor + WebView app)
-# Keep line numbers for readable stack traces
--keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile
+# Add project specific ProGuard rules here.
+# You can control the set of applied configuration files using the
+# proguardFiles setting in build.gradle.
+#
+# For more details, see
+#   http://developer.android.com/guide/developing/tools/proguard.html
 
-# Keep annotations/signatures used by reflection & JSON libs
--keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+# If your project uses WebView with JS, uncomment the following
+# and specify the fully qualified class name to the JavaScript interface
+# class:
+#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
+#   public *;
+#}
 
-# ---------- Capacitor ----------
-# Capacitor discovers plugins & bridge methods via reflection.
--keep class com.getcapacitor.** { *; }
--keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
--keep class * extends com.getcapacitor.Plugin { *; }
--keepclassmembers class * extends com.getcapacitor.Plugin {
-    @com.getcapacitor.PluginMethod <methods>;
-}
--keep class * implements com.getcapacitor.Plugin { *; }
+# Uncomment this to preserve the line number information for
+# debugging stack traces.
+#-keepattributes SourceFile,LineNumberTable
 
-# Community / Capgo / Cordova plugins loaded via reflection
--keep class com.capacitorjs.** { *; }
--keep class ee.forgr.** { *; }
--keep class ca.byteihq.** { *; }
--keep class io.capawesome.** { *; }
--keep class org.apache.cordova.** { *; }
-
-# App package (Capacitor MainActivity + any custom plugins)
--keep class nota.npd.com.** { *; }
-
-# ---------- WebView JS interfaces ----------
--keepclassmembers class * {
-    @android.webkit.JavascriptInterface <methods>;
-}
-
-# ---------- Google Play Billing ----------
--keep class com.android.billingclient.** { *; }
--dontwarn com.android.billingclient.**
-
-# ---------- Google Play Services / GMS ----------
--keep class com.google.android.gms.** { *; }
--dontwarn com.google.android.gms.**
-
-# ---------- AndroidX / Material ----------
--dontwarn androidx.**
--dontwarn com.google.android.material.**
-
-# ---------- OkHttp / Okio (transitive) ----------
--dontwarn okhttp3.**
--dontwarn okio.**
--dontwarn org.conscrypt.**
-
-# ---------- Kotlin ----------
--dontwarn kotlin.**
--dontwarn kotlinx.**
+# If you keep the line number information, uncomment this to
+# hide the original source file name.
+#-renamesourcefileattribute SourceFile

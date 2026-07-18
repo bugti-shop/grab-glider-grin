@@ -5,17 +5,6 @@
  * methods), stops on sign-out. Also wires Capacitor App lifecycle so a
  * background → foreground transition on iOS/Android triggers an immediate
  * resync without the user pressing refresh.
- *
- * Auth-event hygiene:
- *  - Deduplicates by userId so INITIAL_SESSION / TOKEN_REFRESHED /
- *    USER_UPDATED bursts don't spam startSync().
- *  - Serializes start/stop transitions through a single promise chain so
- *    rapid sign-in → sign-out → sign-in sequences can never leave two
- *    Realtime channels attached at once.
- *  - Route changes are intentionally NOT observed here: Realtime lives at
- *    the app root and must survive navigation; the per-view components
- *    subscribe to window events (tasksUpdated / notesUpdated / …) and clean
- *    those up on unmount.
  */
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,41 +20,22 @@ export function useCloudSync(): void {
     installCloudListener();
     startNoteTaskReverseSync();
 
-    // Serialize every start/stop transition. Prevents two overlapping
-    // startSync() invocations from attaching duplicate Realtime channels
-    // when auth events arrive back-to-back.
-    let chain: Promise<void> = Promise.resolve();
-    let activeUserId: string | null = null;
-
-    const transition = (nextUserId: string | null) => {
+    const handle = async (userId: string | null) => {
       if (!mounted) return;
-      // Dedupe: skip if nothing changed (TOKEN_REFRESHED / USER_UPDATED /
-      // repeated INITIAL_SESSION all resolve to the same userId).
-      if (nextUserId === activeUserId) return;
-      activeUserId = nextUserId;
-
-      chain = chain.then(async () => {
+      if (userId) {
+        // Reassign UUIDs to legacy local rows BEFORE the engine starts so the
+        // first listener pass merges them cleanly. Runs at most once per device.
+        try { await runLegacyIdMigration(); } catch {}
         if (!mounted) return;
-        if (nextUserId) {
-          try { await runLegacyIdMigration(); } catch {}
-          if (!mounted || activeUserId !== nextUserId) return;
-          await startSync(nextUserId);
-        } else {
-          await stopSync();
-        }
-      }).catch(err => {
-        console.warn('[cloudSync] transition failed', err);
-      });
+        void startSync(userId);
+      } else void stopSync();
     };
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      // Token refresh is handled inside syncEngine (rebinds channel with
-      // fresh JWT) — don't restart the whole engine here.
-      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
-      transition(session?.user?.id ?? null);
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      handle(session?.user?.id ?? null);
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
-      transition(session?.user?.id ?? null);
+      handle(session?.user?.id ?? null);
     });
 
     // Capacitor app lifecycle — foreground = trigger resync
@@ -79,6 +49,7 @@ export function useCloudSync(): void {
           }
         });
         removeAppListener = () => {
+          // capacitor returns a promise; ignore
           (sub as any).then?.((h: any) => h?.remove?.()).catch?.(() => {});
         };
       }).catch(() => {});
@@ -86,10 +57,9 @@ export function useCloudSync(): void {
 
     return () => {
       mounted = false;
-      try { sub.subscription.unsubscribe(); } catch {}
+      sub.subscription.unsubscribe();
       removeAppListener?.();
-      // Chain the final teardown so it runs after any in-flight transition.
-      chain = chain.then(() => stopSync()).catch(() => {});
+      void stopSync();
     };
   }, []);
 }

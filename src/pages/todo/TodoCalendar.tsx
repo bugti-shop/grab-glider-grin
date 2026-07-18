@@ -279,18 +279,10 @@ const TodoCalendar = () => {
     const handleTasksUpdate = () => loadTasks();
     window.addEventListener('tasksUpdated', handleTasksUpdate);
     window.addEventListener('sectionsUpdated', handleTasksUpdate);
-    window.addEventListener('foldersUpdated', handleTasksUpdate);
-    window.addEventListener('foldersRestored', handleTasksUpdate);
-    window.addEventListener('tasksRestored', handleTasksUpdate);
-    window.addEventListener('sectionsRestored', handleTasksUpdate);
     window.addEventListener('storage', handleTasksUpdate);
     return () => {
       window.removeEventListener('tasksUpdated', handleTasksUpdate);
       window.removeEventListener('sectionsUpdated', handleTasksUpdate);
-      window.removeEventListener('foldersUpdated', handleTasksUpdate);
-      window.removeEventListener('foldersRestored', handleTasksUpdate);
-      window.removeEventListener('tasksRestored', handleTasksUpdate);
-      window.removeEventListener('sectionsRestored', handleTasksUpdate);
       window.removeEventListener('storage', handleTasksUpdate);
     };
   }, [loadTasks]);

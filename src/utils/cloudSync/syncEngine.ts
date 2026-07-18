@@ -54,33 +54,21 @@ async function registerDevice(userId: string): Promise<void> {
 
 /** Fetch all rows for a table since `since` (ISO) and emit them. */
 async function fetchSince(userId: string, table: SyncTable, since: string | null, source: SyncChangeDetail['source']): Promise<void> {
-  const PAGE_SIZE = 5000;
-  let offset = 0;
-  let newest: string | null = null;
-
-  while (true) {
-    let query = supabase.from(table as any).select('*').eq('user_id', userId);
-    if (since) query = query.gt('updated_at', since);
-    const { data, error } = await query
-      .order('updated_at', { ascending: true })
-      .order('id', { ascending: true })
-      .range(offset, offset + PAGE_SIZE - 1);
-
-    if (error) {
-      console.warn('[sync] fetch failed', table, error);
-      return;
-    }
-
-    const rows = ((data ?? []) as unknown) as SyncRow[];
-    if (!rows.length) break;
-
-    emit({ table, rows, source });
-    newest = rows[rows.length - 1].updated_at ?? newest;
-    if (rows.length < PAGE_SIZE) break;
-    offset += PAGE_SIZE;
+  let query = supabase.from(table as any).select('*').eq('user_id', userId);
+  if (since) query = query.gt('updated_at', since);
+  const { data, error } = await query.order('updated_at', { ascending: true }).limit(5000);
+  if (error) {
+    console.warn('[sync] fetch failed', table, error);
+    return;
   }
-
-  if (newest) setLastSync(userId, table, newest);
+  const rows = ((data ?? []) as unknown) as SyncRow[];
+  if (rows.length > 0) {
+    emit({ table, rows, source });
+    const newest = rows[rows.length - 1].updated_at;
+    if (newest) setLastSync(userId, table, newest);
+  } else if (!since) {
+    setLastSync(userId, table, new Date().toISOString());
+  }
 }
 
 async function bootstrap(userId: string): Promise<void> {
@@ -152,28 +140,11 @@ export async function startSync(userId: string): Promise<void> {
   started = true;
   currentUserId = userId;
 
-  try {
-    await registerDevice(userId);
-    attachRealtime(userId);
-    await bootstrap(userId);
-  } catch (err) {
-    console.warn('[sync] startSync failed, tearing down', err);
-    await stopSync();
-    throw err;
-  }
-
-  // First-time-per-device: push everything the user already has locally so
-  // notes/tasks/habits/etc created pre-sign-in actually make it to the cloud.
-  try {
-    const { runInitialFullUpload } = await import('./storeBridge');
-    void runInitialFullUpload(userId);
-  } catch {}
+  await registerDevice(userId);
+  attachRealtime(userId);
+  await bootstrap(userId);
   startHeartbeat();
 
-  // Idempotent — remove any prior bindings before re-adding.
-  document.removeEventListener('visibilitychange', onVisibility);
-  window.removeEventListener('online', onOnline);
-  window.removeEventListener('flowist:app:foreground', onForeground);
   document.addEventListener('visibilitychange', onVisibility);
   window.addEventListener('online', onOnline);
   window.addEventListener('flowist:app:foreground', onForeground);
@@ -184,10 +155,6 @@ export async function startSync(userId: string): Promise<void> {
   if (authSub) { try { authSub.unsubscribe(); } catch {} authSub = null; }
   const { data } = supabase.auth.onAuthStateChange((event, session) => {
     if (!currentUserId) return;
-    if (event === 'SIGNED_OUT') {
-      void stopSync();
-      return;
-    }
     if (event === 'TOKEN_REFRESHED' && session?.access_token) {
       try { (supabase.realtime as any).setAuth?.(session.access_token); } catch {}
       attachRealtime(currentUserId);

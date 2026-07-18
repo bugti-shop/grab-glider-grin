@@ -3,8 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
 import { componentTagger } from "lovable-tagger";
-import { compression } from "vite-plugin-compression2";
-
 
 // Resolve `sonner-real` to the installed package when present, otherwise to a
 // local no-op fallback. Prevents `ENOENT: node_modules/sonner` build failures
@@ -28,25 +26,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    // Pre-generate .gz and .br variants for every JS/CSS/HTML/SVG asset.
-    // The iOS WebViewAssetHandler category (see ios/App/App/WebViewAssetHandler+Compression.swift)
-    // picks the best-encoded sibling at request time and serves it with the
-    // matching Content-Encoding + long-cache headers.
-    compression({
-      algorithms: ['gzip'],
-      exclude: [/\.(br|gz)$/, /\.(png|jpe?g|webp|avif|ico|mp4|woff2?)$/i],
-      threshold: 1024,
-      deleteOriginalAssets: false,
-    }),
-    compression({
-      algorithms: ['brotliCompress'],
-      exclude: [/\.(br|gz)$/, /\.(png|jpe?g|webp|avif|ico|mp4|woff2?)$/i],
-      threshold: 1024,
-      deleteOriginalAssets: false,
-    }),
-
   ].filter(Boolean),
-
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
