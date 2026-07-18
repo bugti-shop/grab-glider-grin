@@ -5,6 +5,11 @@ import { SplashScreen } from "@capacitor/splash-screen";
 import App from "./App.tsx";
 import "./index.css";
 import "./i18n";
+import { initAppZoom } from "@/utils/appZoom";
+
+// Restore the user's saved accessibility zoom before the tree renders so
+// there's no visible resize flash on boot.
+initAppZoom();
 
 // Add platform class to body for platform-specific CSS
 if (Capacitor.isNativePlatform()) {
