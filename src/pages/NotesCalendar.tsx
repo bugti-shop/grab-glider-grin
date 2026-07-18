@@ -28,6 +28,14 @@ type CalendarLayout = 'month' | 'weekStrip' | 'dashboard' | 'yearHeatmap' | 'dar
 
 const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
+const stripMetadataFlags = (note: Note): Note => {
+  const fullNote = { ...note } as Note & Record<string, unknown>;
+  delete fullNote.__contentStub;
+  delete fullNote.__contentPreview;
+  delete fullNote.__contentLength;
+  return fullNote as Note;
+};
+
 
 const CalendarPanelFallback = () => (
   <div className="mx-4 my-4 rounded-lg border border-border bg-card p-4 text-center">
@@ -85,44 +93,59 @@ const NotesCalendar = () => {
     );
   }, [date, notes, selectedNoteTypes]);
 
-  // Keep editingNote in sync with notes array using ID reference
+  // Keep editingNote in sync with notes array using ID reference, but never
+  // replace a fully-loaded open editor with metadata-only calendar data.
   useEffect(() => {
     if (editingNoteIdRef.current && isEditorOpen) {
       const updatedNote = notes.find(n => n.id === editingNoteIdRef.current);
       if (updatedNote) {
-        setEditingNote(updatedNote);
+        setEditingNote((current) => {
+          if (
+            current?.id === updatedNote.id &&
+            isNoteContentStub(updatedNote) &&
+            !isNoteContentStub(current)
+          ) {
+            return current;
+          }
+          return updatedNote;
+        });
       }
     }
   }, [notes, isEditorOpen]);
 
-  const handleSaveNote = useCallback(async (noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+  const handleSaveNote = useCallback(async (incomingNote: Note): Promise<boolean> => {
     const currentEditingId = editingNoteIdRef.current;
 
     if (currentEditingId) {
       if (!softRequireMutate()) return false;
       const existingNote = notes.find(n => n.id === currentEditingId);
-      if (existingNote) {
-        const updatedNote: Note = {
-          ...existingNote,
-          ...noteData,
-          createdAt: existingNote.createdAt,
-          updatedAt: new Date(),
-        };
-        const updatedNotes = notes.map(n => n.id === currentEditingId ? updatedNote : n);
-        setNotes(updatedNotes);
-        setEditingNote(updatedNote);
-        await saveNoteToDBSingle(updatedNote);
-      }
+      const updatedNote: Note = stripMetadataFlags({
+        ...(existingNote || incomingNote),
+        ...incomingNote,
+        id: currentEditingId,
+        createdAt: existingNote?.createdAt || incomingNote.createdAt || date || new Date(),
+        updatedAt: new Date(),
+      });
+      const updatedNotes = notes.some(n => n.id === currentEditingId)
+        ? notes.map(n => n.id === currentEditingId ? updatedNote : n)
+        : [updatedNote, ...notes.filter(n => n.id !== currentEditingId)];
+      setNotes(updatedNotes);
+      setEditingNote(updatedNote);
+      await saveNoteToDBSingle(updatedNote);
     } else {
       if (!isPro && !softRequireCreate('notes', notes.length)) return false;
-      const newNote: Note = {
-        ...noteData,
-        id: genId(),
-        title: noteData.title || `Note - ${format(date || new Date(), 'MMM dd, yyyy')}`,
-        createdAt: date || new Date(),
-        updatedAt: date || new Date(),
-      };
-      const updatedNotes = [...notes, newNote];
+      const newNote: Note = stripMetadataFlags({
+        ...incomingNote,
+        // Use the editor's draft id so the editor's own safety persistence
+        // overwrites the same row instead of creating a second note.
+        id: incomingNote.id || genId(),
+        title: incomingNote.title || `Note - ${format(date || new Date(), 'MMM dd, yyyy')}`,
+        createdAt: incomingNote.createdAt || date || new Date(),
+        updatedAt: new Date(),
+      });
+      const updatedNotes = notes.some(n => n.id === newNote.id)
+        ? notes.map(n => n.id === newNote.id ? newNote : n)
+        : [...notes, newNote];
       setNotes(updatedNotes);
       editingNoteIdRef.current = newNote.id;
       setEditingNote(newNote);
@@ -136,13 +159,20 @@ const NotesCalendar = () => {
   const handleEditNote = useCallback((note: Note) => {
     // Store the note ID in ref to prevent stale reference
     editingNoteIdRef.current = note.id;
-    setEditingNote(note);
-    setIsEditorOpen(true);
     if (isNoteContentStub(note)) {
       loadNoteFromDB(note.id).then((fullNote) => {
-        if (fullNote) setEditingNote(fullNote);
-      }).catch(() => {});
+        if (editingNoteIdRef.current !== note.id) return;
+        setEditingNote(fullNote || note);
+        setIsEditorOpen(true);
+      }).catch(() => {
+        if (editingNoteIdRef.current !== note.id) return;
+        setEditingNote(note);
+        setIsEditorOpen(true);
+      });
+      return;
     }
+    setEditingNote(note);
+    setIsEditorOpen(true);
   }, []);
 
   const handleCreateNote = useCallback((type: NoteType) => {
