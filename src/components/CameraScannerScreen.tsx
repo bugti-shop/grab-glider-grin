@@ -222,12 +222,10 @@ export const CameraScannerScreen = ({
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: facingMode },
-            width: { ideal: 3840 },
-            height: { ideal: 2160 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
             // @ts-ignore — non-standard but widely supported hints
             frameRate: { ideal: 30 },
-            // @ts-ignore
-            resizeMode: 'none',
           } as MediaTrackConstraints,
           audio: false,
         });
@@ -323,13 +321,7 @@ export const CameraScannerScreen = ({
         toast.error('Could not capture frame');
         return;
       }
-      const raw = canvas.toDataURL('image/jpeg', 0.97);
-      const compressed = await compressImage(raw, {
-        maxWidth: 1400,
-        maxHeight: 1400,
-        quality: 0.82,
-        mimeType: 'image/jpeg',
-      }).catch(() => raw);
+      const compressed = canvas.toDataURL('image/jpeg', 0.85);
       console.log('[Scanner] frame captured', { mode, bytes: compressed.length, burst: burstOn });
       setLastThumb(compressed);
 

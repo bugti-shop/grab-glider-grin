@@ -37,23 +37,36 @@ const captureWeb = (source: CaptureSource): Promise<string | null> =>
     // the native picker and let the user choose.
     input.style.display = 'none';
     let resolved = false;
+    const done = (v: string | null) => {
+      if (resolved) return;
+      resolved = true;
+      try { input.remove(); } catch { /* noop */ }
+      window.removeEventListener('focus', onFocus);
+      resolve(v);
+    };
     input.onchange = async () => {
       const file = input.files?.[0];
-      input.remove();
-      if (!file) {
-        if (!resolved) { resolved = true; resolve(null); }
-        return;
-      }
+      if (!file) { done(null); return; }
       try {
         const raw = await fileToDataUrl(file);
         const compressed = await compressImage(raw, COMPRESS_OPTS);
-        if (!resolved) { resolved = true; resolve(compressed); }
+        done(compressed);
       } catch (e) {
         console.error('[imageCaptureForAI] web capture failed', e);
-        if (!resolved) { resolved = true; resolve(null); }
+        done(null);
       }
     };
-    // If user cancels the picker there's no reliable event; rely on next call.
+    // Native `cancel` event (supported in modern browsers).
+    input.addEventListener('cancel', () => done(null));
+    // Fallback: when the picker closes without a selection, the window regains
+    // focus but `onchange` never fires. Resolve null after a short grace period
+    // so the caller's loading state does not spin forever.
+    const onFocus = () => {
+      setTimeout(() => {
+        if (!resolved && !(input.files && input.files.length > 0)) done(null);
+      }, 400);
+    };
+    window.addEventListener('focus', onFocus, { once: true });
     document.body.appendChild(input);
     input.click();
   });
