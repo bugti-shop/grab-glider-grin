@@ -747,77 +747,53 @@ export const TaskDetailPage = ({
         left: 'var(--desktop-sidebar-width, 0px)',
       }}
     >
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3">
-        {/* Left: Folders Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <FolderIcon className="h-4 w-4" />
-              <span>{currentFolder?.name || t('smartLists.allTasks')}</span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48 bg-popover border shadow-lg z-[60]">
-            <DropdownMenuItem 
-              onClick={() => onMoveToFolder(task.id, null)}
-              className={cn("cursor-pointer", !task.folderId && "bg-accent")}
-            >
-              <FolderIcon className="h-4 w-4 mr-2" />
-              {t('taskDetail.allTasksNoFolder')}
-              {!task.folderId && <Check className="h-4 w-4 ml-auto" />}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {folders.map((folder) => (
-              <DropdownMenuItem 
-                key={folder.id}
-                onClick={() => onMoveToFolder(task.id, folder.id)}
-                className={cn("cursor-pointer", task.folderId === folder.id && "bg-accent")}
-              >
-                <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: folder.color }} />
-                {folder.name}
-                {task.folderId === folder.id && <Check className="h-4 w-4 ml-auto" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Right: Options Menu */}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
+      {/* Header — back / share / comments / more */}
+      <header className="flex items-center justify-between px-2 py-2">
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Back" className="rounded-full h-10 w-10">
+          <ChevronLeft className="h-6 w-6" />
+        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Share"
+            className="rounded-full h-10 w-10"
+            onClick={async () => {
+              const shareTitle = task.text || 'Task';
+              try {
+                if (typeof navigator !== 'undefined' && (navigator as any).share) {
+                  await (navigator as any).share({ title: shareTitle, text: shareTitle });
+                } else {
+                  await navigator.clipboard.writeText(shareTitle);
+                  toast.success(t('common.copied', 'Copied'));
+                }
+              } catch {}
+            }}
+          >
+            <Share className="h-[18px] w-[18px]" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Comments"
+            className="rounded-full h-10 w-10"
+            onClick={() => {
+              const el = typeof document !== 'undefined' ? document.getElementById('td-comments') : null;
+              el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+          >
+            <MessageSquare className="h-[18px] w-[18px]" />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button data-tour="task-detail-options" variant="ghost" size="icon">
-
-                <MoreVertical className="h-5 w-5" />
+              <Button data-tour="task-detail-options" variant="ghost" size="icon" className="rounded-full h-10 w-10">
+                <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-popover border shadow-lg z-[60]">
+            <DropdownMenuContent align="end" className="w-56 bg-popover border shadow-lg z-[60]">
               <DropdownMenuItem onClick={handleMarkAsDone} className="cursor-pointer">
                 <Check className="h-4 w-4 mr-2" />
                 {task.completed ? t('taskDetail.markAsIncomplete') : t('taskDetail.markAsDone')}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <div data-tour="task-detail-priority-group">
-                <DropdownMenuItem data-tour="task-detail-priority-item" onClick={() => handleSetPriority('high')} className="cursor-pointer">
-                  <Flag className="h-4 w-4 mr-2 text-red-500" />{t('taskDetail.highPriority')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSetPriority('medium')} className="cursor-pointer">
-                  <Flag className="h-4 w-4 mr-2 text-orange-500" />{t('taskDetail.mediumPriority')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSetPriority('low')} className="cursor-pointer">
-                  <Flag className="h-4 w-4 mr-2 text-green-500" />{t('taskDetail.lowPriority')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSetPriority('none')} className="cursor-pointer">
-                  <Flag className="h-4 w-4 mr-2 text-muted-foreground" />{t('taskDetail.noPriority')}
-                </DropdownMenuItem>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => { if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }} className="cursor-pointer">
-                <TimerIcon className="h-4 w-4 mr-2" />Focus Mode
-                {!isPro && <PremiumCrown size={12} className="ml-1" />}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleDuplicate} className="cursor-pointer">
@@ -825,7 +801,6 @@ export const TaskDetailPage = ({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => { if (!requireFeature('pin_feature')) return; handlePin(); }} className="cursor-pointer">
                 <Pin className="h-4 w-4 mr-2" />{t('taskDetail.pinTask')}
-                
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-destructive">
@@ -838,55 +813,48 @@ export const TaskDetailPage = ({
 
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 py-2 space-y-4">
 
-        {/* Task Title */}
-        <div className="space-y-2">
+        {/* Title + Description */}
+        <div className="pt-1 space-y-2">
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={handleTitleBlur}
             placeholder={t('taskDetail.taskTitle')}
             className={cn(
-              "text-xl font-semibold border-none shadow-none px-0 h-auto focus-visible:ring-0",
+              "text-[28px] leading-[1.15] font-bold border-none shadow-none px-0 h-auto py-0 focus-visible:ring-0 placeholder:text-muted-foreground/50",
               task.completed && "line-through opacity-60"
             )}
           />
-          <div className="flex items-center gap-3 flex-wrap">
-            {task.priority && task.priority !== 'none' && (
-              <div className="flex items-center gap-1.5">
-                <Flag className="h-4 w-4" style={{ color: getPriorityHex(task.priority) }} />
-                <span className="text-sm capitalize" style={{ color: getPriorityHex(task.priority) }}>
-                  {getPriorityName(task.priority)}
-                </span>
-              </div>
-            )}
-            {/* Task Status Badge */}
-            <TaskStatusBadge status={task.status} size="md" />
-          </div>
+          {descText && !isEditingDesc && (
+            <p className="text-[15px] leading-relaxed text-muted-foreground">
+              {descText.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()}
+            </p>
+          )}
         </div>
 
-        {/* Task Status Selection - Premium */}
-        <div data-tour="task-detail-status" className="space-y-2">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Circle className="h-4 w-4" />
-            {t('taskDetail.taskStatus')}
-            
-          </div>
-          <Select 
-            value={task.status || 'not_started'} 
+        {/* Card 1 — Status / Priority / Due Date / Reminder */}
+        <div className="rounded-2xl bg-card border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
+          <Select
+            value={task.status || 'not_started'}
             onValueChange={(value) => {
               if (!requireFeature('task_status')) return;
               onUpdate({ ...task, status: value as TaskStatus });
               toast.success(t('toasts.saved'));
             }}
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={t('taskDetail.selectStatus')}>
-                <div className="flex items-center gap-2">
-                  <TaskStatusBadge status={task.status || 'not_started'} showLabel={true} />
-                </div>
-              </SelectValue>
+            <SelectTrigger asChild>
+              <button data-tour="task-detail-status" className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
+                <span className="flex-shrink-0 h-6 w-6 rounded-full border-[1.5px] border-foreground/80 flex items-center justify-center">
+                  <MoreHorizontal className="h-3 w-3" />
+                </span>
+                <span className="flex-1 text-[16px] font-semibold">Status</span>
+                <span className="text-[13px] px-2.5 py-0.5 rounded-full bg-info/15 text-info font-medium">
+                  {getStatusConfig(task.status || 'not_started').label}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+              </button>
             </SelectTrigger>
             <SelectContent>
               {TASK_STATUS_OPTIONS.map((option) => (
@@ -898,7 +866,139 @@ export const TaskDetailPage = ({
               ))}
             </SelectContent>
           </Select>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
+                <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
+                  <Flag
+                    className="h-5 w-5"
+                    style={{
+                      color: task.priority && task.priority !== 'none' ? getPriorityHex(task.priority) : 'hsl(var(--muted-foreground))',
+                      fill: task.priority && task.priority !== 'none' ? getPriorityHex(task.priority) : 'transparent',
+                    }}
+                  />
+                </span>
+                <span className="flex-1 text-[16px] font-semibold">Priority</span>
+                <span
+                  className="text-[15px] font-medium capitalize"
+                  style={{ color: task.priority && task.priority !== 'none' ? getPriorityHex(task.priority) : 'hsl(var(--muted-foreground))' }}
+                >
+                  {task.priority && task.priority !== 'none' ? getPriorityName(task.priority) : 'None'}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44 z-[60]">
+              <DropdownMenuItem onClick={() => handleSetPriority('high')} className="cursor-pointer"><Flag className="h-4 w-4 mr-2 text-red-500" />High</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSetPriority('medium')} className="cursor-pointer"><Flag className="h-4 w-4 mr-2 text-orange-500" />Medium</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSetPriority('low')} className="cursor-pointer"><Flag className="h-4 w-4 mr-2 text-green-500" />Low</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSetPriority('none')} className="cursor-pointer"><Flag className="h-4 w-4 mr-2 text-muted-foreground" />None</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <button onClick={() => setShowDateTimePage(true)} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
+            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
+              <CalendarIcon className="h-5 w-5" />
+            </span>
+            <span className="flex-1 text-[16px] font-semibold">Due Date</span>
+            <span className="text-[15px] text-muted-foreground">
+              {task.dueDate ? format(new Date(task.dueDate), 'EEE, MMM d, yyyy') : 'None'}
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+          </button>
+
+          <button
+            onClick={() => {
+              const currentList = (task as any).extraReminders as unknown[] | undefined;
+              const currentCount = Array.isArray(currentList) ? currentList.length : task.extraReminderTime ? 1 : 0;
+              if (currentCount >= 1 && !requireCapacity('remindersPerTask', currentCount)) return;
+              setShowExtraReminderSheet(true);
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
+              <Bell className="h-5 w-5" />
+            </span>
+            <span className="flex-1 text-[16px] font-semibold">Reminder</span>
+            <span className="text-[15px] text-muted-foreground truncate max-w-[50%]">
+              {(() => {
+                const list = (task as any).extraReminders as Array<{ time: Date }> | undefined;
+                if (list && list.length) return list.length === 1 ? format(new Date(list[0].time), 'MMM d, h:mm a') : `${list.length} reminders`;
+                if (task.extraReminderTime) return format(new Date(task.extraReminderTime), 'MMM d, h:mm a');
+                return 'None';
+              })()}
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+          </button>
         </div>
+
+        {/* Card 2 — Focus Mode / Time Tracking */}
+        <div className="rounded-2xl bg-card border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
+          <button
+            data-tour="task-detail-focus-mode"
+            onClick={() => { if (!requireProFeature('pomodoro')) return; setShowPomodoro(true); }}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
+              <Target className="h-5 w-5 text-primary" />
+            </span>
+            <span className="flex-1 text-[16px] font-semibold flex items-center gap-1">
+              Focus Mode {!isPro && <PremiumCrown size={12} />}
+            </span>
+            <span className="text-[15px] text-muted-foreground">Deep Work</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+          </button>
+          <div className="w-full flex items-center gap-3 px-4 py-3.5">
+            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-info" />
+            </span>
+            <span className="flex-1 text-[16px] font-semibold">Time Tracking</span>
+            <span className="text-[15px] text-muted-foreground">
+              {formatPomodoroDuration(pomodoroStats.taskFocusedSec)}
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+          </div>
+        </div>
+
+        {/* Card 3 — Subtasks / Tags / Convert to Notes */}
+        <div className="rounded-2xl bg-card border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
+          <button
+            onClick={() => setIsSubtaskInputSheetOpen(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
+              <ListChecks className="h-5 w-5 text-success" />
+            </span>
+            <span className="flex-1 text-[16px] font-semibold">Subtasks</span>
+            <span className="text-[15px] text-muted-foreground">{task.subtasks?.length ?? 0}</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+          </button>
+          <button
+            onClick={() => setShowTagInput(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
+              <Tag className="h-5 w-5 text-info" />
+            </span>
+            <span className="flex-1 text-[16px] font-semibold">Tags</span>
+            <span className="text-[15px] text-muted-foreground truncate max-w-[50%]">
+              {task.coloredTags && task.coloredTags.length > 0 ? task.coloredTags.map(tt => tt.name).join(', ') : 'None'}
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+          </button>
+          <button
+            onClick={handleConvertToNote}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-6 w-6 flex items-center justify-center">
+              <FileEdit className="h-5 w-5 text-warning" />
+            </span>
+            <span className="flex-1 text-[16px] font-semibold">Convert to Notes</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
+          </button>
+        </div>
+
 
         {/* Voice Recording Display */}
         {task.voiceRecording && (
