@@ -316,6 +316,17 @@ const NotesCalendar = () => {
                 onDeleteNote={handleDeleteNote}
               />
             </ErrorBoundary>
+          ) : layout === 'cardGrid' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarCardGrid
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
+                onAddNote={() => handleCreateNote('regular')}
+              />
+            </ErrorBoundary>
           ) : (
             <>
               <ErrorBoundary fallback={<CalendarPanelFallback />}>
