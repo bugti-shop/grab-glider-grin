@@ -388,8 +388,10 @@ DATE & TIME — handwritten cues across languages:
 - Relative words: today/tonight, tomorrow, day after tomorrow, yesterday, next Mon/Tue/…, this weekend, next week, next month, in 3 days, EOD, EOW, kal, parso, mañana, demain, غداً, 明天, 今天, 来週, etc.
 - Explicit dates in any format: 12/05, 12-05-2026, 5 Dec, Dec 5, 05.12, 12月5日, etc. Resolve year from current datetime.
 - Times: "3pm", "15:00", "morning", "noon", "midnight", "evening", "afternoon", "before lunch", "subah", "shaam", "صباحاً", "下午3点".
-- Combine date+time into "dueDateIso" (ISO 8601 with the user timezone offset). Date only -> 09:00 local. Time only & clearly for today -> use today.
-- "reminderIso": if writer wrote a separate reminder/alarm (e.g. "remind 1h before", "alarm 7am", "🔔 8pm"). Null otherwise.
+- CRITICAL — preserve the EXACT literal time the writer put on paper. "6pm" = 18:00, "before 6pm" = 18:00, "9am" = 09:00, "11:30" = 11:30. NEVER round, shift, or default to 23:00 / 11pm / midnight when a concrete time is visible. If unsure between two readings, pick the ONE that literally matches the ink — do not invent.
+- Only fall back to a default time when NO time was written at all: date only -> 09:00 local. Time only & clearly for today -> use today.
+- Combine date+time into "dueDateIso" (ISO 8601 with the user timezone offset).
+- "reminderIso": ALWAYS set this equal to "dueDateIso" whenever a due date/time exists, so every dated task fires a reminder. Only use a different value when the writer explicitly wrote a separate reminder/alarm cue (e.g. "remind 1h before", "alarm 7am", "🔔 8pm"). Null only if there is no date/time at all.
 - "deadlineIso": only if note explicitly says deadline / due by / must finish by / "DL" / "by EOD".
 
 PRIORITY — map ANY of these:
