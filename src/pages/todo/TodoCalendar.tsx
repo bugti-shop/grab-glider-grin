@@ -1468,13 +1468,7 @@ const TodoCalendar = () => {
 
       <TaskInputSheet isOpen={isInputOpen} onClose={() => { setIsInputOpen(false); setQuickAddDate(null); }} onAddTask={handleAddTask} folders={folders} selectedFolderId={null} onCreateFolder={handleCreateFolder} defaultDate={quickAddDate || date} />
 
-      <EventEditor
-        event={editingEvent}
-        isOpen={isEventEditorOpen}
-        onClose={() => { setIsEventEditorOpen(false); setEditingEvent(null); }}
-        onSave={handleSaveEvent}
-        defaultDate={date}
-      />
+      {/* Add event surface removed — Task Dashboard calendar is tasks-only */}
 
       <TaskFilterSheet
         isOpen={isFilterSheetOpen}
