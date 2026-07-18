@@ -836,15 +836,8 @@ export const TaskDetailPage = ({
 
         {/* Card 1 — Status / Priority / Due Date / Reminder */}
         <div className="rounded-2xl bg-card border border-border/60 divide-y divide-border/60 overflow-hidden shadow-sm">
-          <Select
-            value={task.status || 'not_started'}
-            onValueChange={(value) => {
-              if (!requireFeature('task_status')) return;
-              onUpdate({ ...task, status: value as TaskStatus });
-              toast.success(t('toasts.saved'));
-            }}
-          >
-            <SelectTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button data-tour="task-detail-status" className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left">
                 <span className="flex-shrink-0 h-6 w-6 rounded-full border-[1.5px] border-foreground/80 flex items-center justify-center">
                   <MoreHorizontal className="h-3 w-3" />
@@ -855,17 +848,22 @@ export const TaskDetailPage = ({
                 </span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground/70 ml-1" />
               </button>
-            </SelectTrigger>
-            <SelectContent>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
               {TASK_STATUS_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  <div className="flex items-center gap-2">
-                    <TaskStatusBadge status={option.value} showLabel={true} />
-                  </div>
-                </SelectItem>
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => {
+                    if (!requireFeature('task_status')) return;
+                    onUpdate({ ...task, status: option.value as TaskStatus });
+                    toast.success(t('toasts.saved'));
+                  }}
+                >
+                  <TaskStatusBadge status={option.value} showLabel={true} />
+                </DropdownMenuItem>
               ))}
-            </SelectContent>
-          </Select>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
