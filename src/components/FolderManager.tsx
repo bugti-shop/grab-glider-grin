@@ -89,6 +89,7 @@ export const FolderManager = ({
   archivedNotesCount = 0,
   isGridView = false,
   onToggleGridView,
+  onOpenManageFolders,
 }: FolderManagerProps) => {
   const { t } = useTranslation();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
