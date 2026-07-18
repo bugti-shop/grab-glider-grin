@@ -71,13 +71,13 @@ if (isPreviewHost || isInIframe) {
   // Production: force the newest service worker to activate ASAP and evict
   // legacy runtime cache buckets so returning users never get stuck on old
   // JS/CSS bundles referencing removed UI (e.g. old calendar layouts).
-  const SW_CACHE_PURGE_KEY = 'nota_sw_cache_purge_v2';
+  const SW_CACHE_PURGE_KEY = 'nota_sw_cache_purge_v3';
   try {
     if (localStorage.getItem(SW_CACHE_PURGE_KEY) !== 'done') {
       if ('caches' in window) {
         caches.keys().then((names) => {
           names
-            .filter((n) => n === 'js-chunks' || n === 'workbox-precache-v2' || /^workbox-/.test(n))
+            .filter((n) => n === 'js-chunks' || n === 'js-chunks-v2' || n === 'css-chunks-v2' || n === 'workbox-precache-v2' || /^workbox-/.test(n))
             .forEach((n) => caches.delete(n).catch(() => {}));
         }).catch(() => {});
       }

@@ -365,6 +365,9 @@ async function applySettingsFromCloud(rows: SyncRow[]) {
   delete safeDisplay.folders;
   delete safeDisplay.todoFolders;
   delete safeDisplay.todoSections;
+  // Calendar layout is app-controlled, not a user preference. Prevent stale
+  // signed-in cloud snapshots from restoring old colored card / notes layouts.
+  delete safeDisplay.calendarLayoutMode;
   // Virtual journey lives in local IndexedDB only — a stale cloud snapshot
   // must never overwrite a freshly-selected journey on refresh.
   delete safeDisplay.flowist_virtual_journey;
