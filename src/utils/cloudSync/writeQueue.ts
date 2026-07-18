@@ -45,6 +45,7 @@ function save(q: QueuedWrite[]): void {
       const row: any = { ...entry.row };
       if (entry.table === 'notes' && typeof row.body === 'string' && row.body.length > 200 * 1024) {
         row.body = null;
+        row.__bodyOmittedFromQueue = true;
       }
       return { ...entry, row };
     });
@@ -115,6 +116,41 @@ const scheduleFlush = () => {
   }, 250);
 };
 
+async function rehydratePersistedNoteBodies(entries: QueuedWrite[]): Promise<QueuedWrite[]> {
+  if (!entries.some((entry) => entry.table === 'notes' && (entry.row as any).__bodyOmittedFromQueue)) {
+    return entries;
+  }
+
+  let loadNoteFromDB: ((id: string) => Promise<any | null>) | null = null;
+  try {
+    loadNoteFromDB = (await import('@/utils/noteStorage')).loadNoteFromDB;
+  } catch {
+    return entries;
+  }
+
+  const next: QueuedWrite[] = [];
+  for (const entry of entries) {
+    if (entry.table !== 'notes' || !(entry.row as any).__bodyOmittedFromQueue) {
+      next.push(entry);
+      continue;
+    }
+    try {
+      const note = await loadNoteFromDB(entry.row.id);
+      if (typeof note?.content === 'string') {
+        const { __bodyOmittedFromQueue: _omitted, ...row } = entry.row as any;
+        next.push({ ...entry, row: { ...row, body: note.content } });
+      } else {
+        // Never upload a null body just because the compact localStorage queue
+        // omitted it. Keep the write queued until the note can be rehydrated.
+        next.push(entry);
+      }
+    } catch {
+      next.push(entry);
+    }
+  }
+  return next;
+}
+
 export function enqueueWrite(
   table: SyncTable,
   op: 'upsert' | 'delete',
@@ -169,6 +205,7 @@ export async function flushQueue(): Promise<void> {
           return sanitized ? { ...entry, ...sanitized } : null;
         })
         .filter((entry): entry is QueuedWrite => !!entry);
+      q = await rehydratePersistedNoteBodies(q);
       const flushingKeys = new Map<string, number>(q.map((entry) => [`${entry.table}:${entry.row.id}`, entry.enqueuedAt] as const));
       const remaining: QueuedWrite[] = [];
       const groups = new Map<string, QueuedWrite[]>();
@@ -202,11 +239,20 @@ export async function flushQueue(): Promise<void> {
               .eq('user_id', userId);
             if (error) throw error;
           } else {
-            const payload = chunk.map(e => ({
-              ...e.row,
-              user_id: userId,
-              updated_at: e.row.updated_at ?? new Date().toISOString(),
-            }));
+            const payload = chunk
+              .filter(e => !(e.table === 'notes' && (e.row as any).__bodyOmittedFromQueue))
+              .map(e => {
+                const { __bodyOmittedFromQueue: _omitted, ...row } = e.row as any;
+                return {
+                  ...row,
+                  user_id: userId,
+                  updated_at: e.row.updated_at ?? new Date().toISOString(),
+                };
+              });
+            if (!payload.length) {
+              keepForRetry(chunk, new Error('note body not rehydrated'));
+              continue;
+            }
             const { error } = await supabase
               .from(entry.table as any)
               .upsert(payload as any, { onConflict: 'id' });
