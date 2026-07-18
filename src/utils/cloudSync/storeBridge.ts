@@ -21,6 +21,77 @@ import { recordConflict, recordListenerEvent } from './diagnostics';
 
 let installed = false;
 
+// ---------- Initial full upload (post sign-in) ----------
+
+/**
+ * Push every locally-stored row up to the cloud once per (user, device).
+ * Runs after startSync's bootstrap so users who created data BEFORE signing
+ * in (or on a fresh install pre-auth) actually get their notes / tasks /
+ * habits / sections / countdowns / settings mirrored to the cloud.
+ *
+ * Idempotent: keyed by localStorage flag `flowist:initialUpload:done:<uid>`.
+ * Individual upserts are keyed by row id so re-runs don't duplicate anything.
+ */
+export async function runInitialFullUpload(userId: string): Promise<void> {
+  const flagKey = `flowist:initialUpload:done:${userId}`;
+  try { if (localStorage.getItem(flagKey) === '1') return; } catch {}
+
+  try {
+    // Notes
+    try {
+      const { loadNotesFromDB } = await import('@/utils/noteStorage');
+      const notes = await loadNotesFromDB();
+      if (notes.length) pushNotes(notes as any);
+    } catch (e) { console.warn('[initialUpload] notes failed', e); }
+
+    // Tasks
+    try {
+      const { loadTasksFromDB } = await import('@/utils/taskStorage');
+      const tasks = await loadTasksFromDB();
+      if (tasks.length) pushTasks(tasks as any);
+    } catch (e) { console.warn('[initialUpload] tasks failed', e); }
+
+    // Note folders + Task folders + Task sections
+    try {
+      const { getSetting } = await import('@/utils/settingsStorage');
+      const [noteFolders, taskFolders, sections] = await Promise.all([
+        getSetting<any[]>('folders', []),
+        getSetting<any[]>('todoFolders', []),
+        getSetting<any[]>('todoSections', []),
+      ]);
+      if (noteFolders?.length) pushFolders(noteFolders as any);
+      if (taskFolders?.length) pushTaskFolders(taskFolders as any);
+      if (sections?.length) pushSections(sections as any);
+    } catch (e) { console.warn('[initialUpload] folders/sections failed', e); }
+
+    // Habits
+    try {
+      const { loadHabits } = await import('@/utils/habitStorage');
+      const habits = await loadHabits();
+      if (habits.length) pushHabits(habits as any);
+    } catch (e) { console.warn('[initialUpload] habits failed', e); }
+
+    // Habit sections
+    try {
+      const { loadHabitSections } = await import('@/utils/habitSectionsStorage');
+      const hs = loadHabitSections();
+      if (hs?.length) pushHabitSections(hs as any);
+    } catch (e) { console.warn('[initialUpload] habit sections failed', e); }
+
+    // Countdowns
+    try {
+      const { loadCountdowns } = await import('@/utils/countdownStorage');
+      const cs = await loadCountdowns();
+      if (cs?.length) pushCountdowns(cs as any);
+    } catch (e) { console.warn('[initialUpload] countdowns failed', e); }
+
+    try { localStorage.setItem(flagKey, '1'); } catch {}
+    console.info('[initialUpload] complete for', userId);
+  } catch (e) {
+    console.warn('[initialUpload] aborted', e);
+  }
+}
+
 // ---------- Local → Cloud ----------
 
 export function pushFolders(folders: Folder[]): void {
