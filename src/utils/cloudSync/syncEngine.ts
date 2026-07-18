@@ -143,6 +143,12 @@ export async function startSync(userId: string): Promise<void> {
   await registerDevice(userId);
   attachRealtime(userId);
   await bootstrap(userId);
+  // First-time-per-device: push everything the user already has locally so
+  // notes/tasks/habits/etc created pre-sign-in actually make it to the cloud.
+  try {
+    const { runInitialFullUpload } = await import('./storeBridge');
+    void runInitialFullUpload(userId);
+  } catch {}
   startHeartbeat();
 
   document.addEventListener('visibilitychange', onVisibility);
