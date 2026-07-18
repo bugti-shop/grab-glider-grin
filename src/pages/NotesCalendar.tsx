@@ -333,6 +333,16 @@ const NotesCalendar = () => {
                 onAddNote={() => handleCreateNote('regular')}
               />
             </ErrorBoundary>
+          ) : layout === 'editorial' ? (
+            <ErrorBoundary fallback={<CalendarPanelFallback />}>
+              <NotesCalendarEditorial
+                selectedDate={date || new Date()}
+                onDateSelect={setDate}
+                notes={notes}
+                onEditNote={handleEditNote}
+                onDeleteNote={handleDeleteNote}
+              />
+            </ErrorBoundary>
           ) : (
             <>
               <ErrorBoundary fallback={<CalendarPanelFallback />}>
