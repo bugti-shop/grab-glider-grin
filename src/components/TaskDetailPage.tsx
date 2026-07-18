@@ -1014,7 +1014,7 @@ export const TaskDetailPage = ({
             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
           >
             <span className="flex-shrink-0 h-4 w-4 flex items-center justify-center">
-              <Tag className="h-4 w-4 text-info" />
+              <Tag className="h-4 w-4 text-info scale-x-[-1]" />
             </span>
             <span className="flex-1 min-w-0 text-[13px] font-normal leading-none text-black truncate">Tags</span>
             <span className="text-[12px] leading-none text-muted-foreground truncate max-w-[50%]">
