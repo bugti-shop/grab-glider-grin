@@ -248,6 +248,11 @@ const NotesCalendar = () => {
                 <span className="flex-1">Day / Week / Month</span>
                 {layout === 'dayWeekMonth' && <Check className="h-4 w-4" />}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => changeLayout('cardGrid')} className="gap-2">
+                <LayoutPanelTop className="h-4 w-4" />
+                <span className="flex-1">Card grid</span>
+                {layout === 'cardGrid' && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setIsBackgroundSheetOpen(true)} className="gap-2">
                 <ImageIcon className="h-4 w-4" />
