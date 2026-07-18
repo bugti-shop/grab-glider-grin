@@ -68,7 +68,7 @@ interface Props {
   currentFolderId?: string | null;
   currentSectionId?: string | null;
   /** Resolve an AI-proposed folder name → id (creating one if needed). */
-  onEnsureFolder?: (name: string) => string | null;
+  onEnsureFolder?: (name: string, color?: string) => string | null;
   /** Resolve an AI-proposed section name → id (creating one if needed). */
   onEnsureSection?: (name: string, folderId?: string | null) => string | null;
 }
