@@ -22,9 +22,16 @@ interface Props {
   selectedDate: Date;
   onDateSelect: (d: Date) => void;
   notes: Note[];
-  onEditNote: (n: Note) => void;
-  onDeleteNote: (id: string) => void;
+  onEditNote?: (n: Note) => void;
+  onDeleteNote?: (id: string) => void;
+  // Accepted for compatibility; ignored by this layout
+  highlightedDates?: Date[];
+  onBackgroundSettingsClick?: () => void;
+  onAddClick?: () => void;
+  onMonthClick?: () => void;
+  onAddNote?: () => void;
 }
+
 
 type Mode = 'day' | 'week' | 'month';
 
