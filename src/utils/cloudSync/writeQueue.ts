@@ -169,7 +169,7 @@ export async function flushQueue(): Promise<void> {
           return sanitized ? { ...entry, ...sanitized } : null;
         })
         .filter((entry): entry is QueuedWrite => !!entry);
-      const flushingKeys = new Set(q.map((entry) => `${entry.table}:${entry.row.id}`));
+      const flushingKeys = new Map(q.map((entry) => [`${entry.table}:${entry.row.id}`, entry.enqueuedAt] as const));
       const remaining: QueuedWrite[] = [];
       const groups = new Map<string, QueuedWrite[]>();
       for (const entry of q) {
@@ -223,7 +223,11 @@ export async function flushQueue(): Promise<void> {
       // and the notes flush completion would overwrite the task queue.
       const current = mergeQueuedEntries(loadPersisted(), inMemoryQueue);
       inMemoryQueue = mergeQueuedEntries(
-        current.filter((entry) => !flushingKeys.has(`${entry.table}:${entry.row.id}`) || failedKeys.has(`${entry.table}:${entry.row.id}`)),
+        current.filter((entry) => {
+          const key = `${entry.table}:${entry.row.id}`;
+          const startedAt = flushingKeys.get(key);
+          return startedAt === undefined || failedKeys.has(key) || entry.enqueuedAt > startedAt;
+        }),
         remaining,
       );
       save(inMemoryQueue);
