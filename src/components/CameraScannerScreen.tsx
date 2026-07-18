@@ -331,6 +331,7 @@ export const CameraScannerScreen = ({
         mimeType: 'image/jpeg',
       }).catch(() => raw);
       console.log('[Scanner] frame captured', { mode, bytes: compressed.length, burst: burstOn });
+      setLastThumb(compressed);
 
 
 
