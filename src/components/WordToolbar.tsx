@@ -461,8 +461,29 @@ export const WordToolbar = ({
     <button
       type="button"
       onPointerDown={(e) => {
+        const el = e.currentTarget;
+        el.dataset.px = String(e.clientX);
+        el.dataset.py = String(e.clientY);
+        el.dataset.moved = '0';
+      }}
+      onPointerMove={(e) => {
+        const el = e.currentTarget;
+        if (el.dataset.moved === '1' || !el.dataset.px) return;
+        const dx = e.clientX - Number(el.dataset.px);
+        const dy = e.clientY - Number(el.dataset.py);
+        if (Math.hypot(dx, dy) > 8) el.dataset.moved = '1';
+      }}
+      onPointerUp={(e) => {
+        const el = e.currentTarget;
+        const moved = el.dataset.moved === '1';
+        el.dataset.px = ''; el.dataset.py = ''; el.dataset.moved = '';
+        if (disabled || moved) return;
         e.preventDefault();
-        if (!disabled) onClick?.();
+        onClick?.();
+      }}
+      onPointerCancel={(e) => {
+        const el = e.currentTarget;
+        el.dataset.px = ''; el.dataset.py = ''; el.dataset.moved = '';
       }}
       onKeyDown={(e) => {
         if (disabled) return;
@@ -475,7 +496,7 @@ export const WordToolbar = ({
       title={title}
       data-tour={dataTour}
       className={cn(
-        "h-[38px] w-[38px] flex items-center justify-center rounded-lg transition-all duration-150 flex-shrink-0",
+        "h-[38px] w-[38px] flex items-center justify-center rounded-lg transition-all duration-150 flex-shrink-0 touch-pan-x",
         "hover:bg-accent/60 active:scale-95",
         active && "bg-[#3B82F6] text-white shadow-sm hover:bg-[#3B82F6]",
         disabled && "opacity-30 pointer-events-none"
