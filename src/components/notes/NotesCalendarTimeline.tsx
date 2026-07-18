@@ -267,15 +267,6 @@ function TimelineRail({
 }
 
 
-        {dayNotes.length === 0 && (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            No notes for this day yet.
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function NoteRow({ note, onOpen }: { note: Note; onOpen: () => void }) {
   const accent = accentFor(note.id);
