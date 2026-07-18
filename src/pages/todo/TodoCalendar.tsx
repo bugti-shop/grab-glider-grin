@@ -4,10 +4,20 @@ import { recordCompletion, TASK_STREAK_KEY } from '@/utils/streakStorage';
 
 import { NotesCalendarView } from '@/components/NotesCalendarView';
 import { NotesCalendarPremium } from '@/components/notes/NotesCalendarPremium';
+import { NotesCalendarWeekStrip } from '@/components/notes/NotesCalendarWeekStrip';
+import { NotesCalendarDashboard } from '@/components/notes/NotesCalendarDashboard';
+import { NotesCalendarYearHeatmap } from '@/components/notes/NotesCalendarYearHeatmap';
+import { NotesCalendarDarkHero } from '@/components/notes/NotesCalendarDarkHero';
+import { NotesCalendarDayWeekMonth } from '@/components/notes/NotesCalendarDayWeekMonth';
+import { NotesCalendarCardGrid } from '@/components/notes/NotesCalendarCardGrid';
+import { NotesCalendarEditorial } from '@/components/notes/NotesCalendarEditorial';
+import { NotesCalendarTimeline } from '@/components/notes/NotesCalendarTimeline';
+import { tasksToPseudoNotes } from '@/utils/tasksToNotesAdapter';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { TaskTimeGridView, TimeViewMode } from '@/components/TaskTimeGridView';
 import { YearCalendarView } from '@/components/YearCalendarView';
 
-import { Plus, ListTodo, CalendarDays, Clock, MapPin, Repeat, Trash2, Edit, MoreVertical, X, GripVertical, LayoutList, Columns3, GitBranch, Flag, ListChecks, ChevronRight, ChevronDown, TrendingUp, History, CheckCircle2, Circle, Loader2, Sun, AlertCircle, Crown, Check, Grid3x3, Calendar as CalendarIconLucide, Columns2, Square, Rows3 } from 'lucide-react';
+import { Plus, ListTodo, CalendarDays, Clock, MapPin, Repeat, Trash2, Edit, MoreVertical, X, GripVertical, LayoutList, Columns3, GitBranch, Flag, ListChecks, ChevronRight, ChevronDown, TrendingUp, History, CheckCircle2, Circle, Loader2, Sun, AlertCircle, Crown, Check, Grid3x3, Calendar as CalendarIconLucide, Columns2, Square, Rows3, LayoutGrid, LayoutDashboard, Moon, LayoutPanelTop, BookOpen, CalendarRange } from 'lucide-react';
 import { useSubscription, FREE_LIMITS } from '@/contexts/SubscriptionContext';
 import { getSetting, setSetting } from '@/utils/settingsStorage';
 import { Button } from '@/components/ui/button';
@@ -119,8 +129,9 @@ const TodoCalendar = () => {
   // Order version for force re-render
   const [orderVersion, setOrderVersion] = useState(0);
 
-  // Calendar layout mode: list / year / month / week / 3day / day
-  type CalendarLayout = 'list' | 'year' | TimeViewMode;
+  // Calendar layout mode: list / year / month / week / 3day / day + notes-style layouts
+  type NotesLayout = 'notesMonth' | 'notesWeekStrip' | 'notesDashboard' | 'notesYearHeatmap' | 'notesDarkHero' | 'notesDayWeekMonth' | 'notesCardGrid' | 'notesEditorial' | 'notesTimeline';
+  type CalendarLayout = 'list' | 'year' | TimeViewMode | NotesLayout;
   const [calendarLayout, setCalendarLayout] = useState<CalendarLayout>('list');
   // Prefilled due date when quick-adding from a calendar time slot
   const [quickAddDate, setQuickAddDate] = useState<Date | null>(null);
@@ -1221,6 +1232,15 @@ const TodoCalendar = () => {
                 week: t('calendar.week', 'Week'),
                 '3day': t('calendar.threeDay', '3 Day'),
                 day: t('calendar.day', 'Day'),
+                notesMonth: 'Month grid',
+                notesWeekStrip: 'Week strip',
+                notesDashboard: 'Dashboard',
+                notesYearHeatmap: 'Year heatmap',
+                notesDarkHero: 'Dark hero',
+                notesDayWeekMonth: 'Day / Week / Month',
+                notesCardGrid: 'Card grid',
+                notesEditorial: 'Editorial timeline',
+                notesTimeline: 'Timeline (hour rail)',
               };
               return labels[calendarLayout];
             })()}
@@ -1229,20 +1249,30 @@ const TodoCalendar = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 gap-1.5">
                 {(() => {
-                  const Icon = ({
+                  const iconMap: Record<CalendarLayout, any> = {
                     list: LayoutList,
                     year: Grid3x3,
                     month: CalendarIconLucide,
                     week: Columns3,
                     '3day': Columns2,
                     day: Square,
-                  } as const)[calendarLayout];
+                    notesMonth: CalendarRange,
+                    notesWeekStrip: LayoutGrid,
+                    notesDashboard: LayoutDashboard,
+                    notesYearHeatmap: Grid3x3,
+                    notesDarkHero: Moon,
+                    notesDayWeekMonth: CalendarDays,
+                    notesCardGrid: LayoutPanelTop,
+                    notesEditorial: BookOpen,
+                    notesTimeline: Clock,
+                  };
+                  const Icon = iconMap[calendarLayout];
                   return <Icon className="h-4 w-4" />;
                 })()}
                 <ChevronDown className="h-3.5 w-3.5 opacity-60" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44 bg-popover border shadow-lg z-50">
+            <DropdownMenuContent align="end" className="w-56 bg-popover border shadow-lg z-50 max-h-[70vh] overflow-y-auto">
               {([
                 { id: 'list', label: t('calendar.list', 'List'), Icon: LayoutList, free: true },
                 { id: 'year', label: t('calendar.year', 'Year'), Icon: Grid3x3, free: false, proKey: 'calendar_view_year' },
@@ -1250,6 +1280,15 @@ const TodoCalendar = () => {
                 { id: 'week', label: t('calendar.week', 'Week'), Icon: Columns3, free: false, proKey: 'calendar_view_week' },
                 { id: '3day', label: t('calendar.threeDay', '3 Day'), Icon: Columns2, free: false, proKey: 'calendar_view_3day' },
                 { id: 'day', label: t('calendar.day', 'Day'), Icon: Square, free: false, proKey: 'calendar_view_day' },
+                { id: 'notesMonth', label: 'Month grid', Icon: CalendarRange, free: true },
+                { id: 'notesWeekStrip', label: 'Week strip', Icon: LayoutGrid, free: true },
+                { id: 'notesDashboard', label: 'Dashboard', Icon: LayoutDashboard, free: true },
+                { id: 'notesYearHeatmap', label: 'Year heatmap', Icon: Grid3x3, free: true },
+                { id: 'notesDarkHero', label: 'Dark hero', Icon: Moon, free: true },
+                { id: 'notesDayWeekMonth', label: 'Day / Week / Month', Icon: CalendarDays, free: true },
+                { id: 'notesCardGrid', label: 'Card grid', Icon: LayoutPanelTop, free: true },
+                { id: 'notesEditorial', label: 'Editorial timeline', Icon: BookOpen, free: true },
+                { id: 'notesTimeline', label: 'Timeline (hour rail)', Icon: Clock, free: true },
               ] as const).map((opt) => (
                 <DropdownMenuItem
                   key={opt.id}
@@ -1258,7 +1297,7 @@ const TodoCalendar = () => {
                       requireProFeature((opt as any).proKey);
                       return;
                     }
-                    setCalendarLayout(opt.id);
+                    setCalendarLayout(opt.id as CalendarLayout);
                     await setSetting('calendarLayoutMode', opt.id);
                     Haptics.impact({ style: ImpactStyle.Light }).catch(() => {});
                   }}
@@ -1276,6 +1315,96 @@ const TodoCalendar = () => {
           </DropdownMenu>
         </div>
 
+        {(() => {
+          // Notes-style layouts render tasks as pseudo-notes
+          const notesLayouts = new Set<CalendarLayout>([
+            'notesMonth','notesWeekStrip','notesDashboard','notesYearHeatmap',
+            'notesDarkHero','notesDayWeekMonth','notesCardGrid','notesEditorial','notesTimeline',
+          ]);
+          if (!notesLayouts.has(calendarLayout)) return null;
+
+          const pseudoNotes = tasksToPseudoNotes(items);
+          const openTaskById = (n: any) => {
+            const t = items.find(i => i.id === n.id);
+            if (t) setSelectedTask(t);
+          };
+          const deleteById = (id: string) => handleDeleteTask(id);
+          const sel = date || new Date();
+          const onSel = (d: Date) => setDate(d);
+          const Fallback = (
+            <div className="mx-4 my-4 rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
+              This layout couldn’t render. Try another layout.
+            </div>
+          );
+
+          return (
+            <ErrorBoundary fallback={Fallback}>
+              {calendarLayout === 'notesMonth' && (
+                <>
+                  <NotesCalendarPremium
+                    selectedDate={sel}
+                    onDateSelect={onSel}
+                    highlightedDates={highlightedCalendarDates}
+                    onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
+                    onAddClick={() => setIsInputOpen(true)}
+                  />
+                </>
+              )}
+              {calendarLayout === 'notesWeekStrip' && (
+                <NotesCalendarWeekStrip
+                  selectedDate={sel}
+                  onDateSelect={onSel}
+                  notes={pseudoNotes}
+                  onMonthClick={() => setCalendarLayout('notesMonth')}
+                />
+              )}
+              {calendarLayout === 'notesDashboard' && (
+                <NotesCalendarDashboard
+                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
+                  onEditNote={openTaskById} onDeleteNote={deleteById}
+                />
+              )}
+              {calendarLayout === 'notesYearHeatmap' && (
+                <NotesCalendarYearHeatmap
+                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
+                  onEditNote={openTaskById} onDeleteNote={deleteById}
+                />
+              )}
+              {calendarLayout === 'notesDarkHero' && (
+                <NotesCalendarDarkHero
+                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
+                  onEditNote={openTaskById} onDeleteNote={deleteById}
+                />
+              )}
+              {calendarLayout === 'notesDayWeekMonth' && (
+                <NotesCalendarDayWeekMonth
+                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
+                  onEditNote={openTaskById} onDeleteNote={deleteById}
+                />
+              )}
+              {calendarLayout === 'notesCardGrid' && (
+                <NotesCalendarCardGrid
+                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
+                  onEditNote={openTaskById} onDeleteNote={deleteById}
+                  onAddNote={() => setIsInputOpen(true)}
+                />
+              )}
+              {calendarLayout === 'notesEditorial' && (
+                <NotesCalendarEditorial
+                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
+                  onEditNote={openTaskById} onDeleteNote={deleteById}
+                />
+              )}
+              {calendarLayout === 'notesTimeline' && (
+                <NotesCalendarTimeline
+                  selectedDate={sel} onDateSelect={onSel} notes={pseudoNotes}
+                  onEditNote={openTaskById} onDeleteNote={deleteById}
+                />
+              )}
+            </ErrorBoundary>
+          );
+        })()}
+
         {calendarLayout === 'list' ? (
           <NotesCalendarPremium
             selectedDate={date}
@@ -1284,10 +1413,6 @@ const TodoCalendar = () => {
             onBackgroundSettingsClick={() => setIsBackgroundSheetOpen(true)}
             onAddClick={() => setIsInputOpen(true)}
           />
-
-
-
-
         ) : calendarLayout === 'year' ? (
           <div className="px-4 py-3">
             <YearCalendarView
@@ -1296,10 +1421,10 @@ const TodoCalendar = () => {
               tasks={items}
             />
           </div>
-        ) : (
+        ) : (calendarLayout === 'month' || calendarLayout === 'week' || calendarLayout === '3day' || calendarLayout === 'day') ? (
           <div className="px-4 py-3">
             <TaskTimeGridView
-              mode={calendarLayout}
+              mode={calendarLayout as TimeViewMode}
               selectedDate={date || new Date()}
               onDateSelect={(d) => setDate(d)}
               tasks={itemsWithCountdowns}
@@ -1327,7 +1452,8 @@ const TodoCalendar = () => {
             />
 
           </div>
-        )}
+        ) : null}
+
 
 
         {/* Events and Tasks for selected date */}
