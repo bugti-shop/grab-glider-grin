@@ -1115,23 +1115,7 @@ export const TaskDetailPage = ({
         )}
 
 
-        {/* Task History — clickable, opens detail page */}
-        <div className="rounded-2xl bg-white border border-border/60 shadow-sm overflow-hidden">
-          <button
-            onClick={() => setShowHistoryPage(true)}
-            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
-          >
-            <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-muted-foreground" />
-            </span>
-            <span className="flex-1 min-w-0 text-[13.5px] font-medium truncate">
-              {t('taskDetail.taskHistory', 'Task History')}
-            </span>
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
-          </button>
-        </div>
-
-        {/* Subtasks — placed below Task History */}
+        {/* Subtasks summary card — original position, above Task History */}
         <div className="rounded-2xl bg-white border border-border/60 shadow-sm overflow-hidden">
           <button
             type="button"
@@ -1149,6 +1133,62 @@ export const TaskDetailPage = ({
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
           </button>
         </div>
+
+        {/* Task History — clickable, opens detail page */}
+        <div className="rounded-2xl bg-white border border-border/60 shadow-sm overflow-hidden">
+          <button
+            onClick={() => setShowHistoryPage(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted/40 transition-colors text-left"
+          >
+            <span className="flex-shrink-0 h-5 w-5 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+            </span>
+            <span className="flex-1 min-w-0 text-[13.5px] font-medium truncate">
+              {t('taskDetail.taskHistory', 'Task History')}
+            </span>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
+          </button>
+        </div>
+
+        {/* Actual subtask items list — below Task History */}
+        {task.subtasks && task.subtasks.length > 0 && (
+          <div className="rounded-2xl bg-white border border-border/60 shadow-sm overflow-hidden divide-y divide-border/50">
+            {task.subtasks.map((st) => {
+              const ringColor = getPriorityHex(st.priority || 'none');
+              return (
+                <div
+                  key={st.id}
+                  onClick={(e) => { e.stopPropagation(); handleOpenSubtaskDetail(st); }}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer"
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleToggleSubtask(st.id); }}
+                    className="flex-shrink-0 flex items-center justify-center rounded-full"
+                    style={{
+                      width: 23,
+                      height: 23,
+                      border: `1.75px solid ${ringColor}`,
+                      background: st.completed ? ringColor : 'transparent',
+                    }}
+                    aria-label={st.completed ? 'Mark incomplete' : 'Mark complete'}
+                  >
+                    {st.completed && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                  </button>
+                  <span
+                    className={cn(
+                      'flex-1 min-w-0 text-[15px] truncate',
+                      st.completed ? 'line-through text-muted-foreground' : 'text-black'
+                    )}
+                  >
+                    {st.text}
+                  </span>
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60 flex-shrink-0" />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
 
