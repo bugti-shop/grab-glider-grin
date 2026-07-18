@@ -485,112 +485,75 @@ export const CameraScannerScreen = ({
         />
       )}
       {/* Vignette / darken outside the frame */}
-      {!objReviewFrame && (
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70 pointer-events-none" />
-      )}
+      {/* Pure black — no vignette, matches reference */}
 
-      {/* Top bar */}
+      {/* Top bar — minimal: X left, Flash right (no chip backgrounds) */}
       <div
-        className="relative z-10 flex items-center justify-between px-4 pt-3 pb-2"
+        className="relative z-10 flex items-center justify-between px-5"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
       >
         <button
           onClick={onClose}
-          className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-xl border border-white/15 flex items-center justify-center active:scale-95 transition"
+          className="w-10 h-10 flex items-center justify-center active:opacity-60 transition"
           aria-label="Close scanner"
         >
-          <X className="h-5 w-5" />
+          <X className="h-6 w-6 text-white" strokeWidth={2.25} />
         </button>
-        {title ? (
-          <div className="text-sm font-semibold tracking-wide bg-white/10 backdrop-blur-xl border border-white/15 rounded-full px-4 py-1.5">
-            {title}
-          </div>
-        ) : <div />}
-        <div className="flex items-center gap-2">
-          {mode === 'note' && onBatchNote && (
-            <button
-              onClick={() => {
-                if (!requirePro('batch')) return;
-                setBatchOn((v) => {
-                  const next = !v;
-                  toast(next
-                    ? 'Batch scan on · capture pages, tap Done to combine'
-                    : 'Batch scan off', { duration: 1200 });
-                  if (!next) setBatchPages([]);
-                  return next;
-                });
-              }}
-              className={cn(
-                'h-10 px-3 rounded-full backdrop-blur-xl border flex items-center gap-1.5 text-xs font-semibold active:scale-95 transition',
-                batchOn
-                  ? 'bg-primary text-primary-foreground border-primary shadow-[0_6px_18px_hsl(var(--primary)/0.35)]'
-                  : 'bg-white/10 border-white/15 text-white',
-              )}
-              aria-label="Toggle batch scan"
-            >
-              <Files className="h-4 w-4" />
-              Batch{batchPages.length > 0 ? ` · ${batchPages.length}` : ''}
-              {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
-            </button>
+
+        <button
+          onClick={toggleTorch}
+          disabled={!torchSupported}
+          className={cn(
+            'w-10 h-10 flex items-center justify-center active:opacity-60 transition',
+            !torchSupported && 'opacity-40',
           )}
-
-
-          <button
-            onClick={toggleTorch}
-            disabled={!torchSupported}
-            className={cn(
-              'w-10 h-10 rounded-full backdrop-blur-xl border border-white/15 flex items-center justify-center active:scale-95 transition',
-              torchOn ? 'bg-amber-400/90 text-black border-amber-200' : 'bg-white/10',
-              !torchSupported && 'opacity-40',
-            )}
-            aria-label="Toggle flash"
-          >
-            {torchOn ? <Zap className="h-5 w-5" /> : <ZapOff className="h-5 w-5" />}
-          </button>
-        </div>
+          aria-label="Toggle flash"
+        >
+          <Zap
+            className={cn('h-6 w-6', torchOn ? 'text-amber-300 fill-amber-300' : 'text-white')}
+            strokeWidth={2.25}
+          />
+        </button>
       </div>
 
-      {/* Scanner frame */}
-      <div className="relative z-10 flex-1 flex items-center justify-center px-8">
-        <div className="relative aspect-square w-full max-w-[min(80vw,420px)]">
-          {/* Corner brackets */}
-          <CornerBracket className="top-0 left-0" corner="tl" />
-          <CornerBracket className="top-0 right-0" corner="tr" />
-          <CornerBracket className="bottom-0 left-0" corner="bl" />
-          <CornerBracket className="bottom-0 right-0" corner="br" />
+      {/* Scanner frame — thin white L-brackets + horizontal scan line */}
+      <div className="relative z-10 flex-1 flex items-center justify-center px-6">
+        <div className="relative w-full max-w-[420px] aspect-[3/4]">
+          {/* Corner brackets — thin white, no pulse */}
+          <span className="absolute top-0 left-0 w-12 h-12 border-l-2 border-t-2 border-white" />
+          <span className="absolute top-0 right-0 w-12 h-12 border-r-2 border-t-2 border-white" />
+          <span className="absolute bottom-0 left-0 w-12 h-12 border-l-2 border-b-2 border-white" />
+          <span className="absolute bottom-0 right-0 w-12 h-12 border-r-2 border-b-2 border-white" />
 
-          {/* Sweeping scan line */}
-          {ready && (
-            <div className="absolute inset-x-4 top-0 bottom-0 overflow-hidden pointer-events-none">
+          {/* Horizontal center scan line — sweeps within frame */}
+          {ready && !error && (
+            <div className="absolute inset-x-0 top-0 bottom-0 overflow-hidden pointer-events-none">
               <div
-                className="absolute left-0 right-0 h-[2px] rounded-full"
+                className="absolute inset-x-4 h-[2px]"
                 style={{
                   background:
                     'linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent)',
-                  boxShadow: '0 0 24px 4px rgba(255,255,255,0.55)',
-                  animation: 'scanner-sweep 2.4s ease-in-out infinite',
+                  boxShadow: '0 0 20px 3px rgba(255,255,255,0.55)',
+                  animation: 'scanner-sweep 2.6s ease-in-out infinite',
                 }}
               />
             </div>
           )}
 
-
-          {/* Hint / status */}
-          <div className="absolute -bottom-10 left-0 right-0 text-center text-xs text-white/80">
+          {/* Loading / error hint */}
+          <div className="absolute -bottom-10 left-0 right-0 text-center text-xs text-white/70">
             {error ? (
-              <span className="text-white/90">{error} — use Gallery below</span>
+              <span>{error} — use Gallery</span>
             ) : !ready ? (
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Starting camera…
               </span>
             ) : null}
           </div>
-
-
         </div>
       </div>
 
-      {/* Batch scan tray — appears above the bottom bar as pages accumulate */}
+      {/* Batch scan tray */}
       {batchOn && batchPages.length > 0 && !objReviewFrame && (
         <div className="relative z-20 px-4 pb-2">
           <div className="rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)]">
@@ -604,14 +567,9 @@ export const CameraScannerScreen = ({
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
               {batchPages.map((src, i) => (
-                <div
-                  key={i}
-                  className="relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-white/20 bg-black/40"
-                >
+                <div key={i} className="relative shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-white/20 bg-black/40">
                   <img src={src} alt={`Page ${i + 1}`} className="w-full h-full object-cover" />
-                  <span className="absolute bottom-0 right-0 text-[10px] px-1 rounded-tl bg-black/70 text-white font-bold">
-                    {i + 1}
-                  </span>
+                  <span className="absolute bottom-0 right-0 text-[10px] px-1 rounded-tl bg-black/70 text-white font-bold">{i + 1}</span>
                 </div>
               ))}
             </div>
@@ -623,8 +581,7 @@ export const CameraScannerScreen = ({
                 disabled={batchProcessing}
                 className="flex-1 h-10 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold text-white active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
-                <Undo2 className="h-4 w-4" />
-                Undo last
+                <Undo2 className="h-4 w-4" /> Undo last
               </button>
               <button
                 type="button"
@@ -644,67 +601,102 @@ export const CameraScannerScreen = ({
         </div>
       )}
 
-      {/* Bottom frosted control bar — hidden during any review overlay */}
+      {/* Bottom bar — Gallery thumb (L) · Shutter (C) · Flip camera (R) */}
       {!objReviewFrame && (
-      <div
-        className="relative z-10 px-4 pt-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
-      >
-        {/* Mode chips — Gallery moved out so it can't compete with the shutter */}
-        {tapTrace && (
-          <div className="mb-1 px-2 py-1 rounded-md bg-black/60 border border-white/10 text-[10px] font-mono text-white/80 self-start max-w-full truncate">
-            {tapTrace}
-          </div>
-        )}
-
-
-
-        {/* Shutter row — CamScanner-style: big centered shutter, tucked gallery, mode badge */}
-        <div className="relative flex items-center justify-center h-[96px]">
-          <button
-            type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              openGallery();
-            }}
-            disabled={capturing}
-            className="absolute left-0 bottom-1 w-11 h-11 rounded-xl bg-white/10 backdrop-blur-xl border border-white/15 flex items-center justify-center active:scale-95 transition disabled:opacity-50"
-            aria-label="Pick from gallery"
-          >
-            <ImageIcon className="h-5 w-5" />
-          </button>
-
-          <button
-            type="button"
-            onPointerDownCapture={(e) => e.stopPropagation()}
-            onClickCapture={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              handleShutter();
-            }}
-            disabled={capturing || !ready}
-            style={{ zIndex: 50, isolation: 'isolate', touchAction: 'manipulation' }}
-            className="relative w-[86px] h-[86px] rounded-full flex items-center justify-center active:scale-95 transition disabled:opacity-60 pointer-events-auto"
-            aria-label={`Capture (${activeModeLabel})`}
-            data-testid="scanner-shutter"
-            data-mode={mode}
-          >
-            <span className="absolute inset-0 rounded-full border-[3px] border-white shadow-[0_0_0_5px_rgba(0,0,0,0.35),0_10px_30px_rgba(0,0,0,0.45)] pointer-events-none" />
-            <span
-              className={cn(
-                'w-[66px] h-[66px] rounded-full bg-white transition-transform pointer-events-none',
-                capturing && 'scale-90 opacity-80',
+        <div
+          className="relative z-10 px-8"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)', paddingTop: '1.25rem' }}
+        >
+          <div className="relative flex items-center justify-between">
+            {/* Gallery thumbnail — rounded square */}
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); openGallery(); }}
+              disabled={capturing}
+              className="w-[52px] h-[52px] rounded-xl overflow-hidden border border-white/70 bg-white/5 active:scale-95 transition disabled:opacity-50 flex items-center justify-center"
+              aria-label="Pick from gallery"
+            >
+              {lastThumb ? (
+                <img src={lastThumb} alt="Last capture" className="w-full h-full object-cover" />
+              ) : (
+                <ImageIcon className="h-5 w-5 text-white/80" strokeWidth={1.75} />
               )}
-            />
-            {capturing && (
-              <Loader2 className="absolute h-7 w-7 text-black animate-spin pointer-events-none" />
-            )}
-          </button>
+            </button>
 
+            {/* Shutter — big white circle with ring */}
+            <button
+              type="button"
+              onPointerDownCapture={(e) => e.stopPropagation()}
+              onClickCapture={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleShutter();
+              }}
+              disabled={capturing || !ready}
+              style={{ touchAction: 'manipulation' }}
+              className="relative w-[76px] h-[76px] rounded-full flex items-center justify-center active:scale-95 transition disabled:opacity-60"
+              aria-label={`Capture (${activeModeLabel})`}
+              data-testid="scanner-shutter"
+              data-mode={mode}
+            >
+              <span className="absolute inset-0 rounded-full border-[3px] border-white pointer-events-none" />
+              <span
+                className={cn(
+                  'w-[60px] h-[60px] rounded-full bg-white transition-transform pointer-events-none',
+                  capturing && 'scale-90 opacity-80',
+                )}
+              />
+              {capturing && (
+                <Loader2 className="absolute h-7 w-7 text-black animate-spin pointer-events-none" />
+              )}
+            </button>
+
+            {/* Flip camera */}
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setFacingMode((m) => (m === 'environment' ? 'user' : 'environment'));
+              }}
+              disabled={capturing}
+              className="w-[52px] h-[52px] rounded-xl flex items-center justify-center active:opacity-60 transition disabled:opacity-40"
+              aria-label="Flip camera"
+            >
+              <SwitchCamera className="h-6 w-6 text-white" strokeWidth={1.75} />
+            </button>
+          </div>
+
+          {/* Batch toggle — tiny inline row, only in note mode */}
+          {mode === 'note' && onBatchNote && (
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => {
+                  if (!requirePro('batch')) return;
+                  setBatchOn((v) => {
+                    const next = !v;
+                    toast(next ? 'Batch scan on' : 'Batch scan off', { duration: 1000 });
+                    if (!next) setBatchPages([]);
+                    return next;
+                  });
+                }}
+                className={cn(
+                  'h-8 px-3 rounded-full backdrop-blur-xl border flex items-center gap-1.5 text-[11px] font-semibold active:scale-95 transition',
+                  batchOn
+                    ? 'bg-white text-black border-white'
+                    : 'bg-white/10 border-white/20 text-white',
+                )}
+                aria-label="Toggle batch scan"
+              >
+                <Files className="h-3.5 w-3.5" />
+                Batch{batchPages.length > 0 ? ` · ${batchPages.length}` : ''}
+                {!hasPro && <Lock className="h-3 w-3 ml-0.5 opacity-80" />}
+              </button>
+            </div>
+          )}
         </div>
-      </div>
       )}
 
       {/* Local keyframes */}
