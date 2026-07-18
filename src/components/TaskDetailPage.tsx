@@ -832,7 +832,7 @@ export const TaskDetailPage = ({
         </div>
 
         {/* Description — plain paragraph, no label, no box */}
-        <div>
+        <div className="-mt-1 font-sans" style={{ color: '#adadad' }}>
           <style>{RICH_TEXT_EDITOR_STYLES}</style>
           {isEditingDesc || !descText ? (
             <MentionDescriptionEditor
@@ -844,13 +844,14 @@ export const TaskDetailPage = ({
               onFocus={() => setIsEditingDesc(true)}
               onBlur={() => setTimeout(() => setIsEditingDesc(false), 200)}
               placeholder={t('taskDetail.descriptionPlaceholder')}
-              className="bg-transparent border-none focus:ring-0 focus-visible:ring-0 shadow-none px-0"
+              className="bg-transparent border-none focus:ring-0 focus-visible:ring-0 shadow-none px-0 font-sans"
               minHeight={40}
             />
           ) : (
             <div
               onClick={() => setIsEditingDesc(true)}
-              className="rich-text-editor w-full text-[14px] text-muted-foreground/90 whitespace-pre-wrap leading-relaxed cursor-text"
+              className="rich-text-editor w-full text-[14px] whitespace-pre-wrap leading-relaxed cursor-text font-sans"
+              style={{ color: '#adadad' }}
               dangerouslySetInnerHTML={{ __html: descriptionToDisplayHtml(descText) }}
             />
           )}
