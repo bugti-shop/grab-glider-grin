@@ -140,9 +140,16 @@ export async function startSync(userId: string): Promise<void> {
   started = true;
   currentUserId = userId;
 
-  await registerDevice(userId);
-  attachRealtime(userId);
-  await bootstrap(userId);
+  try {
+    await registerDevice(userId);
+    attachRealtime(userId);
+    await bootstrap(userId);
+  } catch (err) {
+    console.warn('[sync] startSync failed, tearing down', err);
+    await stopSync();
+    throw err;
+  }
+
   // First-time-per-device: push everything the user already has locally so
   // notes/tasks/habits/etc created pre-sign-in actually make it to the cloud.
   try {
@@ -151,6 +158,10 @@ export async function startSync(userId: string): Promise<void> {
   } catch {}
   startHeartbeat();
 
+  // Idempotent — remove any prior bindings before re-adding.
+  document.removeEventListener('visibilitychange', onVisibility);
+  window.removeEventListener('online', onOnline);
+  window.removeEventListener('flowist:app:foreground', onForeground);
   document.addEventListener('visibilitychange', onVisibility);
   window.addEventListener('online', onOnline);
   window.addEventListener('flowist:app:foreground', onForeground);
@@ -161,6 +172,10 @@ export async function startSync(userId: string): Promise<void> {
   if (authSub) { try { authSub.unsubscribe(); } catch {} authSub = null; }
   const { data } = supabase.auth.onAuthStateChange((event, session) => {
     if (!currentUserId) return;
+    if (event === 'SIGNED_OUT') {
+      void stopSync();
+      return;
+    }
     if (event === 'TOKEN_REFRESHED' && session?.access_token) {
       try { (supabase.realtime as any).setAuth?.(session.access_token); } catch {}
       attachRealtime(currentUserId);
