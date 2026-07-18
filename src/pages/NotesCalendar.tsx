@@ -156,7 +156,11 @@ const NotesCalendar = () => {
         if (editingNoteIdRef.current !== note.id) return;
         setEditingNote(fullNote || note);
         setIsEditorOpen(true);
-      }).catch(() => {});
+      }).catch(() => {
+        if (editingNoteIdRef.current !== note.id) return;
+        setEditingNote(note);
+        setIsEditorOpen(true);
+      });
       return;
     }
     setEditingNote(note);
