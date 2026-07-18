@@ -76,13 +76,22 @@ if (isPreviewHost || isInIframe) {
   // Production: force the newest service worker to activate ASAP and evict
   // legacy runtime cache buckets so returning users never get stuck on old
   // JS/CSS bundles referencing removed UI (e.g. old calendar layouts).
-  const SW_CACHE_PURGE_KEY = 'nota_sw_cache_purge_v3';
+  const SW_CACHE_PURGE_KEY = 'nota_sw_cache_purge_v4';
   try {
     if (localStorage.getItem(SW_CACHE_PURGE_KEY) !== 'done') {
       if ('caches' in window) {
         caches.keys().then((names) => {
           names
-            .filter((n) => n === 'js-chunks' || n === 'js-chunks-v2' || n === 'css-chunks-v2' || n === 'workbox-precache-v2' || /^workbox-/.test(n))
+            .filter((n) =>
+              n === 'js-chunks' ||
+              n === 'js-chunks-v2' ||
+              n === 'css-chunks-v2' ||
+              n === 'workbox-precache-v2' ||
+              /^html-shell-v[1-3]$/.test(n) ||
+              /^js-chunks-v[1-3]$/.test(n) ||
+              /^css-chunks-v[1-3]$/.test(n) ||
+              /^workbox-/.test(n)
+            )
             .forEach((n) => caches.delete(n).catch(() => {}));
         }).catch(() => {});
       }
@@ -90,6 +99,29 @@ if (isPreviewHost || isInIframe) {
         regs.forEach((r) => { try { r.update(); } catch {} });
       }).catch(() => {});
       localStorage.setItem(SW_CACHE_PURGE_KEY, 'done');
+    }
+  } catch {}
+
+  // Web/PWA: when a fresh service worker arrives, activate it immediately and
+  // reload once so signed-in users don't keep running an old JS/CSS bundle.
+  try {
+    if ('serviceWorker' in navigator) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+      const checkForAppUpdate = () => {
+        navigator.serviceWorker.getRegistrations()
+          .then((regs) => regs.forEach((r) => { try { r.update(); } catch {} }))
+          .catch(() => {});
+      };
+      window.addEventListener('focus', checkForAppUpdate, { passive: true });
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) checkForAppUpdate();
+      });
+      setInterval(checkForAppUpdate, 15 * 60 * 1000);
     }
   } catch {}
 }
