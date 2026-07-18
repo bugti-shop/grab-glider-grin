@@ -1439,6 +1439,8 @@ export const TaskDetailPage = ({
           </div>
 
           {/* Comments & Activity Thread */}
+          <div id="td-comments" />
+
           <TaskCommentsSection
             comments={task.comments || []}
             onAddComment={(comment: TaskComment) => {
