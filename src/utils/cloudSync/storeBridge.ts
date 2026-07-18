@@ -478,9 +478,19 @@ async function applySectionsFromCloud(rows: SyncRow[]) {
   const byId = new Map((local ?? []).map((s: any) => [s.id, s]));
   let changed = false;
   for (const r of rows) {
-    if (r.is_deleted) { if (byId.delete(r.id)) changed = true; continue; }
+    const cloudTs = +new Date(r.updated_at ?? Date.now());
+    if (r.is_deleted) {
+      markDeleted('sections', r.id, cloudTs);
+      if (byId.delete(r.id)) changed = true;
+      continue;
+    }
+    if (isTombstoned('sections', r.id, cloudTs)) {
+      enqueueWrite('sections', 'delete', { id: r.id } as any);
+      continue;
+    }
     const mapped = mappers.sections.fromCloud(r);
     if (!mapped) continue;
+    clearTombstone('sections', r.id);
     byId.set(r.id, mapped);
     changed = true;
   }
