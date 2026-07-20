@@ -144,10 +144,7 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
         <button
           type="button"
           onClick={next}
-          className="w-[62%] max-w-[280px] min-w-[220px] h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-[15px] tracking-tight active:translate-y-[2px] transition-transform"
-          style={{
-            boxShadow: '0 4px 0 0 hsl(var(--primary) / 0.55), 0 6px 14px -4px rgba(0,0,0,0.25)',
-          }}
+          className="w-full max-w-[420px] h-14 rounded-full bg-primary text-primary-foreground font-semibold text-[15px] tracking-tight shadow-lg active:scale-[0.98] transition-transform"
         >
           {isLast ? 'Get Started' : 'Continue'}
         </button>
