@@ -474,18 +474,18 @@ const TodoSettings = () => {
           </h1>
         </div>
         <div className="px-4 pb-1">
-          <div className="flex items-center gap-2 bg-[#E4E4E9] dark:bg-[#1C1C1E] rounded-[10px] px-3 h-9">
+          <div className="flex items-center gap-2 bg-[#f1f4f9] dark:bg-[#1C1C1E] rounded-[10px] px-3 h-9">
             <Search className="h-[18px] w-[18px] text-[#8E8E93]" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search settings"
-              className="flex-1 bg-transparent outline-none border-0 text-[17px] placeholder:text-[#8E8E93] text-black dark:text-white"
+              className="flex-1 bg-transparent outline-none border-0 text-[17px] placeholder:text-[14px] placeholder:text-[#8E8E93] text-black dark:text-white"
             />
           </div>
         </div>
         <div className="px-4 pt-1.5">
-          <div className="w-full h-px bg-[#E5E5EA] dark:bg-[#2C2C2E]" />
+          <div className="w-full h-[1.5px] bg-[#E5E5EA] dark:bg-[#2C2C2E]" />
         </div>
       </div>
 
