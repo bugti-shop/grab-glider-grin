@@ -94,8 +94,9 @@ const Settings = () => {
           paddingRight: 'var(--safe-right, 0px)',
         }}
       >
-        <div className="px-5 pt-4 pb-3">
-          <h1 className="text-[34px] leading-tight font-bold tracking-tight text-black dark:text-white">
+        <div className="px-5 pt-4 pb-3 flex items-center gap-2.5">
+          <AppLogo size="md" className="h-7 w-7 rounded-[7px] flex-shrink-0" />
+          <h1 className="text-[26px] leading-none font-bold tracking-tight text-black dark:text-white">
             Settings
           </h1>
         </div>
@@ -119,8 +120,7 @@ const Settings = () => {
             onClick={() => openPaywall()}
             className="w-full flex items-center justify-between px-4 py-3.5 rounded-[14px] bg-white dark:bg-[#1C1C1E] shadow-sm"
           >
-            <span className="text-[17px] font-medium flex items-center gap-2 text-[#007AFF]">
-              <Crown className="h-[18px] w-[18px]" fill="#FFD700" color="#FFD700" />
+            <span className="text-[17px] font-medium text-[#007AFF]">
               Upgrade to Flowist Pro
             </span>
             <ChevronRight className="h-[18px] w-[18px] text-[#C7C7CC]" />
@@ -143,18 +143,20 @@ const Settings = () => {
                     className="w-full flex items-center gap-3 pl-3 pr-4 py-[9px] active:bg-black/[0.04] dark:active:bg-white/[0.06] transition-colors disabled:opacity-60"
                   >
                     <span
-                      className="flex items-center justify-center rounded-[7px] shrink-0"
-                      style={{ backgroundColor: row.color, width: 29, height: 29 }}
+                      className="flex items-center justify-center rounded-[8px] shrink-0"
+                      style={{
+                        width: 29,
+                        height: 29,
+                        background: `linear-gradient(180deg, ${row.color} 0%, ${row.color}E6 100%)`,
+                        boxShadow: `0 1px 2px ${row.color}40, inset 0 1px 0 rgba(255,255,255,0.25)`,
+                      }}
                     >
-                      <Icon className="h-[17px] w-[17px] text-white" />
+                      <Icon className="h-[17px] w-[17px] text-white drop-shadow-[0_0.5px_0_rgba(0,0,0,0.1)]" />
                     </span>
                     <span className="flex-1 min-w-0 flex items-center">
                       <span className="text-[17px] text-black dark:text-white text-left truncate">
                         {row.label}
                       </span>
-                      {row.showCrown && !isProSub && (
-                        <Crown className="h-[13px] w-[13px] ml-1.5 shrink-0" fill="#FFD700" color="#FFD700" />
-                      )}
                     </span>
                     <ChevronRight className="h-[18px] w-[18px] text-[#C7C7CC] shrink-0" />
                   </button>
