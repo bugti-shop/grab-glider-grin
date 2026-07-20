@@ -116,10 +116,10 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
           loading={index === 0 ? 'eager' : 'eager'}
           className="w-full h-full object-cover animate-in fade-in duration-300 pointer-events-none will-change-transform"
           style={{
-            // object-position top + slight over-scale hides the baked-in button
-            // area at the bottom while keeping the mockup crisp.
+            // object-position top + stronger over-scale hides the baked-in
+            // progress dots + CTA button at the bottom of the mockup.
             objectPosition: 'center top',
-            transform: 'scale(1.02)',
+            transform: 'scale(1.18)',
             transformOrigin: 'center top',
             imageRendering: 'auto' as any,
           }}
