@@ -578,6 +578,15 @@ const AppContent = () => {
   const handleSlidesComplete = useCallback(() => {
     try { localStorage.setItem(ONBOARDING_SLIDES_KEY, 'true'); } catch {}
     setShowSlides(false);
+    // Signal tour bootstrap that onboarding slides are done — it will now
+    // schedule the feature tutorial chain.
+    try { window.dispatchEvent(new CustomEvent('flowist-onboarding-slides:complete')); } catch {}
+    // Show paywall right after onboarding.
+    try {
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('flowist:open-paywall', { detail: { source: 'post-onboarding' } }));
+      }, 400);
+    } catch {}
   }, []);
   useEffect(() => {
     try { localStorage.setItem('onboarding_completed_flag', 'true'); } catch {}
