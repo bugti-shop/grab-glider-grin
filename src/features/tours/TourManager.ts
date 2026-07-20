@@ -865,6 +865,22 @@ class TourManagerImpl {
           if (list.length === 0) { ev.preventDefault(); return; }
           const first = list[0];
           const last = list[list.length - 1];
+          const currentIdx = active ? list.indexOf(active) : -1;
+          if (currentIdx === -1) {
+            ev.preventDefault();
+            first.focus({ preventScroll: true });
+            return;
+          }
+          if (!ev.shiftKey && targetHasFocus && list[1]) {
+            ev.preventDefault();
+            list[1].focus({ preventScroll: true });
+            return;
+          }
+          if (ev.shiftKey && active === list[1] && targetEl) {
+            ev.preventDefault();
+            targetEl.focus({ preventScroll: true });
+            return;
+          }
           if (ev.shiftKey && active === first) { ev.preventDefault(); last.focus(); }
           else if (!ev.shiftKey && active === last) { ev.preventDefault(); first.focus(); }
           return;
