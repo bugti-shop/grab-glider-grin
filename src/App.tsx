@@ -744,17 +744,29 @@ const AppContent = () => {
   if (isPro) wasEverPro.current = true;
 
   // Onboarding removed — subscription state no longer needs to gate/reset it.
+  // While a user is Pro (active/trialing/past_due/grace), keep the recurring
+  // paywall timer "fresh" so that if they later cancel and lose access, they
+  // get a full 6-day window before the next paywall — not an instant one.
   useEffect(() => {
     if (subLoading || isVerifyingCheckout) return;
     if (isPro) {
       awaitingSubscriptionChoice.current = false;
       sessionStorage.removeItem('awaitingSubscriptionChoice');
+      try {
+        localStorage.setItem(RECURRING_PAYWALL_LAST_KEY, String(Date.now()));
+        // First-launch paywall no longer needed for anyone who has ever been Pro
+        localStorage.setItem(FIRST_PAYWALL_SHOWN_KEY, 'true');
+      } catch {}
     }
   }, [isPro, subLoading, isVerifyingCheckout]);
 
-  // Show paywall for free users:
-  //  - First launch ever (any user with no record) → show once
-  //  - Recurring: every 6 days for all free users (including existing)
+  // Show paywall for FREE users only:
+  //  - First launch ever (no record) → show once shortly after app load
+  //  - Recurring: every 6 days (persisted in localStorage)
+  // Pro users (active, trialing, past_due, or within cancellation grace period)
+  // are fully excluded via isPro. When a Pro user cancels and isPro flips to
+  // false, this effect re-runs and the 6-day timer (refreshed above while Pro)
+  // gates the next prompt.
   useEffect(() => {
     if (subLoading || isVerifyingCheckout) return;
     if (isPro) return;
@@ -766,17 +778,19 @@ const AppContent = () => {
       lastShownAt = Number(localStorage.getItem(RECURRING_PAYWALL_LAST_KEY) || 0) || 0;
     } catch {}
     const now = Date.now();
-    const dueRecurring = now - lastShownAt >= RECURRING_PAYWALL_INTERVAL_MS;
-    if (!firstShown || dueRecurring) {
-      const t = window.setTimeout(() => {
-        try { openPaywallRef.current?.(firstShown ? 'recurring-free-user' : 'first-launch'); } catch {}
-        try {
-          localStorage.setItem(FIRST_PAYWALL_SHOWN_KEY, 'true');
-          localStorage.setItem(RECURRING_PAYWALL_LAST_KEY, String(Date.now()));
-        } catch {}
-      }, 800);
-      return () => window.clearTimeout(t);
-    }
+    const dueRecurring = lastShownAt > 0 && now - lastShownAt >= RECURRING_PAYWALL_INTERVAL_MS;
+    const shouldShow = !firstShown || dueRecurring;
+    if (!shouldShow) return;
+    const reason = !firstShown ? 'first-launch' : 'recurring-free-user';
+    const t = window.setTimeout(() => {
+      // Re-check isPro at fire time in case subscription state changed during the delay
+      try { openPaywallRef.current?.(reason); } catch {}
+      try {
+        localStorage.setItem(FIRST_PAYWALL_SHOWN_KEY, 'true');
+        localStorage.setItem(RECURRING_PAYWALL_LAST_KEY, String(Date.now()));
+      } catch {}
+    }, 800);
+    return () => window.clearTimeout(t);
   }, [isPro, subLoading, isVerifyingCheckout, showLanding]);
 
   // Kept only so existing refs below don't error; onboarding never "completes" now.
