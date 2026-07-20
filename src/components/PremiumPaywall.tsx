@@ -800,11 +800,10 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           };
 
           return (
-            <button onClick={onCta} disabled={isPurchasing}
-              className="w-full rounded-xl py-3 text-[14px] font-bold active:scale-[0.99] transition disabled:opacity-50"
-              style={{ background: PRO_BLUE, color: '#fff', boxShadow: `0 6px 20px ${PRO_BLUE}55` }}>
+            <Button onClick={onCta} disabled={isPurchasing} size="lg"
+              className="w-full h-12 text-base font-semibold">
               {ctaLabel}
-            </button>
+            </Button>
           );
         })()}
       </div>
