@@ -1247,8 +1247,7 @@ body.onboarding-active [data-vaul-drawer] {
   top: -8px;
   right: -12px;
   bottom: -8px;
-  left: 0;
-  pointer-events: none;
+  left: -12px;
 }
 .flowist-tour-popover .driver-popover-next-btn:hover,
 .flowist-tour-popover .driver-popover-next-btn:focus-visible {
@@ -1271,10 +1270,6 @@ body.onboarding-active [data-vaul-drawer] {
 .flowist-tour-popover .driver-popover-prev-btn {
   background: hsl(var(--muted));
   color: hsl(var(--foreground));
-  position: relative;
-  z-index: 2;
-  min-height: 40px;
-  padding: 8px 14px;
 }
 .flowist-tour-popover .driver-popover-close-btn {
   position: absolute;
@@ -1315,7 +1310,7 @@ body.onboarding-active [data-vaul-drawer] {
 
 /* Forced/compulsory tutorial: block dismissal via overlay tap and hide the ✕. */
 body[data-tour-forced="true"] .driver-overlay {
-  pointer-events: auto !important;
+  pointer-events: none !important;
 }
 .flowist-tour-popover.flowist-tour-forced .driver-popover-close-btn,
 .flowist-tour-popover.flowist-tour-forced .flowist-tour-dismiss {

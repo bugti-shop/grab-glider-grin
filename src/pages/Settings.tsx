@@ -50,7 +50,7 @@ const Settings = () => {
     {
       rows: [
         { label: 'General', icon: SettingsIcon, color: '#8E8E93', onClick: () => setShowHeaderOffsetSheet(true), keywords: ['header', 'offset', 'layout'] },
-        { label: 'Appearance', icon: Brush, color: '#AF52DE', dataTour: 'settings-appearance', onClick: () => state.setShowThemeDialog(true), keywords: ['theme', 'dark', 'light', 'color', 'colour', 'mode'] },
+        { label: 'Appearance', icon: Brush, color: '#AF52DE', onClick: () => state.setShowThemeDialog(true), keywords: ['theme', 'dark', 'light', 'color', 'colour', 'mode'] },
         { label: 'Language', icon: Globe, color: '#007AFF', onClick: () => state.setShowLanguageDialog(true), keywords: ['locale', 'translate', 'region'] },
         { label: 'Note Type Visibility', icon: Eye, color: '#5AC8CE', dataTour: 'settings-note-type-visibility', onClick: () => { if (requireFeature('notes_type_visibility')) state.setShowNoteTypeVisibilitySheet(true); }, keywords: ['notes', 'show', 'hide', 'sticky', 'sketch', 'voice'] },
         { label: 'Notes Settings', icon: StickyNote, color: '#FF9500', onClick: () => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); }, keywords: ['editor', 'font'] },

@@ -14,7 +14,6 @@ export interface FeatureTourStep {
   title: string;
   description: string;
   side?: 'top' | 'bottom' | 'left' | 'right';
-  scrollBlock?: ScrollLogicalPosition;
   optional?: boolean;
   /** If true, advance the tour when the user clicks the highlighted element
    *  (instead of dismissing). Used for guided click-through flows. */
@@ -99,7 +98,7 @@ export const FEATURE_TOURS: FeatureTour[] = [
   // ─── Personalization ──────────────────────────────────────────
   hint('personalize-theme', 'personalization', 'Personalize your theme', 'Open Settings → Appearance to switch between 9 themes or design your own.', '/settings', { target: '[data-tour="settings-appearance"]' }),
   hint('personalize-app-lock', 'personalization', 'Setup App Lock in Settings', 'Turn on App Lock in Settings to protect Flowist with a passcode or biometrics.', '/settings', { target: '[data-tour="settings-security"]' }),
-  hint('personalize-note-type-visibility', 'personalization', 'Choose which note types show on + New Note', 'Pick which note types (Regular, Sketch, Code, LinkedIn…) appear when you tap "+ New Note".', '/settings', { target: '[data-tour="settings-note-type-visibility"]', side: 'top' }),
+  hint('personalize-note-type-visibility', 'personalization', 'Choose which note types show on + New Note', 'Pick which note types (Regular, Sketch, Code, LinkedIn…) appear when you tap "+ New Note".', '/todo/settings', { target: '[data-tour="settings-note-type-visibility"]', side: 'top' }),
 ];
 
 
