@@ -42,8 +42,13 @@ export const useTourBootstrap = () => {
     const skipAutoTours = isInAppBrowser;
 
     // Auto-start compulsory onboarding on ALL platforms (web + native).
-    // User explicitly asked to restore the tutorial on the web.
-    (async () => {
+    // Wait for the visual onboarding slides to complete before firing the
+    // feature tutorial chain — otherwise both start on top of each other.
+    const ONBOARDING_SLIDES_KEY = 'onboarding_slides_seen_v1';
+    const slidesDone = () => {
+      try { return localStorage.getItem(ONBOARDING_SLIDES_KEY) === 'true'; } catch { return true; }
+    };
+    const runBootstrap = async () => {
       if (skipAutoTours) return;
       try {
         const { getSetting, setSetting } = await import('@/utils/settingsStorage');
@@ -70,7 +75,15 @@ export const useTourBootstrap = () => {
           }
         }
       } catch {}
-    })();
+    };
+
+    let slidesListener: (() => void) | null = null;
+    if (slidesDone()) {
+      runBootstrap();
+    } else {
+      slidesListener = () => { runBootstrap(); };
+      window.addEventListener('flowist-onboarding-slides:complete', slidesListener);
+    }
 
 
 
