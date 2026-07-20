@@ -752,6 +752,33 @@ const AppContent = () => {
     }
   }, [isPro, subLoading, isVerifyingCheckout]);
 
+  // Show paywall for free users:
+  //  - First launch ever (any user with no record) → show once
+  //  - Recurring: every 6 days for all free users (including existing)
+  useEffect(() => {
+    if (subLoading || isVerifyingCheckout) return;
+    if (isPro) return;
+    if (showLanding) return;
+    let firstShown = false;
+    let lastShownAt = 0;
+    try {
+      firstShown = localStorage.getItem(FIRST_PAYWALL_SHOWN_KEY) === 'true';
+      lastShownAt = Number(localStorage.getItem(RECURRING_PAYWALL_LAST_KEY) || 0) || 0;
+    } catch {}
+    const now = Date.now();
+    const dueRecurring = now - lastShownAt >= RECURRING_PAYWALL_INTERVAL_MS;
+    if (!firstShown || dueRecurring) {
+      const t = window.setTimeout(() => {
+        try { openPaywallRef.current?.(firstShown ? 'recurring-free-user' : 'first-launch'); } catch {}
+        try {
+          localStorage.setItem(FIRST_PAYWALL_SHOWN_KEY, 'true');
+          localStorage.setItem(RECURRING_PAYWALL_LAST_KEY, String(Date.now()));
+        } catch {}
+      }, 800);
+      return () => window.clearTimeout(t);
+    }
+  }, [isPro, subLoading, isVerifyingCheckout, showLanding]);
+
   // Kept only so existing refs below don't error; onboarding never "completes" now.
   const onboardingJustCompleted = useRef(false);
 
