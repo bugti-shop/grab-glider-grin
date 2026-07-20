@@ -18,7 +18,7 @@ import { useGoogleDriveSync } from "@/hooks/useGoogleDriveSync";
 import { useQuickAddSync } from "@/hooks/useQuickAddSync";
 import { useCloudSync } from "@/hooks/useCloudSync";
 const PremiumPaywall = lazy(() => import("@/components/PremiumPaywall").then(m => ({ default: m.PremiumPaywall })));
-const OnboardingSlides = lazy(() => import("@/components/OnboardingSlides").then(m => ({ default: m.OnboardingSlides })));
+
 
 
 
@@ -565,27 +565,17 @@ const DriveSyncBootstrap = () => (
   </ErrorBoundary>
 );
 
-const ONBOARDING_SLIDES_KEY = 'onboarding_slides_seen_v1';
 const ONBOARDING_PAYWALL_PENDING_KEY = 'flowist_onboarding_paywall_pending_v1';
+const FIRST_PAYWALL_SHOWN_KEY = 'flowist_first_paywall_shown_v1';
+const RECURRING_PAYWALL_LAST_KEY = 'flowist_recurring_paywall_last_v1';
+const RECURRING_PAYWALL_INTERVAL_MS = 6 * 24 * 60 * 60 * 1000; // 6 days
 
 const AppContent = () => {
   useCloudSync();
   const [isAppLocked, setIsAppLocked] = useState<boolean | null>(null);
   // Onboarding removed — always treat as completed so the dashboard renders immediately.
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
-  const [showSlides, setShowSlides] = useState<boolean>(() => {
-    try { return localStorage.getItem(ONBOARDING_SLIDES_KEY) !== 'true'; } catch { return true; }
-  });
   const openPaywallRef = useRef<((feature?: string) => void) | null>(null);
-  const handleSlidesComplete = useCallback(() => {
-    try { localStorage.setItem(ONBOARDING_SLIDES_KEY, 'true'); } catch {}
-    setShowSlides(false);
-    // Paywall must fully close before the feature tooltip can start.
-    try { sessionStorage.setItem(ONBOARDING_PAYWALL_PENDING_KEY, 'true'); } catch {}
-    window.setTimeout(() => {
-      try { openPaywallRef.current?.('post-onboarding'); } catch {}
-    }, 400);
-  }, []);
 
   useEffect(() => {
     // Wait for the paywall's close animation to fully finish (~320ms Radix
@@ -762,6 +752,33 @@ const AppContent = () => {
     }
   }, [isPro, subLoading, isVerifyingCheckout]);
 
+  // Show paywall for free users:
+  //  - First launch ever (any user with no record) → show once
+  //  - Recurring: every 6 days for all free users (including existing)
+  useEffect(() => {
+    if (subLoading || isVerifyingCheckout) return;
+    if (isPro) return;
+    if (showLanding) return;
+    let firstShown = false;
+    let lastShownAt = 0;
+    try {
+      firstShown = localStorage.getItem(FIRST_PAYWALL_SHOWN_KEY) === 'true';
+      lastShownAt = Number(localStorage.getItem(RECURRING_PAYWALL_LAST_KEY) || 0) || 0;
+    } catch {}
+    const now = Date.now();
+    const dueRecurring = now - lastShownAt >= RECURRING_PAYWALL_INTERVAL_MS;
+    if (!firstShown || dueRecurring) {
+      const t = window.setTimeout(() => {
+        try { openPaywallRef.current?.(firstShown ? 'recurring-free-user' : 'first-launch'); } catch {}
+        try {
+          localStorage.setItem(FIRST_PAYWALL_SHOWN_KEY, 'true');
+          localStorage.setItem(RECURRING_PAYWALL_LAST_KEY, String(Date.now()));
+        } catch {}
+      }, 800);
+      return () => window.clearTimeout(t);
+    }
+  }, [isPro, subLoading, isVerifyingCheckout, showLanding]);
+
   // Kept only so existing refs below don't error; onboarding never "completes" now.
   const onboardingJustCompleted = useRef(false);
 
@@ -916,16 +933,12 @@ const AppContent = () => {
           </Suspense>
           <DeferredSyncInit />
           <AppRoutes />
-          {showSlides && (
-            <Suspense fallback={null}>
-              <OnboardingSlides onComplete={handleSlidesComplete} />
-            </Suspense>
-          )}
         </>
       )}
     </>
   );
 };
+
 
 // Deferred sync hooks - lazy loaded after first paint
 const DeferredSyncInit = () => {
