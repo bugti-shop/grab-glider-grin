@@ -107,7 +107,7 @@ const Settings = () => {
           </h1>
         </div>
 
-        <div className="px-4 pb-3">
+        <div className="px-4 pb-1">
           <div className="flex items-center gap-2 bg-[#E4E4E9] dark:bg-[#1C1C1E] rounded-[10px] px-3 h-9">
             <Search className="h-[18px] w-[18px] text-[#8E8E93]" />
             <input
