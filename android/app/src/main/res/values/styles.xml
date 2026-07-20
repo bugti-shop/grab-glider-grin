@@ -8,12 +8,16 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
+    <!-- Post-splash theme: SOLID launch_background (#f8f8f6) so the window
+         behind the WebView matches the app's background from the very first
+         frame through JS boot — no white flash, no transparent flash.
+         Translucent windows caused a "two-tap to open" bug on some launchers
+         because the first tap dismissed the translucent draw pass; a solid
+         opaque window fixes it. -->
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:background">@null</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@color/launch_background</item>
         <item name="android:windowDisablePreview">true</item>
     </style>
 
