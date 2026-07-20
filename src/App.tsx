@@ -906,11 +906,11 @@ const AppContent = () => {
           </Suspense>
           <DeferredSyncInit />
           <AppRoutes />
-          {showSlides && (
-            <Suspense fallback={null}>
-              <OnboardingSlides onComplete={handleSlidesComplete} />
-            </Suspense>
-          )}
+        </>
+      )}
+    </>
+  );
+};
         </>
       )}
     </>
