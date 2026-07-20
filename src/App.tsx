@@ -575,9 +575,17 @@ const AppContent = () => {
   const [showSlides, setShowSlides] = useState<boolean>(() => {
     try { return localStorage.getItem(ONBOARDING_SLIDES_KEY) !== 'true'; } catch { return true; }
   });
+  const openPaywallRef = useRef<((feature?: string) => void) | null>(null);
   const handleSlidesComplete = useCallback(() => {
     try { localStorage.setItem(ONBOARDING_SLIDES_KEY, 'true'); } catch {}
     setShowSlides(false);
+    // Signal tour bootstrap that onboarding slides are done — the feature
+    // tutorial chain waits for this event before starting.
+    try { window.dispatchEvent(new CustomEvent('flowist-onboarding-slides:complete')); } catch {}
+    // Show paywall right after onboarding.
+    window.setTimeout(() => {
+      try { openPaywallRef.current?.('post-onboarding'); } catch {}
+    }, 400);
   }, []);
   useEffect(() => {
     try { localStorage.setItem('onboarding_completed_flag', 'true'); } catch {}
@@ -619,6 +627,7 @@ const AppContent = () => {
   });
 
   const { isPro, isLoading: subLoading, isVerifyingCheckout, isNewFreeUser, openPaywall } = useSubscription();
+  openPaywallRef.current = openPaywall;
   const awaitingSubscriptionChoice = useRef(
     sessionStorage.getItem('awaitingSubscriptionChoice') === 'true'
   );
