@@ -566,6 +566,7 @@ const DriveSyncBootstrap = () => (
 );
 
 const ONBOARDING_SLIDES_KEY = 'onboarding_slides_seen_v1';
+const ONBOARDING_PAYWALL_PENDING_KEY = 'flowist_onboarding_paywall_pending_v1';
 
 const AppContent = () => {
   useCloudSync();
@@ -579,13 +580,23 @@ const AppContent = () => {
   const handleSlidesComplete = useCallback(() => {
     try { localStorage.setItem(ONBOARDING_SLIDES_KEY, 'true'); } catch {}
     setShowSlides(false);
-    // Signal tour bootstrap that onboarding slides are done — the feature
-    // tutorial chain waits for this event before starting.
-    try { window.dispatchEvent(new CustomEvent('flowist-onboarding-slides:complete')); } catch {}
-    // Show paywall right after onboarding.
+    // Paywall must fully close before the feature tooltip can start.
+    try { sessionStorage.setItem(ONBOARDING_PAYWALL_PENDING_KEY, 'true'); } catch {}
     window.setTimeout(() => {
       try { openPaywallRef.current?.('post-onboarding'); } catch {}
     }, 400);
+  }, []);
+
+  useEffect(() => {
+    const releaseTourAfterPaywall = () => {
+      let pending = false;
+      try { pending = sessionStorage.getItem(ONBOARDING_PAYWALL_PENDING_KEY) === 'true'; } catch {}
+      if (!pending) return;
+      try { sessionStorage.removeItem(ONBOARDING_PAYWALL_PENDING_KEY); } catch {}
+      try { window.dispatchEvent(new CustomEvent('flowist-onboarding-slides:complete')); } catch {}
+    };
+    window.addEventListener('flowist:paywall-closed', releaseTourAfterPaywall);
+    return () => window.removeEventListener('flowist:paywall-closed', releaseTourAfterPaywall);
   }, []);
   useEffect(() => {
     try { localStorage.setItem('onboarding_completed_flag', 'true'); } catch {}

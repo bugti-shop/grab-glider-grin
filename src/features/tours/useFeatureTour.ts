@@ -42,14 +42,20 @@ export const useTourBootstrap = () => {
     const skipAutoTours = isInAppBrowser;
 
     // Auto-start compulsory onboarding on ALL platforms (web + native).
-    // Wait for the visual onboarding slides to complete before firing the
-    // feature tutorial chain — otherwise both start on top of each other.
+    // Wait for the visual onboarding slides AND the post-onboarding paywall
+    // to close before firing the feature tutorial chain.
     const ONBOARDING_SLIDES_KEY = 'onboarding_slides_seen_v1';
+    const ONBOARDING_PAYWALL_PENDING_KEY = 'flowist_onboarding_paywall_pending_v1';
     const slidesDone = () => {
       try { return localStorage.getItem(ONBOARDING_SLIDES_KEY) === 'true'; } catch { return true; }
     };
+    const paywallDone = () => {
+      try { return sessionStorage.getItem(ONBOARDING_PAYWALL_PENDING_KEY) !== 'true'; } catch { return true; }
+    };
+    const onboardingReady = () => slidesDone() && paywallDone();
     const runBootstrap = async () => {
       if (skipAutoTours) return;
+      if (!onboardingReady()) return;
       try {
         const { getSetting, setSetting } = await import('@/utils/settingsStorage');
         const KEY = 'feature-guide-first-launch-shown-v5';
@@ -78,7 +84,7 @@ export const useTourBootstrap = () => {
     };
 
     let slidesListener: (() => void) | null = null;
-    if (slidesDone()) {
+    if (onboardingReady()) {
       runBootstrap();
     } else {
       slidesListener = () => { runBootstrap(); };
@@ -154,7 +160,7 @@ export const useTourBootstrap = () => {
         setTimeout(() => { watchdogPending = false; }, 800);
       }
     };
-    const activityHandler = () => { if (!skipAutoTours && slidesDone()) kickChainIfPending(); };
+    const activityHandler = () => { if (!skipAutoTours && onboardingReady()) kickChainIfPending(); };
     window.addEventListener('pointerdown', activityHandler, { capture: true });
     window.addEventListener('keydown', activityHandler, { capture: true });
 
@@ -233,15 +239,21 @@ export const useFeatureTour = () => {
 export const useFirstVisitTour = (route: string, explicitTourId?: string) => {
   useEffect(() => {
     const ONBOARDING_SLIDES_KEY = 'onboarding_slides_seen_v1';
+    const ONBOARDING_PAYWALL_PENDING_KEY = 'flowist_onboarding_paywall_pending_v1';
     const slidesDone = () => {
       try { return localStorage.getItem(ONBOARDING_SLIDES_KEY) === 'true'; } catch { return true; }
     };
+    const paywallDone = () => {
+      try { return sessionStorage.getItem(ONBOARDING_PAYWALL_PENDING_KEY) !== 'true'; } catch { return true; }
+    };
+    const onboardingReady = () => slidesDone() && paywallDone();
 
     let cancelled = false;
     let slidesListener: (() => void) | null = null;
 
     const run = async () => {
       if (cancelled) return;
+      if (!onboardingReady()) return;
       if (explicitTourId) {
         TourManager.startTour(explicitTourId, { auto: true });
         return;
@@ -265,7 +277,7 @@ export const useFirstVisitTour = (route: string, explicitTourId?: string) => {
       }
     };
 
-    if (slidesDone()) {
+    if (onboardingReady()) {
       run();
     } else {
       slidesListener = () => { run(); };
