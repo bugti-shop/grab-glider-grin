@@ -47,8 +47,9 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
-    // Google Play Billing
-    implementation "com.android.billingclient:billing:9.0.0"
+    // Google Play Billing — pin to 7.x for RevenueCat compatibility
+    // (billing 8+/9+ removes QueryPurchaseHistoryParams which RevenueCat still references)
+    implementation "com.android.billingclient:billing:7.1.1"
 
     // Android 12+ SplashScreen API (backward compatible to API 21)
     implementation "androidx.core:core-splashscreen:1.2.0"

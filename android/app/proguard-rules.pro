@@ -23,6 +23,15 @@
 # ---------- Google Play Billing ----------
 -keep class com.android.billingclient.api.** { *; }
 -keep class com.android.vending.billing.** { *; }
+-dontwarn com.android.billingclient.api.**
+
+# ---------- RevenueCat ----------
+-keep class com.revenuecat.purchases.** { *; }
+-dontwarn com.revenuecat.purchases.**
+
+# ---------- Amazon Appstore SDK (bundled by RevenueCat, optional) ----------
+-dontwarn com.amazon.**
+-keep class com.amazon.device.iap.** { *; }
 
 # ---------- Firebase / Google Services (safe defaults) ----------
 -keep class com.google.firebase.** { *; }
