@@ -166,7 +166,7 @@ const Settings = () => {
                       <Icon className="h-[16px] w-[16px] text-white drop-shadow-[0_0.5px_0_rgba(0,0,0,0.1)]" />
                     </span>
                     <span className="flex-1 min-w-0 flex items-center">
-                      <span className="text-[13px] text-black dark:text-white text-left truncate">
+                      <span className="text-[14px] text-black dark:text-white text-left truncate">
                         {row.label}
                       </span>
                     </span>
