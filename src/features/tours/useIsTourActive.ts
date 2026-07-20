@@ -18,22 +18,24 @@ export function emitTourActiveChange(active: boolean) {
   } catch {}
 }
 
+const subscribeTourActive = (notify: () => void) => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
+  window.addEventListener(EVENT_NAME, notify);
+  // Fallback: mutation observer on <body> in case something else toggles
+  // the dataset (defensive; TourManager is the sole writer today).
+  const observer = new MutationObserver(notify);
+  if (document.body) {
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-tour-active'] });
+  }
+  return () => {
+    window.removeEventListener(EVENT_NAME, notify);
+    observer.disconnect();
+  };
+};
+
 export function useIsTourActive(): boolean {
   return useSyncExternalStore(
-    (notify) => {
-      if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
-      window.addEventListener(EVENT_NAME, notify);
-      // Fallback: mutation observer on <body> in case something else toggles
-      // the dataset (defensive; TourManager is the sole writer today).
-      const observer = new MutationObserver(notify);
-      if (document.body) {
-        observer.observe(document.body, { attributes: true, attributeFilter: ['data-tour-active'] });
-      }
-      return () => {
-        window.removeEventListener(EVENT_NAME, notify);
-        observer.disconnect();
-      };
-    },
+    subscribeTourActive,
     readTourActive,
     () => false,
   );
