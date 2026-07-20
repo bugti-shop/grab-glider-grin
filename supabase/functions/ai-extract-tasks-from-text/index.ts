@@ -73,8 +73,17 @@ const verifyRevenueCatAccess = async (admin: any, identifiers: string[]) => {
   return false;
 };
 
-const hasActiveProAccess = async (admin: any, userId: string, userEmail: string) => {
-  const identifiers = Array.from(new Set([userId, userEmail].filter(Boolean)));
+const hasActiveProAccess = async (
+  admin: any,
+  userId: string,
+  userEmail: string,
+  extraIdentifiers: string[] = [],
+) => {
+  const merged = [userId, userEmail, ...extraIdentifiers]
+    .filter((v): v is string => typeof v === "string" && v.length > 0 && v.length < 256)
+    .map((v) => v.trim())
+    .filter(Boolean);
+  const identifiers = Array.from(new Set(merged)).slice(0, 10);
   const nowMs = Date.now();
 
   if (identifiers.length) {
@@ -226,7 +235,10 @@ Deno.serve(async (req) => {
     );
 
     const body = (await req.json()) as ExtractRequest;
-    const isPro = await hasActiveProAccess(admin, userId, userEmail);
+    const clientIdentifiers = Array.isArray((body as any)?.clientIdentifiers)
+      ? ((body as any).clientIdentifiers as unknown[]).filter((v): v is string => typeof v === "string")
+      : [];
+    const isPro = await hasActiveProAccess(admin, userId, userEmail, clientIdentifiers);
     if (!isPro) {
       return new Response(
         JSON.stringify({ error: "AI task extraction is a Pro feature. Please upgrade to continue." }),

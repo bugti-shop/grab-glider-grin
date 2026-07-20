@@ -23,6 +23,7 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { acquireAiLock, getAiBusyMessage, releaseAllAiLocks } from '@/utils/aiConcurrencyLock';
 import { extractTextFromPdfFile } from '@/utils/pdfTextExtract';
 import { ensureSignedInForAi } from '@/utils/aiAccessGuard';
+import { collectAiClientIdentifiers } from '@/utils/aiClientIdentifiers';
 
 const AI_TIMEOUT_MS = 180_000; // long emails / PDFs are chunked server-side
 
@@ -79,7 +80,7 @@ export const TextTaskExtractorSheet = ({
   initialText, initialMode, titleOverride,
 }: Props) => {
   const { t, i18n } = useTranslation();
-  const { requireFeature } = useSubscription();
+  const { requireFeature, customerInfo } = useSubscription();
   // AI GUARD — locked. See src/utils/aiFeatureGuard.ts. Do not couple to billing.
   const { hasPaidAi, isResolving: aiResolving } = useAiFeatureGuard();
 
@@ -220,6 +221,7 @@ export const TextTaskExtractorSheet = ({
         toast.error(getAiBusyMessage());
         return;
       }
+      const clientIdentifiers = await collectAiClientIdentifiers(customerInfo);
       const { data, error } = await supabase.functions.invoke('ai-extract-tasks-from-text', {
         body: {
           text: inputText,
@@ -230,6 +232,7 @@ export const TextTaskExtractorSheet = ({
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           languageCode: (i18n.language || 'en').split('-')[0],
           languageName: 'auto',
+          clientIdentifiers,
         },
         timeout: AI_TIMEOUT_MS,
         signal: controller.signal,

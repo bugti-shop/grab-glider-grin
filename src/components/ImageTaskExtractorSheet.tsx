@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { acquireAiLock, getAiBusyMessage, releaseAllAiLocks } from '@/utils/aiConcurrencyLock';
 import { ensureSignedInForAi } from '@/utils/aiAccessGuard';
+import { collectAiClientIdentifiers } from '@/utils/aiClientIdentifiers';
 import { CameraScannerScreen } from './CameraScannerScreen';
 
 const AI_SCAN_TIMEOUT_MS = 45_000;
@@ -85,7 +86,7 @@ export const ImageTaskExtractorSheet = ({
   onEnsureSection,
 }: Props) => {
   const { t, i18n } = useTranslation();
-  const { requireFeature } = useSubscription();
+  const { requireFeature, customerInfo } = useSubscription();
   // AI GUARD — locked. See src/utils/aiFeatureGuard.ts. Do not couple to billing.
   const { hasPaidAi, isResolving: aiResolving } = useAiFeatureGuard();
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
@@ -207,6 +208,7 @@ export const ImageTaskExtractorSheet = ({
     try {
       await yieldToPaint();
       setPhase('uploading');
+      const clientIdentifiers = await collectAiClientIdentifiers(customerInfo);
       const invokePromise = supabase.functions.invoke(
         'ai-extract-tasks-from-image',
         {
@@ -218,6 +220,7 @@ export const ImageTaskExtractorSheet = ({
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             languageCode: (i18n.language || 'en').split('-')[0],
             languageName: 'auto',
+            clientIdentifiers,
           },
           timeout: AI_SCAN_TIMEOUT_MS,
         },

@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { acquireAiLock, getAiBusyMessage, releaseAllAiLocks } from '@/utils/aiConcurrencyLock';
 import { ensureSignedInForAi } from '@/utils/aiAccessGuard';
+import { collectAiClientIdentifiers } from '@/utils/aiClientIdentifiers';
 import { CameraScannerScreen } from './CameraScannerScreen';
 
 const AI_SCAN_TIMEOUT_MS = 45_000;
@@ -41,7 +42,7 @@ interface ObjectCountItem {
 
 export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const { t, i18n } = useTranslation();
-  const { requireFeature } = useSubscription();
+  const { requireFeature, customerInfo } = useSubscription();
   // AI GUARD — locked. See src/utils/aiFeatureGuard.ts. Do not couple to billing.
   const { hasPaidAi, isResolving: aiResolving } = useAiFeatureGuard();
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
@@ -158,6 +159,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     try {
       await yieldToPaint();
       setPhase('uploading');
+      const clientIdentifiers = await collectAiClientIdentifiers(customerInfo);
       const invokePromise = supabase.functions.invoke(
         'ai-extract-note-from-image',
         {
@@ -166,6 +168,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             languageCode: (i18n.language || 'en').split('-')[0],
             languageName: 'auto',
             handwriting: opts?.handwriting === true,
+            clientIdentifiers,
           },
           timeout: AI_SCAN_TIMEOUT_MS,
         },
@@ -218,10 +221,12 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       throw new Error(getAiBusyMessage());
     }
     try {
+      const clientIdentifiers = await collectAiClientIdentifiers(customerInfo);
       const { data, error } = await supabase.functions.invoke('ai-extract-tasks-from-image', {
         body: {
           imageBase64: dataUrl,
           scanMode: 'object_count',
+          clientIdentifiers,
         },
         timeout: AI_SCAN_TIMEOUT_MS,
       });
@@ -246,9 +251,11 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       throw new Error(getAiBusyMessage());
     }
     try {
+      const clientIdentifiers = await collectAiClientIdentifiers(customerInfo);
       const { data, error } = await supabase.functions.invoke('ai-extract-receipt', {
         body: {
           imageBase64: dataUrl,
+          clientIdentifiers,
         },
         timeout: AI_SCAN_TIMEOUT_MS,
       });
