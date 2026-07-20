@@ -34,6 +34,7 @@ type IconRow = {
   color: string;
   onClick: () => void;
   keywords?: string[];
+  dataTour?: string;
 };
 
 const Settings = () => {
