@@ -3,7 +3,6 @@ import { BottomNavigation } from '@/components/BottomNavigation';
 import { AppLogo } from '@/components/AppLogo';
 import {
   ChevronRight,
-  Crown,
   Search,
   Settings as SettingsIcon,
   Brush,
