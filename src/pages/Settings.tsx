@@ -121,7 +121,7 @@ const Settings = () => {
         <div className="h-px w-full bg-[#E5E5EA] dark:bg-[#38383A]" />
       </div>
 
-      <main className="px-4 space-y-6">
+      <main className="px-4 pt-4 space-y-6">
         {!isProSub && (
           <button
             onClick={() => openPaywall()}
