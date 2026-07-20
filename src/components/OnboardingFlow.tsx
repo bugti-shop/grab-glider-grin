@@ -151,7 +151,7 @@ const PlanLoadingScreen = ({ onComplete, displayName }: { onComplete: () => void
   );
 };
 
-const FOLDER_COLORS = ['#3c78f0', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#f97316', '#06b6d4'];
+import { FOLDER_COLOR_PALETTE as FOLDER_COLORS } from '@/utils/folderColorPalette';
 
 // Sub-component for folder creation in onboarding
 const OnboardingFolderCreation = ({ type, folders, setFolders, progressPercent, stepLabel, handleBack, goNext }: {
