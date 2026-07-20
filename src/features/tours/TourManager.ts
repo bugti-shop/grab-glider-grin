@@ -388,8 +388,15 @@ class TourManagerImpl {
       });
     };
 
-    const runStep = (stepIndex: number) => {
+    const runStep = async (stepIndex: number) => {
       currentIndex = stepIndex;
+      const step = tour.steps[stepIndex];
+      const target = step ? await this.waitForSelector(step.elementSelector, TOUR_TARGET_WAIT_MS) : null;
+      if (!target) {
+        void finalize();
+        return;
+      }
+      await this.scrollElementIntoView(target, step.scrollBlock ?? 'center');
       const drv = buildDriver(stepIndex);
       currentDrv = drv;
       this.activeDriver = drv;
@@ -400,9 +407,9 @@ class TourManagerImpl {
       }
     };
 
-    this.remountCurrentStep = () => runStep(currentIndex);
+    this.remountCurrentStep = () => { void runStep(currentIndex); };
 
-    runStep(0);
+    void runStep(0);
 
     // Forced-mode watchdog: (a) if the user navigates away from the tour's
     // route, snap them back; (b) if the current step's target disappears
