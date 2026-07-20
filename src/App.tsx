@@ -588,15 +588,37 @@ const AppContent = () => {
   }, []);
 
   useEffect(() => {
+    // Wait for the paywall's close animation to fully finish (~320ms Radix
+    // dialog + safety buffer) AND set an explicit tour cooldown so any taps
+    // during the fade-out cannot trigger the activity watchdog early.
+    const PAYWALL_CLOSE_ANIMATION_MS = 500;
+    const TOUR_COOLDOWN_KEY = 'flowist_tour_cooldown_until_v1';
+    let animTimer: number | null = null;
     const releaseTourAfterPaywall = () => {
       let pending = false;
       try { pending = sessionStorage.getItem(ONBOARDING_PAYWALL_PENDING_KEY) === 'true'; } catch {}
       if (!pending) return;
-      try { sessionStorage.removeItem(ONBOARDING_PAYWALL_PENDING_KEY); } catch {}
-      try { window.dispatchEvent(new CustomEvent('flowist-onboarding-slides:complete')); } catch {}
+      // Extend cooldown immediately so pointerdown during fade-out is ignored.
+      try {
+        sessionStorage.setItem(
+          TOUR_COOLDOWN_KEY,
+          String(Date.now() + PAYWALL_CLOSE_ANIMATION_MS + 250),
+        );
+      } catch {}
+      if (animTimer) { window.clearTimeout(animTimer); animTimer = null; }
+      const finish = () => {
+        const stillOpen = !!document.querySelector('[data-flowist-paywall="open"]');
+        if (stillOpen) { animTimer = window.setTimeout(finish, 120); return; }
+        try { sessionStorage.removeItem(ONBOARDING_PAYWALL_PENDING_KEY); } catch {}
+        try { window.dispatchEvent(new CustomEvent('flowist-onboarding-slides:complete')); } catch {}
+      };
+      animTimer = window.setTimeout(finish, PAYWALL_CLOSE_ANIMATION_MS);
     };
     window.addEventListener('flowist:paywall-closed', releaseTourAfterPaywall);
-    return () => window.removeEventListener('flowist:paywall-closed', releaseTourAfterPaywall);
+    return () => {
+      window.removeEventListener('flowist:paywall-closed', releaseTourAfterPaywall);
+      if (animTimer) window.clearTimeout(animTimer);
+    };
   }, []);
   useEffect(() => {
     try { localStorage.setItem('onboarding_completed_flag', 'true'); } catch {}
