@@ -6,7 +6,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { TourManager } from './TourManager';
+import { TourManager, __getActiveDriverInstance } from './TourManager';
+import { useHardwareBackButton } from '@/hooks/useHardwareBackButton';
+import { useIsTourActive } from './useIsTourActive';
 import {
   ensureInstallDate,
   getAllTourStates,
