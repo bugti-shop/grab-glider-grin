@@ -14,7 +14,18 @@
                     <view key="view" contentMode="scaleToFill" id="rootView">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="Splash" translatesAutoresizingMaskIntoConstraints="NO" id="splashImage">
+                                <rect key="frame" x="127.5" y="273.5" width="120" height="120"/>
+                            </imageView>
+                        </subviews>
                         <color key="backgroundColor" red="0.972" green="0.972" blue="0.964" alpha="1" colorSpace="calibratedRGB"/>
+                        <constraints>
+                            <constraint firstItem="splashImage" firstAttribute="centerX" secondItem="rootView" secondAttribute="centerX" id="cx1"/>
+                            <constraint firstItem="splashImage" firstAttribute="centerY" secondItem="rootView" secondAttribute="centerY" id="cy1"/>
+                            <constraint firstItem="splashImage" firstAttribute="width" relation="equal" constant="120" id="w1"/>
+                            <constraint firstItem="splashImage" firstAttribute="height" relation="equal" constant="120" id="h1"/>
+                        </constraints>
                         <viewLayoutGuide key="safeArea" id="safeArea"/>
                     </view>
                 </viewController>
