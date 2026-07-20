@@ -81,7 +81,7 @@ export const TextTaskExtractorSheet = ({
   const { t, i18n } = useTranslation();
   const { requireFeature } = useSubscription();
   // AI GUARD — locked. See src/utils/aiFeatureGuard.ts. Do not couple to billing.
-  const { hasPaidAi } = useAiFeatureGuard();
+  const { hasPaidAi, isResolving: aiResolving } = useAiFeatureGuard();
 
   const [mode, setMode] = useState<SourceMode>('text');
   const [text, setText] = useState(initialText || '');
@@ -184,6 +184,12 @@ export const TextTaskExtractorSheet = ({
         toast.dismiss(loadingToastId);
         setIsExtracting(false);
         onClose();
+        return;
+      }
+      if (aiResolving) {
+        toast.dismiss(loadingToastId);
+        setIsExtracting(false);
+        toast.message('Checking subscription…', { description: 'Please try again in a moment.' });
         return;
       }
       if (!hasPaidAi) {

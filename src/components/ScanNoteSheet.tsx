@@ -43,7 +43,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const { t, i18n } = useTranslation();
   const { requireFeature } = useSubscription();
   // AI GUARD — locked. See src/utils/aiFeatureGuard.ts. Do not couple to billing.
-  const { hasPaidAi } = useAiFeatureGuard();
+  const { hasPaidAi, isResolving: aiResolving } = useAiFeatureGuard();
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [html, setHtml] = useState('');
@@ -115,6 +115,10 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
 
   const ensureScannerAccess = async () => {
     if (!(await ensureSignedInForAi({ intent: 'scan-note' }))) return false;
+    if (aiResolving) {
+      toast.message('Checking subscription…', { description: 'Please try again in a moment.' });
+      return false;
+    }
     if (!hasPaidAi) {
       requireFeature('ai_dictation');
       return false;
@@ -130,6 +134,10 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const runExtraction = async (dataUrl: string, opts?: { handwriting?: boolean }) => {
     if (!(await ensureSignedInForAi())) {
       onClose();
+      return;
+    }
+    if (aiResolving) {
+      toast.message('Checking subscription…', { description: 'Please try again in a moment.' });
       return;
     }
     if (!hasPaidAi) {

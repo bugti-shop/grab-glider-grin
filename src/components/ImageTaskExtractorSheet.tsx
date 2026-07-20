@@ -87,7 +87,7 @@ export const ImageTaskExtractorSheet = ({
   const { t, i18n } = useTranslation();
   const { requireFeature } = useSubscription();
   // AI GUARD — locked. See src/utils/aiFeatureGuard.ts. Do not couple to billing.
-  const { hasPaidAi } = useAiFeatureGuard();
+  const { hasPaidAi, isResolving: aiResolving } = useAiFeatureGuard();
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [items, setItems] = useState<ReviewItem[]>([]);
@@ -147,6 +147,10 @@ export const ImageTaskExtractorSheet = ({
 
   const ensureScannerAccess = async () => {
     if (!(await ensureSignedInForAi({ intent: 'scan-tasks' }))) return false;
+    if (aiResolving) {
+      toast.message('Checking subscription…', { description: 'Please try again in a moment.' });
+      return false;
+    }
     if (!hasPaidAi) {
       requireFeature('ai_dictation');
       return false;
@@ -179,6 +183,10 @@ export const ImageTaskExtractorSheet = ({
   const runExtraction = async (dataUrl: string) => {
     if (!(await ensureSignedInForAi())) {
       onClose();
+      return;
+    }
+    if (aiResolving) {
+      toast.message('Checking subscription…', { description: 'Please try again in a moment.' });
       return;
     }
     if (!hasPaidAi) {
