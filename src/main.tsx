@@ -264,12 +264,10 @@ const renderApp = () => {
   );
 
   if (Capacitor.isNativePlatform()) {
-    requestAnimationFrame(() => {
-      SplashScreen.hide({ fadeOutDuration: 250 }).catch((error) => {
-        console.warn('[SplashScreen] Hide failed:', error);
-      });
-    });
+    // Fully skip splash — hide immediately, no fade, don't wait for a frame.
+    SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {});
   }
+
 };
 
 // Pre-boot: drain widget pending deep-link BEFORE React renders so a
@@ -309,11 +307,10 @@ const bootstrap = async () => {
 bootstrap();
 
 if (Capacitor.isNativePlatform()) {
-  // Aggressive fallback: hide splash quickly on slow devices so users never
-  // stare at a static splash while the JS bundle finishes hydrating.
-  setTimeout(() => {
-    SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {});
-  }, 400);
+  // Belt-and-suspenders: kill the splash immediately at boot, and again on a
+  // micro-timeout in case the plugin wasn't ready on the very first call.
+  SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {});
+  setTimeout(() => { SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {}); }, 0);
 }
 
 
