@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AppLogo } from '@/components/AppLogo';
 import {
   ChevronRight,
-  Crown,
   Search,
   Settings as SettingsIcon,
   Brush,
@@ -33,7 +33,6 @@ type IconRow = {
   icon: React.ComponentType<{ className?: string }>;
   color: string; // background color for icon tile
   onClick: () => void;
-  showCrown?: boolean;
 };
 
 const Settings = () => {
@@ -51,21 +50,21 @@ const Settings = () => {
         { label: 'General', icon: SettingsIcon, color: '#8E8E93', onClick: () => setShowHeaderOffsetSheet(true) },
         { label: 'Appearance', icon: Brush, color: '#AF52DE', onClick: () => state.setShowThemeDialog(true) },
         { label: 'Language', icon: Globe, color: '#007AFF', onClick: () => state.setShowLanguageDialog(true) },
-        { label: 'Note Type Visibility', icon: Eye, color: '#5AC8CE', showCrown: true, onClick: () => { if (requireFeature('notes_type_visibility')) state.setShowNoteTypeVisibilitySheet(true); } },
-        { label: 'Notes Settings', icon: StickyNote, color: '#FF9500', showCrown: true, onClick: () => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); } },
+        { label: 'Note Type Visibility', icon: Eye, color: '#5AC8CE', onClick: () => { if (requireFeature('notes_type_visibility')) state.setShowNoteTypeVisibilitySheet(true); } },
+        { label: 'Notes Settings', icon: StickyNote, color: '#FF9500', onClick: () => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); } },
       ],
     },
     {
       rows: [
-        { label: 'Tasks', icon: ClipboardCheck, color: '#34C759', showCrown: true, onClick: () => { if (requireFeature('tasks_settings')) state.setShowTasksSettingsSheet(true); } },
+        { label: 'Tasks', icon: ClipboardCheck, color: '#34C759', onClick: () => { if (requireFeature('tasks_settings')) state.setShowTasksSettingsSheet(true); } },
         { label: 'Calendar', icon: CalendarIcon, color: '#FF3B30', onClick: () => navigate('/calendar') },
-        { label: 'Customize Navigation', icon: Compass, color: '#5856D6', showCrown: true, onClick: () => state.setShowCustomizeNavigationSheet(true) },
+        { label: 'Customize Navigation', icon: Compass, color: '#5856D6', onClick: () => state.setShowCustomizeNavigationSheet(true) },
       ],
     },
     {
       rows: [
         { label: 'Accessibility', icon: AccessibilityIcon, color: '#FF2D92', onClick: () => setShowAccessibilityZoomSheet(true) },
-        { label: 'App Lock', icon: Lock, color: '#FF3B30', showCrown: true, onClick: () => { if (requireFeature('app_lock')) state.setShowAppLockSettingsSheet(true); } },
+        { label: 'App Lock', icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) state.setShowAppLockSettingsSheet(true); } },
         { label: 'Notifications', icon: Bell, color: '#FFCC00', onClick: () => toast.info('Manage notifications from your device settings') },
       ],
     },
@@ -94,8 +93,9 @@ const Settings = () => {
           paddingRight: 'var(--safe-right, 0px)',
         }}
       >
-        <div className="px-5 pt-4 pb-3">
-          <h1 className="text-[34px] leading-tight font-bold tracking-tight text-black dark:text-white">
+        <div className="px-5 pt-4 pb-3 flex items-center gap-2.5">
+          <AppLogo size="md" className="h-7 w-7 rounded-[7px] flex-shrink-0" />
+          <h1 className="text-[26px] leading-none font-bold tracking-tight text-black dark:text-white">
             Settings
           </h1>
         </div>
@@ -119,8 +119,7 @@ const Settings = () => {
             onClick={() => openPaywall()}
             className="w-full flex items-center justify-between px-4 py-3.5 rounded-[14px] bg-white dark:bg-[#1C1C1E] shadow-sm"
           >
-            <span className="text-[17px] font-medium flex items-center gap-2 text-[#007AFF]">
-              <Crown className="h-[18px] w-[18px]" fill="#FFD700" color="#FFD700" />
+            <span className="text-[17px] font-medium text-[#007AFF]">
               Upgrade to Flowist Pro
             </span>
             <ChevronRight className="h-[18px] w-[18px] text-[#C7C7CC]" />
@@ -143,18 +142,20 @@ const Settings = () => {
                     className="w-full flex items-center gap-3 pl-3 pr-4 py-[9px] active:bg-black/[0.04] dark:active:bg-white/[0.06] transition-colors disabled:opacity-60"
                   >
                     <span
-                      className="flex items-center justify-center rounded-[7px] shrink-0"
-                      style={{ backgroundColor: row.color, width: 29, height: 29 }}
+                      className="flex items-center justify-center rounded-[8px] shrink-0"
+                      style={{
+                        width: 29,
+                        height: 29,
+                        background: `linear-gradient(180deg, ${row.color} 0%, ${row.color}E6 100%)`,
+                        boxShadow: `0 1px 2px ${row.color}40, inset 0 1px 0 rgba(255,255,255,0.25)`,
+                      }}
                     >
-                      <Icon className="h-[17px] w-[17px] text-white" />
+                      <Icon className="h-[17px] w-[17px] text-white drop-shadow-[0_0.5px_0_rgba(0,0,0,0.1)]" />
                     </span>
                     <span className="flex-1 min-w-0 flex items-center">
                       <span className="text-[17px] text-black dark:text-white text-left truncate">
                         {row.label}
                       </span>
-                      {row.showCrown && !isProSub && (
-                        <Crown className="h-[13px] w-[13px] ml-1.5 shrink-0" fill="#FFD700" color="#FFD700" />
-                      )}
                     </span>
                     <ChevronRight className="h-[18px] w-[18px] text-[#C7C7CC] shrink-0" />
                   </button>
