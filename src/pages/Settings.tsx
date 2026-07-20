@@ -66,7 +66,7 @@ const Settings = () => {
     {
       rows: [
         { label: 'Accessibility', icon: AccessibilityIcon, color: '#FF2D92', onClick: () => setShowAccessibilityZoomSheet(true), keywords: ['zoom', 'font size', 'text size'] },
-        { label: 'App Lock', icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) state.setShowAppLockSettingsSheet(true); }, keywords: ['security', 'passcode', 'pin', 'biometric', 'face', 'touch'] },
+        { label: 'App Lock', icon: Lock, color: '#FF3B30', dataTour: 'settings-security', onClick: () => { if (requireFeature('app_lock')) state.setShowAppLockSettingsSheet(true); }, keywords: ['security', 'passcode', 'pin', 'biometric', 'face', 'touch'] },
         { label: 'Notifications', icon: Bell, color: '#FFCC00', onClick: () => toast.info('Manage notifications from your device settings'), keywords: ['alerts', 'reminders', 'push'] },
       ],
     },
