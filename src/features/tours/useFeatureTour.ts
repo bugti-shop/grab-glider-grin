@@ -46,13 +46,24 @@ export const useTourBootstrap = () => {
     // to close before firing the feature tutorial chain.
     const ONBOARDING_SLIDES_KEY = 'onboarding_slides_seen_v1';
     const ONBOARDING_PAYWALL_PENDING_KEY = 'flowist_onboarding_paywall_pending_v1';
+    const TOUR_COOLDOWN_KEY = 'flowist_tour_cooldown_until_v1';
     const slidesDone = () => {
       try { return localStorage.getItem(ONBOARDING_SLIDES_KEY) === 'true'; } catch { return true; }
     };
     const paywallDone = () => {
       try { return sessionStorage.getItem(ONBOARDING_PAYWALL_PENDING_KEY) !== 'true'; } catch { return true; }
     };
-    const onboardingReady = () => slidesDone() && paywallDone();
+    const paywallStillMounted = () => {
+      try { return !!document.querySelector('[data-flowist-paywall="open"]'); } catch { return false; }
+    };
+    const cooldownActive = () => {
+      try {
+        const until = Number(sessionStorage.getItem(TOUR_COOLDOWN_KEY) || 0);
+        return Number.isFinite(until) && Date.now() < until;
+      } catch { return false; }
+    };
+    const onboardingReady = () =>
+      slidesDone() && paywallDone() && !paywallStillMounted() && !cooldownActive();
     const runBootstrap = async () => {
       if (skipAutoTours) return;
       if (!onboardingReady()) return;
