@@ -469,7 +469,7 @@ const TodoSettings = () => {
       <div style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }}>
         <div className="px-5 pt-4 pb-3 flex items-center gap-2.5">
           <AppLogo size="md" className="h-7 w-7 rounded-[7px] flex-shrink-0" />
-          <h1 className="text-[26px] leading-none font-bold tracking-tight text-black dark:text-white">
+          <h1 className="text-[18px] leading-none font-bold tracking-tight text-black dark:text-white">
             {t('settings.taskSettings', 'Task Settings')}
           </h1>
         </div>
