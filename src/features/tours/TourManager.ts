@@ -250,6 +250,7 @@ class TourManagerImpl {
     let currentIndex = 0;
     let currentDrv: Driver | null = null;
     let disposeStepA11y: (() => void) | null = null;
+    let disposeTargetEvents: (() => void) | null = null;
     const forced = this.forcedActive;
 
     // If this tour is part of the onboarding chain, teach the popover that
@@ -258,6 +259,7 @@ class TourManagerImpl {
     const inChain = !!chainedNextId;
 
     const finalize = async (opts: { advanceChain?: boolean } = {}) => {
+      try { disposeTargetEvents?.(); disposeTargetEvents = null; } catch {}
       try { disposeStepA11y?.(); disposeStepA11y = null; } catch {}
       try { delete document.body.dataset.tourActive; } catch {}
       try { delete document.body.dataset.tourId; } catch {}
@@ -392,19 +394,22 @@ class TourManagerImpl {
     const runStep = async (stepIndex: number) => {
       currentIndex = stepIndex;
       const step = tour.steps[stepIndex];
+      let handledInteractiveActivation = false;
       const target = step ? await this.waitForSelector(step.elementSelector, TOUR_TARGET_WAIT_MS) : null;
       if (!target) {
         void finalize();
         return;
       }
       await this.scrollElementIntoView(target, step.scrollBlock ?? 'center');
+      if (this.activeTourId !== tourId) return;
       const drv = buildDriver(stepIndex);
       currentDrv = drv;
       this.activeDriver = drv;
       try {
         drv.drive();
       } catch {
-        finalize();
+        void finalize();
+        return;
       }
       // Tear down the previous step's a11y wiring before installing the new one.
       try { disposeStepA11y?.(); } catch {}
@@ -412,6 +417,15 @@ class TourManagerImpl {
         titleId: `flowist-tour-title-${tourId}-${stepIndex}`,
         descId: `flowist-tour-desc-${tourId}-${stepIndex}`,
         forced,
+        target: target instanceof HTMLElement ? target : null,
+        interactive: !!step?.interactive,
+        onTargetActivate: step?.interactive
+          ? () => {
+              if (handledInteractiveActivation) return;
+              handledInteractiveActivation = true;
+              try { this.simulateActivation(target as HTMLElement); } catch {}
+            }
+          : undefined,
         onClose: () => {
           if (forced) return;
           const closeBtn = document.querySelector<HTMLElement>('.driver-popover .driver-popover-close-btn');
@@ -485,22 +499,30 @@ class TourManagerImpl {
     }
 
 
-    // Global click handler: interactive step → advance to next by tearing
-    // down the current per-step driver and mounting a fresh one on the new
-    // target. Non-interactive step → dismiss so tour UI doesn't linger.
-    const onTargetClick = (ev: MouseEvent) => {
-      if (!this.activeDriver) return;
+    // Global target handler: interactive step → capture pointerdown AND click
+    // so Radix/route-opening controls cannot race the driver overlay teardown.
+    // Non-interactive background clicks still dismiss regular tours.
+    let handledInteractiveKey: string | null = null;
+    const handleInteractiveActivation = (ev: Event, source: 'pointerdown' | 'click' | 'keyboard'): boolean => {
+      if (!this.activeDriver) return false;
       const target = ev.target as Element | null;
-      if (!target) return;
-      if (target.closest('.driver-popover')) return;
+      if (!target) return false;
+      if (target.closest('.driver-popover')) return false;
 
       const idx = currentIndex;
       const currentStep = tour.steps[idx];
-      if (!currentStep) return;
+      if (!currentStep?.interactive) return false;
       const sel = currentStep.elementSelector;
-      if (!sel || !target.closest(sel)) return;
+      if (!sel || !target.closest(sel)) return false;
 
-      if (currentStep.interactive && idx < tour.steps.length - 1) {
+      const key = `${tourId}:${idx}:${sel}`;
+      if (handledInteractiveKey === key) return true;
+      handledInteractiveKey = key;
+      window.setTimeout(() => {
+        if (handledInteractiveKey === key) handledInteractiveKey = null;
+      }, 900);
+
+      if (idx < tour.steps.length - 1) {
         const nextStep = tour.steps[idx + 1];
         // Immediately kill the current popover so it doesn't cover the
         // sheet/menu the user just opened. Suppress the destroy side-effect
@@ -517,7 +539,7 @@ class TourManagerImpl {
           }
           void runStep(idx + 1);
         });
-      } else if (currentStep.interactive) {
+      } else {
         // Last step of a single/multi-step tour, and the target itself is
         // the "action" (Switch to Notes / + New Note / + Notebook). Treat
         // the tap as chain-advance instead of destroy-then-forced-remount,
@@ -526,30 +548,32 @@ class TourManagerImpl {
         try { currentDrv?.destroy(); } catch {}
         this.activeDriver = null;
         void finalize({ advanceChain: inChain });
-      } else {
-        try { currentDrv?.destroy(); } catch {}
       }
+      return true;
     };
-    window.addEventListener('click', onTargetClick, true);
-    // Radix triggers open on pointerdown, not click; catch those too so
-    // interactive-step advances fire before Radix navigates the app.
-    const onTargetPointerDown = (ev: PointerEvent) => {
+    const onTargetClick = (ev: MouseEvent) => {
+      if (handleInteractiveActivation(ev, 'click')) return;
       if (!this.activeDriver) return;
       const target = ev.target as Element | null;
       if (!target || target.closest('.driver-popover')) return;
-      const step = tour.steps[currentIndex];
-      if (!step?.interactive) return;
-      if (!step.elementSelector || !target.closest(step.elementSelector)) return;
-      // Delegate to click-handler logic via a fake click on next tick.
-      setTimeout(() => onTargetClick(ev as unknown as MouseEvent), 0);
+      const currentStep = tour.steps[currentIndex];
+      if (!currentStep?.elementSelector || !target.closest(currentStep.elementSelector)) return;
+      if (!forced) {
+        try { currentDrv?.destroy(); } catch {}
+      }
     };
-    window.addEventListener('pointerdown', onTargetPointerDown, true);
+    const onTargetPointerDown = (ev: PointerEvent) => {
+      handleInteractiveActivation(ev, 'pointerdown');
+    };
+    window.addEventListener('pointerdown', onTargetPointerDown, { capture: true, passive: true });
+    window.addEventListener('click', onTargetClick, true);
     const cleanup = () => {
       window.removeEventListener('click', onTargetClick, true);
       window.removeEventListener('pointerdown', onTargetPointerDown, true);
     };
+    disposeTargetEvents = cleanup;
     const check = setInterval(() => {
-      if (!this.activeDriver) { cleanup(); clearInterval(check); }
+      if (!this.activeDriver || this.activeTourId !== tourId) { cleanup(); clearInterval(check); }
     }, 500);
   }
 
@@ -764,6 +788,9 @@ class TourManagerImpl {
     titleId: string;
     descId: string;
     forced: boolean;
+    target?: HTMLElement | null;
+    interactive?: boolean;
+    onTargetActivate?: () => void;
     onClose: () => void;
   }): () => void {
     if (typeof document === 'undefined') return () => {};
@@ -772,6 +799,10 @@ class TourManagerImpl {
     let popover: HTMLElement | null = null;
     let onKeyDown: ((ev: KeyboardEvent) => void) | null = null;
     let onFocusIn: ((ev: FocusEvent) => void) | null = null;
+    const targetEl = config.target && document.contains(config.target) ? config.target : null;
+    const previousTargetTabIndex = targetEl?.getAttribute('tabindex') ?? null;
+    const hadTargetTabIndex = !!targetEl?.hasAttribute('tabindex');
+    const previousTargetDescribedBy = targetEl?.getAttribute('aria-describedby') ?? null;
 
     // driver.js mounts the popover on the next microtask; poll briefly.
     const attach = (attempts: number) => {
@@ -802,9 +833,19 @@ class TourManagerImpl {
       if (prevBtn && !prevBtn.hasAttribute('aria-label')) prevBtn.setAttribute('aria-label', 'Back');
       if (closeBtn && !closeBtn.hasAttribute('aria-label')) closeBtn.setAttribute('aria-label', 'Close tutorial');
 
-      // Move focus onto the primary action so screen readers announce the
-      // dialog and keyboard users can immediately activate it.
-      try { (nextBtn ?? popover).focus({ preventScroll: true }); } catch {}
+      if (targetEl) {
+        if (!this.isNaturallyFocusable(targetEl) && !targetEl.hasAttribute('tabindex')) {
+          targetEl.setAttribute('tabindex', '-1');
+        }
+        targetEl.setAttribute('data-flowist-tour-focused', 'true');
+        const describedBy = [previousTargetDescribedBy, config.descId].filter(Boolean).join(' ');
+        if (describedBy) targetEl.setAttribute('aria-describedby', describedBy);
+      }
+
+      // Move focus to the actual highlighted row/control first. This makes
+      // App Lock, Note Type Visibility, and Settings rows receive real focus
+      // before keyboard users tab into Back / Next controls.
+      try { (targetEl ?? nextBtn ?? popover).focus({ preventScroll: true }); } catch {}
 
       const focusables = (): HTMLElement[] => {
         if (!popover) return [];
@@ -817,14 +858,36 @@ class TourManagerImpl {
 
       onKeyDown = (ev: KeyboardEvent) => {
         if (!popover) return;
+        const active = document.activeElement as HTMLElement | null;
+        const targetHasFocus = !!(targetEl && active === targetEl);
         if (ev.key === 'Tab') {
-          const list = focusables();
+          const list = targetEl ? [targetEl, ...focusables()] : focusables();
           if (list.length === 0) { ev.preventDefault(); return; }
           const first = list[0];
           const last = list[list.length - 1];
-          const active = document.activeElement as HTMLElement | null;
+          const currentIdx = active ? list.indexOf(active) : -1;
+          if (currentIdx === -1) {
+            ev.preventDefault();
+            first.focus({ preventScroll: true });
+            return;
+          }
+          if (!ev.shiftKey && targetHasFocus && list[1]) {
+            ev.preventDefault();
+            list[1].focus({ preventScroll: true });
+            return;
+          }
+          if (ev.shiftKey && active === list[1] && targetEl) {
+            ev.preventDefault();
+            targetEl.focus({ preventScroll: true });
+            return;
+          }
           if (ev.shiftKey && active === first) { ev.preventDefault(); last.focus(); }
           else if (!ev.shiftKey && active === last) { ev.preventDefault(); first.focus(); }
+          return;
+        }
+        if ((ev.key === 'Enter' || ev.key === ' ') && targetHasFocus) {
+          ev.preventDefault();
+          if (config.interactive) config.onTargetActivate?.();
           return;
         }
         if (ev.key === 'Escape') {
@@ -850,9 +913,9 @@ class TourManagerImpl {
       onFocusIn = (ev: FocusEvent) => {
         if (!popover) return;
         const t = ev.target as Node | null;
-        if (t && !popover.contains(t)) {
+        if (t && !popover.contains(t) && !(targetEl && targetEl.contains(t))) {
           const list = focusables();
-          (list[0] ?? popover).focus({ preventScroll: true } as FocusOptions);
+          (targetEl ?? list[0] ?? popover).focus({ preventScroll: true } as FocusOptions);
         }
       };
 
@@ -865,12 +928,32 @@ class TourManagerImpl {
       cancelled = true;
       if (onKeyDown) document.removeEventListener('keydown', onKeyDown, true);
       if (onFocusIn) document.removeEventListener('focusin', onFocusIn, true);
+      if (targetEl) {
+        try { targetEl.removeAttribute('data-flowist-tour-focused'); } catch {}
+        try {
+          if (hadTargetTabIndex) {
+            if (previousTargetTabIndex !== null) targetEl.setAttribute('tabindex', previousTargetTabIndex);
+          } else {
+            targetEl.removeAttribute('tabindex');
+          }
+          if (previousTargetDescribedBy !== null) targetEl.setAttribute('aria-describedby', previousTargetDescribedBy);
+          else targetEl.removeAttribute('aria-describedby');
+        } catch {}
+      }
       // Restore focus to whatever was focused before the tour step opened,
       // if it's still in the DOM and focusable.
-      if (prevFocus && document.contains(prevFocus)) {
+      if (prevFocus && document.contains(prevFocus) && prevFocus !== targetEl) {
         try { prevFocus.focus({ preventScroll: true }); } catch {}
       }
     };
+  }
+
+  private isNaturallyFocusable(el: HTMLElement): boolean {
+    if (el.tabIndex >= 0) return true;
+    const tag = el.tagName.toLowerCase();
+    if (['button', 'input', 'select', 'textarea'].includes(tag)) return !el.hasAttribute('disabled');
+    if (tag === 'a') return el.hasAttribute('href');
+    return false;
   }
 
 

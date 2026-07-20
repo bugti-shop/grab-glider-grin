@@ -2,7 +2,7 @@
 // running. Backed by `document.body.dataset.tourActive`, which TourManager
 // toggles and broadcasts via the `flowist-tour-active-change` event.
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 const EVENT_NAME = 'flowist-tour-active-change';
 
@@ -18,21 +18,25 @@ export function emitTourActiveChange(active: boolean) {
   } catch {}
 }
 
-export function useIsTourActive(): boolean {
-  const [active, setActive] = useState<boolean>(() => readTourActive());
-
-  useEffect(() => {
-    const sync = () => setActive(readTourActive());
-    window.addEventListener(EVENT_NAME, sync);
-    // Fallback: mutation observer on <body> in case something else toggles
-    // the dataset (defensive; TourManager is the sole writer today).
-    const observer = new MutationObserver(sync);
+const subscribeTourActive = (notify: () => void) => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
+  window.addEventListener(EVENT_NAME, notify);
+  // Fallback: mutation observer on <body> in case something else toggles
+  // the dataset (defensive; TourManager is the sole writer today).
+  const observer = new MutationObserver(notify);
+  if (document.body) {
     observer.observe(document.body, { attributes: true, attributeFilter: ['data-tour-active'] });
-    return () => {
-      window.removeEventListener(EVENT_NAME, sync);
-      observer.disconnect();
-    };
-  }, []);
+  }
+  return () => {
+    window.removeEventListener(EVENT_NAME, notify);
+    observer.disconnect();
+  };
+};
 
-  return active;
+export function useIsTourActive(): boolean {
+  return useSyncExternalStore(
+    subscribeTourActive,
+    readTourActive,
+    () => false,
+  );
 }
