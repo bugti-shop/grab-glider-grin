@@ -12,7 +12,7 @@ interface Props {
   onComplete: () => void;
 }
 
-const SLIDES = [ob01, ob02, ob03, ob04, ob05, ob06].map((a) => a.url);
+const SLIDES = [ob01, ob02, ob03, ob04, ob05, ob06].map((a: { url: string }) => a.url);
 
 /**
  * Onboarding — image slides with a real Duolingo-style CTA rendered on top of
