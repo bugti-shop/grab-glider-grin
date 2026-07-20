@@ -422,7 +422,7 @@ const TodoSettings = () => {
         { label: t('settings.tasksSettings', 'Task Defaults & Display'), icon: ClipboardCheck, color: '#34C759', onClick: () => setShowTasksSettingsSheet(true), keywords: ['tasks', 'defaults', 'priority', 'display', 'sort'] },
         { label: t('settings.customizeNavigation', 'Customize Navigation'), icon: Compass, color: '#5856D6', dataTour: 'settings-customize-navigation', onClick: () => setShowCustomizeNavigationSheet(true), keywords: ['bottom', 'tabs', 'nav'] },
         { label: t('settings.calendar', 'Calendar'), icon: LayoutGrid, color: '#FF3B30', onClick: () => navigate('/calendar'), keywords: ['schedule', 'date', 'events'] },
-        { label: t('settings.appLock', 'App Lock'), icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) setShowAppLockSettingsSheet(true); }, keywords: ['security', 'passcode', 'pin', 'biometric', 'face', 'touch'] },
+        { label: t('settings.appLock', 'App Lock'), icon: Lock, color: '#FF3B30', dataTour: 'settings-security', onClick: () => { if (requireFeature('app_lock')) setShowAppLockSettingsSheet(true); }, keywords: ['security', 'passcode', 'pin', 'biometric', 'face', 'touch'] },
       ],
     },
     {

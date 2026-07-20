@@ -34,6 +34,7 @@ type IconRow = {
   color: string;
   onClick: () => void;
   keywords?: string[];
+  dataTour?: string;
 };
 
 const Settings = () => {
@@ -51,7 +52,7 @@ const Settings = () => {
         { label: 'General', icon: SettingsIcon, color: '#8E8E93', onClick: () => setShowHeaderOffsetSheet(true), keywords: ['header', 'offset', 'layout'] },
         { label: 'Appearance', icon: Brush, color: '#AF52DE', onClick: () => state.setShowThemeDialog(true), keywords: ['theme', 'dark', 'light', 'color', 'colour', 'mode'] },
         { label: 'Language', icon: Globe, color: '#007AFF', onClick: () => state.setShowLanguageDialog(true), keywords: ['locale', 'translate', 'region'] },
-        { label: 'Note Type Visibility', icon: Eye, color: '#5AC8CE', onClick: () => { if (requireFeature('notes_type_visibility')) state.setShowNoteTypeVisibilitySheet(true); }, keywords: ['notes', 'show', 'hide', 'sticky', 'sketch', 'voice'] },
+        { label: 'Note Type Visibility', icon: Eye, color: '#5AC8CE', dataTour: 'settings-note-type-visibility', onClick: () => { if (requireFeature('notes_type_visibility')) state.setShowNoteTypeVisibilitySheet(true); }, keywords: ['notes', 'show', 'hide', 'sticky', 'sketch', 'voice'] },
         { label: 'Notes Settings', icon: StickyNote, color: '#FF9500', onClick: () => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); }, keywords: ['editor', 'font'] },
       ],
     },
@@ -65,7 +66,7 @@ const Settings = () => {
     {
       rows: [
         { label: 'Accessibility', icon: AccessibilityIcon, color: '#FF2D92', onClick: () => setShowAccessibilityZoomSheet(true), keywords: ['zoom', 'font size', 'text size'] },
-        { label: 'App Lock', icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) state.setShowAppLockSettingsSheet(true); }, keywords: ['security', 'passcode', 'pin', 'biometric', 'face', 'touch'] },
+        { label: 'App Lock', icon: Lock, color: '#FF3B30', dataTour: 'settings-security', onClick: () => { if (requireFeature('app_lock')) state.setShowAppLockSettingsSheet(true); }, keywords: ['security', 'passcode', 'pin', 'biometric', 'face', 'touch'] },
         { label: 'Notifications', icon: Bell, color: '#FFCC00', onClick: () => toast.info('Manage notifications from your device settings'), keywords: ['alerts', 'reminders', 'push'] },
       ],
     },
@@ -152,6 +153,7 @@ const Settings = () => {
                   <button
                     onClick={row.onClick}
                     disabled={row.label === 'Sync & Backup' && isBackingUp}
+                    data-tour={row.dataTour}
                     className="w-full flex items-center gap-3 pl-3 pr-4 py-[9px] active:bg-black/[0.04] dark:active:bg-white/[0.06] transition-colors disabled:opacity-60"
                   >
                     <span
