@@ -517,12 +517,37 @@ class TourManagerImpl {
           }
           void runStep(idx + 1);
         });
+      } else if (currentStep.interactive) {
+        // Last step of a single/multi-step tour, and the target itself is
+        // the "action" (Switch to Notes / + New Note / + Notebook). Treat
+        // the tap as chain-advance instead of destroy-then-forced-remount,
+        // which would ping-pong against the forced-mode route watchdog.
+        suppressDestroy = true;
+        try { currentDrv?.destroy(); } catch {}
+        this.activeDriver = null;
+        void finalize({ advanceChain: inChain });
       } else {
         try { currentDrv?.destroy(); } catch {}
       }
     };
     window.addEventListener('click', onTargetClick, true);
-    const cleanup = () => window.removeEventListener('click', onTargetClick, true);
+    // Radix triggers open on pointerdown, not click; catch those too so
+    // interactive-step advances fire before Radix navigates the app.
+    const onTargetPointerDown = (ev: PointerEvent) => {
+      if (!this.activeDriver) return;
+      const target = ev.target as Element | null;
+      if (!target || target.closest('.driver-popover')) return;
+      const step = tour.steps[currentIndex];
+      if (!step?.interactive) return;
+      if (!step.elementSelector || !target.closest(step.elementSelector)) return;
+      // Delegate to click-handler logic via a fake click on next tick.
+      setTimeout(() => onTargetClick(ev as unknown as MouseEvent), 0);
+    };
+    window.addEventListener('pointerdown', onTargetPointerDown, true);
+    const cleanup = () => {
+      window.removeEventListener('click', onTargetClick, true);
+      window.removeEventListener('pointerdown', onTargetPointerDown, true);
+    };
     const check = setInterval(() => {
       if (!this.activeDriver) { cleanup(); clearInterval(check); }
     }, 500);
