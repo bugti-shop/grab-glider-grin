@@ -22,6 +22,15 @@ interface Props {
 // (which 404s) becomes the real CDN origin.
 const SLIDES = [ob01, ob02, ob03, ob04, ob05, ob06].map((a: { url: string }) => resolveAssetUrl(a.url));
 
+const CAPTIONS = [
+  'Plan your day in seconds',
+  'Capture notes on the go',
+  'Organize with notebooks',
+  'Build habits that stick',
+  'Focus on what matters most',
+  'Write freely with Markdown',
+];
+
 /**
  * Onboarding — image slides with a real Duolingo-style CTA rendered on top of
  * the baked-in button area (which is hidden by cropping the bottom of the image).
@@ -164,6 +173,9 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
             />
           ))}
         </div>
+        <p className="text-[15px] font-medium text-black/80 text-center px-2 leading-snug">
+          {CAPTIONS[index]}
+        </p>
         <Button
           onClick={next}
           size="lg"
