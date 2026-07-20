@@ -11,9 +11,15 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchAutoHide: true,
       launchShowDuration: 0,
+      launchFadeOutDuration: 0,
       showSpinner: false,
-      backgroundColor: '#ffffff',
-      backgroundColorDark: '#000000',
+      autoHide: true,
+      fadeInDuration: 0,
+      fadeOutDuration: 0,
+      backgroundColor: '#f8f8f6',
+      backgroundColorDark: '#0b0b0b',
+      splashImmersive: false,
+      splashFullScreen: false,
     },
     // Native Google + Apple sign-in are configured at runtime via
     // @capgo/capacitor-social-login → SocialLogin.initialize() in
@@ -37,7 +43,7 @@ const config: CapacitorConfig = {
   },
   ios: {
     scrollEnabled: true,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f8f8f6',
     contentInset: 'never',
     limitsNavigationsToAppBoundDomains: false,
   },
