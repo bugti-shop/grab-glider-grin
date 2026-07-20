@@ -7,12 +7,15 @@ import ob03 from '@/assets/onboarding/ob-03-notebooks.webp.asset.json';
 import ob04 from '@/assets/onboarding/ob-04-habits.webp.asset.json';
 import ob05 from '@/assets/onboarding/ob-05-matrix.webp.asset.json';
 import ob06 from '@/assets/onboarding/ob-06-markdown.webp.asset.json';
+import { resolveAssetUrl } from '@/utils/assetUrl';
 
 interface Props {
   onComplete: () => void;
 }
 
-const SLIDES = [ob01, ob02, ob03, ob04, ob05, ob06].map((a: { url: string }) => a.url);
+// Resolve to absolute URLs on native so `capacitor://localhost/__l5e/...`
+// (which 404s) becomes the real CDN origin.
+const SLIDES = [ob01, ob02, ob03, ob04, ob05, ob06].map((a: { url: string }) => resolveAssetUrl(a.url));
 
 /**
  * Onboarding — image slides with a real Duolingo-style CTA rendered on top of
