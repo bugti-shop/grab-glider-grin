@@ -319,7 +319,8 @@ class TourManagerImpl {
         // "interactive" — those tours want the user to actually tap the
         // target (Switch to Notes / New Note / Add Notebook) to advance.
         disableActiveInteraction: !step?.interactive,
-        overlayOpacity: 0.2,
+        overlayOpacity: 0,
+        overlayColor: 'transparent',
         stagePadding: 6,
         stageRadius: 10,
         smoothScroll: true,
