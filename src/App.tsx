@@ -781,8 +781,15 @@ const AppContent = () => {
     const dueRecurring = lastShownAt > 0 && now - lastShownAt >= RECURRING_PAYWALL_INTERVAL_MS;
     const shouldShow = !firstShown || dueRecurring;
     if (!shouldShow) return;
-    const reason = !firstShown ? 'first-launch' : 'recurring-free-user';
+    const isFirstLaunch = !firstShown;
+    const reason = isFirstLaunch ? 'first-launch' : 'recurring-free-user';
     const t = window.setTimeout(() => {
+      // On the very first launch, mark the onboarding-paywall as pending so
+      // the tour bootstrap knows to fire the feature tutorial the instant
+      // the user dismisses the paywall (no extra delay).
+      if (isFirstLaunch) {
+        try { sessionStorage.setItem(ONBOARDING_PAYWALL_PENDING_KEY, 'true'); } catch {}
+      }
       // Re-check isPro at fire time in case subscription state changed during the delay
       try { openPaywallRef.current?.(reason); } catch {}
       try {
