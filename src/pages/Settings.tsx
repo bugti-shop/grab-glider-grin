@@ -123,7 +123,7 @@ const Settings = () => {
         </div>
       </div>
 
-      <main className="px-4 pt-4 space-y-6">
+      <main className="px-2 pt-4 space-y-6">
         {!isProSub && (
           <button
             onClick={() => openPaywall()}
