@@ -106,7 +106,8 @@ const cleanupOldAppShellCache = () => {
   }).catch(() => {});
 };
 
-cleanupOldAppShellCache();
+// Old app-shell cache cleanup — deferred below via scheduleDeferred so it
+// never runs on the critical cold-start path.
 import { migrateLocalStorageToIndexedDB, getSetting, warmSettingsCache } from "./utils/settingsStorage";
 import { migrateNotesToIndexedDB } from "./utils/noteStorage";
 import { initializeProtectionSettings } from "./utils/noteProtection";
@@ -316,8 +317,12 @@ if (Capacitor.isNativePlatform()) {
 }
 
 
-// Warm settings cache in background (non-blocking)
-warmSettingsCache().catch(() => {});
+// Warm settings cache + old service-worker cleanup — both deferred so they
+// never block first paint on cold-start.
+scheduleDeferred(() => {
+  warmSettingsCache().catch(() => {});
+  try { cleanupOldAppShellCache(); } catch {}
+});
 
 // When the WebView is cold-booted at /quick-add (Android widget overlay),
 // skip every non-essential deferred subsystem — background sync worker,
