@@ -117,3 +117,54 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
 };
 
 export default OnboardingSlides;
+
+interface SwipeAreaProps {
+  onNext: () => void;
+  onBack: () => void;
+  children: React.ReactNode;
+}
+
+const SWIPE_THRESHOLD = 50;
+
+const SwipeArea = ({ onNext, onBack, children }: SwipeAreaProps) => {
+  const startX = useRef<number | null>(null);
+  const startY = useRef<number | null>(null);
+  const locked = useRef<'h' | 'v' | null>(null);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    startX.current = e.clientX;
+    startY.current = e.clientY;
+    locked.current = null;
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (startX.current == null || startY.current == null) return;
+    if (locked.current) return;
+    const dx = Math.abs(e.clientX - startX.current);
+    const dy = Math.abs(e.clientY - startY.current);
+    if (dx > 8 || dy > 8) locked.current = dx > dy ? 'h' : 'v';
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (startX.current == null) return;
+    const dx = e.clientX - startX.current;
+    if (locked.current === 'h' && Math.abs(dx) > SWIPE_THRESHOLD) {
+      if (dx < 0) onNext();
+      else onBack();
+    }
+    startX.current = null;
+    startY.current = null;
+    locked.current = null;
+  };
+
+  return (
+    <div
+      className="flex-1 min-h-0 relative overflow-hidden"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={() => { startX.current = null; locked.current = null; }}
+      style={{ touchAction: 'pan-y' }}
+    >
+      {children}
+    </div>
+  );
+};
