@@ -818,5 +818,9 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
 export const PremiumPaywall = () => {
   const logic = usePaywallLogic();
   if (!logic.showPaywall) return null;
-  return <PaywallScreen logic={logic} />;
+  return (
+    <div data-flowist-paywall="open" style={{ display: 'contents' }}>
+      <PaywallScreen logic={logic} />
+    </div>
+  );
 };
