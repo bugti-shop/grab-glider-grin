@@ -173,6 +173,9 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
             />
           ))}
         </div>
+        <p className="text-[15px] font-medium text-black/80 text-center px-2 leading-snug">
+          {CAPTIONS[index]}
+        </p>
         <Button
           onClick={next}
           size="lg"
