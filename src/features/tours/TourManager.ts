@@ -706,19 +706,42 @@ class TourManagerImpl {
 
   private async scrollElementIntoView(el: Element, block: ScrollLogicalPosition = 'center') {
     if (!(el instanceof HTMLElement)) return;
-    const rect = el.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-    const safeTop = 96;
-    const safeBottom = Math.max(safeTop, viewportHeight - 140);
-    const needsScroll = rect.top < safeTop || rect.bottom > safeBottom;
-    if (!needsScroll) return;
-    try {
-      el.scrollIntoView({ behavior: 'smooth', block, inline: 'nearest' });
-    } catch {
-      try { el.scrollIntoView(true); } catch {}
+    // Walk up every scrollable ancestor and center the element inside it.
+    // Needed for pages like Settings where the real scroll container is a
+    // nested <div class="overflow-y-auto"> rather than window.
+    const scrollAncestors: HTMLElement[] = [];
+    let node: HTMLElement | null = el.parentElement;
+    while (node && node !== document.body && node !== document.documentElement) {
+      const cs = window.getComputedStyle(node);
+      const oy = cs.overflowY;
+      if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && node.scrollHeight > node.clientHeight + 4) {
+        scrollAncestors.push(node);
+      }
+      node = node.parentElement;
     }
-    await this.wait(260);
+    for (const container of scrollAncestors) {
+      const cRect = container.getBoundingClientRect();
+      const eRect = el.getBoundingClientRect();
+      const delta = (eRect.top + eRect.height / 2) - (cRect.top + cRect.height / 2);
+      if (Math.abs(delta) > 24) {
+        try { container.scrollBy({ top: delta, behavior: 'smooth' }); } catch { container.scrollTop += delta; }
+      }
+    }
+    // Also handle the page-level scroll (window) via the browser API.
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const safeTop = 96;
+      const safeBottom = Math.max(safeTop, viewportHeight - 140);
+      if (rect.top < safeTop || rect.bottom > safeBottom) {
+        try { el.scrollIntoView({ behavior: 'smooth', block, inline: 'nearest' }); }
+        catch { try { el.scrollIntoView(true); } catch {} }
+      }
+    }
+    // Wait long enough for smooth-scroll to settle before driver.js measures
+    // the highlight rect — otherwise the popover lands on the pre-scroll
+    // position (visible bug on Settings → App Lock / Note Type Visibility).
+    await this.wait(420);
   }
 
   private wait(ms: number) {
