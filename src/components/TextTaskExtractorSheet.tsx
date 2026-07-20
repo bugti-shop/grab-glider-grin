@@ -23,6 +23,7 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { acquireAiLock, getAiBusyMessage, releaseAllAiLocks } from '@/utils/aiConcurrencyLock';
 import { extractTextFromPdfFile } from '@/utils/pdfTextExtract';
 import { ensureSignedInForAi } from '@/utils/aiAccessGuard';
+import { collectAiClientIdentifiers } from '@/utils/aiClientIdentifiers';
 
 const AI_TIMEOUT_MS = 180_000; // long emails / PDFs are chunked server-side
 
