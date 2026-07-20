@@ -4,7 +4,7 @@
 //   then drives step-by-step with Flowist-branded popovers.
 // - Skip / Next / "Don't show again" all persist via TourStateStore.
 
-import { driver, type Driver, type DriveStep, type Config as DriverConfig } from 'driver.js';
+import { driver, type Driver, type DriveStep, type Config as DriverConfig, type PopoverDOM } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
 /**
@@ -32,6 +32,10 @@ function sweepStaleDriverDom() {
     document.body.classList.remove('driver-active', 'driver-fade');
   } catch {}
 }
+
+const TOUR_PORTAL_Z_INDEX = 2147483647;
+const TOUR_OVERLAY_Z_INDEX = TOUR_PORTAL_Z_INDEX - 2;
+const TOUR_VIEWPORT_MARGIN = 12;
 
 function mountSingletonDriver(config: DriverConfig): Driver {
   // Tear down any previously-live instance BEFORE constructing a new one.
@@ -250,6 +254,7 @@ class TourManagerImpl {
     let currentIndex = 0;
     let currentDrv: Driver | null = null;
     let disposeStepA11y: (() => void) | null = null;
+    let disposePopoverPositioning: (() => void) | null = null;
     let disposeTargetEvents: (() => void) | null = null;
     const forced = this.forcedActive;
 
@@ -260,6 +265,7 @@ class TourManagerImpl {
 
     const finalize = async (opts: { advanceChain?: boolean } = {}) => {
       try { disposeTargetEvents?.(); disposeTargetEvents = null; } catch {}
+      try { disposePopoverPositioning?.(); disposePopoverPositioning = null; } catch {}
       try { disposeStepA11y?.(); disposeStepA11y = null; } catch {}
       try { delete document.body.dataset.tourActive; } catch {}
       try { delete document.body.dataset.tourId; } catch {}
@@ -325,10 +331,14 @@ class TourManagerImpl {
         stageRadius: 10,
         smoothScroll: true,
         popoverClass: forced ? 'flowist-tour-popover flowist-tour-forced' : 'flowist-tour-popover',
+        popoverOffset: 8,
         showButtons: buttons,
         nextBtnText: nextLabel,
         doneBtnText: nextLabel,
         prevBtnText: 'Back',
+        onPopoverRender: (popover: PopoverDOM) => {
+          this.prepareTourPopoverPortal(popover.wrapper);
+        },
         steps: [this.toDriverStep(step)],
         onPrevClick: canGoBack
           ? () => {
@@ -413,6 +423,10 @@ class TourManagerImpl {
         return;
       }
       // Tear down the previous step's a11y wiring before installing the new one.
+      try { disposePopoverPositioning?.(); } catch {}
+      disposePopoverPositioning = target instanceof HTMLElement
+        ? this.installPopoverPositionGuard(drv, target)
+        : null;
       try { disposeStepA11y?.(); } catch {}
       disposeStepA11y = this.enhancePopoverA11y({
         titleId: `flowist-tour-title-${tourId}-${stepIndex}`,
@@ -771,6 +785,133 @@ class TourManagerImpl {
 
   private wait(ms: number) {
     return new Promise<void>((resolve) => setTimeout(resolve, ms));
+  }
+
+  private prepareTourPopoverPortal(popover: HTMLElement | null) {
+    if (typeof document === 'undefined' || !popover) return;
+    try {
+      if (popover.parentElement !== document.body) document.body.appendChild(popover);
+      popover.style.position = 'fixed';
+      popover.style.zIndex = String(TOUR_PORTAL_Z_INDEX);
+      popover.style.pointerEvents = 'auto';
+      popover.style.boxSizing = 'border-box';
+      popover.style.isolation = 'isolate';
+      popover.style.maxWidth = `min(320px, calc(100vw - ${TOUR_VIEWPORT_MARGIN * 2}px))`;
+      popover.style.maxHeight = `calc(100dvh - ${TOUR_VIEWPORT_MARGIN * 2}px)`;
+      popover.style.overflowY = 'auto';
+      popover.style.overscrollBehavior = 'contain';
+      document.querySelectorAll<HTMLElement>('.driver-overlay').forEach((overlay) => {
+        overlay.style.position = 'fixed';
+        overlay.style.zIndex = String(TOUR_OVERLAY_Z_INDEX);
+        overlay.style.inset = '0';
+      });
+    } catch {}
+  }
+
+  /**
+   * driver.js only refreshes on window scroll/resize. Flowist pages often use
+   * nested scroll panes and Radix portals, so the mini-sheet can drift off-screen
+   * after a sheet opens, route settles, keyboard appears, or an inner pane scrolls.
+   * Keep the popover body-portaled, fixed, and clamped inside the visual viewport.
+   */
+  private installPopoverPositionGuard(driverInstance: Driver, target: HTMLElement): () => void {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
+
+    let disposed = false;
+    let raf = 0;
+    const scrollParents = this.getScrollableAncestors(target);
+    const visualViewport = window.visualViewport ?? null;
+
+    const clampPopoverToViewport = () => {
+      if (disposed) return;
+      const popover = document.querySelector<HTMLElement>('.flowist-tour-popover.driver-popover, .driver-popover');
+      if (!popover) return;
+      this.prepareTourPopoverPortal(popover);
+
+      const viewportLeft = visualViewport?.offsetLeft ?? 0;
+      const viewportTop = visualViewport?.offsetTop ?? 0;
+      const viewportWidth = visualViewport?.width ?? window.innerWidth;
+      const viewportHeight = visualViewport?.height ?? window.innerHeight;
+      const minLeft = viewportLeft + TOUR_VIEWPORT_MARGIN;
+      const minTop = viewportTop + TOUR_VIEWPORT_MARGIN;
+      const maxRight = viewportLeft + viewportWidth - TOUR_VIEWPORT_MARGIN;
+      const maxBottom = viewportTop + viewportHeight - TOUR_VIEWPORT_MARGIN;
+
+      popover.style.maxWidth = `${Math.max(220, viewportWidth - TOUR_VIEWPORT_MARGIN * 2)}px`;
+      popover.style.maxHeight = `${Math.max(180, viewportHeight - TOUR_VIEWPORT_MARGIN * 2)}px`;
+
+      const rect = popover.getBoundingClientRect();
+      let dx = 0;
+      let dy = 0;
+      if (rect.left < minLeft) dx = minLeft - rect.left;
+      else if (rect.right > maxRight) dx = maxRight - rect.right;
+      if (rect.top < minTop) dy = minTop - rect.top;
+      else if (rect.bottom > maxBottom) dy = maxBottom - rect.bottom;
+
+      if (dx !== 0) {
+        const left = Number.parseFloat(popover.style.left || '');
+        const right = Number.parseFloat(popover.style.right || '');
+        if (Number.isFinite(left)) popover.style.left = `${left + dx}px`;
+        else if (Number.isFinite(right)) popover.style.right = `${right - dx}px`;
+        else popover.style.left = `${rect.left + dx}px`;
+      }
+      if (dy !== 0) {
+        const top = Number.parseFloat(popover.style.top || '');
+        const bottom = Number.parseFloat(popover.style.bottom || '');
+        if (Number.isFinite(top)) popover.style.top = `${top + dy}px`;
+        else if (Number.isFinite(bottom)) popover.style.bottom = `${bottom - dy}px`;
+        else popover.style.top = `${rect.top + dy}px`;
+      }
+    };
+
+    const scheduleRefresh = () => {
+      if (disposed) return;
+      if (raf) window.cancelAnimationFrame(raf);
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        try { driverInstance.refresh(); } catch {}
+        window.requestAnimationFrame(clampPopoverToViewport);
+      });
+    };
+
+    const observer = new MutationObserver(scheduleRefresh);
+    try { observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'data-state'] }); } catch {}
+    window.addEventListener('resize', scheduleRefresh, { passive: true });
+    window.addEventListener('scroll', scheduleRefresh, { passive: true, capture: true });
+    visualViewport?.addEventListener('resize', scheduleRefresh, { passive: true });
+    visualViewport?.addEventListener('scroll', scheduleRefresh, { passive: true });
+    scrollParents.forEach((parent) => parent.addEventListener('scroll', scheduleRefresh, { passive: true }));
+
+    // Run after driver.js initial measurement + after async route/sheet layout settles.
+    scheduleRefresh();
+    window.setTimeout(scheduleRefresh, 80);
+    window.setTimeout(scheduleRefresh, 260);
+
+    return () => {
+      disposed = true;
+      if (raf) window.cancelAnimationFrame(raf);
+      try { observer.disconnect(); } catch {}
+      window.removeEventListener('resize', scheduleRefresh);
+      window.removeEventListener('scroll', scheduleRefresh, true);
+      visualViewport?.removeEventListener('resize', scheduleRefresh);
+      visualViewport?.removeEventListener('scroll', scheduleRefresh);
+      scrollParents.forEach((parent) => parent.removeEventListener('scroll', scheduleRefresh));
+    };
+  }
+
+  private getScrollableAncestors(el: HTMLElement): HTMLElement[] {
+    const ancestors: HTMLElement[] = [];
+    let node: HTMLElement | null = el.parentElement;
+    while (node && node !== document.body && node !== document.documentElement) {
+      const style = window.getComputedStyle(node);
+      const overflowY = style.overflowY;
+      const overflowX = style.overflowX;
+      const scrollableY = ['auto', 'scroll', 'overlay'].includes(overflowY) && node.scrollHeight > node.clientHeight + 2;
+      const scrollableX = ['auto', 'scroll', 'overlay'].includes(overflowX) && node.scrollWidth > node.clientWidth + 2;
+      if (scrollableY || scrollableX) ancestors.push(node);
+      node = node.parentElement;
+    }
+    return ancestors;
   }
 
   /**
