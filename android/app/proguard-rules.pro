@@ -1,21 +1,44 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ProGuard / R8 rules for Capacitor + Play Billing + WebView JS bridge
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep line numbers for crash reports
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# ---------- Capacitor ----------
+-keep class com.getcapacitor.** { *; }
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keepclassmembers class * {
+    @com.getcapacitor.PluginMethod public *;
+}
+-keep class * extends com.getcapacitor.Plugin { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ---------- Cordova (used by some Capacitor plugins) ----------
+-keep class org.apache.cordova.** { *; }
+
+# ---------- WebView JavaScript interface ----------
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
+# ---------- Google Play Billing ----------
+-keep class com.android.billingclient.api.** { *; }
+-keep class com.android.vending.billing.** { *; }
+
+# ---------- Firebase / Google Services (safe defaults) ----------
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+
+# ---------- AndroidX ----------
+-dontwarn androidx.**
+-keep class androidx.core.app.CoreComponentFactory { *; }
+
+# ---------- Kotlin ----------
+-dontwarn kotlin.**
+-dontwarn kotlinx.**
+
+# ---------- Suppress reflection warnings from plugins ----------
+-dontwarn org.chromium.**
+-dontwarn com.google.errorprone.**
+-dontwarn javax.annotation.**
