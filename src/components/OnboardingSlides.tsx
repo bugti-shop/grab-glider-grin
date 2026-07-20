@@ -114,13 +114,17 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
           height={2560}
           decoding="async"
           fetchPriority={index === 0 ? 'high' : 'auto'}
-          loading={index === 0 ? 'eager' : 'eager'}
-          className="w-full h-full object-cover animate-in fade-in duration-300 pointer-events-none will-change-transform"
+          loading="eager"
+          className={`w-full h-full animate-in fade-in duration-300 pointer-events-none will-change-transform ${
+            index === 0 ? 'object-contain' : 'object-cover'
+          }`}
           style={{
-            // object-position top + stronger over-scale hides the baked-in
-            // progress dots + CTA button at the bottom of the mockup.
-            objectPosition: 'center top',
-            transform: 'scale(1.18)',
+            // Slide 1 is the tilted hero composite with no baked-in UI — use
+            // contain so both phones stay fully visible on narrow screens.
+            // Slides 2+ have baked-in dots/CTA at the bottom that we crop out
+            // via top-anchored over-scale.
+            objectPosition: index === 0 ? 'center center' : 'center top',
+            transform: index === 0 ? 'none' : 'scale(1.18)',
             transformOrigin: 'center top',
             imageRendering: 'auto' as any,
           }}
