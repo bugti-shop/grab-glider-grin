@@ -125,7 +125,7 @@ const Settings = () => {
             onClick={() => openPaywall()}
             className="w-full flex items-center justify-between px-4 py-3.5 rounded-[14px] bg-white dark:bg-[#1C1C1E] shadow-sm"
           >
-            <span className="text-[17px] font-medium text-[#007AFF]">
+            <span className="text-[15px] font-medium text-[#007AFF]">
               Upgrade to Flowist Pro
             </span>
             <ChevronRight className="h-[18px] w-[18px] text-[#C7C7CC]" />
