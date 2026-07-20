@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import ob01 from '@/assets/onboarding/ob-01-tasks.png.asset.json';
 import ob02 from '@/assets/onboarding/ob-02-notes.png.asset.json';
 import ob03 from '@/assets/onboarding/ob-03-notebooks.png.asset.json';
