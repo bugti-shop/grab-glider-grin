@@ -116,16 +116,10 @@
 </head>
   <body>
     <style>
-      /* Pin app background from first frame to avoid white flash. Nothing is
-         rendered before React mounts — no wordmark, no logo, no text. */
       html, body {
         margin: 0;
-        background: #f8f8f6;
         min-height: 100vh;
         min-height: 100dvh;
-      }
-      @media (prefers-color-scheme: dark) {
-        html, body { background: #0b0b0b; }
       }
       #root {
         min-height: 100vh;
