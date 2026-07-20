@@ -132,6 +132,9 @@ const Settings = () => {
           </button>
         )}
 
+        {filteredGroups.length === 0 && (
+          <div className="text-center py-10 text-[15px] text-[#8E8E93]">No settings match "{query}"</div>
+        )}
         {filteredGroups.map((group, gi) => (
           <div
             key={gi}
