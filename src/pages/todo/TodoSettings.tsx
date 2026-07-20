@@ -2,7 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
-import { ChevronRight, Check, ChevronDown, Crown, Play, RotateCcw } from 'lucide-react';
+import {
+  ChevronRight, Check, ChevronDown, Crown, Play, RotateCcw,
+  Search, Brush, Globe, Eye, StickyNote, ClipboardCheck, Compass,
+  Lock, Cloud, Download, Trash2, FileText, Shield, LayoutGrid,
+  Target, Timer, ListChecks,
+} from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTranslation } from 'react-i18next';
 import { Switch } from '@/components/ui/switch';
