@@ -531,7 +531,7 @@ const TodoSettings = () => {
                     </span>
                     <span className="flex-1 min-w-0 flex items-center gap-1.5">
                       <span className={cn(
-                        "text-[13px] text-left truncate",
+                        "text-[14px] text-left truncate",
                         row.destructive ? "text-[#FF3B30] font-medium" : "text-black dark:text-white"
                       )}>
                         {row.label}
