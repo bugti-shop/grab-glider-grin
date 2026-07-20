@@ -14,22 +14,17 @@ interface Props {
 const SLIDES = [ob01, ob02, ob03, ob04, ob05, ob06].map((a) => a.url);
 
 /**
- * Pixel-perfect onboarding — each slide image already has step dots and a
- * "Next"/"Get Started" button baked in. So the overlay only provides:
- *  - Skip button (top-right)
- *  - Back button (top-left, small)
- *  - Swipe left/right to navigate
- *  - Tap-to-advance only on the baked-in CTA button area
- * No duplicate dots or Next button in the overlay.
+ * Onboarding — image slides with a real Duolingo-style CTA rendered on top of
+ * the baked-in button area (which is hidden by cropping the bottom of the image).
+ * - Skip (top-right), Back (top-left)
+ * - Swipe left/right or tap CTA to advance
+ * - Bottom CTA matches the Today "Add Task" button style, narrow width.
  */
 export const OnboardingSlides = ({ onComplete }: Props) => {
   const [index, setIndex] = useState(0);
   const isLast = index >= SLIDES.length - 1;
 
   useEffect(() => {
-    // Lock the overlay to the first visual viewport height. Mobile browser
-    // chrome collapsing while the user drags must not stretch/zoom the slide
-    // image or make the baked-in button look unusually long.
     const root = document.documentElement;
     const setStableHeight = () => {
       root.style.setProperty('--onboarding-stable-height', `${window.innerHeight}px`);
@@ -37,8 +32,11 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
     setStableHeight();
     window.addEventListener('orientationchange', setStableHeight);
 
-    SLIDES.slice(1).forEach((src) => {
+    // Preload ALL remaining slides immediately for instant transitions.
+    SLIDES.forEach((src, i) => {
+      if (i === 0) return;
       const img = new Image();
+      img.decoding = 'async';
       img.src = src;
     });
 
@@ -72,7 +70,7 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
         paddingBottom: 'var(--safe-bottom, 0px)',
       }}
     >
-      {/* Back button — upper left */}
+      {/* Back — upper left */}
       {index > 0 && (
         <div
           className="absolute top-0 left-0 z-20 px-4 py-3"
@@ -89,7 +87,7 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
         </div>
       )}
 
-      {/* Skip button — top right */}
+      {/* Skip — top right */}
       <div
         className="absolute top-0 right-0 z-20 px-4 py-3"
         style={{ paddingTop: 'calc(var(--safe-top, 0px) + 12px)' }}
@@ -104,8 +102,8 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
         </button>
       </div>
 
-      {/* Slide image — tap advances, swipe left/right navigates */}
-      <SwipeArea onNext={next} onBack={back} onTap={next}>
+      {/* Image area — swipe to navigate. Bottom is cropped to hide baked-in button. */}
+      <SwipeArea onNext={next} onBack={back}>
         <img
           key={index}
           src={SLIDES[index]}
@@ -115,15 +113,45 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
           height={2560}
           decoding="async"
           fetchPriority={index === 0 ? 'high' : 'auto'}
-          loading={index === 0 ? 'eager' : 'lazy'}
+          loading={index === 0 ? 'eager' : 'eager'}
           className="w-full h-full object-cover animate-in fade-in duration-300 pointer-events-none will-change-transform"
           style={{
-            objectPosition: 'center center',
-            transform: 'scale(1.055)',
-            transformOrigin: 'center center',
+            // object-position top + slight over-scale hides the baked-in button
+            // area at the bottom while keeping the mockup crisp.
+            objectPosition: 'center top',
+            transform: 'scale(1.02)',
+            transformOrigin: 'center top',
+            imageRendering: 'auto' as any,
           }}
         />
       </SwipeArea>
+
+      {/* Real Duolingo-style CTA — narrow, bold, shadow. Matches Today "Add Task". */}
+      <div
+        className="relative z-10 flex flex-col items-center gap-3 px-6 pt-3"
+        style={{ paddingBottom: 'calc(20px + var(--safe-bottom, 0px))' }}
+      >
+        <div className="flex items-center gap-1.5">
+          {SLIDES.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === index ? 'w-6 bg-black' : 'w-1.5 bg-black/25'
+              }`}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={next}
+          className="w-[62%] max-w-[280px] min-w-[220px] h-12 rounded-2xl bg-primary text-primary-foreground font-bold text-[15px] tracking-tight active:translate-y-[2px] transition-transform"
+          style={{
+            boxShadow: '0 4px 0 0 hsl(var(--primary) / 0.55), 0 6px 14px -4px rgba(0,0,0,0.25)',
+          }}
+        >
+          {isLast ? 'Get Started' : 'Continue'}
+        </button>
+      </div>
     </div>
   );
 };
@@ -133,31 +161,25 @@ export default OnboardingSlides;
 interface SwipeAreaProps {
   onNext: () => void;
   onBack: () => void;
-  onTap: () => void;
   children: React.ReactNode;
 }
 
 const SWIPE_THRESHOLD = 50;
-const TAP_MAX_MOVE = 8;
 
-const SwipeArea = ({ onNext, onBack, onTap, children }: SwipeAreaProps) => {
+const SwipeArea = ({ onNext, onBack, children }: SwipeAreaProps) => {
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
   const locked = useRef<'h' | 'v' | null>(null);
-  const moved = useRef(false);
 
   const onPointerDown = (e: React.PointerEvent) => {
     startX.current = e.clientX;
     startY.current = e.clientY;
     locked.current = null;
-    moved.current = false;
   };
   const onPointerMove = (e: React.PointerEvent) => {
-    if (startX.current == null || startY.current == null) return;
+    if (startX.current == null || startY.current == null || locked.current) return;
     const dx = Math.abs(e.clientX - startX.current);
     const dy = Math.abs(e.clientY - startY.current);
-    if (dx > TAP_MAX_MOVE || dy > TAP_MAX_MOVE) moved.current = true;
-    if (locked.current) return;
     if (dx > 8 || dy > 8) locked.current = dx > dy ? 'h' : 'v';
   };
   const onPointerUp = (e: React.PointerEvent) => {
@@ -166,32 +188,22 @@ const SwipeArea = ({ onNext, onBack, onTap, children }: SwipeAreaProps) => {
     if (locked.current === 'h' && Math.abs(dx) > SWIPE_THRESHOLD) {
       if (dx < 0) onNext();
       else onBack();
-    } else if (!moved.current && isBottomCtaTap(e)) {
-      onTap();
     }
     startX.current = null;
     startY.current = null;
     locked.current = null;
-    moved.current = false;
   };
 
   return (
     <div
-      className="flex-1 min-h-0 relative overflow-hidden cursor-pointer"
+      className="flex-1 min-h-0 relative overflow-hidden"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={() => { startX.current = null; locked.current = null; moved.current = false; }}
+      onPointerCancel={() => { startX.current = null; locked.current = null; }}
       style={{ touchAction: 'pan-y', overscrollBehavior: 'none' }}
     >
       {children}
     </div>
   );
-};
-
-const isBottomCtaTap = (e: React.PointerEvent) => {
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-  const x = (e.clientX - rect.left) / rect.width;
-  const y = (e.clientY - rect.top) / rect.height;
-  return x >= 0.04 && x <= 0.96 && y >= 0.88 && y <= 0.985;
 };
