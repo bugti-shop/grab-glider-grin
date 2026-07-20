@@ -143,7 +143,7 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
           }`}
           style={{
             objectPosition: index === 0 ? 'center center' : 'center top',
-            transform: index === 0 ? 'scale(1.28)' : 'scale(1.18)',
+            transform: `scale(${index === 0 ? 1.28 : index === 1 ? 1.30 : index === 2 ? 1.30 : index === 3 ? 1.39 : index === 4 ? 1.30 : 1.18})`,
             transformOrigin: index === 0 ? 'center center' : 'center top',
             imageRendering: 'auto' as any,
           }}
