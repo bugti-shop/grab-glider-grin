@@ -133,14 +133,19 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
             index === 0 ? 'object-contain' : 'object-cover'
           }`}
           style={{
-            // Slide 1: tilted hero composite — contain keeps both phones fully
-            // visible, scaled up to match landing hero prominence, centered.
-            // Slides 2+: baked-in dots/CTA cropped via top-anchored over-scale.
             objectPosition: index === 0 ? 'center center' : 'center top',
             transform: index === 0 ? 'scale(1.28)' : 'scale(1.18)',
             transformOrigin: index === 0 ? 'center center' : 'center top',
             imageRendering: 'auto' as any,
           }}
+        />
+        {/* Mask baked-in short description strip under the title without
+            zooming the image. Solid app-bg rectangle at the bottom of the
+            image area — CTA sits below in its own container. */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 pointer-events-none"
+          style={{ height: '14%', background: '#f8f8f6' }}
         />
       </SwipeArea>
 
