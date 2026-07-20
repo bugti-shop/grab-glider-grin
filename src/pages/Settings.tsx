@@ -101,7 +101,7 @@ const Settings = () => {
       >
         <div className="px-5 pt-4 pb-3 flex items-center gap-2.5">
           <AppLogo size="md" className="h-7 w-7 rounded-[7px] flex-shrink-0" />
-          <h1 className="text-[26px] leading-none font-bold tracking-tight text-black dark:text-white">
+          <h1 className="text-[18px] leading-none font-bold tracking-tight text-black dark:text-white">
             Settings
           </h1>
         </div>
