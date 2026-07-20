@@ -1,6 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type React from 'react';
 import { Button } from '@/components/ui/button';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+
+const tap = (style: ImpactStyle = ImpactStyle.Light) => {
+  Haptics.impact({ style }).catch(() => {});
+};
 import ob01 from '@/assets/onboarding/ob-01-tasks-tilted.webp.asset.json';
 import ob02 from '@/assets/onboarding/ob-02-notes.webp.asset.json';
 import ob03 from '@/assets/onboarding/ob-03-notebooks.webp.asset.json';
@@ -51,11 +56,17 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
   }, []);
 
   const next = useCallback(() => {
-    if (isLast) onComplete();
-    else setIndex((i) => i + 1);
+    if (isLast) {
+      tap(ImpactStyle.Medium);
+      onComplete();
+    } else {
+      tap(ImpactStyle.Light);
+      setIndex((i) => i + 1);
+    }
   }, [isLast, onComplete]);
 
   const back = useCallback(() => {
+    tap(ImpactStyle.Light);
     setIndex((i) => Math.max(0, i - 1));
   }, []);
 
@@ -98,7 +109,7 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
       >
         <button
           type="button"
-          onClick={onComplete}
+          onClick={() => { tap(ImpactStyle.Light); onComplete(); }}
           className="rounded-full bg-black/70 backdrop-blur-md px-4 py-2 text-[13px] font-semibold text-white shadow-lg active:scale-95 transition"
           aria-label="Skip onboarding"
         >
