@@ -565,11 +565,20 @@ const DriveSyncBootstrap = () => (
   </ErrorBoundary>
 );
 
+const ONBOARDING_SLIDES_KEY = 'onboarding_slides_seen_v1';
+
 const AppContent = () => {
   useCloudSync();
   const [isAppLocked, setIsAppLocked] = useState<boolean | null>(null);
   // Onboarding removed — always treat as completed so the dashboard renders immediately.
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
+  const [showSlides, setShowSlides] = useState<boolean>(() => {
+    try { return localStorage.getItem(ONBOARDING_SLIDES_KEY) !== 'true'; } catch { return true; }
+  });
+  const handleSlidesComplete = useCallback(() => {
+    try { localStorage.setItem(ONBOARDING_SLIDES_KEY, 'true'); } catch {}
+    setShowSlides(false);
+  }, []);
   useEffect(() => {
     try { localStorage.setItem('onboarding_completed_flag', 'true'); } catch {}
     setSetting('onboarding_completed', true).catch(() => {});
