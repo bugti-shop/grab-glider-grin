@@ -1482,6 +1482,9 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     // is enforced separately at each Pro-gated action via requireFeature().
     setShowPaywall(false);
     setPaywallFeature(null);
+    try {
+      window.dispatchEvent(new CustomEvent('flowist:paywall-closed'));
+    } catch {}
     // Defensive: clear any leftover Radix scroll-lock / pointer-events lockdown
     // so the underlying UI never gets "stuck" un-interactive after paywall closes.
     try {
