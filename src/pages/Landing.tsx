@@ -35,8 +35,7 @@ import includeMarkdownImg from '@/assets/flowist-include-markdown.png.asset.json
 import includeSlashImg from '@/assets/flowist-include-slash.png.asset.json';
 import includeWebClipperImg from '@/assets/flowist-include-webclipper.png.asset.json';
 import includeInlineCalcImg from '@/assets/flowist-include-inline-calc.png.asset.json';
-import scanTodoIphone from '@/assets/scan-todolist-iphone.png.asset.json';
-import tasksHomeIphone from '@/assets/tasks-home-iphone.png.asset.json';
+import onboardingTiltedHero from '@/assets/onboarding/ob-01-tasks-tilted.png.asset.json';
 
 const BLUE = '#3c78f0';
 const BLUE_DARK = '#2b5dbf';
