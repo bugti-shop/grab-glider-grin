@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { acquireAiLock, getAiBusyMessage, releaseAllAiLocks } from '@/utils/aiConcurrencyLock';
 import { ensureSignedInForAi } from '@/utils/aiAccessGuard';
+import { collectAiClientIdentifiers } from '@/utils/aiClientIdentifiers';
 import { CameraScannerScreen } from './CameraScannerScreen';
 
 const AI_SCAN_TIMEOUT_MS = 45_000;
