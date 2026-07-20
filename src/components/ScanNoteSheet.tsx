@@ -42,7 +42,7 @@ interface ObjectCountItem {
 
 export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
   const { t, i18n } = useTranslation();
-  const { requireFeature } = useSubscription();
+  const { requireFeature, customerInfo } = useSubscription();
   // AI GUARD — locked. See src/utils/aiFeatureGuard.ts. Do not couple to billing.
   const { hasPaidAi, isResolving: aiResolving } = useAiFeatureGuard();
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
