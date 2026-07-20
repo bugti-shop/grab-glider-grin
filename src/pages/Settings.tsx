@@ -31,8 +31,9 @@ import { AccessibilityZoomSheet } from '@/components/settings/AccessibilityZoomS
 type IconRow = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  color: string; // background color for icon tile
+  color: string;
   onClick: () => void;
+  keywords?: string[];
 };
 
 const Settings = () => {
