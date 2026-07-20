@@ -119,13 +119,12 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
             index === 0 ? 'object-contain' : 'object-cover'
           }`}
           style={{
-            // Slide 1 is the tilted hero composite with no baked-in UI — use
-            // contain so both phones stay fully visible on narrow screens.
-            // Slides 2+ have baked-in dots/CTA at the bottom that we crop out
-            // via top-anchored over-scale.
+            // Slide 1: tilted hero composite — contain keeps both phones fully
+            // visible, scaled up to match landing hero prominence, centered.
+            // Slides 2+: baked-in dots/CTA cropped via top-anchored over-scale.
             objectPosition: index === 0 ? 'center center' : 'center top',
-            transform: index === 0 ? 'none' : 'scale(1.18)',
-            transformOrigin: 'center top',
+            transform: index === 0 ? 'scale(1.28)' : 'scale(1.18)',
+            transformOrigin: index === 0 ? 'center center' : 'center top',
             imageRendering: 'auto' as any,
           }}
         />
