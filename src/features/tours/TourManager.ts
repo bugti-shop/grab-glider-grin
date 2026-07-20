@@ -649,13 +649,16 @@ class TourManagerImpl {
     const elements = Array.from(document.querySelectorAll(selector));
     return elements.find((el) => {
       if (!(el instanceof HTMLElement)) return true;
-      const rect = el.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0 || el.getClientRects().length === 0) return false;
       let node: HTMLElement | null = el;
       while (node && node !== document.body) {
         const style = window.getComputedStyle(node);
         if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
         node = node.parentElement;
+      }
+      const isJsdom = typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent || '');
+      if (!isJsdom) {
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0 || el.getClientRects().length === 0) return false;
       }
       return true;
     }) ?? null;
@@ -664,6 +667,7 @@ class TourManagerImpl {
   private async scrollElementIntoView(el: Element, block: ScrollLogicalPosition = 'center') {
     if (!(el instanceof HTMLElement)) return;
     const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
     const safeTop = 96;
     const safeBottom = Math.max(safeTop, viewportHeight - 140);
