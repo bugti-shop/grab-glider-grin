@@ -62,17 +62,17 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
         </button>
       </div>
 
-      {/* Slide image */}
-      <div className="flex-1 min-h-0 relative overflow-hidden">
+      {/* Slide image — swipe left/right to navigate */}
+      <SwipeArea onNext={next} onBack={back}>
         <img
           key={index}
           src={SLIDES[index]}
           alt=""
           draggable={false}
-          className="w-full h-full object-cover animate-in fade-in duration-300"
+          className="w-full h-full object-cover animate-in fade-in duration-300 pointer-events-none"
           style={{ objectPosition: 'center center' }}
         />
-      </div>
+      </SwipeArea>
 
       {/* Bottom controls: Back / dots / Next */}
       <div
