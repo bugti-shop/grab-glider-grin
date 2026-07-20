@@ -115,6 +115,46 @@
   <meta name="twitter:description" content="Flowist is a free all-in-one productivity app with smart notes, to-do lists, habit tracking, sketching &amp; daily planner. Organize your life effortlessly.">
 </head>
   <body>
+    <style>
+      /* Kill the perceived "white screen" between native launcher and React
+         first paint. Root gets the app background color pinned from the very
+         first frame + a subtle Flowist wordmark so users see the brand
+         instead of a blank cream sheet. As soon as React renders into #root
+         the ::before pseudo is covered by real UI. */
+      html, body {
+        margin: 0;
+        background: #f8f8f6;
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+      @media (prefers-color-scheme: dark) {
+        html, body { background: #0b0b0b; }
+      }
+      #root {
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+      #root:empty::before {
+        content: 'Flowist';
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        font-weight: 900;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+        color: rgba(0, 0, 0, 0.85);
+        background: #f8f8f6;
+      }
+      @media (prefers-color-scheme: dark) {
+        #root:empty::before {
+          color: rgba(255, 255, 255, 0.85);
+          background: #0b0b0b;
+        }
+      }
+    </style>
     <script>
       // Instant app-store redirect for /get, /download, /app — runs before React,
       // so users never see the landing page flash.
@@ -128,7 +168,6 @@
             var isAndroid = /android/i.test(ua);
             var isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
             location.replace(isAndroid ? android : isIOS ? ios : ios);
-            // Stop the rest of the page from booting React
             throw new Error('redirecting');
           }
         } catch (e) {}
@@ -142,10 +181,24 @@
         try {
           if (location.pathname.replace(/\/+$/, '') === '/quick-add') {
             var s = document.createElement('style');
-            s.textContent = 'html,body,#root{background:transparent!important;background-color:transparent!important;}';
+            s.textContent = 'html,body,#root{background:transparent!important;background-color:transparent!important;}#root:empty::before{display:none!important;}';
             document.head.appendChild(s);
             document.documentElement.style.background = 'transparent';
             document.body.style.background = 'transparent';
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script>
+      // Persisted theme (dark-mode) sync BEFORE first paint so the cold-start
+      // background matches the app's final color instead of the light default.
+      (function () {
+        try {
+          var saved = localStorage.getItem('flowist_dark_mode');
+          var dark = saved === 'true' || (saved == null && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) {
+            document.documentElement.style.background = '#0b0b0b';
+            document.body && (document.body.style.background = '#0b0b0b');
           }
         } catch (e) {}
       })();
