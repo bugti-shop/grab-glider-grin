@@ -116,12 +116,12 @@
 </head>
   <body>
     <style>
-      html, body {
+      /* First render must be completely blank/transparent — no pinned bg,
+         no theme sync. React paints the real background when it mounts. */
+      html, body, #root {
         margin: 0;
-        min-height: 100vh;
-        min-height: 100dvh;
-      }
-      #root {
+        background: transparent !important;
+        background-color: transparent !important;
         min-height: 100vh;
         min-height: 100dvh;
       }
