@@ -153,6 +153,7 @@ const Settings = () => {
                   <button
                     onClick={row.onClick}
                     disabled={row.label === 'Sync & Backup' && isBackingUp}
+                    data-tour={row.dataTour}
                     className="w-full flex items-center gap-3 pl-3 pr-4 py-[9px] active:bg-black/[0.04] dark:active:bg-white/[0.06] transition-colors disabled:opacity-60"
                   >
                     <span
