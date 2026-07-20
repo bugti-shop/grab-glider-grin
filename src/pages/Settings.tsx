@@ -51,21 +51,21 @@ const Settings = () => {
         { label: 'General', icon: SettingsIcon, color: '#8E8E93', onClick: () => setShowHeaderOffsetSheet(true) },
         { label: 'Appearance', icon: Brush, color: '#AF52DE', onClick: () => state.setShowThemeDialog(true) },
         { label: 'Language', icon: Globe, color: '#007AFF', onClick: () => state.setShowLanguageDialog(true) },
-        { label: 'Note Type Visibility', icon: Eye, color: '#5AC8CE', showCrown: true, onClick: () => { if (requireFeature('notes_type_visibility')) state.setShowNoteTypeVisibilitySheet(true); } },
-        { label: 'Notes Settings', icon: StickyNote, color: '#FF9500', showCrown: true, onClick: () => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); } },
+        { label: 'Note Type Visibility', icon: Eye, color: '#5AC8CE', onClick: () => { if (requireFeature('notes_type_visibility')) state.setShowNoteTypeVisibilitySheet(true); } },
+        { label: 'Notes Settings', icon: StickyNote, color: '#FF9500', onClick: () => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); } },
       ],
     },
     {
       rows: [
-        { label: 'Tasks', icon: ClipboardCheck, color: '#34C759', showCrown: true, onClick: () => { if (requireFeature('tasks_settings')) state.setShowTasksSettingsSheet(true); } },
+        { label: 'Tasks', icon: ClipboardCheck, color: '#34C759', onClick: () => { if (requireFeature('tasks_settings')) state.setShowTasksSettingsSheet(true); } },
         { label: 'Calendar', icon: CalendarIcon, color: '#FF3B30', onClick: () => navigate('/calendar') },
-        { label: 'Customize Navigation', icon: Compass, color: '#5856D6', showCrown: true, onClick: () => state.setShowCustomizeNavigationSheet(true) },
+        { label: 'Customize Navigation', icon: Compass, color: '#5856D6', onClick: () => state.setShowCustomizeNavigationSheet(true) },
       ],
     },
     {
       rows: [
         { label: 'Accessibility', icon: AccessibilityIcon, color: '#FF2D92', onClick: () => setShowAccessibilityZoomSheet(true) },
-        { label: 'App Lock', icon: Lock, color: '#FF3B30', showCrown: true, onClick: () => { if (requireFeature('app_lock')) state.setShowAppLockSettingsSheet(true); } },
+        { label: 'App Lock', icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) state.setShowAppLockSettingsSheet(true); } },
         { label: 'Notifications', icon: Bell, color: '#FFCC00', onClick: () => toast.info('Manage notifications from your device settings') },
       ],
     },
