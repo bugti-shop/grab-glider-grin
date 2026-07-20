@@ -59,9 +59,7 @@ interface FolderManagerProps {
   onOpenManageFolders?: () => void;
 }
 
-const folderColors = [
-  '#3c78f0', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'
-];
+import { FOLDER_COLOR_PALETTE as folderColors } from '@/utils/folderColorPalette';
 
 const CLICKS_TO_SHOW_ACTIONS = 3;
 
