@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { FOLDER_COLOR_PALETTE } from '@/utils/folderColorPalette';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
