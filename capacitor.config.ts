@@ -12,12 +12,12 @@ const config: CapacitorConfig = {
     // for warm resumes (background → foreground), matching WhatsApp behavior.
     SplashScreen: {
       launchAutoHide: true,
-      launchShowDuration: 1200,
-      launchFadeOutDuration: 250,
+      launchShowDuration: 300,
+      launchFadeOutDuration: 150,
       showSpinner: false,
       autoHide: true,
       fadeInDuration: 0,
-      fadeOutDuration: 250,
+      fadeOutDuration: 150,
       backgroundColor: '#f8f8f6',
       backgroundColorDark: '#0b0b0b',
       splashImmersive: false,

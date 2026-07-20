@@ -264,12 +264,11 @@ const renderApp = () => {
   );
 
   if (Capacitor.isNativePlatform()) {
-    // Cold-start only: let the branded splash breathe briefly, then fade out.
-    // Warm resumes never trigger the splash (native OS behavior), so this
-    // matches WhatsApp-style UX — no splash when reopening from background.
+    // Cold-start only: brief branded splash, then quick fade. Warm resumes
+    // never show splash (native OS behavior) — WhatsApp-style.
     setTimeout(() => {
-      SplashScreen.hide({ fadeOutDuration: 250 }).catch(() => {});
-    }, 900);
+      SplashScreen.hide({ fadeOutDuration: 150 }).catch(() => {});
+    }, 250);
   }
 
 };
