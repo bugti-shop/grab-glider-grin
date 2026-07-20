@@ -136,34 +136,32 @@ const Settings = () => {
               const Icon = row.icon;
               const isLast = ri === group.rows.length - 1;
               return (
-                <button
-                  key={row.label}
-                  onClick={row.onClick}
-                  disabled={row.label === 'Sync & Backup' && isBackingUp}
-                  className="w-full flex items-center gap-3 pl-3 pr-4 py-[9px] active:bg-black/[0.04] dark:active:bg-white/[0.06] transition-colors disabled:opacity-60"
-                >
-                  <span
-                    className="flex items-center justify-center rounded-[7px] shrink-0"
-                    style={{ backgroundColor: row.color, width: 29, height: 29 }}
+                <div key={row.label} className="relative">
+                  <button
+                    onClick={row.onClick}
+                    disabled={row.label === 'Sync & Backup' && isBackingUp}
+                    className="w-full flex items-center gap-3 pl-3 pr-4 py-[9px] active:bg-black/[0.04] dark:active:bg-white/[0.06] transition-colors disabled:opacity-60"
                   >
-                    <Icon className="h-[17px] w-[17px] text-white" />
-                  </span>
-                  <span className="flex-1 min-w-0 flex items-center">
-                    <span className="text-[17px] text-black dark:text-white text-left truncate">
-                      {row.label}
-                    </span>
-                    {row.showCrown && !isProSub && (
-                      <Crown className="h-[13px] w-[13px] ml-1.5 shrink-0" fill="#FFD700" color="#FFD700" />
-                    )}
-                  </span>
-                  <ChevronRight className="h-[18px] w-[18px] text-[#C7C7CC] shrink-0" />
-                  {!isLast && (
                     <span
-                      className="absolute left-[56px] right-0 border-b border-[#E5E5EA] dark:border-[#38383A]"
-                      style={{ position: 'absolute', bottom: 0 }}
-                    />
+                      className="flex items-center justify-center rounded-[7px] shrink-0"
+                      style={{ backgroundColor: row.color, width: 29, height: 29 }}
+                    >
+                      <Icon className="h-[17px] w-[17px] text-white" />
+                    </span>
+                    <span className="flex-1 min-w-0 flex items-center">
+                      <span className="text-[17px] text-black dark:text-white text-left truncate">
+                        {row.label}
+                      </span>
+                      {row.showCrown && !isProSub && (
+                        <Crown className="h-[13px] w-[13px] ml-1.5 shrink-0" fill="#FFD700" color="#FFD700" />
+                      )}
+                    </span>
+                    <ChevronRight className="h-[18px] w-[18px] text-[#C7C7CC] shrink-0" />
+                  </button>
+                  {!isLast && (
+                    <div className="absolute left-[52px] right-0 bottom-0 h-px bg-[#E5E5EA] dark:bg-[#38383A]" />
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
