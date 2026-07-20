@@ -911,11 +911,7 @@ const AppContent = () => {
     </>
   );
 };
-        </>
-      )}
-    </>
-  );
-};
+
 
 // Deferred sync hooks - lazy loaded after first paint
 const DeferredSyncInit = () => {
