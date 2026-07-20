@@ -4,7 +4,7 @@
 //   then drives step-by-step with Flowist-branded popovers.
 // - Skip / Next / "Don't show again" all persist via TourStateStore.
 
-import { driver, type Driver, type DriveStep, type Config as DriverConfig, type PopoverDOM } from 'driver.js';
+import { driver, type Driver, type DriveStep, type Config as DriverConfig } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
 /**
@@ -32,10 +32,6 @@ function sweepStaleDriverDom() {
     document.body.classList.remove('driver-active', 'driver-fade');
   } catch {}
 }
-
-const TOUR_PORTAL_Z_INDEX = 2147483647;
-const TOUR_OVERLAY_Z_INDEX = TOUR_PORTAL_Z_INDEX - 2;
-const TOUR_VIEWPORT_MARGIN = 12;
 
 function mountSingletonDriver(config: DriverConfig): Driver {
   // Tear down any previously-live instance BEFORE constructing a new one.
@@ -253,9 +249,6 @@ class TourManagerImpl {
     let suppressDestroy = false;
     let currentIndex = 0;
     let currentDrv: Driver | null = null;
-    let disposeStepA11y: (() => void) | null = null;
-    let disposePopoverPositioning: (() => void) | null = null;
-    let disposeTargetEvents: (() => void) | null = null;
     const forced = this.forcedActive;
 
     // If this tour is part of the onboarding chain, teach the popover that
@@ -264,9 +257,6 @@ class TourManagerImpl {
     const inChain = !!chainedNextId;
 
     const finalize = async (opts: { advanceChain?: boolean } = {}) => {
-      try { disposeTargetEvents?.(); disposeTargetEvents = null; } catch {}
-      try { disposePopoverPositioning?.(); disposePopoverPositioning = null; } catch {}
-      try { disposeStepA11y?.(); disposeStepA11y = null; } catch {}
       try { delete document.body.dataset.tourActive; } catch {}
       try { delete document.body.dataset.tourId; } catch {}
       try { delete document.body.dataset.tourForced; } catch {}
@@ -321,24 +311,20 @@ class TourManagerImpl {
         // Forced tours cannot be dismissed by ✕ or overlay tap — user must
         // walk through every step.
         allowClose: !forced,
-        // Block clicks on the highlighted target UNLESS this step is
-        // "interactive" — those tours want the user to actually tap the
-        // target (Switch to Notes / New Note / Add Notebook) to advance.
-        disableActiveInteraction: !step?.interactive,
-        overlayOpacity: 0,
-        overlayColor: 'transparent',
+        // Block clicks on the highlighted target too — during the mini sheet
+        // only the "Next" button should be interactive. Prevents the user
+        // from firing Create Note / Create Task / Create Notebook / etc.
+        // by tapping the pulsing element behind the popover.
+        disableActiveInteraction: true,
+        overlayOpacity: 0.55,
         stagePadding: 6,
         stageRadius: 10,
         smoothScroll: true,
         popoverClass: forced ? 'flowist-tour-popover flowist-tour-forced' : 'flowist-tour-popover',
-        popoverOffset: 8,
         showButtons: buttons,
         nextBtnText: nextLabel,
         doneBtnText: nextLabel,
         prevBtnText: 'Back',
-        onPopoverRender: (popover: PopoverDOM) => {
-          this.prepareTourPopoverPortal(popover.wrapper);
-        },
         steps: [this.toDriverStep(step)],
         onPrevClick: canGoBack
           ? () => {
@@ -347,7 +333,7 @@ class TourManagerImpl {
                 suppressDestroy = true;
                 try { currentDrv?.destroy(); } catch {}
                 this.activeDriver = null;
-                void runStep(stepIndex - 1);
+                runStep(stepIndex - 1);
                 return;
               }
               // First step: jump back to the previous tour in the onboarding
@@ -384,7 +370,7 @@ class TourManagerImpl {
               suppressDestroy = true;
               try { currentDrv?.destroy(); } catch {}
               this.activeDriver = null;
-              void runStep(stepIndex + 1);
+              runStep(stepIndex + 1);
             },
         onDestroyed: async () => {
           if (suppressDestroy) {
@@ -394,7 +380,7 @@ class TourManagerImpl {
           // Forced tours refuse dismissal: re-mount the same step instead of
           // ending the tour.
           if (forced && this.activeTourId === tourId) {
-            setTimeout(() => { void runStep(currentIndex); }, 60);
+            setTimeout(() => runStep(currentIndex), 60);
             return;
           }
           await finalize();
@@ -402,58 +388,21 @@ class TourManagerImpl {
       });
     };
 
-    const runStep = async (stepIndex: number) => {
+    const runStep = (stepIndex: number) => {
       currentIndex = stepIndex;
-      const step = tour.steps[stepIndex];
-      let handledInteractiveActivation = false;
-      const target = step ? await this.waitForSelector(step.elementSelector, TOUR_TARGET_WAIT_MS) : null;
-      if (!target) {
-        void finalize();
-        return;
-      }
-      await this.scrollElementIntoView(target, step.scrollBlock ?? 'center');
-      if (this.activeTourId !== tourId) return;
       const drv = buildDriver(stepIndex);
       currentDrv = drv;
       this.activeDriver = drv;
       try {
         drv.drive();
       } catch {
-        void finalize();
-        return;
+        finalize();
       }
-      // Tear down the previous step's a11y wiring before installing the new one.
-      try { disposePopoverPositioning?.(); } catch {}
-      disposePopoverPositioning = target instanceof HTMLElement
-        ? this.installPopoverPositionGuard(drv, target)
-        : null;
-      try { disposeStepA11y?.(); } catch {}
-      disposeStepA11y = this.enhancePopoverA11y({
-        titleId: `flowist-tour-title-${tourId}-${stepIndex}`,
-        descId: `flowist-tour-desc-${tourId}-${stepIndex}`,
-        forced,
-        target: target instanceof HTMLElement ? target : null,
-        interactive: !!step?.interactive,
-        onTargetActivate: step?.interactive
-          ? () => {
-              if (handledInteractiveActivation) return;
-              handledInteractiveActivation = true;
-              try { this.simulateActivation(target as HTMLElement); } catch {}
-            }
-          : undefined,
-        onClose: () => {
-          if (forced) return;
-          const closeBtn = document.querySelector<HTMLElement>('.driver-popover .driver-popover-close-btn');
-          if (closeBtn) closeBtn.click();
-          else { try { currentDrv?.destroy(); } catch {} }
-        },
-      });
     };
 
-    this.remountCurrentStep = () => { void runStep(currentIndex); };
+    this.remountCurrentStep = () => runStep(currentIndex);
 
-
-    void runStep(0);
+    runStep(0);
 
     // Forced-mode watchdog: (a) if the user navigates away from the tour's
     // route, snap them back; (b) if the current step's target disappears
@@ -508,36 +457,28 @@ class TourManagerImpl {
           suppressDestroy = true;
           try { currentDrv?.destroy(); } catch {}
           this.activeDriver = null;
-          void runStep(currentIndex);
+          runStep(currentIndex);
         }
       }, 700);
     }
 
 
-    // Global target handler: interactive step → capture pointerdown AND click
-    // so Radix/route-opening controls cannot race the driver overlay teardown.
-    // Non-interactive background clicks still dismiss regular tours.
-    let handledInteractiveKey: string | null = null;
-    const handleInteractiveActivation = (ev: Event, source: 'pointerdown' | 'click' | 'keyboard'): boolean => {
-      if (!this.activeDriver) return false;
+    // Global click handler: interactive step → advance to next by tearing
+    // down the current per-step driver and mounting a fresh one on the new
+    // target. Non-interactive step → dismiss so tour UI doesn't linger.
+    const onTargetClick = (ev: MouseEvent) => {
+      if (!this.activeDriver) return;
       const target = ev.target as Element | null;
-      if (!target) return false;
-      if (target.closest('.driver-popover')) return false;
+      if (!target) return;
+      if (target.closest('.driver-popover')) return;
 
       const idx = currentIndex;
       const currentStep = tour.steps[idx];
-      if (!currentStep?.interactive) return false;
+      if (!currentStep) return;
       const sel = currentStep.elementSelector;
-      if (!sel || !target.closest(sel)) return false;
+      if (!sel || !target.closest(sel)) return;
 
-      const key = `${tourId}:${idx}:${sel}`;
-      if (handledInteractiveKey === key) return true;
-      handledInteractiveKey = key;
-      window.setTimeout(() => {
-        if (handledInteractiveKey === key) handledInteractiveKey = null;
-      }, 900);
-
-      if (idx < tour.steps.length - 1) {
+      if (currentStep.interactive && idx < tour.steps.length - 1) {
         const nextStep = tour.steps[idx + 1];
         // Immediately kill the current popover so it doesn't cover the
         // sheet/menu the user just opened. Suppress the destroy side-effect
@@ -552,43 +493,16 @@ class TourManagerImpl {
             finalize();
             return;
           }
-          void runStep(idx + 1);
+          runStep(idx + 1);
         });
       } else {
-        // Last step of a single/multi-step tour, and the target itself is
-        // the "action" (Switch to Notes / + New Note / + Notebook). Treat
-        // the tap as chain-advance instead of destroy-then-forced-remount,
-        // which would ping-pong against the forced-mode route watchdog.
-        suppressDestroy = true;
-        try { currentDrv?.destroy(); } catch {}
-        this.activeDriver = null;
-        void finalize({ advanceChain: inChain });
-      }
-      return true;
-    };
-    const onTargetClick = (ev: MouseEvent) => {
-      if (handleInteractiveActivation(ev, 'click')) return;
-      if (!this.activeDriver) return;
-      const target = ev.target as Element | null;
-      if (!target || target.closest('.driver-popover')) return;
-      const currentStep = tour.steps[currentIndex];
-      if (!currentStep?.elementSelector || !target.closest(currentStep.elementSelector)) return;
-      if (!forced) {
         try { currentDrv?.destroy(); } catch {}
       }
     };
-    const onTargetPointerDown = (ev: PointerEvent) => {
-      handleInteractiveActivation(ev, 'pointerdown');
-    };
-    window.addEventListener('pointerdown', onTargetPointerDown, { capture: true, passive: true });
     window.addEventListener('click', onTargetClick, true);
-    const cleanup = () => {
-      window.removeEventListener('click', onTargetClick, true);
-      window.removeEventListener('pointerdown', onTargetPointerDown, true);
-    };
-    disposeTargetEvents = cleanup;
+    const cleanup = () => window.removeEventListener('click', onTargetClick, true);
     const check = setInterval(() => {
-      if (!this.activeDriver || this.activeTourId !== tourId) { cleanup(); clearInterval(check); }
+      if (!this.activeDriver) { cleanup(); clearInterval(check); }
     }, 500);
   }
 
@@ -728,376 +642,15 @@ class TourManagerImpl {
     const elements = Array.from(document.querySelectorAll(selector));
     return elements.find((el) => {
       if (!(el instanceof HTMLElement)) return true;
-      let node: HTMLElement | null = el;
-      while (node && node !== document.body) {
-        const style = window.getComputedStyle(node);
-        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-        node = node.parentElement;
-      }
-      const isJsdom = typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent || '');
-      if (!isJsdom) {
-        const rect = el.getBoundingClientRect();
-        if (rect.width <= 0 || rect.height <= 0 || el.getClientRects().length === 0) return false;
-      }
+      const style = window.getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
       return true;
     }) ?? null;
-  }
-
-  private async scrollElementIntoView(el: Element, block: ScrollLogicalPosition = 'center') {
-    if (!(el instanceof HTMLElement)) return;
-    // Walk up every scrollable ancestor and center the element inside it.
-    // Needed for pages like Settings where the real scroll container is a
-    // nested <div class="overflow-y-auto"> rather than window.
-    const scrollAncestors: HTMLElement[] = [];
-    let node: HTMLElement | null = el.parentElement;
-    while (node && node !== document.body && node !== document.documentElement) {
-      const cs = window.getComputedStyle(node);
-      const oy = cs.overflowY;
-      if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && node.scrollHeight > node.clientHeight + 4) {
-        scrollAncestors.push(node);
-      }
-      node = node.parentElement;
-    }
-    for (const container of scrollAncestors) {
-      const cRect = container.getBoundingClientRect();
-      const eRect = el.getBoundingClientRect();
-      const delta = (eRect.top + eRect.height / 2) - (cRect.top + cRect.height / 2);
-      if (Math.abs(delta) > 24) {
-        try { container.scrollBy({ top: delta, behavior: 'smooth' }); } catch { container.scrollTop += delta; }
-      }
-    }
-    // Also handle the page-level scroll (window) via the browser API.
-    const rect = el.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-      const safeTop = 96;
-      const safeBottom = Math.max(safeTop, viewportHeight - 140);
-      if (rect.top < safeTop || rect.bottom > safeBottom) {
-        try { el.scrollIntoView({ behavior: 'smooth', block, inline: 'nearest' }); }
-        catch { try { el.scrollIntoView(true); } catch {} }
-      }
-    }
-    // Wait long enough for smooth-scroll to settle before driver.js measures
-    // the highlight rect — otherwise the popover lands on the pre-scroll
-    // position (visible bug on Settings → App Lock / Note Type Visibility).
-    await this.wait(420);
   }
 
   private wait(ms: number) {
     return new Promise<void>((resolve) => setTimeout(resolve, ms));
   }
-
-  private prepareTourPopoverPortal(popover: HTMLElement | null) {
-    if (typeof document === 'undefined' || !popover) return;
-    try {
-      if (popover.parentElement !== document.body) document.body.appendChild(popover);
-      popover.style.position = 'fixed';
-      popover.style.zIndex = String(TOUR_PORTAL_Z_INDEX);
-      popover.style.pointerEvents = 'auto';
-      popover.style.boxSizing = 'border-box';
-      popover.style.isolation = 'isolate';
-      popover.style.maxWidth = `min(320px, calc(100vw - ${TOUR_VIEWPORT_MARGIN * 2}px))`;
-      popover.style.maxHeight = `calc(100dvh - ${TOUR_VIEWPORT_MARGIN * 2}px)`;
-      popover.style.overflowY = 'auto';
-      popover.style.overscrollBehavior = 'contain';
-      document.querySelectorAll<HTMLElement>('.driver-overlay').forEach((overlay) => {
-        overlay.style.position = 'fixed';
-        overlay.style.zIndex = String(TOUR_OVERLAY_Z_INDEX);
-        overlay.style.inset = '0';
-      });
-    } catch {}
-  }
-
-  /**
-   * driver.js only refreshes on window scroll/resize. Flowist pages often use
-   * nested scroll panes and Radix portals, so the mini-sheet can drift off-screen
-   * after a sheet opens, route settles, keyboard appears, or an inner pane scrolls.
-   * Keep the popover body-portaled, fixed, and clamped inside the visual viewport.
-   */
-  private installPopoverPositionGuard(driverInstance: Driver, target: HTMLElement): () => void {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return () => {};
-
-    let disposed = false;
-    let raf = 0;
-    const scrollParents = this.getScrollableAncestors(target);
-    const visualViewport = window.visualViewport ?? null;
-
-    const clampPopoverToViewport = () => {
-      if (disposed) return;
-      const popover = document.querySelector<HTMLElement>('.flowist-tour-popover.driver-popover, .driver-popover');
-      if (!popover) return;
-      this.prepareTourPopoverPortal(popover);
-
-      const viewportLeft = visualViewport?.offsetLeft ?? 0;
-      const viewportTop = visualViewport?.offsetTop ?? 0;
-      const viewportWidth = visualViewport?.width ?? window.innerWidth;
-      const viewportHeight = visualViewport?.height ?? window.innerHeight;
-      const minLeft = viewportLeft + TOUR_VIEWPORT_MARGIN;
-      const minTop = viewportTop + TOUR_VIEWPORT_MARGIN;
-      const maxRight = viewportLeft + viewportWidth - TOUR_VIEWPORT_MARGIN;
-      const maxBottom = viewportTop + viewportHeight - TOUR_VIEWPORT_MARGIN;
-
-      popover.style.maxWidth = `${Math.max(220, viewportWidth - TOUR_VIEWPORT_MARGIN * 2)}px`;
-      popover.style.maxHeight = `${Math.max(180, viewportHeight - TOUR_VIEWPORT_MARGIN * 2)}px`;
-
-      const rect = popover.getBoundingClientRect();
-      let dx = 0;
-      let dy = 0;
-      if (rect.left < minLeft) dx = minLeft - rect.left;
-      else if (rect.right > maxRight) dx = maxRight - rect.right;
-      if (rect.top < minTop) dy = minTop - rect.top;
-      else if (rect.bottom > maxBottom) dy = maxBottom - rect.bottom;
-
-      if (dx !== 0) {
-        const left = Number.parseFloat(popover.style.left || '');
-        const right = Number.parseFloat(popover.style.right || '');
-        if (Number.isFinite(left)) popover.style.left = `${left + dx}px`;
-        else if (Number.isFinite(right)) popover.style.right = `${right - dx}px`;
-        else popover.style.left = `${rect.left + dx}px`;
-      }
-      if (dy !== 0) {
-        const top = Number.parseFloat(popover.style.top || '');
-        const bottom = Number.parseFloat(popover.style.bottom || '');
-        if (Number.isFinite(top)) popover.style.top = `${top + dy}px`;
-        else if (Number.isFinite(bottom)) popover.style.bottom = `${bottom - dy}px`;
-        else popover.style.top = `${rect.top + dy}px`;
-      }
-    };
-
-    const scheduleRefresh = () => {
-      if (disposed) return;
-      if (raf) window.cancelAnimationFrame(raf);
-      raf = window.requestAnimationFrame(() => {
-        raf = 0;
-        try { driverInstance.refresh(); } catch {}
-        window.requestAnimationFrame(clampPopoverToViewport);
-      });
-    };
-
-    const observer = new MutationObserver(scheduleRefresh);
-    try { observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'data-state'] }); } catch {}
-    window.addEventListener('resize', scheduleRefresh, { passive: true });
-    window.addEventListener('scroll', scheduleRefresh, { passive: true, capture: true });
-    visualViewport?.addEventListener('resize', scheduleRefresh, { passive: true });
-    visualViewport?.addEventListener('scroll', scheduleRefresh, { passive: true });
-    scrollParents.forEach((parent) => parent.addEventListener('scroll', scheduleRefresh, { passive: true }));
-
-    // Run after driver.js initial measurement + after async route/sheet layout settles.
-    scheduleRefresh();
-    window.setTimeout(scheduleRefresh, 80);
-    window.setTimeout(scheduleRefresh, 260);
-
-    return () => {
-      disposed = true;
-      if (raf) window.cancelAnimationFrame(raf);
-      try { observer.disconnect(); } catch {}
-      window.removeEventListener('resize', scheduleRefresh);
-      window.removeEventListener('scroll', scheduleRefresh, true);
-      visualViewport?.removeEventListener('resize', scheduleRefresh);
-      visualViewport?.removeEventListener('scroll', scheduleRefresh);
-      scrollParents.forEach((parent) => parent.removeEventListener('scroll', scheduleRefresh));
-    };
-  }
-
-  private getScrollableAncestors(el: HTMLElement): HTMLElement[] {
-    const ancestors: HTMLElement[] = [];
-    let node: HTMLElement | null = el.parentElement;
-    while (node && node !== document.body && node !== document.documentElement) {
-      const style = window.getComputedStyle(node);
-      const overflowY = style.overflowY;
-      const overflowX = style.overflowX;
-      const scrollableY = ['auto', 'scroll', 'overlay'].includes(overflowY) && node.scrollHeight > node.clientHeight + 2;
-      const scrollableX = ['auto', 'scroll', 'overlay'].includes(overflowX) && node.scrollWidth > node.clientWidth + 2;
-      if (scrollableY || scrollableX) ancestors.push(node);
-      node = node.parentElement;
-    }
-    return ancestors;
-  }
-
-  /**
-   * Wire up accessibility + keyboard navigation on the current driver.js
-   * popover:
-   *   - role="dialog", aria-modal, labelled/described by the title/desc IDs
-   *     so screen readers announce the coach mark as it appears.
-   *   - Move focus to the primary action (Next / Got it) on mount, remember
-   *     the previously-focused element, restore it on teardown.
-   *   - Trap Tab focus inside the popover so keyboard users can't wander
-   *     into the (interaction-disabled) page behind it.
-   *   - Enter/Space activates the focused button (native), ArrowRight → Next,
-   *     ArrowLeft → Back, Escape → Close (when not forced).
-   */
-  private enhancePopoverA11y(config: {
-    titleId: string;
-    descId: string;
-    forced: boolean;
-    target?: HTMLElement | null;
-    interactive?: boolean;
-    onTargetActivate?: () => void;
-    onClose: () => void;
-  }): () => void {
-    if (typeof document === 'undefined') return () => {};
-    const prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    let cancelled = false;
-    let popover: HTMLElement | null = null;
-    let onKeyDown: ((ev: KeyboardEvent) => void) | null = null;
-    let onFocusIn: ((ev: FocusEvent) => void) | null = null;
-    const targetEl = config.target && document.contains(config.target) ? config.target : null;
-    const previousTargetTabIndex = targetEl?.getAttribute('tabindex') ?? null;
-    const hadTargetTabIndex = !!targetEl?.hasAttribute('tabindex');
-    const previousTargetDescribedBy = targetEl?.getAttribute('aria-describedby') ?? null;
-
-    // driver.js mounts the popover on the next microtask; poll briefly.
-    const attach = (attempts: number) => {
-      if (cancelled) return;
-      popover = document.querySelector<HTMLElement>('.driver-popover');
-      if (!popover) {
-        if (attempts <= 0) return;
-        window.setTimeout(() => attach(attempts - 1), 30);
-        return;
-      }
-      // ARIA semantics for screen readers.
-      popover.setAttribute('role', 'dialog');
-      popover.setAttribute('aria-modal', 'true');
-      const titleEl = popover.querySelector<HTMLElement>('.driver-popover-title');
-      const descEl = popover.querySelector<HTMLElement>('.driver-popover-description');
-      if (titleEl) {
-        titleEl.id = config.titleId;
-        popover.setAttribute('aria-labelledby', config.titleId);
-      }
-      if (descEl) {
-        descEl.id = config.descId;
-        popover.setAttribute('aria-describedby', config.descId);
-      }
-      const nextBtn = popover.querySelector<HTMLElement>('.driver-popover-next-btn');
-      const prevBtn = popover.querySelector<HTMLElement>('.driver-popover-prev-btn');
-      const closeBtn = popover.querySelector<HTMLElement>('.driver-popover-close-btn');
-      if (nextBtn && !nextBtn.hasAttribute('aria-label')) nextBtn.setAttribute('aria-label', nextBtn.textContent?.trim() || 'Next');
-      if (prevBtn && !prevBtn.hasAttribute('aria-label')) prevBtn.setAttribute('aria-label', 'Back');
-      if (closeBtn && !closeBtn.hasAttribute('aria-label')) closeBtn.setAttribute('aria-label', 'Close tutorial');
-
-      if (targetEl) {
-        if (!this.isNaturallyFocusable(targetEl) && !targetEl.hasAttribute('tabindex')) {
-          targetEl.setAttribute('tabindex', '-1');
-        }
-        targetEl.setAttribute('data-flowist-tour-focused', 'true');
-        const describedBy = [previousTargetDescribedBy, config.descId].filter(Boolean).join(' ');
-        if (describedBy) targetEl.setAttribute('aria-describedby', describedBy);
-      }
-
-      // Move focus to the actual highlighted row/control first. This makes
-      // App Lock, Note Type Visibility, and Settings rows receive real focus
-      // before keyboard users tab into Back / Next controls.
-      try { (targetEl ?? nextBtn ?? popover).focus({ preventScroll: true }); } catch {}
-
-      const focusables = (): HTMLElement[] => {
-        if (!popover) return [];
-        return Array.from(
-          popover.querySelectorAll<HTMLElement>(
-            'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
-          ),
-        ).filter((el) => el.offsetParent !== null || el === document.activeElement);
-      };
-
-      onKeyDown = (ev: KeyboardEvent) => {
-        if (!popover) return;
-        const active = document.activeElement as HTMLElement | null;
-        const targetHasFocus = !!(targetEl && active === targetEl);
-        if (ev.key === 'Tab') {
-          const list = targetEl ? [targetEl, ...focusables()] : focusables();
-          if (list.length === 0) { ev.preventDefault(); return; }
-          const first = list[0];
-          const last = list[list.length - 1];
-          const currentIdx = active ? list.indexOf(active) : -1;
-          if (currentIdx === -1) {
-            ev.preventDefault();
-            first.focus({ preventScroll: true });
-            return;
-          }
-          if (!ev.shiftKey && targetHasFocus && list[1]) {
-            ev.preventDefault();
-            list[1].focus({ preventScroll: true });
-            return;
-          }
-          if (ev.shiftKey && active === list[1] && targetEl) {
-            ev.preventDefault();
-            targetEl.focus({ preventScroll: true });
-            return;
-          }
-          if (ev.shiftKey && active === first) { ev.preventDefault(); last.focus(); }
-          else if (!ev.shiftKey && active === last) { ev.preventDefault(); first.focus(); }
-          return;
-        }
-        if ((ev.key === 'Enter' || ev.key === ' ') && targetHasFocus) {
-          ev.preventDefault();
-          if (config.interactive) config.onTargetActivate?.();
-          return;
-        }
-        if (ev.key === 'Escape') {
-          if (config.forced) { ev.preventDefault(); return; }
-          ev.preventDefault();
-          config.onClose();
-          return;
-        }
-        if (ev.key === 'ArrowRight') {
-          ev.preventDefault();
-          nextBtn?.click();
-          return;
-        }
-        if (ev.key === 'ArrowLeft') {
-          ev.preventDefault();
-          prevBtn?.click();
-          return;
-        }
-      };
-
-      // Focus trap: if focus escapes the popover (e.g. background click),
-      // pull it back so keyboard users stay inside the dialog.
-      onFocusIn = (ev: FocusEvent) => {
-        if (!popover) return;
-        const t = ev.target as Node | null;
-        if (t && !popover.contains(t) && !(targetEl && targetEl.contains(t))) {
-          const list = focusables();
-          (targetEl ?? list[0] ?? popover).focus({ preventScroll: true } as FocusOptions);
-        }
-      };
-
-      document.addEventListener('keydown', onKeyDown, true);
-      document.addEventListener('focusin', onFocusIn, true);
-    };
-    attach(10);
-
-    return () => {
-      cancelled = true;
-      if (onKeyDown) document.removeEventListener('keydown', onKeyDown, true);
-      if (onFocusIn) document.removeEventListener('focusin', onFocusIn, true);
-      if (targetEl) {
-        try { targetEl.removeAttribute('data-flowist-tour-focused'); } catch {}
-        try {
-          if (hadTargetTabIndex) {
-            if (previousTargetTabIndex !== null) targetEl.setAttribute('tabindex', previousTargetTabIndex);
-          } else {
-            targetEl.removeAttribute('tabindex');
-          }
-          if (previousTargetDescribedBy !== null) targetEl.setAttribute('aria-describedby', previousTargetDescribedBy);
-          else targetEl.removeAttribute('aria-describedby');
-        } catch {}
-      }
-      // Restore focus to whatever was focused before the tour step opened,
-      // if it's still in the DOM and focusable.
-      if (prevFocus && document.contains(prevFocus) && prevFocus !== targetEl) {
-        try { prevFocus.focus({ preventScroll: true }); } catch {}
-      }
-    };
-  }
-
-  private isNaturallyFocusable(el: HTMLElement): boolean {
-    if (el.tabIndex >= 0) return true;
-    const tag = el.tagName.toLowerCase();
-    if (['button', 'input', 'select', 'textarea'].includes(tag)) return !el.hasAttribute('disabled');
-    if (tag === 'a') return el.hasAttribute('href');
-    return false;
-  }
-
 
   private clearActiveTourState() {
     this.activeDriver = null;
