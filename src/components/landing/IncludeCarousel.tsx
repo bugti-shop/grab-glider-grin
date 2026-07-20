@@ -127,22 +127,7 @@ export default function IncludeCarousel({
         </div>
       </div>
 
-      {/* Text card below — swaps to active */}
-      <div className="mt-6 flex justify-center px-5 sm:px-8">
-        <div
-          key={active}
-          className={`w-full max-w-md rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-[0_8px_30px_-12px_rgba(15,23,42,0.15)] ${reduced ? '' : 'animate-in fade-in duration-300'}`}
-        >
-          <h3 className="mb-1.5 text-[18px] font-extrabold tracking-tight text-slate-900 sm:text-[20px]">
-            {items[active].title}
-          </h3>
-          <p className="text-[13.5px] leading-relaxed text-slate-600 sm:text-[14.5px]">
-            {items[active].desc}
-          </p>
-        </div>
-      </div>
-
-      {/* Dots */}
+      {/* Dots — between mockup and text card */}
       <div className="mt-6 flex items-center justify-center gap-2">
         {items.map((_, i) => (
           <button
@@ -156,6 +141,21 @@ export default function IncludeCarousel({
             }}
           />
         ))}
+      </div>
+
+      {/* Text card below — swaps to active */}
+      <div className="mt-6 flex justify-center px-5 sm:px-8">
+        <div
+          key={active}
+          className={`w-full max-w-md rounded-2xl border border-slate-200 bg-white px-6 py-5 text-center shadow-[0_8px_30px_-12px_rgba(15,23,42,0.15)] ${reduced ? '' : 'animate-in fade-in duration-300'}`}
+        >
+          <h3 className="mb-1.5 text-[18px] font-extrabold tracking-tight text-slate-900 sm:text-[20px]">
+            {items[active].title}
+          </h3>
+          <p className="text-[13.5px] leading-relaxed text-slate-600 sm:text-[14.5px]">
+            {items[active].desc}
+          </p>
+        </div>
       </div>
     </div>
   );
