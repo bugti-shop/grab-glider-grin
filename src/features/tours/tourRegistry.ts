@@ -88,9 +88,27 @@ export const FEATURE_TOURS: FeatureTour[] = [
   hint('task-batch-add', 'tasks', 'Add batch tasks', 'Open ⋮ → Add multiple to paste or type many tasks at once.', '/todo/today', { beforeStart: '[data-tour="todo-options-menu"]', target: '[data-tour="todo-menu-batch-tasks"]', side: 'left' }),
 
   // ─── Notes ─────────────────────────────────────────────────────
-  hint('notes-switch-dashboard', 'notes', 'Switch to Notes dashboard', 'Tap the notes icon in the header to jump into your notes workspace.', '/todo/today', { target: '[data-tour="switch-to-notes"]', side: 'bottom' }),
-  hint('notes-create-first', 'notes', 'Create your first note', 'Tap "+" on the Notes dashboard and pick a note type.', '/notesdashboard', { target: '[data-tour="new-note-button"]' }),
-  hint('notes-create-notebook', 'notes', 'Create your first notebook', 'Open the Notebooks tab and tap "+" to create a color-coded notebook.', '/notebooks', { target: '[data-tour="add-notebook"]' }),
+  {
+    id: 'notes-switch-dashboard', category: 'notes',
+    title: 'Switch to Notes dashboard',
+    shortDescription: 'Tap the notes icon in the header to jump into your notes workspace.',
+    route: '/todo/today', trigger: 'manual-only',
+    steps: [{ elementSelector: '[data-tour="switch-to-notes"]', title: 'Switch to Notes dashboard', description: 'Tap the notes icon in the header to jump into your notes workspace.', side: 'bottom', optional: true, interactive: true }],
+  },
+  {
+    id: 'notes-create-first', category: 'notes',
+    title: 'Create your first note',
+    shortDescription: 'Tap "+" on the Notes dashboard and pick a note type.',
+    route: '/notesdashboard', trigger: 'manual-only',
+    steps: [{ elementSelector: '[data-tour="new-note-button"]', title: 'Create your first note', description: 'Tap "+" on the Notes dashboard and pick a note type.', side: 'bottom', optional: true, interactive: true }],
+  },
+  {
+    id: 'notes-create-notebook', category: 'notes',
+    title: 'Create your first notebook',
+    shortDescription: 'Open the Notebooks tab and tap "+" to create a color-coded notebook.',
+    route: '/notebooks', trigger: 'manual-only',
+    steps: [{ elementSelector: '[data-tour="add-notebook"]', title: 'Create your first notebook', description: 'Open the Notebooks tab and tap "+" to create a color-coded notebook.', side: 'bottom', optional: true, interactive: true }],
+  },
   hint('notes-sketch', 'notes', 'Add a sketch note', 'Choose the Sketch note type to draw freehand with pens, colors & shapes.', '/notesdashboard', { beforeStart: '[data-tour="new-note-button"]', target: '[data-tour="note-type-sketch"]', side: 'left' }),
   hint('notes-import', 'notes', 'Import notes', 'Bring notes in from Markdown or other apps via the notes ⋮ menu.', '/notesdashboard'),
   hint('notes-scan', 'notes', 'Scan notes from the editor toolbar', 'Inside any note, use the bottom toolbar scan button to capture handwritten pages.', '/notesdashboard', { premium: true, beforeStart: 'event:flowist-tour-open-first-regular-note', target: '[data-tour="editor-toolbar-scan"]', side: 'top' }),

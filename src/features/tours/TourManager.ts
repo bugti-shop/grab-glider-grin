@@ -313,11 +313,10 @@ class TourManagerImpl {
         // Forced tours cannot be dismissed by ✕ or overlay tap — user must
         // walk through every step.
         allowClose: !forced,
-        // Block clicks on the highlighted target too — during the mini sheet
-        // only the "Next" button should be interactive. Prevents the user
-        // from firing Create Note / Create Task / Create Notebook / etc.
-        // by tapping the pulsing element behind the popover.
-        disableActiveInteraction: true,
+        // Block clicks on the highlighted target UNLESS this step is
+        // "interactive" — those tours want the user to actually tap the
+        // target (Switch to Notes / New Note / Add Notebook) to advance.
+        disableActiveInteraction: !step?.interactive,
         overlayOpacity: 0.55,
         stagePadding: 6,
         stageRadius: 10,
@@ -518,12 +517,37 @@ class TourManagerImpl {
           }
           void runStep(idx + 1);
         });
+      } else if (currentStep.interactive) {
+        // Last step of a single/multi-step tour, and the target itself is
+        // the "action" (Switch to Notes / + New Note / + Notebook). Treat
+        // the tap as chain-advance instead of destroy-then-forced-remount,
+        // which would ping-pong against the forced-mode route watchdog.
+        suppressDestroy = true;
+        try { currentDrv?.destroy(); } catch {}
+        this.activeDriver = null;
+        void finalize({ advanceChain: inChain });
       } else {
         try { currentDrv?.destroy(); } catch {}
       }
     };
     window.addEventListener('click', onTargetClick, true);
-    const cleanup = () => window.removeEventListener('click', onTargetClick, true);
+    // Radix triggers open on pointerdown, not click; catch those too so
+    // interactive-step advances fire before Radix navigates the app.
+    const onTargetPointerDown = (ev: PointerEvent) => {
+      if (!this.activeDriver) return;
+      const target = ev.target as Element | null;
+      if (!target || target.closest('.driver-popover')) return;
+      const step = tour.steps[currentIndex];
+      if (!step?.interactive) return;
+      if (!step.elementSelector || !target.closest(step.elementSelector)) return;
+      // Delegate to click-handler logic via a fake click on next tick.
+      setTimeout(() => onTargetClick(ev as unknown as MouseEvent), 0);
+    };
+    window.addEventListener('pointerdown', onTargetPointerDown, true);
+    const cleanup = () => {
+      window.removeEventListener('click', onTargetClick, true);
+      window.removeEventListener('pointerdown', onTargetPointerDown, true);
+    };
     const check = setInterval(() => {
       if (!this.activeDriver) { cleanup(); clearInterval(check); }
     }, 500);
@@ -682,19 +706,42 @@ class TourManagerImpl {
 
   private async scrollElementIntoView(el: Element, block: ScrollLogicalPosition = 'center') {
     if (!(el instanceof HTMLElement)) return;
-    const rect = el.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-    const safeTop = 96;
-    const safeBottom = Math.max(safeTop, viewportHeight - 140);
-    const needsScroll = rect.top < safeTop || rect.bottom > safeBottom;
-    if (!needsScroll) return;
-    try {
-      el.scrollIntoView({ behavior: 'smooth', block, inline: 'nearest' });
-    } catch {
-      try { el.scrollIntoView(true); } catch {}
+    // Walk up every scrollable ancestor and center the element inside it.
+    // Needed for pages like Settings where the real scroll container is a
+    // nested <div class="overflow-y-auto"> rather than window.
+    const scrollAncestors: HTMLElement[] = [];
+    let node: HTMLElement | null = el.parentElement;
+    while (node && node !== document.body && node !== document.documentElement) {
+      const cs = window.getComputedStyle(node);
+      const oy = cs.overflowY;
+      if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && node.scrollHeight > node.clientHeight + 4) {
+        scrollAncestors.push(node);
+      }
+      node = node.parentElement;
     }
-    await this.wait(260);
+    for (const container of scrollAncestors) {
+      const cRect = container.getBoundingClientRect();
+      const eRect = el.getBoundingClientRect();
+      const delta = (eRect.top + eRect.height / 2) - (cRect.top + cRect.height / 2);
+      if (Math.abs(delta) > 24) {
+        try { container.scrollBy({ top: delta, behavior: 'smooth' }); } catch { container.scrollTop += delta; }
+      }
+    }
+    // Also handle the page-level scroll (window) via the browser API.
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const safeTop = 96;
+      const safeBottom = Math.max(safeTop, viewportHeight - 140);
+      if (rect.top < safeTop || rect.bottom > safeBottom) {
+        try { el.scrollIntoView({ behavior: 'smooth', block, inline: 'nearest' }); }
+        catch { try { el.scrollIntoView(true); } catch {} }
+      }
+    }
+    // Wait long enough for smooth-scroll to settle before driver.js measures
+    // the highlight rect — otherwise the popover lands on the pre-scroll
+    // position (visible bug on Settings → App Lock / Note Type Visibility).
+    await this.wait(420);
   }
 
   private wait(ms: number) {
