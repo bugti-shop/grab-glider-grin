@@ -77,7 +77,7 @@ export const useTourBootstrap = () => {
           await setSetting(CHAIN_KEY, true, { skipCloudSync: true });
           window.setTimeout(() => {
             window.dispatchEvent(new CustomEvent('flowist-onboarding:start-chain'));
-          }, 2000);
+          }, 0);
           return;
         }
         const chainStarted = await getSetting<boolean>(CHAIN_KEY, false);
