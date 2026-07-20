@@ -251,9 +251,11 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
       throw new Error(getAiBusyMessage());
     }
     try {
+      const clientIdentifiers = await collectAiClientIdentifiers(customerInfo);
       const { data, error } = await supabase.functions.invoke('ai-extract-receipt', {
         body: {
           imageBase64: dataUrl,
+          clientIdentifiers,
         },
         timeout: AI_SCAN_TIMEOUT_MS,
       });
