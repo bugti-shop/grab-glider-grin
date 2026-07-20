@@ -160,20 +160,6 @@
         } catch (e) {}
       })();
     </script>
-    <script>
-      // Persisted theme (dark-mode) sync BEFORE first paint so the cold-start
-      // background matches the app's final color instead of the light default.
-      (function () {
-        try {
-          var saved = localStorage.getItem('flowist_dark_mode');
-          var dark = saved === 'true' || (saved == null && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          if (dark) {
-            document.documentElement.style.background = '#0b0b0b';
-            document.body && (document.body.style.background = '#0b0b0b');
-          }
-        } catch (e) {}
-      })();
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
