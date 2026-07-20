@@ -22,7 +22,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FOLDER_ICON_NAMES, getChildFolders, getDescendantFolderIds, wouldCreateCycle, getFolderPath } from '@/utils/folderHelpers';
 
-const FOLDER_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
+import { FOLDER_COLOR_PALETTE as FOLDER_COLORS } from '@/utils/folderColorPalette';
 const DEFAULT_ICON = 'Folder';
 
 interface FolderManageSheetProps {

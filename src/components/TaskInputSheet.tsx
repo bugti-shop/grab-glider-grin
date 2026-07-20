@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { genId } from '@/utils/genId';
+import { FOLDER_COLOR_PALETTE } from '@/utils/folderColorPalette';
 import { useTranslation } from 'react-i18next';
 import { TodoItem, Priority, RepeatType, Folder, VoiceRecording, LocationReminder, TaskAttachment } from '@/types/note';
 import { TagManagementSheet } from '@/components/TagManagementSheet';
@@ -344,7 +345,7 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
     openScannerLockRef.current = false;
   }, [isOpen]);
 
-  const folderColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+  const folderColors = FOLDER_COLOR_PALETTE;
 
 
   // Natural language parsing - real-time preview

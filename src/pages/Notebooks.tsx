@@ -35,17 +35,7 @@ import { useFirstVisitTour } from '@/features/tours/useFeatureTour';
 import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';
 import { getAdaptiveOverscan } from '@/utils/virtualizationSettings';
 
-const NOTEBOOK_COLORS = [
-  '#3b82f6', // blue
-  '#22c55e', // green
-  '#f97316', // orange
-  '#ef4444', // red
-  '#a855f7', // purple
-  '#ec4899', // pink
-  '#eab308', // yellow
-  '#14b8a6', // teal
-  '#64748b', // slate
-];
+import { FOLDER_COLOR_PALETTE as NOTEBOOK_COLORS } from '@/utils/folderColorPalette';
 
 const Notebooks = () => {
   const navigate = useNavigate();
