@@ -578,36 +578,19 @@ const AppContent = () => {
   const openPaywallRef = useRef<((feature?: string) => void) | null>(null);
 
   useEffect(() => {
-    // Wait for the paywall's close animation to fully finish (~320ms Radix
-    // dialog + safety buffer) AND set an explicit tour cooldown so any taps
-    // during the fade-out cannot trigger the activity watchdog early.
-    const PAYWALL_CLOSE_ANIMATION_MS = 500;
+    // Instantly kick the feature tutorial chain the moment the paywall closes.
+    // No delays, no cooldowns — the previous "wait for animation" behaviour
+    // caused the tooltip to never appear on some devices.
     const TOUR_COOLDOWN_KEY = 'flowist_tour_cooldown_until_v1';
-    let animTimer: number | null = null;
     const releaseTourAfterPaywall = () => {
-      let pending = false;
-      try { pending = sessionStorage.getItem(ONBOARDING_PAYWALL_PENDING_KEY) === 'true'; } catch {}
-      if (!pending) return;
-      // Extend cooldown immediately so pointerdown during fade-out is ignored.
-      try {
-        sessionStorage.setItem(
-          TOUR_COOLDOWN_KEY,
-          String(Date.now() + PAYWALL_CLOSE_ANIMATION_MS + 250),
-        );
-      } catch {}
-      if (animTimer) { window.clearTimeout(animTimer); animTimer = null; }
-      const finish = () => {
-        const stillOpen = !!document.querySelector('[data-flowist-paywall="open"]');
-        if (stillOpen) { animTimer = window.setTimeout(finish, 120); return; }
-        try { sessionStorage.removeItem(ONBOARDING_PAYWALL_PENDING_KEY); } catch {}
-        try { window.dispatchEvent(new CustomEvent('flowist-onboarding-slides:complete')); } catch {}
-      };
-      animTimer = window.setTimeout(finish, PAYWALL_CLOSE_ANIMATION_MS);
+      try { sessionStorage.removeItem(ONBOARDING_PAYWALL_PENDING_KEY); } catch {}
+      try { sessionStorage.removeItem(TOUR_COOLDOWN_KEY); } catch {}
+      try { window.dispatchEvent(new CustomEvent('flowist-onboarding-slides:complete')); } catch {}
+      try { window.dispatchEvent(new CustomEvent('flowist-onboarding:start-chain')); } catch {}
     };
     window.addEventListener('flowist:paywall-closed', releaseTourAfterPaywall);
     return () => {
       window.removeEventListener('flowist:paywall-closed', releaseTourAfterPaywall);
-      if (animTimer) window.clearTimeout(animTimer);
     };
   }, []);
   useEffect(() => {
