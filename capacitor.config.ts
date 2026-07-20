@@ -8,19 +8,21 @@ const config: CapacitorConfig = {
     cleartext: true
   },
   plugins: {
+    // Cold-start branded splash only. iOS/Android natively skip the splash
+    // for warm resumes (background → foreground), matching WhatsApp behavior.
     SplashScreen: {
       launchAutoHide: true,
-      launchShowDuration: 0,
-      launchFadeOutDuration: 0,
+      launchShowDuration: 1200,
+      launchFadeOutDuration: 250,
       showSpinner: false,
       autoHide: true,
       fadeInDuration: 0,
-      fadeOutDuration: 0,
+      fadeOutDuration: 250,
       backgroundColor: '#f8f8f6',
       backgroundColorDark: '#0b0b0b',
       splashImmersive: false,
       splashFullScreen: false,
-      androidSplashResourceName: 'launch_background',
+      androidSplashResourceName: 'splash',
       useDialog: false,
     },
     // Native Google + Apple sign-in are configured at runtime via
