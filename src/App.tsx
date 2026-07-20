@@ -606,13 +606,13 @@ const AppContent = () => {
         );
       } catch {}
       if (animTimer) { window.clearTimeout(animTimer); animTimer = null; }
-      animTimer = window.setTimeout(() => {
-        // Only release once the paywall is actually unmounted from the DOM.
+      const finish = () => {
         const stillOpen = !!document.querySelector('[data-flowist-paywall="open"]');
-        if (stillOpen) { animTimer = window.setTimeout(arguments.callee as any, 120); return; }
+        if (stillOpen) { animTimer = window.setTimeout(finish, 120); return; }
         try { sessionStorage.removeItem(ONBOARDING_PAYWALL_PENDING_KEY); } catch {}
         try { window.dispatchEvent(new CustomEvent('flowist-onboarding-slides:complete')); } catch {}
-      }, PAYWALL_CLOSE_ANIMATION_MS);
+      };
+      animTimer = window.setTimeout(finish, PAYWALL_CLOSE_ANIMATION_MS);
     };
     window.addEventListener('flowist:paywall-closed', releaseTourAfterPaywall);
     return () => {
