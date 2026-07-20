@@ -333,7 +333,7 @@ class TourManagerImpl {
                 suppressDestroy = true;
                 try { currentDrv?.destroy(); } catch {}
                 this.activeDriver = null;
-                runStep(stepIndex - 1);
+                void runStep(stepIndex - 1);
                 return;
               }
               // First step: jump back to the previous tour in the onboarding
@@ -370,7 +370,7 @@ class TourManagerImpl {
               suppressDestroy = true;
               try { currentDrv?.destroy(); } catch {}
               this.activeDriver = null;
-              runStep(stepIndex + 1);
+              void runStep(stepIndex + 1);
             },
         onDestroyed: async () => {
           if (suppressDestroy) {
@@ -380,7 +380,7 @@ class TourManagerImpl {
           // Forced tours refuse dismissal: re-mount the same step instead of
           // ending the tour.
           if (forced && this.activeTourId === tourId) {
-            setTimeout(() => runStep(currentIndex), 60);
+            setTimeout(() => { void runStep(currentIndex); }, 60);
             return;
           }
           await finalize();
@@ -388,8 +388,15 @@ class TourManagerImpl {
       });
     };
 
-    const runStep = (stepIndex: number) => {
+    const runStep = async (stepIndex: number) => {
       currentIndex = stepIndex;
+      const step = tour.steps[stepIndex];
+      const target = step ? await this.waitForSelector(step.elementSelector, TOUR_TARGET_WAIT_MS) : null;
+      if (!target) {
+        void finalize();
+        return;
+      }
+      await this.scrollElementIntoView(target, step.scrollBlock ?? 'center');
       const drv = buildDriver(stepIndex);
       currentDrv = drv;
       this.activeDriver = drv;
@@ -400,9 +407,9 @@ class TourManagerImpl {
       }
     };
 
-    this.remountCurrentStep = () => runStep(currentIndex);
+    this.remountCurrentStep = () => { void runStep(currentIndex); };
 
-    runStep(0);
+    void runStep(0);
 
     // Forced-mode watchdog: (a) if the user navigates away from the tour's
     // route, snap them back; (b) if the current step's target disappears
@@ -457,7 +464,7 @@ class TourManagerImpl {
           suppressDestroy = true;
           try { currentDrv?.destroy(); } catch {}
           this.activeDriver = null;
-          runStep(currentIndex);
+          void runStep(currentIndex);
         }
       }, 700);
     }
@@ -493,7 +500,7 @@ class TourManagerImpl {
             finalize();
             return;
           }
-          runStep(idx + 1);
+          void runStep(idx + 1);
         });
       } else {
         try { currentDrv?.destroy(); } catch {}
@@ -642,10 +649,36 @@ class TourManagerImpl {
     const elements = Array.from(document.querySelectorAll(selector));
     return elements.find((el) => {
       if (!(el instanceof HTMLElement)) return true;
-      const style = window.getComputedStyle(el);
-      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      let node: HTMLElement | null = el;
+      while (node && node !== document.body) {
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        node = node.parentElement;
+      }
+      const isJsdom = typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent || '');
+      if (!isJsdom) {
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0 || el.getClientRects().length === 0) return false;
+      }
       return true;
     }) ?? null;
+  }
+
+  private async scrollElementIntoView(el: Element, block: ScrollLogicalPosition = 'center') {
+    if (!(el instanceof HTMLElement)) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const safeTop = 96;
+    const safeBottom = Math.max(safeTop, viewportHeight - 140);
+    const needsScroll = rect.top < safeTop || rect.bottom > safeBottom;
+    if (!needsScroll) return;
+    try {
+      el.scrollIntoView({ behavior: 'smooth', block, inline: 'nearest' });
+    } catch {
+      try { el.scrollIntoView(true); } catch {}
+    }
+    await this.wait(260);
   }
 
   private wait(ms: number) {
