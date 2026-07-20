@@ -504,9 +504,9 @@ class TourManagerImpl {
     // Non-interactive background clicks still dismiss regular tours.
     let handledInteractiveKey: string | null = null;
     const handleInteractiveActivation = (ev: Event, source: 'pointerdown' | 'click' | 'keyboard'): boolean => {
-      if (!this.activeDriver) return;
+      if (!this.activeDriver) return false;
       const target = ev.target as Element | null;
-      if (!target) return;
+      if (!target) return false;
       if (target.closest('.driver-popover')) return false;
 
       const idx = currentIndex;
@@ -788,6 +788,9 @@ class TourManagerImpl {
     titleId: string;
     descId: string;
     forced: boolean;
+    target?: HTMLElement | null;
+    interactive?: boolean;
+    onTargetActivate?: () => void;
     onClose: () => void;
   }): () => void {
     if (typeof document === 'undefined') return () => {};
@@ -796,6 +799,10 @@ class TourManagerImpl {
     let popover: HTMLElement | null = null;
     let onKeyDown: ((ev: KeyboardEvent) => void) | null = null;
     let onFocusIn: ((ev: FocusEvent) => void) | null = null;
+    const targetEl = config.target && document.contains(config.target) ? config.target : null;
+    const previousTargetTabIndex = targetEl?.getAttribute('tabindex') ?? null;
+    const hadTargetTabIndex = !!targetEl?.hasAttribute('tabindex');
+    const previousTargetDescribedBy = targetEl?.getAttribute('aria-describedby') ?? null;
 
     // driver.js mounts the popover on the next microtask; poll briefly.
     const attach = (attempts: number) => {
@@ -826,9 +833,19 @@ class TourManagerImpl {
       if (prevBtn && !prevBtn.hasAttribute('aria-label')) prevBtn.setAttribute('aria-label', 'Back');
       if (closeBtn && !closeBtn.hasAttribute('aria-label')) closeBtn.setAttribute('aria-label', 'Close tutorial');
 
-      // Move focus onto the primary action so screen readers announce the
-      // dialog and keyboard users can immediately activate it.
-      try { (nextBtn ?? popover).focus({ preventScroll: true }); } catch {}
+      if (targetEl) {
+        if (!this.isNaturallyFocusable(targetEl) && !targetEl.hasAttribute('tabindex')) {
+          targetEl.setAttribute('tabindex', '-1');
+        }
+        targetEl.setAttribute('data-flowist-tour-focused', 'true');
+        const describedBy = [previousTargetDescribedBy, config.descId].filter(Boolean).join(' ');
+        if (describedBy) targetEl.setAttribute('aria-describedby', describedBy);
+      }
+
+      // Move focus to the actual highlighted row/control first. This makes
+      // App Lock, Note Type Visibility, and Settings rows receive real focus
+      // before keyboard users tab into Back / Next controls.
+      try { (targetEl ?? nextBtn ?? popover).focus({ preventScroll: true }); } catch {}
 
       const focusables = (): HTMLElement[] => {
         if (!popover) return [];
@@ -841,14 +858,20 @@ class TourManagerImpl {
 
       onKeyDown = (ev: KeyboardEvent) => {
         if (!popover) return;
+        const active = document.activeElement as HTMLElement | null;
+        const targetHasFocus = !!(targetEl && active === targetEl);
         if (ev.key === 'Tab') {
-          const list = focusables();
+          const list = targetEl ? [targetEl, ...focusables()] : focusables();
           if (list.length === 0) { ev.preventDefault(); return; }
           const first = list[0];
           const last = list[list.length - 1];
-          const active = document.activeElement as HTMLElement | null;
           if (ev.shiftKey && active === first) { ev.preventDefault(); last.focus(); }
           else if (!ev.shiftKey && active === last) { ev.preventDefault(); first.focus(); }
+          return;
+        }
+        if ((ev.key === 'Enter' || ev.key === ' ') && targetHasFocus) {
+          ev.preventDefault();
+          if (config.interactive) config.onTargetActivate?.();
           return;
         }
         if (ev.key === 'Escape') {
@@ -874,9 +897,9 @@ class TourManagerImpl {
       onFocusIn = (ev: FocusEvent) => {
         if (!popover) return;
         const t = ev.target as Node | null;
-        if (t && !popover.contains(t)) {
+        if (t && !popover.contains(t) && !(targetEl && targetEl.contains(t))) {
           const list = focusables();
-          (list[0] ?? popover).focus({ preventScroll: true } as FocusOptions);
+          (targetEl ?? list[0] ?? popover).focus({ preventScroll: true } as FocusOptions);
         }
       };
 
@@ -889,12 +912,32 @@ class TourManagerImpl {
       cancelled = true;
       if (onKeyDown) document.removeEventListener('keydown', onKeyDown, true);
       if (onFocusIn) document.removeEventListener('focusin', onFocusIn, true);
+      if (targetEl) {
+        try { targetEl.removeAttribute('data-flowist-tour-focused'); } catch {}
+        try {
+          if (hadTargetTabIndex) {
+            if (previousTargetTabIndex !== null) targetEl.setAttribute('tabindex', previousTargetTabIndex);
+          } else {
+            targetEl.removeAttribute('tabindex');
+          }
+          if (previousTargetDescribedBy !== null) targetEl.setAttribute('aria-describedby', previousTargetDescribedBy);
+          else targetEl.removeAttribute('aria-describedby');
+        } catch {}
+      }
       // Restore focus to whatever was focused before the tour step opened,
       // if it's still in the DOM and focusable.
-      if (prevFocus && document.contains(prevFocus)) {
+      if (prevFocus && document.contains(prevFocus) && prevFocus !== targetEl) {
         try { prevFocus.focus({ preventScroll: true }); } catch {}
       }
     };
+  }
+
+  private isNaturallyFocusable(el: HTMLElement): boolean {
+    if (el.tabIndex >= 0) return true;
+    const tag = el.tagName.toLowerCase();
+    if (['button', 'input', 'select', 'textarea'].includes(tag)) return !el.hasAttribute('disabled');
+    if (tag === 'a') return el.hasAttribute('href');
+    return false;
   }
 
 
