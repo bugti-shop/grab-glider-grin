@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type React from 'react';
 import { Button } from '@/components/ui/button';
-import ob01 from '@/assets/onboarding/ob-01-tasks.webp.asset.json';
+import ob01 from '@/assets/onboarding/ob-01-tasks-tilted.png.asset.json';
 import ob02 from '@/assets/onboarding/ob-02-notes.webp.asset.json';
 import ob03 from '@/assets/onboarding/ob-03-notebooks.webp.asset.json';
 import ob04 from '@/assets/onboarding/ob-04-habits.webp.asset.json';
