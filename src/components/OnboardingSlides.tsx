@@ -148,14 +148,6 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
             imageRendering: 'auto' as any,
           }}
         />
-        {/* Mask baked-in short description strip under the title without
-            zooming the image. Solid app-bg rectangle at the bottom of the
-            image area — CTA sits below in its own container. */}
-        <div
-          aria-hidden
-          className="absolute inset-x-0 bottom-0 pointer-events-none"
-          style={{ height: '14%', background: '#f8f8f6' }}
-        />
       </SwipeArea>
 
       {/* Real Duolingo-style CTA — narrow, bold, shadow. Matches Today "Add Task". */}
@@ -173,7 +165,7 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
             />
           ))}
         </div>
-        <p className="text-[15px] font-medium text-black/80 text-center px-2 leading-snug">
+        <p className="text-[18px] font-semibold text-black text-center px-2 leading-snug">
           {CAPTIONS[index]}
         </p>
         <Button
