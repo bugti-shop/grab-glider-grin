@@ -235,7 +235,10 @@ Deno.serve(async (req) => {
     );
 
     const body = (await req.json()) as ExtractRequest;
-    const isPro = await hasActiveProAccess(admin, userId, userEmail);
+    const clientIdentifiers = Array.isArray((body as any)?.clientIdentifiers)
+      ? ((body as any).clientIdentifiers as unknown[]).filter((v): v is string => typeof v === "string")
+      : [];
+    const isPro = await hasActiveProAccess(admin, userId, userEmail, clientIdentifiers);
     if (!isPro) {
       return new Response(
         JSON.stringify({ error: "AI task extraction is a Pro feature. Please upgrade to continue." }),
