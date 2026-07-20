@@ -388,6 +388,8 @@ class TourManagerImpl {
       });
     };
 
+    let disposeStepA11y: (() => void) | null = null;
+
     const runStep = async (stepIndex: number) => {
       currentIndex = stepIndex;
       const step = tour.steps[stepIndex];
@@ -405,9 +407,40 @@ class TourManagerImpl {
       } catch {
         finalize();
       }
+      // Tear down the previous step's a11y wiring before installing the new one.
+      try { disposeStepA11y?.(); } catch {}
+      disposeStepA11y = this.enhancePopoverA11y({
+        titleId: `flowist-tour-title-${tourId}-${stepIndex}`,
+        descId: `flowist-tour-desc-${tourId}-${stepIndex}`,
+        isFirst: stepIndex === 0,
+        isLast: stepIndex === tour.steps.length - 1,
+        inChain,
+        forced,
+        onNext: () => {
+          const nextBtn = document.querySelector<HTMLElement>('.driver-popover .driver-popover-next-btn');
+          nextBtn?.click();
+        },
+        onPrev: () => {
+          const prevBtn = document.querySelector<HTMLElement>('.driver-popover .driver-popover-prev-btn');
+          prevBtn?.click();
+        },
+        onClose: () => {
+          if (forced) return;
+          const closeBtn = document.querySelector<HTMLElement>('.driver-popover .driver-popover-close-btn');
+          if (closeBtn) closeBtn.click();
+          else { try { currentDrv?.destroy(); } catch {} }
+        },
+      });
     };
 
     this.remountCurrentStep = () => { void runStep(currentIndex); };
+
+    // Ensure per-step a11y wiring is disposed whenever the tour ends.
+    const origFinalize = finalize;
+    (finalize as unknown) = async (o?: { advanceChain?: boolean }) => {
+      try { disposeStepA11y?.(); disposeStepA11y = null; } catch {}
+      return origFinalize(o);
+    };
 
     void runStep(0);
 
