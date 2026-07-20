@@ -221,6 +221,7 @@ export const TextTaskExtractorSheet = ({
         toast.error(getAiBusyMessage());
         return;
       }
+      const clientIdentifiers = await collectAiClientIdentifiers(customerInfo);
       const { data, error } = await supabase.functions.invoke('ai-extract-tasks-from-text', {
         body: {
           text: inputText,
@@ -231,6 +232,7 @@ export const TextTaskExtractorSheet = ({
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           languageCode: (i18n.language || 'en').split('-')[0],
           languageName: 'auto',
+          clientIdentifiers,
         },
         timeout: AI_TIMEOUT_MS,
         signal: controller.signal,
