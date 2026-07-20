@@ -469,7 +469,7 @@ const TodoSettings = () => {
       <div style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }}>
         <div className="px-5 pt-4 pb-3 flex items-center gap-2.5">
           <AppLogo size="md" className="h-7 w-7 rounded-[7px] flex-shrink-0" />
-          <h1 className="text-[26px] leading-none font-bold tracking-tight text-black dark:text-white">
+          <h1 className="text-[18px] leading-none font-bold tracking-tight text-black dark:text-white">
             {t('settings.taskSettings', 'Task Settings')}
           </h1>
         </div>
@@ -492,7 +492,7 @@ const TodoSettings = () => {
             onClick={() => openPaywall()}
             className="w-full flex items-center justify-between px-4 py-3.5 rounded-[14px] bg-white dark:bg-[#1C1C1E] shadow-sm"
           >
-            <span className="text-[17px] font-medium text-[#007AFF]">
+            <span className="text-[15px] font-medium text-[#007AFF]">
               {t('settings.upgradeToPro', 'Upgrade to Flowist Pro')}
             </span>
             <ChevronRight className="h-[18px] w-[18px] text-[#C7C7CC]" />
@@ -528,7 +528,7 @@ const TodoSettings = () => {
                     </span>
                     <span className="flex-1 min-w-0 flex items-center gap-1.5">
                       <span className={cn(
-                        "text-[17px] text-left truncate",
+                        "text-[13px] text-left truncate",
                         row.destructive ? "text-[#FF3B30] font-medium" : "text-black dark:text-white"
                       )}>
                         {row.label}

@@ -101,7 +101,7 @@ const Settings = () => {
       >
         <div className="px-5 pt-4 pb-3 flex items-center gap-2.5">
           <AppLogo size="md" className="h-7 w-7 rounded-[7px] flex-shrink-0" />
-          <h1 className="text-[26px] leading-none font-bold tracking-tight text-black dark:text-white">
+          <h1 className="text-[18px] leading-none font-bold tracking-tight text-black dark:text-white">
             Settings
           </h1>
         </div>
@@ -125,7 +125,7 @@ const Settings = () => {
             onClick={() => openPaywall()}
             className="w-full flex items-center justify-between px-4 py-3.5 rounded-[14px] bg-white dark:bg-[#1C1C1E] shadow-sm"
           >
-            <span className="text-[17px] font-medium text-[#007AFF]">
+            <span className="text-[15px] font-medium text-[#007AFF]">
               Upgrade to Flowist Pro
             </span>
             <ChevronRight className="h-[18px] w-[18px] text-[#C7C7CC]" />
@@ -162,7 +162,7 @@ const Settings = () => {
                       <Icon className="h-[17px] w-[17px] text-white drop-shadow-[0_0.5px_0_rgba(0,0,0,0.1)]" />
                     </span>
                     <span className="flex-1 min-w-0 flex items-center">
-                      <span className="text-[17px] text-black dark:text-white text-left truncate">
+                      <span className="text-[13px] text-black dark:text-white text-left truncate">
                         {row.label}
                       </span>
                     </span>
