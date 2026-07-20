@@ -200,7 +200,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const isPro = await hasActiveProAccess(admin, userId, userEmail);
+    const clientIdentifiers = Array.isArray((body as any)?.clientIdentifiers)
+      ? ((body as any).clientIdentifiers as unknown[]).filter((v): v is string => typeof v === "string")
+      : [];
+    const isPro = await hasActiveProAccess(admin, userId, userEmail, clientIdentifiers);
 
     if (!isPro) {
       return new Response(
