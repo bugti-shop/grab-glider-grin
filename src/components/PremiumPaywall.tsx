@@ -16,6 +16,7 @@ import heroCrown from '@/assets/paywall-hero-king-throne.webp';
 import { useTranslation } from 'react-i18next';
 import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock, LayoutGrid, Blocks, Timer, BookOpen } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { Button } from '@/components/ui/button';
 import { useSubscription, ProductType, FREE_CAPACITY_LIMITS, SOFT_FREE_LIMITS, CAPACITY_LABELS } from '@/contexts/SubscriptionContext';
 import { Capacitor } from '@capacitor/core';
 import { Purchases, PurchasesPackage, PACKAGE_TYPE } from '@revenuecat/purchases-capacitor';
