@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 
+import androidx.core.splashscreen.SplashScreen;
+
 import com.getcapacitor.BridgeActivity;
 
 import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
@@ -20,6 +22,14 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Install the AndroidX SplashScreen compat BEFORE super.onCreate so the
+        // Android 12+ system splash hands off cleanly to the post-splash theme
+        // with no black frame or flicker on the transition.
+        SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
+        // Keep the splash on-screen only until the first frame is ready — no
+        // artificial hold that would extend the animation.
+        splashScreen.setKeepOnScreenCondition(() -> false);
+
         // FocusTimerPlugin removed on Android to avoid foreground-service permissions.
         registerPlugin(FlowistShareIntentPlugin.class);
         storeWidgetPath(getIntent());
