@@ -20,6 +20,8 @@ const config: CapacitorConfig = {
       backgroundColorDark: '#0b0b0b',
       splashImmersive: false,
       splashFullScreen: false,
+      androidSplashResourceName: 'launch_background',
+      useDialog: false,
     },
     // Native Google + Apple sign-in are configured at runtime via
     // @capgo/capacitor-social-login → SocialLogin.initialize() in
