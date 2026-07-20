@@ -421,6 +421,8 @@ const TodoSettings = () => {
       rows: [
         { label: t('settings.tasksSettings', 'Task Defaults & Display'), icon: ClipboardCheck, color: '#34C759', onClick: () => setShowTasksSettingsSheet(true), keywords: ['tasks', 'defaults', 'priority', 'display', 'sort'] },
         { label: t('settings.customizeNavigation', 'Customize Navigation'), icon: Compass, color: '#5856D6', dataTour: 'settings-customize-navigation', onClick: () => setShowCustomizeNavigationSheet(true), keywords: ['bottom', 'tabs', 'nav'] },
+        { label: t('settings.calendar', 'Calendar'), icon: LayoutGrid, color: '#FF3B30', onClick: () => navigate('/calendar'), keywords: ['schedule', 'date', 'events'] },
+        { label: t('settings.appLock', 'App Lock'), icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) setShowAppLockSettingsSheet(true); }, keywords: ['security', 'passcode', 'pin', 'biometric', 'face', 'touch'] },
       ],
     },
     {
@@ -428,11 +430,6 @@ const TodoSettings = () => {
         { label: t('settings.habitTracker', 'Habit Tracker'), icon: ListChecks, color: '#FF2D92', dataTour: 'settings-habit-tracker', onClick: () => navigate('/todo/habits'), keywords: ['habits', 'routine', 'daily'] },
         { label: t('settings.eisenhowerMatrix', 'Eisenhower Matrix'), icon: Target, color: '#FF6B00', dataTour: 'settings-eisenhower-matrix', onClick: () => navigate('/todo/matrix'), keywords: ['priority', 'quadrant', 'urgent', 'important'] },
         { label: t('settings.countdown', 'Countdown'), icon: Timer, color: '#00C7BE', onClick: () => navigate('/todo/countdown'), keywords: ['timer', 'deadline', 'event'] },
-      ],
-    },
-    {
-      rows: [
-        { label: t('settings.appLock', 'App Lock'), icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) setShowAppLockSettingsSheet(true); }, keywords: ['security', 'passcode', 'pin', 'biometric', 'face', 'touch'] },
       ],
     },
     {
