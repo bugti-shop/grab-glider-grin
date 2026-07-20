@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { genId } from '@/utils/genId';
+import { FOLDER_COLOR_PALETTE } from '@/utils/folderColorPalette';
 import { useTranslation } from 'react-i18next';
 import { TodoItem, Priority, RepeatType, Folder, VoiceRecording, LocationReminder, TaskAttachment } from '@/types/note';
 import { TagManagementSheet } from '@/components/TagManagementSheet';
