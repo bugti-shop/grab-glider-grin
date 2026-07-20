@@ -115,9 +115,9 @@ export default function IncludeCarousel({
                 src={it.image}
                 alt={it.alt}
                 draggable={false}
-                loading="eager"
+                loading={i === 0 ? 'eager' : 'lazy'}
                 decoding="async"
-                fetchPriority={i === 0 ? 'high' : 'low'}
+                fetchPriority={i === active ? 'high' : 'low'}
                 className="pointer-events-none h-[640px] w-auto object-contain sm:h-[820px]"
                 style={{ background: 'transparent', contentVisibility: 'auto' }}
               />
