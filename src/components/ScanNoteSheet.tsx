@@ -159,6 +159,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
     try {
       await yieldToPaint();
       setPhase('uploading');
+      const clientIdentifiers = await collectAiClientIdentifiers(customerInfo);
       const invokePromise = supabase.functions.invoke(
         'ai-extract-note-from-image',
         {
@@ -167,6 +168,7 @@ export const ScanNoteSheet = ({ isOpen, onClose, onInsertHtml }: Props) => {
             languageCode: (i18n.language || 'en').split('-')[0],
             languageName: 'auto',
             handwriting: opts?.handwriting === true,
+            clientIdentifiers,
           },
           timeout: AI_SCAN_TIMEOUT_MS,
         },
