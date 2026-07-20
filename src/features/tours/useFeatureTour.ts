@@ -232,16 +232,24 @@ export const useFeatureTour = () => {
 /** Fire the first-visit tour(s) for a given route, if any and not yet seen. */
 export const useFirstVisitTour = (route: string, explicitTourId?: string) => {
   useEffect(() => {
-    if (explicitTourId) {
-      TourManager.startTour(explicitTourId, { auto: true });
-      return;
-    }
-    const eligible = FEATURE_TOURS.filter(
-      (t) => t.trigger === 'first-visit' && t.route === route,
-    );
-    if (eligible.length === 0) return;
+    const ONBOARDING_SLIDES_KEY = 'onboarding_slides_seen_v1';
+    const slidesDone = () => {
+      try { return localStorage.getItem(ONBOARDING_SLIDES_KEY) === 'true'; } catch { return true; }
+    };
 
-    (async () => {
+    let cancelled = false;
+    let slidesListener: (() => void) | null = null;
+
+    const run = async () => {
+      if (cancelled) return;
+      if (explicitTourId) {
+        TourManager.startTour(explicitTourId, { auto: true });
+        return;
+      }
+      const eligible = FEATURE_TOURS.filter(
+        (t) => t.trigger === 'first-visit' && t.route === route,
+      );
+      if (eligible.length === 0) return;
       for (const tour of eligible) {
         TourManager.startTour(tour.id, { auto: true });
       }
@@ -255,7 +263,19 @@ export const useFirstVisitTour = (route: string, explicitTourId?: string) => {
       for (const tour of dueByAge) {
         TourManager.startTour(tour.id, { auto: true });
       }
-    })();
+    };
+
+    if (slidesDone()) {
+      run();
+    } else {
+      slidesListener = () => { run(); };
+      window.addEventListener('flowist-onboarding-slides:complete', slidesListener);
+    }
+
+    return () => {
+      cancelled = true;
+      if (slidesListener) window.removeEventListener('flowist-onboarding-slides:complete', slidesListener);
+    };
   }, [route, explicitTourId]);
 };
 
