@@ -167,6 +167,7 @@ export const useTourBootstrap = () => {
     });
     return () => {
       sub.subscription.unsubscribe();
+      if (slidesListener) window.removeEventListener('flowist-onboarding-slides:complete', slidesListener);
       window.removeEventListener('flowist-onboarding:start-chain', onChainRequest);
       window.removeEventListener('flowist-onboarding:action-completed', onActionCompleted);
       window.removeEventListener('pointerdown', activityHandler, { capture: true } as any);
