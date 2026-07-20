@@ -466,7 +466,7 @@ const TodoSettings = () => {
 
   return (
     <div className="min-h-screen min-h-screen-dynamic bg-[#F2F2F7] dark:bg-[#000000] pb-20">
-      <div style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }}>
+      <div className="bg-white dark:bg-[#000000]" style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }}>
         <div className="px-5 pt-4 pb-3 flex items-center gap-2.5">
           <AppLogo size="md" className="h-7 w-7 rounded-[7px] flex-shrink-0" />
           <h1 className="text-[18px] leading-none font-bold tracking-tight text-black dark:text-white">
@@ -484,9 +484,10 @@ const TodoSettings = () => {
             />
           </div>
         </div>
+        <div className="h-px w-full bg-[#E5E5EA] dark:bg-[#38383A]" />
       </div>
 
-      <main className="px-4 space-y-6">
+      <main className="px-4 pt-4 space-y-6">
         {!isPro && (
           <button
             onClick={() => openPaywall()}
