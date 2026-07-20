@@ -163,7 +163,7 @@ export function SketchNotebookLibrary({
     if (showNewNotebook || showNewFolder) setTimeout(() => newInputRef.current?.focus(), 50);
   }, [showNewNotebook, showNewFolder]);
 
-  const NOTEBOOK_COLORS = ['#3C78F0', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+  const NOTEBOOK_COLORS = FOLDER_COLOR_PALETTE;
 
   if (!isLoaded) return null;
 
