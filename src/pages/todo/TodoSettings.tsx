@@ -524,7 +524,7 @@ const TodoSettings = () => {
                         boxShadow: `0 1px 2px ${row.color}40, inset 0 1px 0 rgba(255,255,255,0.25)`,
                       }}
                     >
-                      <Icon className="h-[17px] w-[17px] text-white drop-shadow-[0_0.5px_0_rgba(0,0,0,0.1)]" />
+                      <Icon className="h-[16px] w-[16px] text-white drop-shadow-[0_0.5px_0_rgba(0,0,0,0.1)]" />
                     </span>
                     <span className="flex-1 min-w-0 flex items-center gap-1.5">
                       <span className={cn(
