@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type React from 'react';
+import { Button } from '@/components/ui/button';
 import ob01 from '@/assets/onboarding/ob-01-tasks.webp.asset.json';
 import ob02 from '@/assets/onboarding/ob-02-notes.webp.asset.json';
 import ob03 from '@/assets/onboarding/ob-03-notebooks.webp.asset.json';
@@ -141,13 +142,13 @@ export const OnboardingSlides = ({ onComplete }: Props) => {
             />
           ))}
         </div>
-        <button
-          type="button"
+        <Button
           onClick={next}
-          className="w-full max-w-[420px] h-14 rounded-full bg-primary text-primary-foreground font-semibold text-[15px] tracking-tight shadow-lg active:scale-[0.98] transition-transform"
+          size="lg"
+          className="w-full max-w-[420px] h-12 text-base font-semibold"
         >
           {isLast ? 'Get Started' : 'Continue'}
-        </button>
+        </Button>
       </div>
     </div>
   );
