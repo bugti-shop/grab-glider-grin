@@ -4,7 +4,7 @@
 //   then drives step-by-step with Flowist-branded popovers.
 // - Skip / Next / "Don't show again" all persist via TourStateStore.
 
-import { driver, type Driver, type DriveStep, type Config as DriverConfig } from 'driver.js';
+import { driver, type Driver, type DriveStep, type Config as DriverConfig, type PopoverDOM } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
 /**
@@ -32,6 +32,10 @@ function sweepStaleDriverDom() {
     document.body.classList.remove('driver-active', 'driver-fade');
   } catch {}
 }
+
+const TOUR_PORTAL_Z_INDEX = 2147483647;
+const TOUR_OVERLAY_Z_INDEX = TOUR_PORTAL_Z_INDEX - 2;
+const TOUR_VIEWPORT_MARGIN = 12;
 
 function mountSingletonDriver(config: DriverConfig): Driver {
   // Tear down any previously-live instance BEFORE constructing a new one.
@@ -250,6 +254,7 @@ class TourManagerImpl {
     let currentIndex = 0;
     let currentDrv: Driver | null = null;
     let disposeStepA11y: (() => void) | null = null;
+    let disposePopoverPositioning: (() => void) | null = null;
     let disposeTargetEvents: (() => void) | null = null;
     const forced = this.forcedActive;
 
@@ -260,6 +265,7 @@ class TourManagerImpl {
 
     const finalize = async (opts: { advanceChain?: boolean } = {}) => {
       try { disposeTargetEvents?.(); disposeTargetEvents = null; } catch {}
+      try { disposePopoverPositioning?.(); disposePopoverPositioning = null; } catch {}
       try { disposeStepA11y?.(); disposeStepA11y = null; } catch {}
       try { delete document.body.dataset.tourActive; } catch {}
       try { delete document.body.dataset.tourId; } catch {}
@@ -325,10 +331,14 @@ class TourManagerImpl {
         stageRadius: 10,
         smoothScroll: true,
         popoverClass: forced ? 'flowist-tour-popover flowist-tour-forced' : 'flowist-tour-popover',
+        popoverOffset: 8,
         showButtons: buttons,
         nextBtnText: nextLabel,
         doneBtnText: nextLabel,
         prevBtnText: 'Back',
+        onPopoverRender: (popover: PopoverDOM) => {
+          this.prepareTourPopoverPortal(popover.wrapper);
+        },
         steps: [this.toDriverStep(step)],
         onPrevClick: canGoBack
           ? () => {
@@ -413,6 +423,10 @@ class TourManagerImpl {
         return;
       }
       // Tear down the previous step's a11y wiring before installing the new one.
+      try { disposePopoverPositioning?.(); } catch {}
+      disposePopoverPositioning = target instanceof HTMLElement
+        ? this.installPopoverPositionGuard(drv, target)
+        : null;
       try { disposeStepA11y?.(); } catch {}
       disposeStepA11y = this.enhancePopoverA11y({
         titleId: `flowist-tour-title-${tourId}-${stepIndex}`,
