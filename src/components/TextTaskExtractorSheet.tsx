@@ -80,7 +80,7 @@ export const TextTaskExtractorSheet = ({
   initialText, initialMode, titleOverride,
 }: Props) => {
   const { t, i18n } = useTranslation();
-  const { requireFeature } = useSubscription();
+  const { requireFeature, customerInfo } = useSubscription();
   // AI GUARD — locked. See src/utils/aiFeatureGuard.ts. Do not couple to billing.
   const { hasPaidAi, isResolving: aiResolving } = useAiFeatureGuard();
 
