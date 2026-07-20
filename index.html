@@ -116,11 +116,8 @@
 </head>
   <body>
     <style>
-      /* Kill the perceived "white screen" between native launcher and React
-         first paint. Root gets the app background color pinned from the very
-         first frame + a subtle Flowist wordmark so users see the brand
-         instead of a blank cream sheet. As soon as React renders into #root
-         the ::before pseudo is covered by real UI. */
+      /* Pin app background from first frame to avoid white flash. Nothing is
+         rendered before React mounts — no wordmark, no logo, no text. */
       html, body {
         margin: 0;
         background: #f8f8f6;
@@ -133,26 +130,6 @@
       #root {
         min-height: 100vh;
         min-height: 100dvh;
-      }
-      #root:empty::before {
-        content: 'Flowist';
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-        font-weight: 900;
-        font-size: 28px;
-        letter-spacing: -0.02em;
-        color: rgba(0, 0, 0, 0.85);
-        background: #f8f8f6;
-      }
-      @media (prefers-color-scheme: dark) {
-        #root:empty::before {
-          color: rgba(255, 255, 255, 0.85);
-          background: #0b0b0b;
-        }
       }
     </style>
     <script>
