@@ -489,7 +489,7 @@ const TodoSettings = () => {
         </div>
       </div>
 
-      <main className="px-4 pt-4 space-y-6">
+      <main className="px-2 pt-4 space-y-6">
         {!isPro && (
           <button
             onClick={() => openPaywall()}
