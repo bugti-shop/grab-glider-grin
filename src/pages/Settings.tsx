@@ -34,7 +34,6 @@ type IconRow = {
   icon: React.ComponentType<{ className?: string }>;
   color: string; // background color for icon tile
   onClick: () => void;
-  showCrown?: boolean;
 };
 
 const Settings = () => {
