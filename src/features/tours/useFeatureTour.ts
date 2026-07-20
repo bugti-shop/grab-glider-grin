@@ -24,6 +24,22 @@ import { supabase } from '@/integrations/supabase/client';
 /** Mount once near the app root to wire navigation + cloud hydration. */
 export const useTourBootstrap = () => {
   const navigate = useNavigate();
+  const tourActive = useIsTourActive();
+
+  // Hardware / browser back while a tour is active:
+  //  - Forced tour  → swallow the press (user must complete the tour)
+  //  - Regular tour → close the popover instead of leaving the page and
+  //                   orphaning the driver.js DOM (which was crashing
+  //                   Notes Dashboard switch / Create Note / Create Notebook).
+  useHardwareBackButton({
+    enabled: tourActive,
+    priority: 'sheet',
+    onBack: () => {
+      if (TourManager.isForced()) return;
+      const drv = __getActiveDriverInstance();
+      try { drv?.destroy(); } catch {}
+    },
+  });
 
   useEffect(() => {
     TourManager.setNavigate((path) => navigate(path));
