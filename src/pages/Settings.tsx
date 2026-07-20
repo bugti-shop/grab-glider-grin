@@ -93,6 +93,7 @@ const Settings = () => {
   return (
     <div className="min-h-screen min-h-screen-dynamic bg-[#F2F2F7] dark:bg-[#000000] pb-20">
       <div
+        className="bg-white dark:bg-[#000000]"
         style={{
           paddingTop: 'var(--safe-top, 0px)',
           paddingLeft: 'var(--safe-left, 0px)',
@@ -117,9 +118,10 @@ const Settings = () => {
             />
           </div>
         </div>
+        <div className="h-px w-full bg-[#E5E5EA] dark:bg-[#38383A]" />
       </div>
 
-      <main className="px-4 space-y-6">
+      <main className="px-4 pt-4 space-y-6">
         {!isProSub && (
           <button
             onClick={() => openPaywall()}
