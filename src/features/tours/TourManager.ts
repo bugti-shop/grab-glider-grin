@@ -701,6 +701,132 @@ class TourManagerImpl {
     return new Promise<void>((resolve) => setTimeout(resolve, ms));
   }
 
+  /**
+   * Wire up accessibility + keyboard navigation on the current driver.js
+   * popover:
+   *   - role="dialog", aria-modal, labelled/described by the title/desc IDs
+   *     so screen readers announce the coach mark as it appears.
+   *   - Move focus to the primary action (Next / Got it) on mount, remember
+   *     the previously-focused element, restore it on teardown.
+   *   - Trap Tab focus inside the popover so keyboard users can't wander
+   *     into the (interaction-disabled) page behind it.
+   *   - Enter/Space activates the focused button (native), ArrowRight → Next,
+   *     ArrowLeft → Back, Escape → Close (when not forced).
+   */
+  private enhancePopoverA11y(config: {
+    titleId: string;
+    descId: string;
+    forced: boolean;
+    onClose: () => void;
+  }): () => void {
+    if (typeof document === 'undefined') return () => {};
+    const prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    let cancelled = false;
+    let popover: HTMLElement | null = null;
+    let onKeyDown: ((ev: KeyboardEvent) => void) | null = null;
+    let onFocusIn: ((ev: FocusEvent) => void) | null = null;
+
+    // driver.js mounts the popover on the next microtask; poll briefly.
+    const attach = (attempts: number) => {
+      if (cancelled) return;
+      popover = document.querySelector<HTMLElement>('.driver-popover');
+      if (!popover) {
+        if (attempts <= 0) return;
+        window.setTimeout(() => attach(attempts - 1), 30);
+        return;
+      }
+      // ARIA semantics for screen readers.
+      popover.setAttribute('role', 'dialog');
+      popover.setAttribute('aria-modal', 'true');
+      const titleEl = popover.querySelector<HTMLElement>('.driver-popover-title');
+      const descEl = popover.querySelector<HTMLElement>('.driver-popover-description');
+      if (titleEl) {
+        titleEl.id = config.titleId;
+        popover.setAttribute('aria-labelledby', config.titleId);
+      }
+      if (descEl) {
+        descEl.id = config.descId;
+        popover.setAttribute('aria-describedby', config.descId);
+      }
+      const nextBtn = popover.querySelector<HTMLElement>('.driver-popover-next-btn');
+      const prevBtn = popover.querySelector<HTMLElement>('.driver-popover-prev-btn');
+      const closeBtn = popover.querySelector<HTMLElement>('.driver-popover-close-btn');
+      if (nextBtn && !nextBtn.hasAttribute('aria-label')) nextBtn.setAttribute('aria-label', nextBtn.textContent?.trim() || 'Next');
+      if (prevBtn && !prevBtn.hasAttribute('aria-label')) prevBtn.setAttribute('aria-label', 'Back');
+      if (closeBtn && !closeBtn.hasAttribute('aria-label')) closeBtn.setAttribute('aria-label', 'Close tutorial');
+
+      // Move focus onto the primary action so screen readers announce the
+      // dialog and keyboard users can immediately activate it.
+      try { (nextBtn ?? popover).focus({ preventScroll: true }); } catch {}
+
+      const focusables = (): HTMLElement[] => {
+        if (!popover) return [];
+        return Array.from(
+          popover.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+      };
+
+      onKeyDown = (ev: KeyboardEvent) => {
+        if (!popover) return;
+        if (ev.key === 'Tab') {
+          const list = focusables();
+          if (list.length === 0) { ev.preventDefault(); return; }
+          const first = list[0];
+          const last = list[list.length - 1];
+          const active = document.activeElement as HTMLElement | null;
+          if (ev.shiftKey && active === first) { ev.preventDefault(); last.focus(); }
+          else if (!ev.shiftKey && active === last) { ev.preventDefault(); first.focus(); }
+          return;
+        }
+        if (ev.key === 'Escape') {
+          if (config.forced) { ev.preventDefault(); return; }
+          ev.preventDefault();
+          config.onClose();
+          return;
+        }
+        if (ev.key === 'ArrowRight') {
+          ev.preventDefault();
+          nextBtn?.click();
+          return;
+        }
+        if (ev.key === 'ArrowLeft') {
+          ev.preventDefault();
+          prevBtn?.click();
+          return;
+        }
+      };
+
+      // Focus trap: if focus escapes the popover (e.g. background click),
+      // pull it back so keyboard users stay inside the dialog.
+      onFocusIn = (ev: FocusEvent) => {
+        if (!popover) return;
+        const t = ev.target as Node | null;
+        if (t && !popover.contains(t)) {
+          const list = focusables();
+          (list[0] ?? popover).focus({ preventScroll: true } as FocusOptions);
+        }
+      };
+
+      document.addEventListener('keydown', onKeyDown, true);
+      document.addEventListener('focusin', onFocusIn, true);
+    };
+    attach(10);
+
+    return () => {
+      cancelled = true;
+      if (onKeyDown) document.removeEventListener('keydown', onKeyDown, true);
+      if (onFocusIn) document.removeEventListener('focusin', onFocusIn, true);
+      // Restore focus to whatever was focused before the tour step opened,
+      // if it's still in the DOM and focusable.
+      if (prevFocus && document.contains(prevFocus)) {
+        try { prevFocus.focus({ preventScroll: true }); } catch {}
+      }
+    };
+  }
+
+
   private clearActiveTourState() {
     this.activeDriver = null;
     this.activeTourId = null;
