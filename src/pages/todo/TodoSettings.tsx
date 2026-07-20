@@ -403,6 +403,7 @@ const TodoSettings = () => {
     dataTour?: string;
     destructive?: boolean;
     disabled?: boolean;
+    keywords?: string[];
   };
 
   const [query, setQuery] = useState('');
@@ -410,51 +411,58 @@ const TodoSettings = () => {
   const groups: { rows: IconRow[] }[] = [
     {
       rows: [
-        { label: t('settings.theme', 'Theme'), icon: Brush, color: '#AF52DE', value: themes.find(th => th.id === currentTheme)?.name, onClick: () => setShowThemeDialog(true) },
-        { label: t('settings.language', 'Language'), icon: Globe, color: '#007AFF', value: currentLanguage.nativeName, onClick: () => setShowLanguageDialog(true) },
-        { label: t('settings.noteTypeVisibility', 'Note Type Visibility'), icon: Eye, color: '#5AC8CE', locked: !isPro, dataTour: 'settings-note-type-visibility', onClick: () => { if (requireFeature('notes_type_visibility')) setShowNoteTypeVisibilitySheet(true); } },
-        { label: t('settings.notesSettings', 'Notes Settings'), icon: StickyNote, color: '#FF9500', onClick: () => setShowNotesSettingsSheet(true) },
+        { label: t('settings.theme', 'Theme'), icon: Brush, color: '#AF52DE', value: themes.find(th => th.id === currentTheme)?.name, onClick: () => setShowThemeDialog(true), keywords: ['appearance', 'dark', 'light', 'mode', 'color', 'colour'] },
+        { label: t('settings.language', 'Language'), icon: Globe, color: '#007AFF', value: currentLanguage.nativeName, onClick: () => setShowLanguageDialog(true), keywords: ['locale', 'translate', 'region'] },
+        { label: t('settings.noteTypeVisibility', 'Note Type Visibility'), icon: Eye, color: '#5AC8CE', locked: !isPro, dataTour: 'settings-note-type-visibility', onClick: () => { if (requireFeature('notes_type_visibility')) setShowNoteTypeVisibilitySheet(true); }, keywords: ['notes', 'show', 'hide', 'sticky', 'sketch', 'voice'] },
+        { label: t('settings.notesSettings', 'Notes Settings'), icon: StickyNote, color: '#FF9500', onClick: () => setShowNotesSettingsSheet(true), keywords: ['editor', 'font', 'notes'] },
       ],
     },
     {
       rows: [
-        { label: t('settings.tasksSettings', 'Task Defaults & Display'), icon: ClipboardCheck, color: '#34C759', onClick: () => setShowTasksSettingsSheet(true) },
-        { label: t('settings.customizeNavigation', 'Customize Navigation'), icon: Compass, color: '#5856D6', dataTour: 'settings-customize-navigation', onClick: () => setShowCustomizeNavigationSheet(true) },
+        { label: t('settings.tasksSettings', 'Task Defaults & Display'), icon: ClipboardCheck, color: '#34C759', onClick: () => setShowTasksSettingsSheet(true), keywords: ['tasks', 'defaults', 'priority', 'display', 'sort'] },
+        { label: t('settings.customizeNavigation', 'Customize Navigation'), icon: Compass, color: '#5856D6', dataTour: 'settings-customize-navigation', onClick: () => setShowCustomizeNavigationSheet(true), keywords: ['bottom', 'tabs', 'nav'] },
       ],
     },
     {
       rows: [
-        { label: t('settings.habitTracker', 'Habit Tracker'), icon: ListChecks, color: '#FF2D92', dataTour: 'settings-habit-tracker', onClick: () => navigate('/todo/habits') },
-        { label: t('settings.eisenhowerMatrix', 'Eisenhower Matrix'), icon: Target, color: '#FF6B00', dataTour: 'settings-eisenhower-matrix', onClick: () => navigate('/todo/matrix') },
-        { label: t('settings.countdown', 'Countdown'), icon: Timer, color: '#00C7BE', onClick: () => navigate('/todo/countdown') },
+        { label: t('settings.habitTracker', 'Habit Tracker'), icon: ListChecks, color: '#FF2D92', dataTour: 'settings-habit-tracker', onClick: () => navigate('/todo/habits'), keywords: ['habits', 'routine', 'daily'] },
+        { label: t('settings.eisenhowerMatrix', 'Eisenhower Matrix'), icon: Target, color: '#FF6B00', dataTour: 'settings-eisenhower-matrix', onClick: () => navigate('/todo/matrix'), keywords: ['priority', 'quadrant', 'urgent', 'important'] },
+        { label: t('settings.countdown', 'Countdown'), icon: Timer, color: '#00C7BE', onClick: () => navigate('/todo/countdown'), keywords: ['timer', 'deadline', 'event'] },
       ],
     },
     {
       rows: [
-        { label: t('settings.appLock', 'App Lock'), icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) setShowAppLockSettingsSheet(true); } },
+        { label: t('settings.appLock', 'App Lock'), icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) setShowAppLockSettingsSheet(true); }, keywords: ['security', 'passcode', 'pin', 'biometric', 'face', 'touch'] },
       ],
     },
     {
       rows: [
-        { label: isBackingUp ? t('settings.backingUp', 'Backing up...') : t('settings.backupData', 'Backup Data'), icon: Cloud, color: '#32ADE6', disabled: isBackingUp, onClick: () => { if (requireFeature('backup')) handleBackupData(); } },
-        { label: t('settings.restoreData', 'Restore Data'), icon: RotateCcw, color: '#5AC8CE', onClick: handleRestoreData },
-        { label: t('settings.downloadData', 'Download Data'), icon: Download, color: '#34C759', onClick: handleDownloadData },
-        { label: t('settings.deleteData', 'Delete Data'), icon: Trash2, color: '#FF9500', onClick: handleDeleteData },
-        { label: t('settings.deleteAccount', 'Delete Account'), icon: Trash2, color: '#FF3B30', destructive: true, onClick: () => { setDeleteAccountConfirmText(''); setShowDeleteAccountDialog(true); } },
+        { label: isBackingUp ? t('settings.backingUp', 'Backing up...') : t('settings.backupData', 'Backup Data'), icon: Cloud, color: '#32ADE6', disabled: isBackingUp, onClick: () => { if (requireFeature('backup')) handleBackupData(); }, keywords: ['sync', 'export', 'save', 'cloud', 'drive'] },
+        { label: t('settings.restoreData', 'Restore Data'), icon: RotateCcw, color: '#5AC8CE', onClick: handleRestoreData, keywords: ['import', 'recover'] },
+        { label: t('settings.downloadData', 'Download Data'), icon: Download, color: '#34C759', onClick: handleDownloadData, keywords: ['export', 'json'] },
+        { label: t('settings.deleteData', 'Delete Data'), icon: Trash2, color: '#FF9500', onClick: handleDeleteData, keywords: ['wipe', 'clear', 'reset'] },
+        { label: t('settings.deleteAccount', 'Delete Account'), icon: Trash2, color: '#FF3B30', destructive: true, onClick: () => { setDeleteAccountConfirmText(''); setShowDeleteAccountDialog(true); }, keywords: ['remove', 'close', 'wipe'] },
       ],
     },
     {
       rows: [
-        { label: t('settings.termsOfService', 'Terms of Service'), icon: FileText, color: '#8E8E93', onClick: () => navigate('/terms-and-conditions') },
-        { label: t('settings.privacy', 'Privacy Policy'), icon: Shield, color: '#48484A', onClick: () => navigate('/privacy-policy') },
+        { label: t('settings.termsOfService', 'Terms of Service'), icon: FileText, color: '#8E8E93', onClick: () => navigate('/terms-and-conditions'), keywords: ['legal', 'tos'] },
+        { label: t('settings.privacy', 'Privacy Policy'), icon: Shield, color: '#48484A', onClick: () => navigate('/privacy-policy'), keywords: ['legal', 'data', 'gdpr'] },
       ],
     },
   ];
 
   const q = query.trim().toLowerCase();
+  const matches = (r: IconRow) => {
+    if (!q) return true;
+    if (r.label.toLowerCase().includes(q)) return true;
+    if (r.value && r.value.toLowerCase().includes(q)) return true;
+    return (r.keywords || []).some((k) => k.toLowerCase().includes(q));
+  };
   const filteredGroups = q
-    ? groups.map(g => ({ rows: g.rows.filter(r => r.label.toLowerCase().includes(q)) })).filter(g => g.rows.length > 0)
+    ? groups.map(g => ({ rows: g.rows.filter(matches) })).filter(g => g.rows.length > 0)
     : groups;
+
 
   return (
     <div className="min-h-screen min-h-screen-dynamic bg-[#F2F2F7] dark:bg-[#000000] pb-20">
