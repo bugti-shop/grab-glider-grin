@@ -118,7 +118,7 @@ const Settings = () => {
             />
           </div>
         </div>
-        <div className="px-4">
+        <div className="px-4 pt-1.5">
           <div className="w-full bg-[#E5E5EA] dark:bg-[#38383A]" style={{ height: '0.5px' }} />
         </div>
       </div>
