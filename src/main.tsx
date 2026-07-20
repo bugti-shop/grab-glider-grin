@@ -264,8 +264,12 @@ const renderApp = () => {
   );
 
   if (Capacitor.isNativePlatform()) {
-    // Fully skip splash — hide immediately, no fade, don't wait for a frame.
-    SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {});
+    // Cold-start only: let the branded splash breathe briefly, then fade out.
+    // Warm resumes never trigger the splash (native OS behavior), so this
+    // matches WhatsApp-style UX — no splash when reopening from background.
+    setTimeout(() => {
+      SplashScreen.hide({ fadeOutDuration: 250 }).catch(() => {});
+    }, 900);
   }
 
 };
@@ -306,12 +310,8 @@ const bootstrap = async () => {
 };
 bootstrap();
 
-if (Capacitor.isNativePlatform()) {
-  // Belt-and-suspenders: kill the splash immediately at boot, and again on a
-  // micro-timeout in case the plugin wasn't ready on the very first call.
-  SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {});
-  setTimeout(() => { SplashScreen.hide({ fadeOutDuration: 0 }).catch(() => {}); }, 0);
-}
+
+
 
 
 // Warm settings cache + old service-worker cleanup — both deferred so they
