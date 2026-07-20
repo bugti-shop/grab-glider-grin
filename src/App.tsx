@@ -627,6 +627,7 @@ const AppContent = () => {
   });
 
   const { isPro, isLoading: subLoading, isVerifyingCheckout, isNewFreeUser, openPaywall } = useSubscription();
+  openPaywallRef.current = openPaywall;
   const awaitingSubscriptionChoice = useRef(
     sessionStorage.getItem('awaitingSubscriptionChoice') === 'true'
   );
