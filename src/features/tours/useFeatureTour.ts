@@ -154,7 +154,7 @@ export const useTourBootstrap = () => {
         setTimeout(() => { watchdogPending = false; }, 800);
       }
     };
-    const activityHandler = () => { if (!skipAutoTours) kickChainIfPending(); };
+    const activityHandler = () => { if (!skipAutoTours && slidesDone()) kickChainIfPending(); };
     window.addEventListener('pointerdown', activityHandler, { capture: true });
     window.addEventListener('keydown', activityHandler, { capture: true });
 
