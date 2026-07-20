@@ -2,7 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { TodoBottomNavigation } from '@/components/TodoBottomNavigation';
-import { ChevronRight, Check, ChevronDown, Crown, Play, RotateCcw } from 'lucide-react';
+import {
+  ChevronRight, Check, ChevronDown, Crown, Play, RotateCcw,
+  Search, Brush, Globe, Eye, StickyNote, ClipboardCheck, Compass,
+  Lock, Cloud, Download, Trash2, FileText, Shield, LayoutGrid,
+  Target, Timer, ListChecks,
+} from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTranslation } from 'react-i18next';
 import { Switch } from '@/components/ui/switch';
@@ -388,154 +393,154 @@ const TodoSettings = () => {
     </div>
   );
 
+  type IconRow = {
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+    value?: string;
+    locked?: boolean;
+    onClick: () => void;
+    dataTour?: string;
+    destructive?: boolean;
+    disabled?: boolean;
+  };
+
+  const [query, setQuery] = useState('');
+
+  const groups: { rows: IconRow[] }[] = [
+    {
+      rows: [
+        { label: t('settings.theme', 'Theme'), icon: Brush, color: '#AF52DE', value: themes.find(th => th.id === currentTheme)?.name, onClick: () => setShowThemeDialog(true) },
+        { label: t('settings.language', 'Language'), icon: Globe, color: '#007AFF', value: currentLanguage.nativeName, onClick: () => setShowLanguageDialog(true) },
+        { label: t('settings.noteTypeVisibility', 'Note Type Visibility'), icon: Eye, color: '#5AC8CE', locked: !isPro, dataTour: 'settings-note-type-visibility', onClick: () => { if (requireFeature('notes_type_visibility')) setShowNoteTypeVisibilitySheet(true); } },
+        { label: t('settings.notesSettings', 'Notes Settings'), icon: StickyNote, color: '#FF9500', onClick: () => setShowNotesSettingsSheet(true) },
+      ],
+    },
+    {
+      rows: [
+        { label: t('settings.tasksSettings', 'Task Defaults & Display'), icon: ClipboardCheck, color: '#34C759', onClick: () => setShowTasksSettingsSheet(true) },
+        { label: t('settings.customizeNavigation', 'Customize Navigation'), icon: Compass, color: '#5856D6', dataTour: 'settings-customize-navigation', onClick: () => setShowCustomizeNavigationSheet(true) },
+      ],
+    },
+    {
+      rows: [
+        { label: t('settings.habitTracker', 'Habit Tracker'), icon: ListChecks, color: '#FF2D92', dataTour: 'settings-habit-tracker', onClick: () => navigate('/todo/habits') },
+        { label: t('settings.eisenhowerMatrix', 'Eisenhower Matrix'), icon: Target, color: '#FF6B00', dataTour: 'settings-eisenhower-matrix', onClick: () => navigate('/todo/matrix') },
+        { label: t('settings.countdown', 'Countdown'), icon: Timer, color: '#00C7BE', onClick: () => navigate('/todo/countdown') },
+      ],
+    },
+    {
+      rows: [
+        { label: t('settings.appLock', 'App Lock'), icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) setShowAppLockSettingsSheet(true); } },
+      ],
+    },
+    {
+      rows: [
+        { label: isBackingUp ? t('settings.backingUp', 'Backing up...') : t('settings.backupData', 'Backup Data'), icon: Cloud, color: '#32ADE6', disabled: isBackingUp, onClick: () => { if (requireFeature('backup')) handleBackupData(); } },
+        { label: t('settings.restoreData', 'Restore Data'), icon: RotateCcw, color: '#5AC8CE', onClick: handleRestoreData },
+        { label: t('settings.downloadData', 'Download Data'), icon: Download, color: '#34C759', onClick: handleDownloadData },
+        { label: t('settings.deleteData', 'Delete Data'), icon: Trash2, color: '#FF9500', onClick: handleDeleteData },
+        { label: t('settings.deleteAccount', 'Delete Account'), icon: Trash2, color: '#FF3B30', destructive: true, onClick: () => { setDeleteAccountConfirmText(''); setShowDeleteAccountDialog(true); } },
+      ],
+    },
+    {
+      rows: [
+        { label: t('settings.termsOfService', 'Terms of Service'), icon: FileText, color: '#8E8E93', onClick: () => navigate('/terms-and-conditions') },
+        { label: t('settings.privacy', 'Privacy Policy'), icon: Shield, color: '#48484A', onClick: () => navigate('/privacy-policy') },
+      ],
+    },
+  ];
+
+  const q = query.trim().toLowerCase();
+  const filteredGroups = q
+    ? groups.map(g => ({ rows: g.rows.filter(r => r.label.toLowerCase().includes(q)) })).filter(g => g.rows.length > 0)
+    : groups;
+
   return (
-    <div className="min-h-screen min-h-screen-dynamic bg-background pb-14">
-      <header className="sticky top-0 bg-background z-10" style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }}>
-        <div className="container mx-auto px-2 xs:px-3 sm:px-4 py-2 xs:py-3 sm:py-4">
-          <div className="flex items-center gap-1.5 xs:gap-2 min-w-0">
-            <AppLogo size="sm" />
-            <h1 className="text-base xs:text-lg sm:text-xl font-bold truncate">{t('settings.taskSettings', 'Task Settings')}</h1>
+    <div className="min-h-screen min-h-screen-dynamic bg-[#F2F2F7] dark:bg-[#000000] pb-20">
+      <div style={{ paddingTop: 'var(--safe-top, 0px)', paddingLeft: 'var(--safe-left, 0px)', paddingRight: 'var(--safe-right, 0px)' }}>
+        <div className="px-5 pt-4 pb-3 flex items-center gap-2.5">
+          <AppLogo size="md" className="h-7 w-7 rounded-[7px] flex-shrink-0" />
+          <h1 className="text-[26px] leading-none font-bold tracking-tight text-black dark:text-white">
+            {t('settings.taskSettings', 'Task Settings')}
+          </h1>
+        </div>
+        <div className="px-4 pb-3">
+          <div className="flex items-center gap-2 bg-[#E4E4E9] dark:bg-[#1C1C1E] rounded-[10px] px-3 h-9">
+            <Search className="h-[18px] w-[18px] text-[#8E8E93]" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search settings"
+              className="flex-1 bg-transparent outline-none border-0 text-[17px] placeholder:text-[#8E8E93] text-black dark:text-white"
+            />
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="container mx-auto px-2 xs:px-3 sm:px-4 py-3 xs:py-4 sm:py-6">
-        <div className="max-w-2xl mx-auto space-y-4">
-          {/* Upgrade to Pro */}
-          {!isPro && (
-            <button
-              onClick={() => openPaywall()}
-              className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors"
-            >
-              <span className="text-sm font-medium flex items-center gap-2" style={{ color: 'hsl(var(--primary))' }}>
-                <Crown className="h-4 w-4" fill="#FFD700" color="#FFD700" />
-                {t('settings.upgradeToPro', 'Upgrade to Flowist Pro')}
-              </span>
-              <ChevronRight className="h-4 w-4" style={{ color: 'hsl(var(--primary))' }} />
-            </button>
-          )}
+      <main className="px-4 space-y-6">
+        {!isPro && (
+          <button
+            onClick={() => openPaywall()}
+            className="w-full flex items-center justify-between px-4 py-3.5 rounded-[14px] bg-white dark:bg-[#1C1C1E] shadow-sm"
+          >
+            <span className="text-[17px] font-medium text-[#007AFF]">
+              {t('settings.upgradeToPro', 'Upgrade to Flowist Pro')}
+            </span>
+            <ChevronRight className="h-[18px] w-[18px] text-[#C7C7CC]" />
+          </button>
+        )}
 
-          {/* Preferences Section */}
-          <div className="border border-border rounded-lg overflow-hidden">
-            <SectionHeading title={t('settings.preferences', 'Preferences')} />
-            <SettingsRow 
-              label={t('settings.theme', 'Theme')} 
-              value={themes.find(th => th.id === currentTheme)?.name}
-              onClick={() => setShowThemeDialog(true)} 
-            />
-            <SettingsRow 
-              label={t('settings.language', 'Language')} 
-              value={currentLanguage.nativeName}
-              onClick={() => setShowLanguageDialog(true)} 
-            />
-            <SettingsRow 
-              dataTour="settings-note-type-visibility"
-              label={
-                <span className="inline-flex items-center gap-1.5">
-                  {t('settings.noteTypeVisibility', 'Note Type Visibility')}
-                  {!isPro && <Crown className="h-3.5 w-3.5" fill="#FFD700" color="#FFD700" />}
-                </span>
-              }
-              onClick={() => { if (requireFeature('notes_type_visibility')) setShowNoteTypeVisibilitySheet(true); }} 
-            />
-            <SettingsRow 
-              label={t('settings.notesSettings', 'Notes Settings')}
-              onClick={() => setShowNotesSettingsSheet(true)} 
-            />
-            <SettingsRow 
-              label={t('settings.tasksSettings', 'Task Defaults & Display')}
-              onClick={() => setShowTasksSettingsSheet(true)} 
-            />
-            <SettingsRow 
-              dataTour="settings-customize-navigation"
-              label={t('settings.customizeNavigation', 'Customize Navigation')}
-              onClick={() => setShowCustomizeNavigationSheet(true)} 
-            />
-            <button
-              data-tour="settings-more-tabs"
-              onClick={() => setShowMoreTabsExpanded(!showMoreTabsExpanded)}
-              className="w-full flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted transition-colors"
-            >
-              <span className="text-foreground text-sm">{t('settings.moreTabs', 'More Tabs')}</span>
-              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showMoreTabsExpanded && "rotate-180")} />
-            </button>
-            {showMoreTabsExpanded && (
-              <div className="bg-muted/30">
-                <button
-                  data-tour="settings-habit-tracker"
-                  onClick={() => navigate('/todo/habits')}
-                  className="w-full flex items-center justify-between px-6 py-3 border-b border-border/50 hover:bg-muted transition-colors"
-                >
-                  <span className="text-foreground text-sm">{t('settings.habitTracker', 'Habit Tracker')}</span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </button>
-                <button
-                  data-tour="settings-eisenhower-matrix"
-                  onClick={() => navigate('/todo/matrix')}
-                  className="w-full flex items-center justify-between px-6 py-3 border-b border-border/50 hover:bg-muted transition-colors"
-                >
-                  <span className="text-foreground text-sm">{t('settings.eisenhowerMatrix', 'Eisenhower Matrix')}</span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </button>
-                <button
-                  onClick={() => navigate('/todo/countdown')}
-                  className="w-full flex items-center justify-between px-6 py-3 border-b border-border/50 hover:bg-muted transition-colors"
-                >
-                  <span className="text-foreground text-sm">{t('settings.countdown', 'Countdown')}</span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </div>
-            )}
+        {filteredGroups.map((group, gi) => (
+          <div key={gi} className="bg-white dark:bg-[#1C1C1E] rounded-[14px] overflow-hidden">
+            {group.rows.map((row, ri) => {
+              const Icon = row.icon;
+              const isLast = ri === group.rows.length - 1;
+              return (
+                <div key={row.label + ri} className="relative">
+                  <button
+                    onClick={row.onClick}
+                    disabled={row.disabled}
+                    data-tour={row.dataTour}
+                    className="w-full flex items-center gap-3 pl-3 pr-4 py-[9px] active:bg-black/[0.04] dark:active:bg-white/[0.06] transition-colors disabled:opacity-60"
+                  >
+                    <span
+                      className="flex items-center justify-center rounded-[8px] shrink-0"
+                      style={{
+                        width: 29,
+                        height: 29,
+                        background: `linear-gradient(180deg, ${row.color} 0%, ${row.color}E6 100%)`,
+                        boxShadow: `0 1px 2px ${row.color}40, inset 0 1px 0 rgba(255,255,255,0.25)`,
+                      }}
+                    >
+                      <Icon className="h-[17px] w-[17px] text-white drop-shadow-[0_0.5px_0_rgba(0,0,0,0.1)]" />
+                    </span>
+                    <span className="flex-1 min-w-0 flex items-center gap-1.5">
+                      <span className={cn(
+                        "text-[17px] text-left truncate",
+                        row.destructive ? "text-[#FF3B30] font-medium" : "text-black dark:text-white"
+                      )}>
+                        {row.label}
+                      </span>
+                    </span>
+                    {row.value && (
+                      <span className="text-[15px] text-[#8E8E93] truncate max-w-[35%]">{row.value}</span>
+                    )}
+                    <ChevronRight className={cn(
+                      "h-[18px] w-[18px] shrink-0",
+                      row.destructive ? "text-[#FF3B30]/60" : "text-[#C7C7CC]"
+                    )} />
+                  </button>
+                  {!isLast && (
+                    <div className="absolute left-[52px] right-0 bottom-0 h-px bg-[#E5E5EA] dark:bg-[#38383A]" />
+                  )}
+                </div>
+              );
+            })}
           </div>
-
-
-
-
-
-          <div className="border border-border rounded-lg overflow-hidden">
-            <SectionHeading title={t('settings.security', 'Security')} />
-            <SettingsRow 
-              label={t('settings.appLock', 'App Lock')}
-              onClick={() => { if (requireFeature('app_lock')) setShowAppLockSettingsSheet(true); }} 
-            />
-          </div>
-
-          {/* Data Management Section */}
-          <div className="border border-border rounded-lg overflow-hidden">
-            <SectionHeading title={t('settings.dataManagement', 'Data Management')} />
-            <button
-              onClick={() => { if (requireFeature('backup')) handleBackupData(); }}
-              disabled={isBackingUp}
-              className="w-full flex items-center justify-between px-4 py-3 border-b border-border hover:bg-muted transition-colors disabled:opacity-50"
-            >
-              <span className="text-foreground text-sm flex items-center gap-1">
-                {isBackingUp ? t('settings.backingUp', 'Backing up...') : t('settings.backupData')}
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <SettingsRow label={t('settings.restoreData')} onClick={handleRestoreData} />
-            <SettingsRow label={t('settings.downloadData')} onClick={handleDownloadData} />
-            <SettingsRow label={t('settings.deleteData')} onClick={handleDeleteData} />
-            <button
-              onClick={() => { setDeleteAccountConfirmText(''); setShowDeleteAccountDialog(true); }}
-              className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted transition-colors"
-            >
-              <span className="text-destructive text-sm font-medium">
-                {t('settings.deleteAccount', 'Delete Account')}
-              </span>
-              <ChevronRight className="h-4 w-4 text-destructive/70" />
-            </button>
-          </div>
-
-          {/* About & Support Section */}
-          <div className="border border-border rounded-lg overflow-hidden">
-            <SectionHeading title={t('settings.aboutSupport', 'About & Support')} />
-            <SettingsRow label={t('settings.termsOfService')} onClick={() => navigate('/terms-and-conditions')} />
-            <SettingsRow label={t('settings.privacy')} onClick={() => navigate('/privacy-policy')} />
-
-          </div>
-        </div>
+        ))}
       </main>
+
 
       {/* Theme Dialog */}
       <Dialog open={showThemeDialog} onOpenChange={setShowThemeDialog}>
