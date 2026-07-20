@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BottomNavigation } from '@/components/BottomNavigation';
+import { AppLogo } from '@/components/AppLogo';
 import {
   ChevronRight,
   Crown,
