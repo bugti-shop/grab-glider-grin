@@ -17,9 +17,9 @@ const SLIDES = [ob01, ob02, ob03, ob04, ob05, ob06].map((a) => a.url);
  * Pixel-perfect onboarding — each slide image already has step dots and a
  * "Next"/"Get Started" button baked in. So the overlay only provides:
  *  - Skip button (top-right)
- *  - Back button (bottom-left, small)
+ *  - Back button (top-left, small)
  *  - Swipe left/right to navigate
- *  - Tap-to-advance on the image (invokes the baked-in Next button visually)
+ *  - Tap-to-advance only on the baked-in CTA button area
  * No duplicate dots or Next button in the overlay.
  */
 export const OnboardingSlides = ({ onComplete }: Props) => {
@@ -166,7 +166,7 @@ const SwipeArea = ({ onNext, onBack, onTap, children }: SwipeAreaProps) => {
     if (locked.current === 'h' && Math.abs(dx) > SWIPE_THRESHOLD) {
       if (dx < 0) onNext();
       else onBack();
-    } else if (!moved.current) {
+    } else if (!moved.current && isBottomCtaTap(e)) {
       onTap();
     }
     startX.current = null;
@@ -187,4 +187,11 @@ const SwipeArea = ({ onNext, onBack, onTap, children }: SwipeAreaProps) => {
       {children}
     </div>
   );
+};
+
+const isBottomCtaTap = (e: React.PointerEvent) => {
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+  return x >= 0.04 && x <= 0.96 && y >= 0.88 && y <= 0.985;
 };
