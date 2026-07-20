@@ -249,6 +249,7 @@ class TourManagerImpl {
     let suppressDestroy = false;
     let currentIndex = 0;
     let currentDrv: Driver | null = null;
+    let disposeStepA11y: (() => void) | null = null;
     const forced = this.forcedActive;
 
     // If this tour is part of the onboarding chain, teach the popover that
@@ -257,6 +258,7 @@ class TourManagerImpl {
     const inChain = !!chainedNextId;
 
     const finalize = async (opts: { advanceChain?: boolean } = {}) => {
+      try { disposeStepA11y?.(); disposeStepA11y = null; } catch {}
       try { delete document.body.dataset.tourActive; } catch {}
       try { delete document.body.dataset.tourId; } catch {}
       try { delete document.body.dataset.tourForced; } catch {}
