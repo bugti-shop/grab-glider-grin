@@ -48,40 +48,45 @@ const Settings = () => {
   const groups: { rows: IconRow[] }[] = useMemo(() => [
     {
       rows: [
-        { label: 'General', icon: SettingsIcon, color: '#8E8E93', onClick: () => setShowHeaderOffsetSheet(true) },
-        { label: 'Appearance', icon: Brush, color: '#AF52DE', onClick: () => state.setShowThemeDialog(true) },
-        { label: 'Language', icon: Globe, color: '#007AFF', onClick: () => state.setShowLanguageDialog(true) },
-        { label: 'Note Type Visibility', icon: Eye, color: '#5AC8CE', onClick: () => { if (requireFeature('notes_type_visibility')) state.setShowNoteTypeVisibilitySheet(true); } },
-        { label: 'Notes Settings', icon: StickyNote, color: '#FF9500', onClick: () => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); } },
+        { label: 'General', icon: SettingsIcon, color: '#8E8E93', onClick: () => setShowHeaderOffsetSheet(true), keywords: ['header', 'offset', 'layout'] },
+        { label: 'Appearance', icon: Brush, color: '#AF52DE', onClick: () => state.setShowThemeDialog(true), keywords: ['theme', 'dark', 'light', 'color', 'colour', 'mode'] },
+        { label: 'Language', icon: Globe, color: '#007AFF', onClick: () => state.setShowLanguageDialog(true), keywords: ['locale', 'translate', 'region'] },
+        { label: 'Note Type Visibility', icon: Eye, color: '#5AC8CE', onClick: () => { if (requireFeature('notes_type_visibility')) state.setShowNoteTypeVisibilitySheet(true); }, keywords: ['notes', 'show', 'hide', 'sticky', 'sketch', 'voice'] },
+        { label: 'Notes Settings', icon: StickyNote, color: '#FF9500', onClick: () => { if (requireFeature('notes_settings')) state.setShowNotesSettingsSheet(true); }, keywords: ['editor', 'font'] },
       ],
     },
     {
       rows: [
-        { label: 'Tasks', icon: ClipboardCheck, color: '#34C759', onClick: () => { if (requireFeature('tasks_settings')) state.setShowTasksSettingsSheet(true); } },
-        { label: 'Calendar', icon: CalendarIcon, color: '#FF3B30', onClick: () => navigate('/calendar') },
-        { label: 'Customize Navigation', icon: Compass, color: '#5856D6', onClick: () => state.setShowCustomizeNavigationSheet(true) },
+        { label: 'Tasks', icon: ClipboardCheck, color: '#34C759', onClick: () => { if (requireFeature('tasks_settings')) state.setShowTasksSettingsSheet(true); }, keywords: ['todo', 'priority', 'defaults'] },
+        { label: 'Calendar', icon: CalendarIcon, color: '#FF3B30', onClick: () => navigate('/calendar'), keywords: ['schedule', 'date', 'events'] },
+        { label: 'Customize Navigation', icon: Compass, color: '#5856D6', onClick: () => state.setShowCustomizeNavigationSheet(true), keywords: ['bottom', 'tabs', 'nav', 'menu'] },
       ],
     },
     {
       rows: [
-        { label: 'Accessibility', icon: AccessibilityIcon, color: '#FF2D92', onClick: () => setShowAccessibilityZoomSheet(true) },
-        { label: 'App Lock', icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) state.setShowAppLockSettingsSheet(true); } },
-        { label: 'Notifications', icon: Bell, color: '#FFCC00', onClick: () => toast.info('Manage notifications from your device settings') },
+        { label: 'Accessibility', icon: AccessibilityIcon, color: '#FF2D92', onClick: () => setShowAccessibilityZoomSheet(true), keywords: ['zoom', 'font size', 'text size'] },
+        { label: 'App Lock', icon: Lock, color: '#FF3B30', onClick: () => { if (requireFeature('app_lock')) state.setShowAppLockSettingsSheet(true); }, keywords: ['security', 'passcode', 'pin', 'biometric', 'face', 'touch'] },
+        { label: 'Notifications', icon: Bell, color: '#FFCC00', onClick: () => toast.info('Manage notifications from your device settings'), keywords: ['alerts', 'reminders', 'push'] },
       ],
     },
     {
       rows: [
-        { label: 'Sync & Backup', icon: Cloud, color: '#32ADE6', onClick: () => { if (requireFeature('backup')) state.handleBackupData(); } },
-        { label: 'Help & Support', icon: HelpCircle, color: '#34C759', onClick: () => setShowFeedbackDialog(true) },
-        { label: 'About', icon: Info, color: '#48484A', onClick: () => state.setShowTermsDialog(true) },
+        { label: 'Sync & Backup', icon: Cloud, color: '#32ADE6', onClick: () => { if (requireFeature('backup')) state.handleBackupData(); }, keywords: ['export', 'save', 'drive', 'restore', 'cloud'] },
+        { label: 'Help & Support', icon: HelpCircle, color: '#34C759', onClick: () => setShowFeedbackDialog(true), keywords: ['feedback', 'contact', 'faq'] },
+        { label: 'About', icon: Info, color: '#48484A', onClick: () => state.setShowTermsDialog(true), keywords: ['version', 'terms', 'legal', 'privacy'] },
       ],
     },
   ], [state, requireFeature, navigate]);
 
   const q = query.trim().toLowerCase();
+  const matches = (r: IconRow) => {
+    if (!q) return true;
+    if (r.label.toLowerCase().includes(q)) return true;
+    return (r.keywords || []).some((k) => k.toLowerCase().includes(q));
+  };
   const filteredGroups = q
     ? groups
-        .map((g) => ({ rows: g.rows.filter((r) => r.label.toLowerCase().includes(q)) }))
+        .map((g) => ({ rows: g.rows.filter(matches) }))
         .filter((g) => g.rows.length > 0)
     : groups;
 
