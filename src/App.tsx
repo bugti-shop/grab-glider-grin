@@ -533,6 +533,7 @@ const AppRoutes = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             
             <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/admin/onboarding" element={<AdminOnboarding />} />
             <Route path="/w/add-task" element={<WidgetAddTask />} />
             <Route path="/w/new/sticky" element={<WidgetNewSticky />} />
