@@ -85,6 +85,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const SyncDiagnostics = lazy(() => import("./pages/SyncDiagnostics"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
+const Contact = lazy(() => import("./pages/Contact"));
 const Progress = lazy(() => import("./pages/todo/Progress"));
 const JourneyHistory = lazy(() => import("./pages/todo/JourneyHistory"));
 const JourneyBadges = lazy(() => import("./pages/todo/JourneyBadges"));
