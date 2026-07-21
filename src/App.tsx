@@ -893,6 +893,7 @@ const AppContent = () => {
             <Routes>
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/premium-unlock" element={<PremiumUnlock />} />
               <Route path="/p/:slug" element={<PublicNote />} />
               <Route path="/invite/:token" element={<AcceptInvite />} />
