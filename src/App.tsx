@@ -85,6 +85,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const SyncDiagnostics = lazy(() => import("./pages/SyncDiagnostics"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
+const Contact = lazy(() => import("./pages/Contact"));
 const Progress = lazy(() => import("./pages/todo/Progress"));
 const JourneyHistory = lazy(() => import("./pages/todo/JourneyHistory"));
 const JourneyBadges = lazy(() => import("./pages/todo/JourneyBadges"));
@@ -532,6 +533,7 @@ const AppRoutes = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             
             <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/admin/onboarding" element={<AdminOnboarding />} />
             <Route path="/w/add-task" element={<WidgetAddTask />} />
             <Route path="/w/new/sticky" element={<WidgetNewSticky />} />
@@ -891,6 +893,7 @@ const AppContent = () => {
             <Routes>
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/premium-unlock" element={<PremiumUnlock />} />
               <Route path="/p/:slug" element={<PublicNote />} />
               <Route path="/invite/:token" element={<AcceptInvite />} />
