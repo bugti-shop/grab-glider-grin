@@ -21,7 +21,7 @@ export const HistoryView = ({
 
   const historyGroups = [
     { label: t('grouping.completedToday', 'Completed Today'), tasks: completedItems.filter(item => item.dueDate && isToday(new Date(item.dueDate))), color: '#10b981' },
-    { label: t('grouping.completedYesterday', 'Completed Yesterday'), tasks: completedItems.filter(item => item.dueDate && isYesterday(new Date(item.dueDate))), color: '#3b82f6' },
+    { label: t('grouping.completedYesterday', 'Completed Yesterday'), tasks: completedItems.filter(item => item.dueDate && isYesterday(new Date(item.dueDate))), color: '#db252d' },
     { label: t('grouping.thisWeek', 'This Week'), tasks: completedItems.filter(item => item.dueDate && isThisWeek(new Date(item.dueDate)) && !isToday(new Date(item.dueDate)) && !isYesterday(new Date(item.dueDate))), color: '#8b5cf6' },
     { label: t('grouping.older', 'Older'), tasks: completedItems.filter(item => !item.dueDate || (!isThisWeek(new Date(item.dueDate)))), color: '#6b7280' },
   ];

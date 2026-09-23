@@ -223,7 +223,7 @@ export const mappers = {
         ...(payload ?? {}),
         id: r.id,
         name: r.name ?? payload?.name ?? '',
-        color: payload?.color ?? '#3b82f6',
+        color: payload?.color ?? '#db252d',
         isCollapsed: payload?.isCollapsed ?? false,
         order: typeof r.order_index === 'number' ? r.order_index : (payload?.order ?? 0),
         folderId: r.folder_id ?? payload?.folderId,

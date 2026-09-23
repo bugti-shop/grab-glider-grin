@@ -482,7 +482,7 @@ class WidgetDataSyncManager {
           id: h.id,
           name: h.name,
           emoji: h.emoji || '✨',
-          color: h.color || '#3c78f0',
+          color: h.color || '#db252d',
           done,
           streak: h.currentStreak || 0,
           progress: isAmount ? `${rec?.amount ?? 0} / ${h.goalAmount} ${h.goalUnit || ''}`.trim() : '',

@@ -34,7 +34,7 @@ export const KanbanStatusView = ({
 
   const statusGroups = [
     { id: 'not_started' as TaskStatus, label: t('grouping.notStarted'), color: '#6b7280', icon: <Circle className="h-3.5 w-3.5" />, tasks: uncompletedItems.filter(item => !item.status || item.status === 'not_started') },
-    { id: 'in_progress' as TaskStatus, label: t('grouping.inProgress'), color: '#3b82f6', icon: <Loader2 className="h-3.5 w-3.5" />, tasks: uncompletedItems.filter(item => item.status === 'in_progress') },
+    { id: 'in_progress' as TaskStatus, label: t('grouping.inProgress'), color: '#db252d', icon: <Loader2 className="h-3.5 w-3.5" />, tasks: uncompletedItems.filter(item => item.status === 'in_progress') },
     { id: 'almost_done' as TaskStatus, label: t('grouping.almostDone'), color: '#f59e0b', icon: <ClockIcon className="h-3.5 w-3.5" />, tasks: uncompletedItems.filter(item => item.status === 'almost_done') },
     { id: 'completed' as TaskStatus, label: t('grouping.completed'), color: '#10b981', icon: <CheckCircle2 className="h-3.5 w-3.5" />, tasks: completedItems },
   ];

@@ -61,7 +61,7 @@ import { TodoCalendarFab } from '@/components/todo/TodoCalendarFab';
 type ViewMode = 'flat' | 'kanban-status' | 'timeline' | 'progress' | 'priority' | 'history';
 
 const defaultSections: TaskSection[] = [
-  { id: 'default', name: 'Tasks', color: '#3b82f6', isCollapsed: false, order: 0 }
+  { id: 'default', name: 'Tasks', color: '#db252d', isCollapsed: false, order: 0 }
 ];
 
 const TodoCalendar = () => {
@@ -956,7 +956,7 @@ const TodoCalendar = () => {
   const renderStatusView = () => {
     const statusGroups: { id: TaskStatus; label: string; color: string; icon: React.ReactNode; tasks: TodoItem[] }[] = [
       { id: 'not_started', label: t('todayPage.notStarted'), color: '#6b7280', icon: <Circle className="h-3.5 w-3.5" />, tasks: uncompletedTasks.filter(item => !item.status || item.status === 'not_started') },
-      { id: 'in_progress', label: t('todayPage.inProgress'), color: '#3b82f6', icon: <Loader2 className="h-3.5 w-3.5" />, tasks: uncompletedTasks.filter(item => item.status === 'in_progress') },
+      { id: 'in_progress', label: t('todayPage.inProgress'), color: '#db252d', icon: <Loader2 className="h-3.5 w-3.5" />, tasks: uncompletedTasks.filter(item => item.status === 'in_progress') },
       { id: 'almost_done', label: t('todayPage.almostDone'), color: '#f59e0b', icon: <ClockIcon className="h-3.5 w-3.5" />, tasks: uncompletedTasks.filter(item => item.status === 'almost_done') },
       { id: 'completed', label: t('todayPage.completed'), color: '#10b981', icon: <CheckCircle2 className="h-3.5 w-3.5" />, tasks: completedTasks },
     ];
@@ -1059,7 +1059,7 @@ const TodoCalendar = () => {
     const today = startOfDay(new Date());
     const timelineGroups = [
       { id: 'cal-tl-overdue', label: t('todayPage.overdue'), tasks: uncompletedTasks.filter(t => t.dueDate && isBefore(new Date(t.dueDate), today)), color: '#ef4444', icon: <AlertCircle className="h-4 w-4" /> },
-      { id: 'cal-tl-today', label: t('todayPage.today'), tasks: uncompletedTasks.filter(t => t.dueDate && isToday(new Date(t.dueDate))), color: '#3b82f6', icon: <Sun className="h-4 w-4" /> },
+      { id: 'cal-tl-today', label: t('todayPage.today'), tasks: uncompletedTasks.filter(t => t.dueDate && isToday(new Date(t.dueDate))), color: '#db252d', icon: <Sun className="h-4 w-4" /> },
       { id: 'cal-tl-tomorrow', label: t('todayPage.tomorrow'), tasks: uncompletedTasks.filter(t => t.dueDate && isTomorrow(new Date(t.dueDate))), color: '#f59e0b', icon: <CalendarIcon2 className="h-4 w-4" /> },
       { id: 'cal-tl-thisweek', label: t('todayPage.thisWeek'), tasks: uncompletedTasks.filter(t => t.dueDate && isThisWeek(new Date(t.dueDate)) && !isToday(new Date(t.dueDate)) && !isTomorrow(new Date(t.dueDate))), color: '#10b981', icon: <CalendarIcon2 className="h-4 w-4" /> },
       { id: 'cal-tl-later', label: t('todayPage.later'), tasks: uncompletedTasks.filter(t => t.dueDate && !isBefore(new Date(t.dueDate), today) && !isThisWeek(new Date(t.dueDate))), color: '#8b5cf6', icon: <Clock className="h-4 w-4" /> },
@@ -1132,7 +1132,7 @@ const TodoCalendar = () => {
 
     const historyGroups = [
       { label: t('todayPage.completedToday'), tasks: todayCompleted, color: '#10b981' },
-      { label: t('todayPage.completedYesterday'), tasks: yesterdayCompleted, color: '#3b82f6' },
+      { label: t('todayPage.completedYesterday'), tasks: yesterdayCompleted, color: '#db252d' },
       { label: t('todayPage.thisWeek'), tasks: thisWeekCompleted, color: '#8b5cf6' },
       { label: t('todayPage.older'), tasks: olderCompleted, color: '#6b7280' },
     ];

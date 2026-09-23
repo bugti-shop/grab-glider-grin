@@ -97,7 +97,7 @@ export const MonthlyChallengeBoard = () => {
           recycle={false}
           numberOfPieces={400}
           gravity={0.2}
-          colors={['#FFD700', '#FFA500', '#FF6347', '#8B5CF6', '#3B82F6']}
+          colors={['#FFD700', '#FFA500', '#FF6347', '#8B5CF6', '#db252d']}
           style={{ position: 'fixed', top: 0, left: 0, zIndex: 100, pointerEvents: 'none' }}
         />
       )}

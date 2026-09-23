@@ -152,7 +152,7 @@ export const scheduleSmartNudges = async (): Promise<void> => {
         schedule: { at: morning, allowWhileIdle: true },
         channelId: NUDGE_CHANNEL,
         smallIcon: 'npd_notification_icon',
-        iconColor: '#3B82F6',
+        iconColor: '#db252d',
         sound: 'default',
       });
     }

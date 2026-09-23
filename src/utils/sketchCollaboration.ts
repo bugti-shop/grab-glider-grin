@@ -48,7 +48,7 @@ export interface RemotePageSwitch { userId: string; userName: string; pageIndex:
 export interface RemoteLayerEvent { userId: string; userName: string; action: LayerAction; timestamp: number; }
 
 // No-op stubs
-export const getCollabColor = (i: number) => ['#ef4444','#3b82f6','#22c55e'][i % 3];
+export const getCollabColor = (i: number) => ['#ef4444','#db252d','#22c55e'][i % 3];
 export const createCollabRoom = async (): Promise<string> => { throw new Error('Collaboration removed'); };
 export const doesRoomExist = async (): Promise<boolean> => false;
 export const joinRoom = async (): Promise<string> => { throw new Error('Collaboration removed'); };

@@ -64,7 +64,7 @@ export const template = {
   },
 } satisfies TemplateEntry
 
-const brandBlue = 'hsl(220, 85%, 59%)'
+const brandBlue = 'hsl(358, 71%, 50%)'
 const foreground = 'hsl(222.2, 84%, 4.9%)'
 const muted = 'hsl(215.4, 16.3%, 46.9%)'
 const main = { backgroundColor: '#ffffff', fontFamily: 'Nunito, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif' }

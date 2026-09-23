@@ -98,7 +98,7 @@ const BUILT_IN_STICKERS: StickerElement[] = [
   },
   {
     id: 'builtin-circle', name: 'Circle', builtIn: true,
-    strokes: [{ points: Array.from({length: 25}, (_, i) => { const a = (i/24)*Math.PI*2; return mkPt(25+20*Math.cos(a), 25+20*Math.sin(a)); }), color: '#3b82f6', width: 2, tool: 'pen' as ToolType }],
+    strokes: [{ points: Array.from({length: 25}, (_, i) => { const a = (i/24)*Math.PI*2; return mkPt(25+20*Math.cos(a), 25+20*Math.sin(a)); }), color: '#db252d', width: 2, tool: 'pen' as ToolType }],
   },
   {
     id: 'builtin-underline', name: 'Underline', builtIn: true,
@@ -878,7 +878,7 @@ const PenPreviewCanvas = memo(({ penType, isActive, currentColor }: { penType: D
       points.push({ x, y, p });
     }
 
-    const c = currentColor || '#3C78F0';
+    const c = currentColor || '#db252d';
 
     switch (penType) {
       case 'pencil': {
@@ -1299,7 +1299,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   const triangleRef = useRef<TriangleEdges | null>(null);
   // Fill color state for shapes
   const [fillEnabled, setFillEnabled] = useState(false);
-  const [fillColor, setFillColor] = useState('#3b82f6');
+  const [fillColor, setFillColor] = useState('#db252d');
   const [fillOpacity, setFillOpacity] = useState(0.3);
   const [fillType, setFillType] = useState<'solid' | 'linear-gradient' | 'radial-gradient' | 'stripes' | 'dots' | 'crosshatch'>('solid');
   const [fillColor2, setFillColor2] = useState('#8b5cf6');
@@ -1328,7 +1328,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
   useEffect(() => { pressureCurveRef.current = pressureCurve; }, [pressureCurve]);
 
   const [savedPalettes, setSavedPalettes] = useState<{ name: string; colors: string[] }[]>([
-    { name: 'Default', colors: ['#1a1a1a', '#ffffff', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280'] },
+    { name: 'Default', colors: ['#1a1a1a', '#ffffff', '#ef4444', '#f97316', '#eab308', '#22c55e', '#db252d', '#8b5cf6', '#ec4899', '#6b7280'] },
     { name: 'Pastel', colors: ['#fecdd3', '#fed7aa', '#fef08a', '#bbf7d0', '#bfdbfe', '#ddd6fe', '#fbcfe8', '#e2e8f0'] },
     { name: 'Earth', colors: ['#292524', '#78716c', '#a16207', '#854d0e', '#365314', '#1e3a5f', '#44403c', '#d6d3d1'] },
   ]);
@@ -6595,7 +6595,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                       >
                         <X className="h-3 w-3 text-muted-foreground" />
                       </button>
-                      {['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316','#1a1a1a','#ffffff'].map(c => (
+                      {['#db252d','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316','#1a1a1a','#ffffff'].map(c => (
                         <button key={c}
                           className={cn('w-6 h-6 rounded-full border-2 transition-transform active:scale-90',
                             currentFill === c ? 'border-primary scale-110' : 'border-border')}
@@ -6634,7 +6634,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                           <div>
                             <p className="text-[10px] text-muted-foreground mb-1">Second Color</p>
                             <div className="flex gap-1 flex-wrap">
-                              {['#8b5cf6','#3b82f6','#ef4444','#22c55e','#f59e0b','#ec4899','#06b6d4','#f97316','#1a1a1a','#ffffff'].map(c => (
+                              {['#8b5cf6','#db252d','#ef4444','#22c55e','#f59e0b','#ec4899','#06b6d4','#f97316','#1a1a1a','#ffffff'].map(c => (
                                 <button key={c}
                                   className={cn('w-5 h-5 rounded-full border-2 transition-transform active:scale-90',
                                     currentFillColor2 === c ? 'border-primary scale-110' : 'border-border')}
@@ -7979,7 +7979,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
               {fillEnabled && (
                 <>
                   <div className="flex gap-1 flex-wrap">
-                    {['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316','#1a1a1a','#ffffff'].map(c => (
+                    {['#db252d','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316','#1a1a1a','#ffffff'].map(c => (
                       <button key={c}
                         className={cn('w-5 h-5 rounded-full border-2 transition-transform active:scale-90',
                           fillColor === c ? 'border-primary scale-110' : 'border-border')}
@@ -8016,7 +8016,7 @@ export const SketchEditor = memo(({ initialData, onChange, onImageExport, classN
                     <div>
                       <p className="text-[10px] text-muted-foreground mb-1">Second Color</p>
                       <div className="flex gap-1 flex-wrap">
-                        {['#8b5cf6','#3b82f6','#ef4444','#22c55e','#f59e0b','#ec4899','#06b6d4','#f97316','#1a1a1a','#ffffff'].map(c => (
+                        {['#8b5cf6','#db252d','#ef4444','#22c55e','#f59e0b','#ec4899','#06b6d4','#f97316','#1a1a1a','#ffffff'].map(c => (
                           <button key={c}
                             className={cn('w-5 h-5 rounded-full border-2 transition-transform active:scale-90',
                               fillColor2 === c ? 'border-primary scale-110' : 'border-border')}

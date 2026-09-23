@@ -198,7 +198,7 @@ const parseTodoistCSV = (text: string): ImportResult => {
           const section: TaskSection = {
             id: generateId(),
             name: content,
-            color: '#3b82f6',
+            color: '#db252d',
             isCollapsed: false,
             order: sections.length,
           };
@@ -319,7 +319,7 @@ const parseTickTickCSV = (text: string): ImportResult => {
           let section = sectionMap.get(key);
           if (!section) {
             section = {
-              id: generateId(), name: colName, color: '#3b82f6', isCollapsed: false,
+              id: generateId(), name: colName, color: '#db252d', isCollapsed: false,
               order: sectionMap.size, folderId,
             } as TaskSection;
             sectionMap.set(key, section);
@@ -589,7 +589,7 @@ const parseTodoistJSON = (text: string): ImportResult => {
         sectionMap.set(sid, {
           id: generateId(),
           name: String(s.name || `Section ${sid}`),
-          color: '#3b82f6',
+          color: '#db252d',
           isCollapsed: false,
           order: sectionMap.size,
           folderId: s?.project_id != null ? projectFolders.get(String(s.project_id))?.id : undefined,
@@ -641,7 +641,7 @@ const parseTodoistJSON = (text: string): ImportResult => {
             section = {
               id: generateId(),
               name: `Section ${sourceSectionId}`,
-              color: '#3b82f6',
+              color: '#db252d',
               isCollapsed: false,
               order: sectionMap.size,
             };

@@ -37,6 +37,6 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:backgroundDimEnabled">true</item>
         <item name="android:windowCloseOnTouchOutside">true</item>
-        <item name="android:colorAccent">#3b82f6</item>
+        <item name="android:colorAccent">#db252d</item>
     </style>
 </resources>

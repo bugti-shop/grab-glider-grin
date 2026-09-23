@@ -226,7 +226,7 @@ const Progress = () => {
           <button
             onClick={() => setShowStreakDetail(true)}
             className="relative w-full rounded-xl px-6 sm:px-8 py-8 sm:py-10 text-left overflow-hidden active:scale-[0.99] transition-transform min-h-[180px] sm:min-h-[220px]"
-            style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
+            style={{ background: 'linear-gradient(135deg, #db252d 0%, #b51e25 100%)' }}
           >
             <div className="relative z-10">
               <p className="text-7xl sm:text-8xl font-extrabold text-white leading-none tracking-tight">
@@ -396,9 +396,9 @@ const Progress = () => {
                 <AreaChart data={chartData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="lovableAreaFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.32} />
-                      <stop offset="60%" stopColor="#3B82F6" stopOpacity={0.08} />
-                      <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#db252d" stopOpacity={0.32} />
+                      <stop offset="60%" stopColor="#db252d" stopOpacity={0.08} />
+                      <stop offset="100%" stopColor="#db252d" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis
@@ -419,7 +419,7 @@ const Progress = () => {
                     tickMargin={4}
                   />
                   <Tooltip
-                    cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeOpacity: 0.5 }}
+                    cursor={{ stroke: '#db252d', strokeWidth: 1, strokeOpacity: 0.5 }}
                     contentStyle={{
                       background: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
@@ -434,10 +434,10 @@ const Progress = () => {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="#3B82F6"
+                    stroke="#db252d"
                     strokeWidth={2.5}
                     fill="url(#lovableAreaFill)"
-                    activeDot={{ r: 5, fill: '#3B82F6', stroke: '#FFFFFF', strokeWidth: 2 }}
+                    activeDot={{ r: 5, fill: '#db252d', stroke: '#FFFFFF', strokeWidth: 2 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>

@@ -33,7 +33,7 @@ const HabitGallery = () => {
       id: genId(),
       name: t.name,
       emoji: t.emoji,
-      color: 'hsl(220, 85%, 59%)',
+      color: 'hsl(358, 71%, 50%)',
       quote: t.quote,
       frequency: 'daily',
       weeklyDays: [0, 1, 2, 3, 4, 5, 6],

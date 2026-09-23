@@ -13,7 +13,7 @@ import { Bookmark, Sparkles } from 'lucide-react';
 
 const EMOJI_OPTIONS = ['📋', '⭐', '🔥', '💡', '🎯', '📌', '🚀', '💼', '📊', '🏷️', '⚡', '🔔'];
 const COLOR_OPTIONS = [
-  '#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6',
+  '#db252d', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6',
   '#ec4899', '#06b6d4', '#f97316', '#6366f1', '#14b8a6',
 ];
 
@@ -40,7 +40,7 @@ export const SaveSmartViewSheet = ({
   const { requireCapacity } = useSubscription();
   const [name, setName] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('📋');
-  const [selectedColor, setSelectedColor] = useState('#3b82f6');
+  const [selectedColor, setSelectedColor] = useState('#db252d');
 
   useHardwareBackButton({
     onBack: onClose,
@@ -68,7 +68,7 @@ export const SaveSmartViewSheet = ({
     toast.success(t('smartViews.viewSaved', { name: name.trim() }));
     setName('');
     setSelectedEmoji('📋');
-    setSelectedColor('#3b82f6');
+    setSelectedColor('#db252d');
     onSaved();
     onClose();
   };

@@ -37,8 +37,8 @@ import includeWebClipperImg from '@/assets/flowist-include-webclipper.webp.asset
 import includeInlineCalcImg from '@/assets/flowist-include-inline-calc.webp.asset.json';
 import onboardingTiltedHero from '@/assets/onboarding/ob-01-tasks-tilted.webp.asset.json';
 
-const BLUE = '#3c78f0';
-const BLUE_DARK = '#2b5dbf';
+const BLUE = '#db252d';
+const BLUE_DARK = '#b51e25';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -188,7 +188,7 @@ export default function Landing() {
   ];
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 antialiased selection:bg-[#3c78f0]/20">
+    <div className="min-h-screen bg-white text-slate-900 antialiased selection:bg-[#db252d]/20">
       {/* Header */}
       <header
         className={`sticky top-0 z-40 w-full border-b border-slate-200 transition-all ${
@@ -374,8 +374,8 @@ export default function Landing() {
             {/* Hero mockups, stacked, tilted iPhones (Notion/Linear style) */}
             <div className="relative mx-auto hidden w-full max-w-md md:block">
               {/* Ambient glow */}
-              <div className="pointer-events-none absolute -inset-10 rounded-[48px] bg-gradient-to-br from-[#3c78f0]/25 via-[#8ab4ff]/15 to-transparent blur-3xl" />
-              <div className="pointer-events-none absolute right-0 top-8 h-64 w-64 rounded-full bg-[#3c78f0]/20 blur-[90px]" />
+              <div className="pointer-events-none absolute -inset-10 rounded-[48px] bg-gradient-to-br from-[#db252d]/25 via-[#ee8f94]/15 to-transparent blur-3xl" />
+              <div className="pointer-events-none absolute right-0 top-8 h-64 w-64 rounded-full bg-[#db252d]/20 blur-[90px]" />
 
               <div className="relative aspect-[5/6] w-full">
                 {/* Back phone, Notes, tilted left */}
@@ -399,7 +399,7 @@ export default function Landing() {
 
             {/* Mobile hero mockups, single tilted stack */}
             <div className="relative mx-auto -mt-2 mb-2 block w-full max-w-sm md:hidden">
-              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[#3c78f0]/15 blur-3xl" />
+              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[#db252d]/15 blur-3xl" />
               <div className="relative mx-auto aspect-[5/5] w-full">
                 <img
                   src={heroNotesIphone}
@@ -467,8 +467,8 @@ export default function Landing() {
 
             {/* Desktop: single tilted composite (matches onboarding slide 1) */}
             <div className="relative mx-auto hidden w-full max-w-xl md:block">
-              <div className="pointer-events-none absolute -inset-10 rounded-[48px] bg-gradient-to-br from-[#3c78f0]/25 via-[#8ab4ff]/15 to-transparent blur-3xl" />
-              <div className="pointer-events-none absolute right-0 top-8 h-64 w-64 rounded-full bg-[#3c78f0]/20 blur-[90px]" />
+              <div className="pointer-events-none absolute -inset-10 rounded-[48px] bg-gradient-to-br from-[#db252d]/25 via-[#ee8f94]/15 to-transparent blur-3xl" />
+              <div className="pointer-events-none absolute right-0 top-8 h-64 w-64 rounded-full bg-[#db252d]/20 blur-[90px]" />
               <img
                 src={onboardingTiltedHero.url}
                 alt="Scan a handwritten to-do list and get tasks in Flowist"
@@ -480,7 +480,7 @@ export default function Landing() {
 
             {/* Mobile: same composite */}
             <div className="relative mx-auto block w-full max-w-sm md:hidden">
-              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[#3c78f0]/15 blur-3xl" />
+              <div className="pointer-events-none absolute -inset-8 rounded-[40px] bg-[#db252d]/15 blur-3xl" />
               <img
                 src={onboardingTiltedHero.url}
                 alt="Scan a handwritten to-do list and get tasks in Flowist"
@@ -568,7 +568,7 @@ export default function Landing() {
                 href="https://apps.apple.com/us/app/flowist-ai-note-taker/id6772996510"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 items-center justify-center rounded-full border border-white/70 px-10 text-base font-semibold text-white transition-all hover:bg-white hover:text-[#3c78f0]"
+                className="inline-flex h-12 items-center justify-center rounded-full border border-white/70 px-10 text-base font-semibold text-white transition-all hover:bg-white hover:text-[#db252d]"
               >
                 Download
               </a>

@@ -176,7 +176,7 @@ const TEXT_COLORS = [
   '#14532D', '#166534', '#15803D', '#16A34A', '#22C55E', '#4ADE80', '#86EFAC',
   '#134E4A', '#115E59', '#0D9488', '#14B8A6', '#2DD4BF',
   '#164E63', '#0E7490', '#0891B2', '#06B6D4', '#22D3EE',
-  '#1E3A8A', '#1D4ED8', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD',
+  '#1E3A8A', '#1D4ED8', '#b51e25', '#db252d', '#60A5FA', '#93C5FD',
   '#312E81', '#4338CA', '#4F46E5', '#6366F1', '#818CF8',
   '#581C87', '#7E22CE', '#9333EA', '#A855F7', '#C084FC',
   '#831843', '#BE185D', '#DB2777', '#EC4899', '#F472B6',
@@ -193,7 +193,7 @@ const HIGHLIGHT_COLORS = [
   '#F3E8FF', '#E9D5FF', '#D8B4FE', '#C084FC', '#A855F7', '#9333EA',
   '#EDE9FE', '#DDD6FE', '#C4B5FD', '#A78BFA', '#8B5CF6', '#7C3AED',
   '#E0E7FF', '#C7D2FE', '#A5B4FC', '#818CF8', '#6366F1', '#4F46E5',
-  '#DBEAFE', '#BFDBFE', '#93C5FD', '#60A5FA', '#3B82F6', '#2563EB',
+  '#DBEAFE', '#BFDBFE', '#93C5FD', '#60A5FA', '#db252d', '#b51e25',
   '#CFFAFE', '#A5F3FC', '#67E8F9', '#22D3EE', '#06B6D4', '#0891B2',
   '#CCFBF1', '#99F6E4', '#5EEAD4', '#2DD4BF', '#14B8A6', '#0D9488',
   '#DCFCE7', '#BBF7D0', '#86EFAC', '#4ADE80', '#22C55E', '#16A34A',
@@ -498,7 +498,7 @@ export const WordToolbar = ({
       className={cn(
         "h-[38px] w-[38px] flex items-center justify-center rounded-lg transition-all duration-150 flex-shrink-0 touch-pan-x",
         "hover:bg-accent/60 active:scale-95",
-        active && "bg-[#3B82F6] text-white shadow-sm hover:bg-[#3B82F6]",
+        active && "bg-[#db252d] text-white shadow-sm hover:bg-[#db252d]",
         disabled && "opacity-30 pointer-events-none"
       )}
     >

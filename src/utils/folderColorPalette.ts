@@ -3,7 +3,7 @@
 // so the UI stays clean and consistent across the app.
 
 export const FOLDER_COLOR_PALETTE: string[] = [
-  '#3b82f6', // blue
+  '#db252d', // blue
   '#10b981', // green
   '#f59e0b', // amber
   '#ef4444', // red

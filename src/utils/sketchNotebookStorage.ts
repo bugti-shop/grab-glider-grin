@@ -67,7 +67,7 @@ export function createNotebook(name: string, folderId?: string, color?: string):
     createdAt: new Date(),
     updatedAt: new Date(),
     order: Date.now(),
-    color: color || '#3C78F0',
+    color: color || '#db252d',
   };
 }
 
