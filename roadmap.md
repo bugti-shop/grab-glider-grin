@@ -1,3 +1,3 @@
 # Roadmap
 
-- [ ] Complete Flowist red rebrand, logo replacement, and native splash refresh
+- [x] Complete Flowist red rebrand, logo replacement, and native splash refresh
