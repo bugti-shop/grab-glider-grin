@@ -101,7 +101,7 @@ const FONT_COLORS = [
   { label: 'Red', value: '#ef4444' },
   { label: 'Orange', value: '#f97316' },
   { label: 'Green', value: '#22c55e' },
-  { label: 'Blue', value: '#3b82f6' },
+  { label: 'Blue', value: '#db252d' },
   { label: 'Purple', value: '#a855f7' },
   { label: 'Pink', value: '#ec4899' },
 ];

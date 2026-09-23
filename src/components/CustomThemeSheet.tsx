@@ -84,7 +84,7 @@ const defaultColors: CustomTheme['colors'] = {
   foreground: '0 0% 95%',
   card: '220 15% 14%',
   cardForeground: '0 0% 95%',
-  primary: '220 85% 59%',
+  primary: '358 71% 50%',
   primaryForeground: '0 0% 100%',
   secondary: '220 12% 18%',
   secondaryForeground: '0 0% 95%',

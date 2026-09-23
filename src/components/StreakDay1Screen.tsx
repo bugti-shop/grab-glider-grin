@@ -7,7 +7,7 @@ import { StreakSocietyBadge } from '@/components/StreakSocietyBadge';
 import { triggerTripleHeavyHaptic } from '@/utils/haptics';
 import { useTranslation } from 'react-i18next';
 
-const ONBOARDING_COLOR = '#3c78f0';
+const ONBOARDING_COLOR = '#db252d';
 
 interface StreakDay1ScreenProps {
   userName: string;

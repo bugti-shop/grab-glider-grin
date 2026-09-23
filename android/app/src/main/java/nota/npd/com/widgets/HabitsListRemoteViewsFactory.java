@@ -24,7 +24,7 @@ import nota.npd.com.R;
  * {
  *   "today": { "done": 2, "total": 5, "label": "Tuesday, Jun 30" },
  *   "habits": [
- *     { "id": "...", "name": "Read", "emoji": "📚", "color": "#3c78f0",
+ *     { "id": "...", "name": "Read", "emoji": "📚", "color": "#db252d",
  *       "done": true, "streak": 12, "progress": "1 / 1" }
  *   ]
  * }
@@ -77,7 +77,7 @@ public class HabitsListRemoteViewsFactory implements RemoteViewsService.RemoteVi
                 r.id = o.optString("id", "");
                 r.name = o.optString("name", "");
                 r.emoji = o.optString("emoji", "✨");
-                r.color = o.optString("color", "#3c78f0");
+                r.color = o.optString("color", "#db252d");
                 r.done = o.optBoolean("done", false);
                 r.streak = o.optInt("streak", 0);
                 r.progress = o.optString("progress", "");

@@ -206,7 +206,7 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
   const [showSectionPopover, setShowSectionPopover] = useState(false);
   const [repeatSettings, setRepeatSettings] = useState<RepeatSettings | undefined>();
   const [newFolderName, setNewFolderName] = useState('');
-  const [selectedColor, setSelectedColor] = useState('#3b82f6');
+  const [selectedColor, setSelectedColor] = useState('#db252d');
   const [imageUrl, setImageUrl] = useState<string | undefined>();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [showTagSheet, setShowTagSheet] = useState(false);
@@ -862,7 +862,7 @@ export const TaskInputSheet = ({ isOpen, onClose: rawOnClose, onAddTask, folders
     } catch {}
     onCreateFolder(newFolderName.trim(), selectedColor);
     setNewFolderName('');
-    setSelectedColor('#3b82f6');
+    setSelectedColor('#db252d');
     setShowFolderDialog(false);
   };
 

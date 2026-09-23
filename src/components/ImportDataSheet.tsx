@@ -242,7 +242,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
       const withFolderDefaults = (folder: Partial<NotesFolder>, fallbackName = importFolderName): NotesFolder => ({
         id: folder.id || ((crypto as any).randomUUID ? crypto.randomUUID() : `imp-folder-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
         name: folder.name || fallbackName,
-        color: folder.color || '#3b82f6',
+        color: folder.color || '#db252d',
         icon: folder.icon || 'Folder',
         isDefault: false,
         createdAt: folder.createdAt ? new Date(folder.createdAt) : now,
@@ -309,7 +309,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
         const parserSections: TaskSection[] = (importResult.sections || []).map((section, index) => ({
           ...section,
           id: section.id || ((crypto as any).randomUUID ? crypto.randomUUID() : `imp-sec-${Date.now()}-${index}`),
-          color: section.color || '#3b82f6',
+          color: section.color || '#db252d',
           isCollapsed: false,
           order: existingSections.length + index,
           folderId: section.folderId && allTaskFolderIds.has(section.folderId) ? section.folderId : fallbackFolderId,
@@ -337,7 +337,7 @@ export const ImportDataSheet = ({ isOpen, onClose }: ImportDataSheetProps) => {
           autoSections.push({
             id: sid,
             name: folderName === importFolderName ? importFolderName : `Imported · ${folderName}`,
-            color: '#3b82f6', isCollapsed: false, order: nextOrder++, folderId: fid,
+            color: '#db252d', isCollapsed: false, order: nextOrder++, folderId: fid,
           });
           folderDefaultSectionId.set(fid, sid);
         });

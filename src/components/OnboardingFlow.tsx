@@ -29,7 +29,7 @@ import { StreakConsistencyCertificate } from '@/components/StreakConsistencyCert
 import { EmailAuthSheet } from '@/components/EmailAuthSheet';
 
 
-const ONBOARDING_COLOR = '#3c78f0';
+const ONBOARDING_COLOR = '#db252d';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -205,7 +205,7 @@ const OnboardingFolderCreation = ({ type, folders, setFolders, progressPercent, 
         <div className="flex-1 flex flex-col gap-0.5">
           <span className="text-[11px] font-semibold text-[#999] text-right">{stepLabel}</span>
           <div className="h-[17px] rounded-[6px] bg-[#e5e5e5] overflow-hidden">
-            <motion.div className="h-full rounded-[6px]" style={{ backgroundColor: '#3c78f0' }} initial={{ width: '0%' }} animate={{ width: progressPercent }} transition={{ duration: 0.5, ease: 'easeOut' }} />
+            <motion.div className="h-full rounded-[6px]" style={{ backgroundColor: '#db252d' }} initial={{ width: '0%' }} animate={{ width: progressPercent }} transition={{ duration: 0.5, ease: 'easeOut' }} />
           </div>
         </div>
       </div>
@@ -247,7 +247,7 @@ const OnboardingFolderCreation = ({ type, folders, setFolders, progressPercent, 
             value={folderName}
             onChange={(e) => setFolderName(e.target.value)}
             placeholder={t('onboarding.folderName')}
-            className="w-full px-4 py-3 rounded-xl border border-[#e0e0e0] bg-white text-[15px] text-[#1a1a1a] placeholder-[#bbb] outline-none focus:border-[#3c78f0] focus:ring-2 focus:ring-[#3c78f0]/10 transition-all duration-200 mb-3"
+            className="w-full px-4 py-3 rounded-xl border border-[#e0e0e0] bg-white text-[15px] text-[#1a1a1a] placeholder-[#bbb] outline-none focus:border-[#db252d] focus:ring-2 focus:ring-[#db252d]/10 transition-all duration-200 mb-3"
             onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); }}
             autoFocus
           />
@@ -492,9 +492,9 @@ const OnboardingBatchTaskForm = ({ sections, folders, onAddTasks, onCancel }: {
                 onClick={() => { triggerHaptic(); setSelectedFolder(selectedFolder === f.id ? '' : f.id); }}
                 className="px-3 py-1.5 rounded-xl text-[13px] font-medium cursor-pointer"
                 style={{
-                  backgroundColor: selectedFolder === f.id ? '#3c78f010' : '#f3f4f6',
-                  border: `1.5px solid ${selectedFolder === f.id ? '#3c78f0' : '#e5e7eb'}`,
-                  color: selectedFolder === f.id ? '#3c78f0' : '#6b7280',
+                  backgroundColor: selectedFolder === f.id ? '#db252d10' : '#f3f4f6',
+                  border: `1.5px solid ${selectedFolder === f.id ? '#db252d' : '#e5e7eb'}`,
+                  color: selectedFolder === f.id ? '#db252d' : '#6b7280',
                 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -540,9 +540,9 @@ const OnboardingBatchTaskForm = ({ sections, folders, onAddTasks, onCancel }: {
               <button
                 className="w-full py-2.5 px-3 rounded-xl text-[13px] font-medium text-left flex items-center gap-2 cursor-pointer"
                 style={{
-                  backgroundColor: selectedDate ? '#3c78f010' : '#f3f4f6',
-                  border: `1.5px solid ${selectedDate ? '#3c78f0' : '#e5e7eb'}`,
-                  color: selectedDate ? '#3c78f0' : '#6b7280',
+                  backgroundColor: selectedDate ? '#db252d10' : '#f3f4f6',
+                  border: `1.5px solid ${selectedDate ? '#db252d' : '#e5e7eb'}`,
+                  color: selectedDate ? '#db252d' : '#6b7280',
                 }}
               >
                 <CalendarDays className="h-4 w-4" />
@@ -802,7 +802,7 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
     (async () => {
       const savedSections = await getSetting<TaskSection[]>('todoSections', []);
       if (savedSections.length > 0) setOnboardingSections(savedSections);
-      else setOnboardingSections([{ id: 'default', name: 'Tasks', color: '#3b82f6', isCollapsed: false, order: 0 }]);
+      else setOnboardingSections([{ id: 'default', name: 'Tasks', color: '#db252d', isCollapsed: false, order: 0 }]);
       const savedFolders = await getSetting<Folder[] | null>('todoFolders', null);
       if (savedFolders) setOnboardingFolders(savedFolders.map((f: any) => ({ ...f, createdAt: new Date(f.createdAt) })));
     })();

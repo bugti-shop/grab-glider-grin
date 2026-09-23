@@ -326,7 +326,7 @@ export const NotesCalendarView = ({
                       !isToday && isCurrentMonth && (useLightText ? "text-white" : "text-foreground")
                     )}
                     style={{
-                      backgroundColor: isToday ? '#3c78f0' : undefined,
+                      backgroundColor: isToday ? '#db252d' : undefined,
                     }}
                   >
                     {format(day, "d")}
@@ -392,11 +392,11 @@ export const NotesCalendarView = ({
                 )}
                 style={{
                   backgroundColor: isToday
-                    ? '#3c78f0'
+                    ? '#db252d'
                     : (isSelected && !isToday)
-                      ? '#3c78f0'
+                      ? '#db252d'
                       : (hasAnyIndicator && isCurrentMonth && !isToday)
-                        ? '#3c78f0'
+                        ? '#db252d'
                         : undefined,
                 }}
               >

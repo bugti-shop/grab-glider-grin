@@ -301,7 +301,7 @@ const bootstrap = async () => {
           '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff;color:#111;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:24px;text-align:center;">' +
           '<div><h1 style="font-size:18px;margin:0 0 8px;">Flowist</h1>' +
           '<p style="font-size:14px;color:#555;margin:0 0 16px;">Something went wrong starting the app.</p>' +
-          '<button onclick="location.reload()" style="background:#3c78f0;color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:14px;">Reload</button>' +
+          '<button onclick="location.reload()" style="background:#db252d;color:#fff;border:0;padding:10px 18px;border-radius:8px;font-size:14px;">Reload</button>' +
           '</div></div>';
       }
     } catch {}

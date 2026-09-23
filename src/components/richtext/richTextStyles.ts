@@ -3,15 +3,15 @@
 
 export const RICH_TEXT_EDITOR_STYLES = `
   .rich-text-editor ::selection {
-    background-color: rgba(59, 130, 246, 0.22);
+    background-color: rgba(219, 37, 45, 0.22);
     color: inherit;
   }
   .rich-text-editor ::-moz-selection {
-    background-color: rgba(59, 130, 246, 0.22);
+    background-color: rgba(219, 37, 45, 0.22);
     color: inherit;
   }
   .rich-text-editor a {
-    color: #3B82F6;
+    color: #db252d;
     text-decoration: underline;
   }
   .rich-text-editor ul {
@@ -100,8 +100,8 @@ export const RICH_TEXT_EDITOR_STYLES = `
     gap: 4px;
     padding: 4px 10px;
     border-radius: 999px;
-    border: 1px solid #3B82F6;
-    color: #3B82F6;
+    border: 1px solid #db252d;
+    color: #db252d;
     font-size: 13px;
     font-weight: 500;
     background: transparent;
@@ -110,7 +110,7 @@ export const RICH_TEXT_EDITOR_STYLES = `
     -webkit-tap-highlight-color: transparent;
   }
   .note-meta-row .note-location-pill:hover {
-    background: rgba(59, 130, 246, 0.08);
+    background: rgba(219, 37, 45, 0.08);
   }
   .note-meta-row .note-date-text {
     font-size: 13px;
@@ -129,8 +129,8 @@ export const RICH_TEXT_EDITOR_STYLES = `
     align-items: center;
     padding: 5px 12px;
     border-radius: 999px;
-    border: 1px solid #3B82F6;
-    color: #3B82F6;
+    border: 1px solid #db252d;
+    color: #db252d;
     font-size: 13px;
     font-weight: 500;
     background: transparent;
@@ -351,7 +351,7 @@ export const RICH_TEXT_EDITOR_STYLES = `
 
   /* === Quote block === */
   .rich-text-editor blockquote.rt-quote {
-    border-left: 4px solid #3B82F6;
+    border-left: 4px solid #db252d;
     padding: 8px 14px;
     margin: 10px 0;
     color: hsl(var(--muted-foreground));

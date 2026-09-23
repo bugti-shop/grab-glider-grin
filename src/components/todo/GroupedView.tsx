@@ -62,7 +62,7 @@ export const GroupedView = ({
     const today = startOfDay(new Date());
     groups = [
       { id: 'overdue', label: t('grouping.overdue'), color: '#ef4444', icon: <AlertCircle className="h-4 w-4 text-destructive" />, tasks: uncompletedItems.filter(i => i.dueDate && isBefore(new Date(i.dueDate), today)) },
-      { id: 'today', label: t('grouping.today'), color: '#3b82f6', icon: <Sun className="h-4 w-4 text-info" />, tasks: uncompletedItems.filter(i => i.dueDate && isToday(new Date(i.dueDate))) },
+      { id: 'today', label: t('grouping.today'), color: '#db252d', icon: <Sun className="h-4 w-4 text-info" />, tasks: uncompletedItems.filter(i => i.dueDate && isToday(new Date(i.dueDate))) },
       { id: 'tomorrow', label: t('grouping.tomorrow'), color: '#f59e0b', icon: <CalendarIcon2 className="h-4 w-4 text-warning" />, tasks: uncompletedItems.filter(i => i.dueDate && isTomorrow(new Date(i.dueDate))) },
       { id: 'this-week', label: t('grouping.thisWeek'), color: '#10b981', icon: <CalendarIcon2 className="h-4 w-4 text-success" />, tasks: uncompletedItems.filter(i => i.dueDate && isThisWeek(new Date(i.dueDate)) && !isToday(new Date(i.dueDate)) && !isTomorrow(new Date(i.dueDate))) },
       { id: 'later', label: t('grouping.later'), color: '#8b5cf6', icon: <Clock className="h-4 w-4 text-accent-purple" />, tasks: uncompletedItems.filter(i => i.dueDate && !isBefore(new Date(i.dueDate), today) && !isThisWeek(new Date(i.dueDate))) },

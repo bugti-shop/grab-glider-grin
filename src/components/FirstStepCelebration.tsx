@@ -3,7 +3,7 @@ import { m as motion, AnimatePresence } from 'framer-motion';
 import { LazyConfetti } from '@/components/LazyConfetti';
 import { triggerHaptic } from '@/utils/haptics';
 
-const ONBOARDING_COLOR = '#3c78f0';
+const ONBOARDING_COLOR = '#db252d';
 
 interface FirstStepCelebrationProps {
   userName: string;

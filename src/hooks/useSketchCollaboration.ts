@@ -71,7 +71,7 @@ export const useSketchCollaboration = (): UseSketchCollaborationReturn => ({
   remoteViewports: [],
   remotePageSwitches: [],
   followingUserId: null,
-  myColor: '#3b82f6',
+  myColor: '#db252d',
   myName: 'Anonymous',
   myUserId: null,
   myRole: 'editor',

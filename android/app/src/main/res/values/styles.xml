@@ -8,7 +8,7 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
-    <!-- Post-splash theme: SOLID launch_background (#f8f8f6) so the window
+    <!-- Post-splash theme: solid white so the native launch and WebView handoff
          behind the WebView matches the app's background from the very first
          frame through JS boot — no white flash, no transparent flash.
          Translucent windows caused a "two-tap to open" bug on some launchers
@@ -21,8 +21,7 @@
         <item name="android:windowDisablePreview">true</item>
     </style>
 
-    <!-- Launch theme: matches app background so there is no white flash
-         between the OS launch window and the WebView first paint. -->
+    <!-- Launch theme: pure white behind the enlarged Flowist logo. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/launch_background</item>
         <item name="windowSplashScreenIconBackgroundColor">@color/launch_background</item>
@@ -37,6 +36,6 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:backgroundDimEnabled">true</item>
         <item name="android:windowCloseOnTouchOutside">true</item>
-        <item name="android:colorAccent">#3b82f6</item>
+        <item name="android:colorAccent">#db252d</item>
     </style>
 </resources>

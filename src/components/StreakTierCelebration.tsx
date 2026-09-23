@@ -35,7 +35,7 @@ export const StreakTierCelebration = () => {
           recycle={false}
           numberOfPieces={350}
           gravity={0.2}
-          colors={['#FFD700', '#FFA500', '#FF6347', '#8B5CF6', '#3B82F6', '#10B981']}
+          colors={['#FFD700', '#FFA500', '#FF6347', '#8B5CF6', '#db252d', '#10B981']}
           style={{ position: 'fixed', top: 0, left: 0, zIndex: 120, pointerEvents: 'none' }}
         />
       )}

@@ -33,7 +33,7 @@ export const createShapeFillStyle = (
   x: number, y: number, w: number, h: number,
 ): string | CanvasGradient | CanvasPattern | null => {
   const fillType = stroke.fillType || 'solid';
-  const color1 = stroke.fillColor || '#3b82f6';
+  const color1 = stroke.fillColor || '#db252d';
   const color2 = stroke.fillColor2 || '#8b5cf6';
   const opacity = stroke.fillOpacity ?? 0.3;
   const angle = stroke.fillAngle ?? 0;

@@ -21,7 +21,7 @@ export const parseNoteLinks = (content: string, notes: Note[]): string => {
     );
     
     if (linkedNote) {
-      return `<a href="#" class="note-link" data-note-id="${linkedNote.id}" style="color: #3B82F6; text-decoration: none; background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 500;">📝 ${noteTitle}</a>`;
+      return `<a href="#" class="note-link" data-note-id="${linkedNote.id}" style="color: #db252d; text-decoration: none; background: rgba(219, 37, 45, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 500;">📝 ${noteTitle}</a>`;
     }
     
     // Return unlinked style for non-existent notes

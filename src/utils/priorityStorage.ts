@@ -13,7 +13,7 @@ export const DEFAULT_PRIORITIES: CustomPriority[] = [
   { id: 'high', name: 'High', color: '#EF4444', order: 0, isDefault: true },
   { id: 'medium', name: 'Medium', color: '#F97316', order: 1, isDefault: true },
   { id: 'low', name: 'Low', color: '#22C55E', order: 2, isDefault: true },
-  { id: 'none', name: 'None', color: '#3c78f0', order: 3, isDefault: true },
+  { id: 'none', name: 'None', color: '#db252d', order: 3, isDefault: true },
 ];
 
 const STORAGE_KEY = 'customPriorities';
@@ -97,7 +97,7 @@ export const reorderPriorities = async (priorities: CustomPriority[]): Promise<v
 // Helper to get priority color by ID
 export const getPriorityColorById = (priorities: CustomPriority[], id: string): string => {
   const priority = priorities.find(p => p.id === id);
-  return priority?.color || '#3c78f0';
+  return priority?.color || '#db252d';
 };
 
 // Helper to get priority name by ID

@@ -54,7 +54,7 @@ const DEFAULT_NOTE_TEMPLATES: NoteTemplate[] = [
     icon: 'Calendar',
     description: 'Ready-to-use meeting notes with agenda, action items, and follow-up templates',
     category: 'Work',
-    folderColor: '#3b82f6',
+    folderColor: '#db252d',
     notes: [
       {
         title: 'Weekly Team Standup',

@@ -16,7 +16,7 @@ interface InlineFindReplaceProps {
 
 // Highlight colors - blue theme as requested
 const HIGHLIGHT_TEXT_COLOR = '#FFFFFF';
-const HIGHLIGHT_BG_COLOR = '#3c78f0'; // Blue highlight for all matches
+const HIGHLIGHT_BG_COLOR = '#db252d'; // Blue highlight for all matches
 const CURRENT_HIGHLIGHT_BG = '#1d4ed8'; // Darker blue for current match
 const CURRENT_HIGHLIGHT_TEXT = '#FFFFFF';
 

@@ -417,9 +417,9 @@ function PaywallFooter({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
 }
 
 /* ═══════════════════════════════════════════
-   Paywall — Black & Blue (#3c78f0)
+   Paywall — Black & Blue (#db252d)
    ═══════════════════════════════════════════ */
-const PRO_BLUE = '#3c78f0';
+const PRO_BLUE = '#db252d';
 
 const FEATURE_ROWS: { label: string; free: string | 'x' | 'check'; pro: string | 'check' }[] = [
   { label: 'Eisenhower Matrix', free: 'x', pro: 'check' },

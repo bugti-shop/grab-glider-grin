@@ -22,7 +22,7 @@ interface SectionEditSheetProps {
 }
 
 const sectionColors = [
-  '#3b82f6', // blue
+  '#db252d', // blue
   '#10b981', // emerald
   '#f59e0b', // amber
   '#ef4444', // red
@@ -37,7 +37,7 @@ const sectionColors = [
 export const SectionEditSheet = ({ isOpen, onClose, section, onSave }: SectionEditSheetProps) => {
   const { t } = useTranslation();
   const [name, setName] = useState('');
-  const [color, setColor] = useState('#3b82f6');
+  const [color, setColor] = useState('#db252d');
 
   // Hardware back button support - use 'sheet' priority to close sheet before navigation
   useHardwareBackButton({

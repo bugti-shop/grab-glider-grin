@@ -10,7 +10,7 @@ interface Particle {
   delay: number;
 }
 
-const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#ec4899', '#14b8a6', '#f97316'];
+const COLORS = ['#f59e0b', '#10b981', '#db252d', '#8b5cf6', '#ef4444', '#ec4899', '#14b8a6', '#f97316'];
 
 const createParticles = (intensity: 'normal' | 'combo' | 'milestone' = 'normal'): Particle[] => {
   const count = intensity === 'milestone' ? 20 : intensity === 'combo' ? 16 : 12;

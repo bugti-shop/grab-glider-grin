@@ -301,7 +301,7 @@ export const exportNoteToPdf = async (
     (match, varName) => {
       // Map common CSS variables to actual colors
       const colorMap: Record<string, string> = {
-        'primary': '#3b82f6',
+        'primary': '#db252d',
         'secondary': '#6b7280',
         'accent': '#8b5cf6',
         'muted': '#9ca3af',

@@ -76,7 +76,7 @@ export const COLORS = [
   { name: 'Emerald', value: '#34D399' },
   { name: 'Teal', value: '#14B8A6' },
   // Blues
-  { name: 'Blue', value: '#3B82F6' },
+  { name: 'Blue', value: '#db252d' },
   { name: 'Dark Blue', value: '#1D4ED8' },
   { name: 'Sky Blue', value: '#0EA5E9' },
   { name: 'Cyan', value: '#06B6D4' },

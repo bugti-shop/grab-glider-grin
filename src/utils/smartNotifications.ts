@@ -194,7 +194,7 @@ export const scheduleSmartNotifications = async (): Promise<void> => {
         schedule: { at: gentleTime, allowWhileIdle: true },
         channelId: CHANNEL_GENTLE,
         smallIcon: 'npd_notification_icon',
-        iconColor: '#3B82F6',
+        iconColor: '#db252d',
         sound: 'default',
       });
     }
@@ -337,7 +337,7 @@ const scheduleReengagementNotifications = async (): Promise<void> => {
         schedule: { at: makeDate(2), allowWhileIdle: true },
         channelId: CHANNEL_GENTLE,
         smallIcon: 'npd_notification_icon',
-        iconColor: '#3B82F6',
+        iconColor: '#db252d',
         sound: 'default',
       },
       // Re-engagement — 5 days

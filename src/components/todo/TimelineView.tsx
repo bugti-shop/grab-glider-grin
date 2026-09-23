@@ -57,7 +57,7 @@ export const TimelineView = ({
       item.dueDate && isSameZonedDay(new Date(item.dueDate), date, tz)
     );
     const color =
-      i === 0 ? '#3b82f6'
+      i === 0 ? '#db252d'
       : i === 1 ? '#f59e0b'
       : '#10b981';
     return { id, label, date, tasks, color };

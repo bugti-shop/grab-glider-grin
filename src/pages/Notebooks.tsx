@@ -137,7 +137,7 @@ const Notebooks = () => {
         const inbox: FolderType = {
           id: genId(),
           name: 'Inbox',
-          color: '#3b82f6',
+          color: '#db252d',
           icon: 'Folder',
           isDefault: true,
           createdAt: new Date(),
@@ -549,7 +549,7 @@ const VirtualNotebookGrid = ({
             >
               {rowItems.map((f) => {
                 const count = counts.get(f.id) ?? 0;
-                const color = f.color || '#3b82f6';
+                const color = f.color || '#db252d';
                 return (
                   <button
                     key={f.id}

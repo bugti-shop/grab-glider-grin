@@ -200,7 +200,7 @@ export const VirtualJourneyCard = () => {
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => { handleAbandon(); setShowPicker(true); }}
-                className="text-[14px] font-semibold text-[#3B82F6] flex items-center gap-1 flex-shrink-0"
+                className="text-[14px] font-semibold text-[#db252d] flex items-center gap-1 flex-shrink-0"
               >
                 {t('journey.newJourney', 'New Journey')} <ChevronRight className="h-4 w-4" />
               </motion.button>
@@ -208,7 +208,7 @@ export const VirtualJourneyCard = () => {
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAbandon}
-                className="text-[14px] font-semibold text-[#3B82F6] flex items-center gap-1.5 flex-shrink-0"
+                className="text-[14px] font-semibold text-[#db252d] flex items-center gap-1.5 flex-shrink-0"
               >
                 {t('journey.change', 'Change')} <RotateCcw className="h-3.5 w-3.5" />
               </motion.button>
@@ -228,7 +228,7 @@ export const VirtualJourneyCard = () => {
                     className={cn(
                       "w-6 h-6 rounded-full border-[1.5px] bg-white dark:bg-card flex items-center justify-center",
                       reached
-                        ? "border-[#3B82F6] bg-[#3B82F6]"
+                        ? "border-[#db252d] bg-[#db252d]"
                         : "border-[#D1D5DB] dark:border-border"
                     )}
                   >
@@ -241,7 +241,7 @@ export const VirtualJourneyCard = () => {
 
           {/* Next location label */}
           <div className="flex items-center gap-1.5 mb-2.5 sm:mb-4">
-            <MapPin className="h-4 w-4 text-[#3B82F6] flex-shrink-0" />
+            <MapPin className="h-4 w-4 text-[#db252d] flex-shrink-0" />
             <span className="text-[13px] font-medium text-[#111827] dark:text-foreground">
               {isComplete
                 ? `🏆 ${t('journey.journeyComplete', 'Journey Complete! 🎉')}`
@@ -270,9 +270,9 @@ export const VirtualJourneyCard = () => {
                   <span className={cn(
                     "w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[11px] sm:text-[12px] font-semibold flex-shrink-0",
                     reached
-                      ? "bg-[#3B82F6] text-white"
+                      ? "bg-[#db252d] text-white"
                       : isCurrent
-                        ? "bg-[#DBEAFE] text-[#3B82F6] dark:bg-primary/20"
+                        ? "bg-[#DBEAFE] text-[#db252d] dark:bg-primary/20"
                         : "bg-[#F3F4F6] text-[#6B7280] dark:bg-muted dark:text-muted-foreground"
                   )}>
                     {reached ? '✓' : (i + 1)}

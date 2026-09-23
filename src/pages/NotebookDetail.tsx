@@ -132,7 +132,7 @@ const NotebookDetail = () => {
     setIsEditorOpen(true);
   };
 
-  const accent = folder?.color || '#3b82f6';
+  const accent = folder?.color || '#db252d';
 
   return (
     <div className="min-h-screen bg-background pb-24">

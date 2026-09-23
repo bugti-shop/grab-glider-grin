@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePageMeta } from '@/hooks/usePageMeta';
 
 const SUPPORT_EMAIL = 'julie@flowist.me';
-const BLUE = '#2E67F8';
+const BLUE = '#db252d';
 
 const topics = [
   { label: 'General question', value: 'General question' },
@@ -75,7 +75,7 @@ const Contact = () => {
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              'radial-gradient(1000px 500px at 15% -10%, rgba(46,103,248,0.10), transparent 60%), radial-gradient(800px 420px at 90% 10%, rgba(46,103,248,0.06), transparent 60%)',
+              'radial-gradient(1000px 500px at 15% -10%, rgba(219,37,45,0.10), transparent 60%), radial-gradient(800px 420px at 90% 10%, rgba(219,37,45,0.06), transparent 60%)',
           }}
         />
         <div className="relative mx-auto max-w-5xl px-5 py-16 sm:px-6 sm:py-24">
@@ -147,7 +147,7 @@ const Contact = () => {
                 <li key={title} className="flex gap-3">
                   <div
                     className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
-                    style={{ background: 'rgba(46,103,248,0.10)', color: BLUE }}
+                    style={{ background: 'rgba(219,37,45,0.10)', color: BLUE }}
                   >
                     <Icon className="h-4 w-4" />
                   </div>

@@ -142,7 +142,7 @@ export const WASHI_PATTERNS: WashiTapePattern[] = [
   },
   // 6. Suns on light blue
   {
-    id: 'suns-blue', name: 'Sunny Day', color: '#3b82f6', bgColor: '#93c5fd',
+    id: 'suns-blue', name: 'Sunny Day', color: '#db252d', bgColor: '#93c5fd',
     draw: (ctx, w, h) => {
       ctx.fillStyle = '#93c5fd'; ctx.fillRect(0, 0, w, h);
       const drawSun = (cx: number, cy: number, r: number) => {
@@ -195,7 +195,7 @@ export const WASHI_PATTERNS: WashiTapePattern[] = [
     draw: (ctx, w, h) => {
       ctx.fillStyle = '#fde68a'; ctx.fillRect(0, 0, w, h);
       const drawRainbow = (cx: number, cy: number, s: number) => {
-        const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6'];
+        const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#db252d', '#8b5cf6'];
         for (let i = 0; i < colors.length; i++) {
           ctx.strokeStyle = colors[i]; ctx.lineWidth = 1.5; ctx.globalAlpha = 1;
           const r = s - i * 1.2;
@@ -259,7 +259,7 @@ export const WASHI_PATTERNS: WashiTapePattern[] = [
   },
   // 11. White polka dots on blue
   {
-    id: 'polka-blue-white', name: 'Blue Polka', color: '#3b82f6', bgColor: '#60a5fa',
+    id: 'polka-blue-white', name: 'Blue Polka', color: '#db252d', bgColor: '#60a5fa',
     draw: (ctx, w, h) => {
       ctx.fillStyle = '#60a5fa'; ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 1;
@@ -377,12 +377,12 @@ export const WASHI_PATTERNS: WashiTapePattern[] = [
   },
   // 20. Diagonal stripes blue + white
   {
-    id: 'stripes-blue-diag', name: 'Ocean Stripes', color: '#3b82f6', bgColor: '#93c5fd',
+    id: 'stripes-blue-diag', name: 'Ocean Stripes', color: '#db252d', bgColor: '#93c5fd',
     draw: (ctx, w, h) => {
       ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
       ctx.lineCap = 'butt'; ctx.lineWidth = 5;
       for (let x = -h * 2; x < w + h * 2; x += 10) {
-        ctx.strokeStyle = '#3b82f6'; ctx.globalAlpha = 0.85;
+        ctx.strokeStyle = '#db252d'; ctx.globalAlpha = 0.85;
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + h, h); ctx.stroke();
       }
       ctx.globalAlpha = 1;

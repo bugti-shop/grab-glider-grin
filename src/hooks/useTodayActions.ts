@@ -252,7 +252,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const existing = folders.find(f => (f.name || '').trim().toLowerCase() === name.toLowerCase());
     if (existing) return existing.id;
     if (!requireCapacity('taskFolders', folders.length)) return null;
-    const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+    const palette = ['#db252d', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
     const color = colorOverride || palette[folders.length % palette.length];
     const id = genId();
     const now = new Date();
@@ -282,7 +282,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     const id = genId();
     const maxOrder = Math.max(0, ...sections.map(s => s.order || 0));
     const newSection: TaskSection = {
-      id, name, color: '#3b82f6', isCollapsed: false, order: maxOrder + 1,
+      id, name, color: '#db252d', isCollapsed: false, order: maxOrder + 1,
       folderId: folderId || undefined, updatedAt: new Date(),
     } as TaskSection;
     setSections(prev => [...prev, newSection]);
@@ -364,7 +364,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
       }
     }
     const newSection: TaskSection = {
-      id: genId(), name: t('todayPage.newSection'), color: '#3b82f6', isCollapsed: false, order: newOrder,
+      id: genId(), name: t('todayPage.newSection'), color: '#db252d', isCollapsed: false, order: newOrder,
       // Scope new sections to the currently selected folder (if any)
       folderId: selectedFolderId || undefined,
       updatedAt: new Date(),

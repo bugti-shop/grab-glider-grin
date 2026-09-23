@@ -48,7 +48,7 @@ const getFallbackFolderId = (folders: Folder[]): string | null => {
 };
 
 const getDefaultSections = (t: (key: string) => string): TaskSection[] => [
-  { id: 'default', name: t('grouping.tasks'), color: '#3b82f6', isCollapsed: false, order: 0 }
+  { id: 'default', name: t('grouping.tasks'), color: '#db252d', isCollapsed: false, order: 0 }
 ];
 
 const todayRuntimeCache = ((globalThis as any).__flowistTodayRuntimeCache ??= {
@@ -236,7 +236,7 @@ export const useTodayState = () => {
           const now = new Date();
           const inbox: Folder = {
             id: (crypto as any).randomUUID ? crypto.randomUUID() : `inbox-${Date.now()}`,
-            name: 'Inbox', color: '#3b82f6', icon: 'Folder',
+            name: 'Inbox', color: '#db252d', icon: 'Folder',
             isDefault: true, createdAt: now, updatedAt: now,
           } as Folder;
           todayRuntimeCache.folders = [inbox];

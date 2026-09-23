@@ -52,7 +52,7 @@ const dateKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 const DEFAULT_PRIORITY_COLORS: Record<string, string> = {
   high: '#ef4444',
   medium: '#f59e0b',
-  low: '#3b82f6',
+  low: '#db252d',
   none: '#d1d5db',
 };
 
@@ -289,7 +289,7 @@ export const NotesCalendarDayWeekMonth = ({
               : dim
                 ? 'text-muted-foreground/35'
                 : has
-                  ? 'text-[#2563eb]'
+                  ? 'text-[#b51e25]'
                   : 'text-foreground',
           )}
         >
@@ -311,7 +311,7 @@ export const NotesCalendarDayWeekMonth = ({
             has
               ? selected
                 ? 'bg-white/85'
-                : 'bg-[#2563eb]'
+                : 'bg-[#b51e25]'
               : 'bg-transparent',
           )}
         />

@@ -166,7 +166,7 @@ const LOREM = [
 
 const COLOR_MAP: Record<string, string> = {
   red: '#dc2626', orange: '#ea580c', yellow: '#ca8a04', green: '#16a34a',
-  blue: '#2563eb', indigo: '#4f46e5', purple: '#9333ea', pink: '#db2777',
+  blue: '#b51e25', indigo: '#4f46e5', purple: '#9333ea', pink: '#db2777',
   gray: '#6b7280', grey: '#6b7280', black: '#000000', white: '#ffffff',
   brown: '#92400e', cyan: '#0891b2', teal: '#0d9488', lime: '#65a30d',
   amber: '#d97706', rose: '#e11d48', violet: '#7c3aed', fuchsia: '#c026d3',

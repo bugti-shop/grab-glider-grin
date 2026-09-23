@@ -185,7 +185,7 @@ const Index = () => {
         const now = new Date();
         const inbox: Folder = {
           id: (crypto as any).randomUUID ? crypto.randomUUID() : `inbox-notes-${Date.now()}`,
-          name: 'Inbox', color: '#3b82f6', icon: 'Folder',
+          name: 'Inbox', color: '#db252d', icon: 'Folder',
           isDefault: true, createdAt: now, updatedAt: now,
         } as Folder;
         notesDashboardRuntimeCache.folders = [inbox];

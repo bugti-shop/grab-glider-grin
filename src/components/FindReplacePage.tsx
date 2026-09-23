@@ -17,7 +17,7 @@ interface FindReplacePageProps {
   editorRef: React.RefObject<HTMLDivElement>;
 }
 
-const HIGHLIGHT_COLOR = '#3c78f0';
+const HIGHLIGHT_COLOR = '#db252d';
 const HIGHLIGHT_BG_COLOR = 'rgba(60, 120, 240, 0.3)';
 
 export const FindReplacePage = ({

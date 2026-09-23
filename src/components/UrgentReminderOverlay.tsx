@@ -172,7 +172,7 @@ export const UrgentReminderOverlay = () => {
             whileTap={{ scale: 0.95 }}
             onClick={handleComplete}
             className="w-full py-4 rounded-2xl text-white font-semibold text-lg transition-all active:brightness-90"
-            style={{ backgroundColor: '#3c78f0' }}
+            style={{ backgroundColor: '#db252d' }}
           >
             Complete
           </motion.button>
