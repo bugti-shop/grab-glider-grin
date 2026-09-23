@@ -18,7 +18,7 @@ const config: CapacitorConfig = {
       autoHide: true,
       fadeInDuration: 0,
       fadeOutDuration: 150,
-      backgroundColor: '#f8f8f6',
+      backgroundColor: '#FFFFFF',
       backgroundColorDark: '#0b0b0b',
       splashImmersive: false,
       splashFullScreen: false,
