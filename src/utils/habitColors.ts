@@ -2,7 +2,7 @@
 // strings so they render consistently in light and dark themes.
 
 export const HABIT_COLOR_SWATCHES: string[] = [
-  'hsl(358, 71%, 50%)', // blue (default)
+  'hsl(358, 71%, 50%)', // Flowist red (default)
   'hsl(0, 78%, 60%)',   // red
   'hsl(20, 90%, 58%)',  // orange
   'hsl(38, 92%, 55%)',  // amber

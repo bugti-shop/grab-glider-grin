@@ -169,7 +169,7 @@ private struct HabitRowView: View {
     }
 
     private var tint: Color {
-        Color(hex: row.color) ?? Color.blue
+        Color(hex: row.color) ?? Color(red: 219 / 255, green: 37 / 255, blue: 45 / 255)
     }
 
     private var meta: String {
@@ -203,7 +203,7 @@ struct HabitsWidgetEntryView: View {
                 Spacer()
                 Text(progressLabel)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Color.blue)
+                    .foregroundColor(Color(red: 219 / 255, green: 37 / 255, blue: 45 / 255))
             }
 
             if entry.habits.isEmpty {

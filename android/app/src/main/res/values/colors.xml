@@ -4,5 +4,5 @@
     <color name="colorPrimaryDark">#b51e25</color>
     <color name="colorAccent">#db252d</color>
     <color name="notification_icon_color">#db252d</color>
-    <color name="launch_background">#f8f8f6</color>
+    <color name="launch_background">#FFFFFF</color>
 </resources>

@@ -731,7 +731,7 @@ body[data-tour-active="true"] [aria-busy="true"][role="status"] {
   color: white;
   font-weight: 700;
   border-radius: 0.875rem;
-  border-bottom: 4px solid #2B5DBF;
+  border-bottom: 4px solid #b51e25;
   transition: all 0.1s ease;
   padding: 0.875rem 1.5rem;
   font-size: 1rem;
