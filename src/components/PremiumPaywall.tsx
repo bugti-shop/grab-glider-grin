@@ -12,7 +12,7 @@ function useSafeNavigate() {
   };
 }
 import appLogo from '@/assets/app-logo.webp';
-import heroCrown from '@/assets/paywall-hero-king-throne.webp';
+import heroCrown from '@/assets/paywall-hero-new-flowist-crown.webp';
 import { useTranslation } from 'react-i18next';
 import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock, LayoutGrid, Blocks, Timer, BookOpen } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -417,7 +417,7 @@ function PaywallFooter({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
 }
 
 /* ═══════════════════════════════════════════
-   Paywall — Black & Blue (#db252d)
+   Paywall — Black & Flowist Red (#db252d)
    ═══════════════════════════════════════════ */
 const PRO_BLUE = '#db252d';
 
