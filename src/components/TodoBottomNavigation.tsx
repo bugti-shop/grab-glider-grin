@@ -170,7 +170,7 @@ export const TodoBottomNavigation = () => {
                       transition={{ type: "spring", stiffness: 900, damping: 38 }}
                     />
                   )}
-                  <Icon className={cn("relative z-10 h-5 w-5 flex-shrink-0", isActive && "[&>svg]:fill-current")} />
+                  <Icon className={cn("relative z-10 h-5 w-5 flex-shrink-0", isActive && "fill-current")} />
                   {badge > 0 && (
                     <span
                       className="absolute -top-1.5 -right-2 z-20 min-w-[16px] h-[16px] px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold leading-[16px] text-center"

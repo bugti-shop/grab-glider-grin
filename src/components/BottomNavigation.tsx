@@ -92,7 +92,7 @@ export const BottomNavigation = () => {
                     transition={{ type: "spring", stiffness: 900, damping: 38 }}
                   />
                 )}
-                <Icon className={cn("relative z-10 h-5 w-5 flex-shrink-0", isActive && "[&>svg]:fill-current")} />
+                <Icon className={cn("relative z-10 h-5 w-5 flex-shrink-0", isActive && "fill-current")} />
               </span>
               <span className="text-[10px] sm:text-xs font-medium truncate max-w-full">
                 {getDisplayLabel(item)}
