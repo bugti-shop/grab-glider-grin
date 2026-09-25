@@ -2,6 +2,7 @@
 
 ## Core
 Use #db252d as primary; supplied pen-check logo transparent except enlarged on white Android/iOS splash screens.
+Disable all haptic and vibration feedback across the entire app, including navigation, buttons, sheets, gestures, and reminders.
 AI features NEVER gated by subscription/trial/RevenueCat/Stripe. Only sign-in + daily cap + concurrency lock. `src/utils/aiFeatureGuard.ts` is locked.
 Markdown shortcuts in notes editor body must always be active — never gate on the settings toggle.
 No-argument slash shortcuts in notes editor should auto-run when complete, especially on mobile.

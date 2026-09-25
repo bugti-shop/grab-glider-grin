@@ -433,7 +433,7 @@ export const ImageTaskExtractorSheet = ({
     // "Work" label from two tasks lands in a single folder (stale-closure safe).
     // Folder color = majority task-priority color within the group.
     const priorityColor: Record<string, string> = {
-      high: '#ef4444', medium: '#f59e0b', low: '#10b981', none: '#db252d',
+      high: '#ef4444', medium: '#f59e0b', low: '#10b981', none: '#94a3b8',
     };
     const folderGroups = new Map<string, { name: string; counts: Record<string, number> }>();
     for (const it of selected) {
