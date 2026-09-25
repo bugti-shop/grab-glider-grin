@@ -12,7 +12,7 @@ function useSafeNavigate() {
   };
 }
 import appLogo from '@/assets/app-logo.webp';
-import heroCrown from '@/assets/paywall-hero-new-flowist-crown.webp';
+import heroCrown from '@/assets/paywall-hero-original-logo-crown.webp';
 import { useTranslation } from 'react-i18next';
 import { Crown, Unlock, Bell, Gift, Check, X, Lock, CalendarDays, Clock, LayoutGrid, Blocks, Timer, BookOpen } from 'lucide-react';
 import { createPortal } from 'react-dom';

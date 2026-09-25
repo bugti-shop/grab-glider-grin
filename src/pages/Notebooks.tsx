@@ -63,9 +63,6 @@ const Notebooks = () => {
     if (pressTimer.current) window.clearTimeout(pressTimer.current);
     pressTimer.current = window.setTimeout(() => {
       longPressedRef.current = true;
-      try {
-        if ('vibrate' in navigator) navigator.vibrate?.(30);
-      } catch {}
       setActionFor(folder);
     }, 450);
   };

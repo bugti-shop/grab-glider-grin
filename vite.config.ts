@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@capacitor/haptics": path.resolve(__dirname, "./src/lib/capacitorHapticsDisabled.ts"),
       "sonner-real": sonnerRealTarget,
       "sonner": path.resolve(__dirname, "./src/lib/sonnerShim.ts"),
     },
