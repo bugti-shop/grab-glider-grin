@@ -285,7 +285,6 @@ function usePaywallLogic() {
     location_reminders: 'Location Reminders are Premium. Upgrade to unlock smart reminders.',
     task_status: 'Task Status is a Premium feature. Upgrade to track work more clearly.',
     view_mode_status_board: 'Status Board view is Premium. Upgrade to unlock advanced task layouts.',
-    view_mode_timeline: 'Timeline view is Premium. Upgrade to unlock advanced task layouts.',
     view_mode_progress: 'Progress view is Premium. Upgrade to see deeper progress tracking.',
     view_mode_priority: 'Priority Board view is Premium. Upgrade to unlock advanced task layouts.',
     view_mode_history: 'History view is Premium. Upgrade to unlock task history.',

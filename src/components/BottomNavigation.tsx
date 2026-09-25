@@ -1,15 +1,10 @@
-import { startTransition, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Home, FileText, Calendar, User, Settings, Book } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { triggerHaptic } from '@/utils/haptics';
 import { useTranslation } from 'react-i18next';
 import { useCustomNavigation, NavItem } from './CustomizeNavigationSheet';
 import { prefetchRoute, prefetchAllOnIdle } from '@/utils/routePrefetch';
-
-const triggerNavHaptic = () => {
-  triggerHaptic('heavy').catch(() => {});
-};
 
 // Icon mapping
 const ICON_COMPONENTS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -38,10 +33,9 @@ export const BottomNavigation = () => {
   };
 
 
-  // Instant navigation — fire haptic + navigate immediately (no startTransition deferral)
+  // Instant navigation with eager route prefetching.
   const handleNavigation = useCallback((path: string) => {
     if (location.pathname === path) return;
-    triggerNavHaptic();
     void prefetchRoute(path);
     navigate(path);
   }, [navigate, location.pathname]);
@@ -79,14 +73,19 @@ export const BottomNavigation = () => {
               onPointerEnter={() => prefetchRoute(item.path)}
               onTouchStart={() => prefetchRoute(item.path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-colors min-w-0 px-1 touch-manipulation select-none active:scale-95 active:bg-muted/40 rounded-lg",
+                "flex flex-col items-center justify-center gap-1 min-w-0 px-1 touch-manipulation select-none rounded-lg",
                 "min-h-[52px] min-w-[52px]",
                 isActive ? "text-primary" : "text-muted-foreground"
               )}
               aria-label={getDisplayLabel(item)}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className="h-5 w-5 flex-shrink-0" />
+              <span className={cn(
+                "flex h-8 min-w-14 items-center justify-center rounded-full transition-colors",
+                isActive ? "bg-primary/15 text-primary" : "active:bg-primary/10 active:text-primary"
+              )}>
+                <Icon className="h-5 w-5 flex-shrink-0" />
+              </span>
               <span className="text-[10px] sm:text-xs font-medium truncate max-w-full">
                 {getDisplayLabel(item)}
               </span>
