@@ -31,7 +31,7 @@ export const usePriorities = () => {
 
   const getPriorityColor = useCallback((priorityId: string): string => {
     const priority = priorities.find(p => p.id === priorityId);
-    return priority?.color || '#db252d';
+    return priority?.color || '#94a3b8';
   }, [priorities]);
 
   const getPriorityName = useCallback((priorityId: string): string => {
