@@ -50,7 +50,7 @@ export const NavigationIcon = ({ iconName, Icon, isActive }: NavigationIconProps
   }
 
   const shouldStayOutline = iconName === 'Home' || iconName === 'BarChart3';
-  const keepInnerCircleClear = iconName === 'Settings';
+  const keepInnerCircleClear = iconName === 'Settings' || iconName === 'User';
 
   return (
     <Icon
