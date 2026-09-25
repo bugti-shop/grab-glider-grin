@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useCustomNavigation, NavItem } from './CustomizeNavigationSheet';
 import { prefetchRoute, prefetchAllOnIdle } from '@/utils/routePrefetch';
+import { NavigationIcon } from './NavigationIcon';
 
 // Icon mapping
 const ICON_COMPONENTS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -89,10 +90,10 @@ export const BottomNavigation = () => {
                   <motion.span
                     layoutId="flowist-nav-pill"
                     className="absolute inset-0 rounded-full bg-primary/15"
-                    transition={{ type: "spring", stiffness: 900, damping: 38 }}
+                    transition={{ type: "tween", duration: 0.16, ease: "easeOut" }}
                   />
                 )}
-                <Icon className={cn("relative z-10 h-5 w-5 flex-shrink-0", isActive && "fill-current")} />
+                <NavigationIcon iconName={item.icon} Icon={Icon} isActive={isActive} />
               </span>
               <span className="text-[10px] sm:text-xs font-medium truncate max-w-full">
                 {getDisplayLabel(item)}
