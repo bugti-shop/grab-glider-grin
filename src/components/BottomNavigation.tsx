@@ -89,10 +89,10 @@ export const BottomNavigation = () => {
                   <motion.span
                     layoutId="flowist-nav-pill"
                     className="absolute inset-0 rounded-full bg-primary/15"
-                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    transition={{ type: "spring", stiffness: 900, damping: 38 }}
                   />
                 )}
-                <Icon className="relative z-10 h-5 w-5 flex-shrink-0" />
+                <Icon className={cn("relative z-10 h-5 w-5 flex-shrink-0", isActive && "fill-current")} />
               </span>
               <span className="text-[10px] sm:text-xs font-medium truncate max-w-full">
                 {getDisplayLabel(item)}
