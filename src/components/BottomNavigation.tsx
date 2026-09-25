@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Home, FileText, Calendar, User, Settings, Book } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -81,10 +82,17 @@ export const BottomNavigation = () => {
               aria-current={isActive ? 'page' : undefined}
             >
               <span className={cn(
-                "flex h-8 min-w-14 items-center justify-center rounded-full transition-colors",
-                isActive ? "bg-primary/15 text-primary" : "active:bg-primary/10 active:text-primary"
+                "relative flex h-8 min-w-14 items-center justify-center rounded-full",
+                isActive ? "text-primary" : "text-muted-foreground active:text-primary"
               )}>
-                <Icon className="h-5 w-5 flex-shrink-0" />
+                {isActive && (
+                  <motion.span
+                    layoutId="flowist-nav-pill"
+                    className="absolute inset-0 rounded-full bg-primary/15"
+                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                  />
+                )}
+                <Icon className="relative z-10 h-5 w-5 flex-shrink-0" />
               </span>
               <span className="text-[10px] sm:text-xs font-medium truncate max-w-full">
                 {getDisplayLabel(item)}
