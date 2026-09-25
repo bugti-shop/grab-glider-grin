@@ -85,7 +85,7 @@ const TodoCalendar = () => {
   const [selectedTask, setSelectedTask] = useState<TodoItem | null>(null);
 
   // View mode
-  const [viewMode, setViewMode] = useState<ViewMode>('flat');
+  const [viewMode, setViewMode] = useState<ViewMode>('timeline');
 
   // Selection mode state
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -257,7 +257,7 @@ const TodoCalendar = () => {
     }
 
     // Load saved view mode
-    const savedViewMode = await getSetting<ViewMode>('calendarViewMode', 'flat');
+    const savedViewMode = await getSetting<ViewMode>('calendarViewMode', 'timeline');
     setViewMode(savedViewMode);
 
     // Force Today-style task list layout for all users and overwrite any

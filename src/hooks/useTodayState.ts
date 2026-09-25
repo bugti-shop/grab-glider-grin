@@ -100,7 +100,7 @@ export const useTodayState = () => {
   const [smartList, setSmartList] = useState<SmartListType>('all');
 
   // View
-  const [viewMode, setViewMode] = useState<ViewMode>('flat');
+  const [viewMode, setViewMode] = useState<ViewMode>('timeline');
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [hideDetailsOptions, setHideDetailsOptions] = useState<HideDetailsOptions>({ hideDateTime: true, hideStatus: true, hideSubtasks: true });
   const [compactMode, setCompactMode] = useState(false);
@@ -252,7 +252,7 @@ export const useTodayState = () => {
         setPriorityFilter(g<PriorityFilter>('todoPriorityFilter', 'all'));
         setStatusFilter(g<StatusFilter>('todoStatusFilter', 'all'));
         setTagFilter(g<string[]>('todoTagFilter', []));
-        { const vm = g<ViewMode | 'kanban'>('todoViewMode', 'flat'); setViewMode(vm === 'kanban' ? 'flat' : vm); }
+        { const vm = g<ViewMode | 'kanban'>('todoViewMode', 'timeline'); setViewMode(vm === 'kanban' ? 'flat' : vm); }
         setHideDetailsOptions(g<HideDetailsOptions>('todoHideDetailsOptions', { hideDateTime: true, hideStatus: true, hideSubtasks: true }));
         setSortBy(g<SortBy>('todoSortBy', 'date'));
         setSmartList(g<SmartListType>('todoSmartList', 'all'));
