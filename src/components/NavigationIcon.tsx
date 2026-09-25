@@ -7,7 +7,9 @@ interface NavigationIconProps {
   isActive: boolean;
 }
 
-const iconClassName = 'relative z-10 h-5 w-5 flex-shrink-0';
+// translateZ + backface-hidden pins the icon on its own layer so the sliding
+// pill beneath it can't cause sub-pixel jitter during tab switches.
+const iconClassName = 'relative z-10 h-5 w-5 flex-shrink-0 [transform:translateZ(0)] [backface-visibility:hidden]';
 
 export const NavigationIcon = ({ iconName, Icon, isActive }: NavigationIconProps) => {
   if (!isActive) return <Icon className={iconClassName} />;
