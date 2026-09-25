@@ -99,12 +99,15 @@ const Progress = () => {
         console.error('Failed to load stats:', error);
       }
     };
-    loadStats();
+    // Defer heavy loading until after the tab switch has painted and the
+    // nav pill animation has finished, so navigation feels instant.
+    const initTimer = window.setTimeout(() => { void loadStats(); }, 220);
 
     const handler = () => loadStats();
     window.addEventListener('tasksUpdated', handler);
     window.addEventListener('dailyRewardClaimed', handler);
     return () => {
+      window.clearTimeout(initTimer);
       window.removeEventListener('tasksUpdated', handler);
       window.removeEventListener('dailyRewardClaimed', handler);
     };
@@ -189,14 +192,26 @@ const Progress = () => {
       for (let i = 11; i >= 0; i--) pushMonth(subMonths(now, i));
     }
 
+    // Fast binning: skip tasks outside the range before any date formatting.
+    const pad = (n: number) => (n < 10 ? '0' + n : '' + n);
+    const rangeStart = buckets.length ? (() => {
+      const first = buckets[0].date;
+      if (mode === 'month') return new Date(first + '-01T00:00:00').getTime();
+      if (mode === 'hour') return new Date(first.replace(' ', 'T') + ':00:00').getTime();
+      return new Date(first + 'T00:00:00').getTime();
+    })() : 0;
     for (const task of allTasks) {
       if (!task.completedAt) continue;
       const dt = new Date(task.completedAt);
-      let key = '';
-      if (mode === 'hour') key = format(startOfHour(dt), 'yyyy-MM-dd HH');
-      else if (mode === 'day') key = format(startOfDay(dt), 'yyyy-MM-dd');
-      else key = format(dt, 'yyyy-MM');
-      if (map.has(key)) map.set(key, (map.get(key) || 0) + 1);
+      const ts = dt.getTime();
+      if (!(ts >= rangeStart)) continue;
+      const ymd = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}`;
+      let key: string;
+      if (mode === 'month') key = ymd;
+      else if (mode === 'day') key = `${ymd}-${pad(dt.getDate())}`;
+      else key = `${ymd}-${pad(dt.getDate())} ${pad(dt.getHours())}`;
+      const v = map.get(key);
+      if (v !== undefined) map.set(key, v + 1);
     }
     return buckets.map(b => ({ ...b, value: map.get(b.date) || 0 }));
   }, [allTasks, chartRange]);
