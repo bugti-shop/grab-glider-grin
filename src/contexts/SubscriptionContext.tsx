@@ -74,7 +74,6 @@ export const PREMIUM_FEATURES = [
   'location_reminders',
   'task_status',
   'view_mode_status_board',
-  'view_mode_timeline',
   'view_mode_progress',
   'view_mode_priority',
   'view_mode_history',

@@ -187,10 +187,9 @@ export const TodoOptionsDropdown = ({
                 <span className="flex-1">{t('menu.statusBoard')}</span>
                 <Crown className="h-3.5 w-3.5 ml-2" fill="#FFD700" color="#FFD700" />
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { if (!requireFeature('view_mode_timeline')) return; setViewMode('timeline'); }} className={cn("cursor-pointer", viewMode === 'timeline' && "bg-accent")}>
+              <DropdownMenuItem onClick={() => setViewMode('timeline')} className={cn("cursor-pointer", viewMode === 'timeline' && "bg-accent")}>
                 <GitBranch className="h-4 w-4 mr-2" />
                 <span className="flex-1">{t('menu.timelineBoard')}</span>
-                <Crown className="h-3.5 w-3.5 ml-2" fill="#FFD700" color="#FFD700" />
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => { if (!requireFeature('view_mode_priority')) return; setViewMode('priority'); }} className={cn("cursor-pointer", viewMode === 'priority' && "bg-accent")}>
                 <Flag className="h-4 w-4 mr-2" />

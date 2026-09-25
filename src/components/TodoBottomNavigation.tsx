@@ -1,15 +1,10 @@
-import { startTransition, useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Home, Calendar, Settings, BarChart3, User, ListChecks, LayoutGrid, Hourglass } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { triggerHaptic } from '@/utils/haptics';
 import { useTranslation } from 'react-i18next';
 import { getSetting } from '@/utils/settingsStorage';
 import { prefetchRoute, prefetchAllOnIdle } from '@/utils/routePrefetch';
-
-const triggerNavHaptic = () => {
-  triggerHaptic('heavy').catch(() => {});
-};
 
 export interface TodoNavItem {
   id: string;
@@ -118,7 +113,6 @@ export const TodoBottomNavigation = () => {
 
   const handleNavigation = useCallback((path: string) => {
     if (path === location.pathname) return;
-    triggerNavHaptic();
     void prefetchRoute(path);
     navigate(path, { state: { from: location.pathname } });
   }, [navigate, location.pathname]);
@@ -157,14 +151,17 @@ export const TodoBottomNavigation = () => {
               onPointerEnter={() => prefetchRoute(item.path)}
               onTouchStart={() => prefetchRoute(item.path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-colors min-w-0 px-1 touch-manipulation select-none active:scale-95 active:bg-muted/40 rounded-lg",
+                "flex flex-col items-center justify-center gap-1 min-w-0 px-1 touch-manipulation select-none rounded-lg",
                 "min-h-[52px] min-w-[52px]",
                 isActive ? "text-primary" : "text-muted-foreground"
               )}
               aria-label={getDisplayLabel(item) + (badge ? ` (${badge} upcoming)` : '')}
               aria-current={isActive ? 'page' : undefined}
             >
-              <div className="relative">
+              <div className={cn(
+                "relative flex h-8 min-w-14 items-center justify-center rounded-full transition-colors",
+                isActive ? "bg-primary/15 text-primary" : "active:bg-primary/10 active:text-primary"
+              )}>
                 <Icon className="h-5 w-5 flex-shrink-0" />
                 {badge > 0 && (
                   <span
