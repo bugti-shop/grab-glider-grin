@@ -167,10 +167,10 @@ export const TodoBottomNavigation = () => {
                     <motion.span
                       layoutId="todo-nav-pill"
                       className="absolute inset-0 rounded-full bg-primary/15"
-                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                      transition={{ type: "spring", stiffness: 900, damping: 38 }}
                     />
                   )}
-                  <Icon className="relative z-10 h-5 w-5 flex-shrink-0" />
+                  <Icon className={cn("relative z-10 h-5 w-5 flex-shrink-0", isActive && "[&>svg]:fill-current")} />
                   {badge > 0 && (
                     <span
                       className="absolute -top-1.5 -right-2 z-20 min-w-[16px] h-[16px] px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold leading-[16px] text-center"
