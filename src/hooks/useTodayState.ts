@@ -252,7 +252,7 @@ export const useTodayState = () => {
         setPriorityFilter(g<PriorityFilter>('todoPriorityFilter', 'all'));
         setStatusFilter(g<StatusFilter>('todoStatusFilter', 'all'));
         setTagFilter(g<string[]>('todoTagFilter', []));
-        { const vm = g<ViewMode | 'kanban'>('todoViewMode', 'timeline'); setViewMode(vm === 'kanban' ? 'flat' : vm); }
+        { const vm = g<ViewMode | 'kanban'>('todoViewMode', 'timeline'); setViewMode(vm === 'kanban' ? 'timeline' : vm); }
         setHideDetailsOptions(g<HideDetailsOptions>('todoHideDetailsOptions', { hideDateTime: true, hideStatus: true, hideSubtasks: true }));
         setSortBy(g<SortBy>('todoSortBy', 'date'));
         setSmartList(g<SmartListType>('todoSmartList', 'all'));
