@@ -7,6 +7,7 @@
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { App } from '@capacitor/app';
+import { scheduleNativeAlarm, cancelNativeAlarm } from '@/utils/nativeAlarm';
 
 // Track scheduled urgent reminders for resume-check
 const pendingUrgentReminders = new Map<string, { taskText: string; reminderTime: Date }>();
@@ -150,7 +151,8 @@ export const scheduleTaskReminder = async (
   taskId: string,
   taskText: string,
   reminderTime: Date,
-  isUrgent?: boolean
+  isUrgent?: boolean,
+  priority?: string
 ): Promise<void> => {
   const now = new Date();
   if (reminderTime <= now) {
@@ -159,7 +161,7 @@ export const scheduleTaskReminder = async (
   }
 
   // For urgent reminders, ALWAYS set an in-app timer so it shows full-screen automatically
-  if (isUrgent) {
+    if (isUrgent && Capacitor.getPlatform() !== 'android') {
     scheduleUrgentInAppTimer(taskId, taskText, reminderTime);
   }
 
@@ -174,7 +176,7 @@ export const scheduleTaskReminder = async (
   try {
     await cancelTaskReminder(taskId);
     // Re-set the in-app timer since cancelTaskReminder clears it
-    if (isUrgent) {
+    if (isUrgent && Capacitor.getPlatform() !== 'android') {
       scheduleUrgentInAppTimer(taskId, taskText, reminderTime);
     }
 
@@ -193,11 +195,10 @@ export const scheduleTaskReminder = async (
     };
 
     // Android: fullScreenIntent wakes screen & shows app even from background
-    if (Capacitor.getPlatform() === 'android' && isUrgent) {
-      notificationConfig.fullScreenIntent = true;
-    }
+    // The native AlarmClock owns Android's full-screen intent and ringtone.
 
     await LocalNotifications.schedule({ notifications: [notificationConfig] });
+    await scheduleNativeAlarm(`task-${taskId}`, taskText, reminderTime, priority || 'None');
 
     console.log('[Reminder] Scheduled task reminder:', taskText, 'at', reminderTime.toLocaleString(), isUrgent ? '(URGENT)' : '');
   } catch (e) {
@@ -217,6 +218,7 @@ export const cancelTaskReminder = async (taskId: string): Promise<void> => {
   if (!Capacitor.isNativePlatform()) return;
 
   const notifId = hashStringToId(`task-${taskId}`);
+  await cancelNativeAlarm(`task-${taskId}`);
   try {
     await LocalNotifications.cancel({ notifications: [{ id: notifId }] });
   } catch (e) {
@@ -263,6 +265,7 @@ export const scheduleNoteReminder = async (
         extra: { type: 'note', noteId },
       }],
     });
+    await scheduleNativeAlarm(`note-${noteId}`, noteTitle || 'Note reminder', reminderTime);
 
     console.log('[Reminder] Scheduled note reminder:', noteTitle, 'at', reminderTime.toLocaleString());
   } catch (e) {
@@ -279,6 +282,7 @@ export const cancelNoteReminder = async (noteId: string): Promise<void> => {
   if (!Capacitor.isNativePlatform()) return;
 
   const notifId = hashStringToId(`note-${noteId}`);
+  await cancelNativeAlarm(`note-${noteId}`);
   try {
     await LocalNotifications.cancel({ notifications: [{ id: notifId }] });
   } catch (e) {
@@ -468,6 +472,7 @@ export const scheduleExtraReminder = async (
         extra: { type: 'extra-reminder', taskId },
       }],
     });
+    await scheduleNativeAlarm(`extra-${taskId}`, taskText, next);
   } catch (e) {
     console.warn('[Reminder] Failed to schedule native extra reminder:', e);
   }
@@ -486,6 +491,7 @@ export const cancelExtraReminder = async (taskId: string): Promise<void> => {
   }
   if (!Capacitor.isNativePlatform()) return;
   const notifId = hashStringToId(`extra-${taskId}`);
+  await cancelNativeAlarm(`extra-${taskId}`);
   try {
     await LocalNotifications.cancel({ notifications: [{ id: notifId }] });
   } catch (e) {
@@ -551,6 +557,7 @@ export const scheduleExtraRemindersList = async (
             extra: { type: 'extra-reminder', taskId, itemId: it.id },
           }],
         });
+        await scheduleNativeAlarm(extraItemKey(taskId, it.id), taskText, first);
       } catch (e) {
         console.warn('[Reminder] Failed to schedule native extra reminder item:', e);
       }
@@ -571,6 +578,7 @@ export const cancelAllExtraReminders = async (taskId: string): Promise<void> => 
     if (t) clearTimeout(t);
     extraTimers.delete(key);
     toCancelIds.push(hashStringToId(key));
+      await cancelNativeAlarm(key);
   }
   if (Capacitor.isNativePlatform() && toCancelIds.length > 0) {
     try {
@@ -688,7 +696,7 @@ export const initializeReminders = async (): Promise<void> => {
   
   // Listen for notification received events to trigger urgent overlay IMMEDIATELY (full-screen)
   LocalNotifications.addListener('localNotificationReceived', (notification) => {
-    if (notification.extra?.isUrgent === 'true') {
+    if (Capacitor.getPlatform() !== 'android' && notification.extra?.isUrgent === 'true') {
       window.dispatchEvent(new CustomEvent('urgentReminderTriggered', {
         detail: {
           id: notification.extra.taskId,
@@ -701,7 +709,7 @@ export const initializeReminders = async (): Promise<void> => {
 
   // Also listen for notification action (when user taps the notification)
   LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
-    if (action.notification.extra?.isUrgent === 'true') {
+    if (Capacitor.getPlatform() !== 'android' && action.notification.extra?.isUrgent === 'true') {
       window.dispatchEvent(new CustomEvent('urgentReminderTriggered', {
         detail: {
           id: action.notification.extra.taskId,
@@ -715,7 +723,7 @@ export const initializeReminders = async (): Promise<void> => {
   // Listen for app resume — check if any urgent reminders were missed while in background
   App.addListener('appStateChange', ({ isActive }) => {
     if (isActive) {
-      checkMissedUrgentReminders();
+      if (Capacitor.getPlatform() !== 'android') checkMissedUrgentReminders();
       // Also restore any timers that were killed while backgrounded
       restoreUrgentTimers().catch(console.warn);
     }
@@ -737,7 +745,7 @@ export const initializeReminders = async (): Promise<void> => {
  */
 const restoreWebReminderTimers = async (): Promise<void> => {
   if (Capacitor.isNativePlatform()) return;
-  
+
   try {
     const { loadTodoItems } = await import('@/utils/todoItemsStorage');
     const items = await loadTodoItems();
@@ -763,6 +771,7 @@ const restoreWebReminderTimers = async (): Promise<void> => {
 };
 
 const restoreUrgentTimers = async (): Promise<void> => {
+  if (Capacitor.getPlatform() === 'android') return;
   try {
     const { loadTodoItems } = await import('@/utils/todoItemsStorage');
     const items = await loadTodoItems();

@@ -526,7 +526,7 @@ export const useTodayActions = (props: UseTodayActionsProps) => {
     setInputSectionId(null);
     if (newItem.reminderTime) {
       import('@/utils/reminderScheduler').then(({ scheduleTaskReminder }) => {
-        scheduleTaskReminder(newItem.id, newItem.text, new Date(newItem.reminderTime!), newItem.isUrgent).catch(console.warn);
+        scheduleTaskReminder(newItem.id, newItem.text, new Date(newItem.reminderTime!), newItem.isUrgent, newItem.priority).catch(console.warn);
       });
     }
   }, [inputSectionId, defaultSectionId, sections, taskAddPosition, setItems, setInputSectionId, isPro, softRequireCreate, requireCapacity, selectedFolderId, markSingleTaskPersisted, t]);

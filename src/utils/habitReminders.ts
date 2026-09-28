@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Habit, HabitReminder, normalizeHabit } from '@/types/habit';
 import { loadHabits } from '@/utils/habitStorage';
+import { scheduleNativeAlarm, cancelNativeAlarm } from '@/utils/nativeAlarm';
 
 const hashStringToId = (str: string): number => {
   let hash = 0;
@@ -132,6 +133,13 @@ export const scheduleHabitReminder = async (habit: Habit): Promise<void> => {
   if (notifications.length === 0) return;
   try {
     await LocalNotifications.schedule({ notifications });
+    await Promise.all(reminders.flatMap((r, idx) => {
+      const days = r.days && r.days.length > 0 ? r.days : [0, 1, 2, 3, 4, 5, 6];
+      return days.map((day) => {
+        const next = nextOccurrenceOnDays(r.time, [day]);
+        return scheduleNativeAlarm(`habit-${habit.id}-${idx}-${day}`, habit.name, next, 'None', 7);
+      });
+    }));
   } catch (e) {
     console.warn('[HabitReminder] schedule failed:', e);
   }
@@ -143,11 +151,14 @@ export const cancelHabitReminder = async (habitId: string): Promise<void> => {
   try {
     // Cancel up to 10 reminder slots × 7 days = 70 potential IDs.
     const ids: { id: number }[] = [];
+    const alarmKeys: string[] = [];
     for (let idx = 0; idx < 10; idx++) {
       for (let d = 0; d < 7; d++) {
         ids.push({ id: hashStringToId(`habit-${habitId}-${idx}-${d}`) });
+        alarmKeys.push(`habit-${habitId}-${idx}-${d}`);
       }
     }
+    await Promise.all(alarmKeys.map(cancelNativeAlarm));
     // Also clear the legacy single-id from the previous implementation.
     ids.push({ id: hashStringToId(`habit-${habitId}`) });
     await LocalNotifications.cancel({ notifications: ids });
@@ -176,6 +187,7 @@ export const testHabitReminder = async (
         extra: { type: 'habit-test' },
       }],
     });
+    await scheduleNativeAlarm(`habit-test-${fakeHabit.id}`, habitName, new Date(Date.now() + delayMs));
   } catch (e) {
     console.warn('[HabitReminder] test failed:', e);
   }
