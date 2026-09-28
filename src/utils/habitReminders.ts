@@ -139,7 +139,7 @@ export const scheduleHabitReminder = async (habit: Habit): Promise<void> => {
         const next = nextOccurrenceOnDays(r.time, [day]);
         return scheduleNativeAlarm(`habit-${habit.id}-${idx}-${day}`, habit.name, next, 'None', 7);
       });
-    })));
+    }));
   } catch (e) {
     console.warn('[HabitReminder] schedule failed:', e);
   }
