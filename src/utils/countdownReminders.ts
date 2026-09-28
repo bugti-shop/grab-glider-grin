@@ -5,6 +5,7 @@
  */
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { scheduleNativeAlarm, cancelNativeAlarm } from '@/utils/nativeAlarm';
 import {
   CountdownEvent,
   ReminderOffset,
@@ -74,6 +75,7 @@ export const cancelCountdownReminders = async (eventId: string): Promise<void> =
   if (!Capacitor.isNativePlatform()) return;
   // Cancel all known offsets (covers any previously-scheduled value).
   const offsets: ReminderOffset[] = [0, 1, 2, 3, 7, 14, 30];
+  await Promise.all(offsets.map(o => cancelNativeAlarm(`countdown-${eventId}-${o}`)));
   try {
     await LocalNotifications.cancel({
       notifications: offsets.map((o) => ({ id: reminderKey(eventId, o) })),
@@ -135,6 +137,7 @@ export const scheduleCountdownReminders = async (
 
   try {
     await LocalNotifications.schedule({ notifications: toSchedule });
+    await Promise.all(offsets.map((offset) => scheduleNativeAlarm(`countdown-${event.id}-${offset}`, event.name, computeFireTime(event, offset))));
   } catch (e) {
     console.warn('[CountdownReminder] schedule failed:', e);
   }
