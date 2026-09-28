@@ -30,7 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Plus, StickyNote, FileText, FileEdit, Pen, ListTodo, Bell, Clock, Repeat, FileCode, GitBranch, Sun, Moon, Receipt, Star, ArrowUpDown, MoreVertical, FolderPlus, CheckSquare, Trash2, Archive, X, RotateCcw, Copy, Folder as FolderIcon, Eye, EyeOff, Mic, Type, LayoutTemplate, Crown, PenTool } from 'lucide-react';
 
 import { format, isToday, isTomorrow, differenceInDays } from 'date-fns';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { AppLogo } from '@/components/AppLogo';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';

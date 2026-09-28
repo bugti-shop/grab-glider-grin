@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate, useInRouterContext } from 'react-router-dom';
+import { useNavigate, useInRouterContext, Link } from 'react-router-dom';
 
 // Safe navigate — falls back to window.location when the paywall renders
 // outside <BrowserRouter> (during onboarding/landing).
