@@ -133,13 +133,13 @@ export const scheduleHabitReminder = async (habit: Habit): Promise<void> => {
   if (notifications.length === 0) return;
   try {
     await LocalNotifications.schedule({ notifications });
-    reminders.forEach((r, idx) => {
+    await Promise.all(reminders.flatMap((r, idx) => {
       const days = r.days && r.days.length > 0 ? r.days : [0, 1, 2, 3, 4, 5, 6];
-      days.forEach((day) => {
+      return days.map((day) => {
         const next = nextOccurrenceOnDays(r.time, [day]);
-        void scheduleNativeAlarm(`habit-${habit.id}-${idx}-${day}`, habit.name, next, 'None', 7);
+        return scheduleNativeAlarm(`habit-${habit.id}-${idx}-${day}`, habit.name, next, 'None', 7);
       });
-    });
+    })));
   } catch (e) {
     console.warn('[HabitReminder] schedule failed:', e);
   }
@@ -151,12 +151,14 @@ export const cancelHabitReminder = async (habitId: string): Promise<void> => {
   try {
     // Cancel up to 10 reminder slots × 7 days = 70 potential IDs.
     const ids: { id: number }[] = [];
+    const alarmKeys: string[] = [];
     for (let idx = 0; idx < 10; idx++) {
       for (let d = 0; d < 7; d++) {
         ids.push({ id: hashStringToId(`habit-${habitId}-${idx}-${d}`) });
-        await cancelNativeAlarm(`habit-${habitId}-${idx}-${d}`);
+        alarmKeys.push(`habit-${habitId}-${idx}-${d}`);
       }
     }
+    await Promise.all(alarmKeys.map(cancelNativeAlarm));
     // Also clear the legacy single-id from the previous implementation.
     ids.push({ id: hashStringToId(`habit-${habitId}`) });
     await LocalNotifications.cancel({ notifications: ids });
