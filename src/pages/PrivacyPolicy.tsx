@@ -159,6 +159,16 @@ const PrivacyPolicy = () => {
         </section>
 
         <section className="space-y-3">
+          <h3 className="text-lg font-semibold">End-User License Agreement (EULA)</h3>
+          <p className="text-muted-foreground leading-relaxed">
+            Your use of the App is licensed, not sold, under our End-User License Agreement (EULA), which forms part of our <a href="https://flowist.me/terms-and-conditions" target="_blank" rel="noopener noreferrer" className="text-primary underline">Terms &amp; Conditions</a>. The EULA governs your rights and obligations regarding the installation and use of the App on your device.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            If you downloaded the App from the Apple App Store, your license is also subject to Apple's standard Licensed Application End User License Agreement ("Standard EULA"), available at <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="text-primary underline">https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</a>. Apple is not a party to these Terms or this Privacy Policy, and we — not Apple — are solely responsible for the App and its content.
+          </p>
+        </section>
+
+        <section className="space-y-3">
           <h3 className="text-lg font-semibold">13. Changes to This Privacy Policy</h3>
           <p className="text-muted-foreground leading-relaxed">
             We may update this Privacy Policy from time to time. Any changes will be posted within the App with an updated "Last Updated" date and will take effect immediately upon posting. Your continued use of the App after changes constitutes acceptance of the updated policy. We encourage you to review this Privacy Policy periodically.

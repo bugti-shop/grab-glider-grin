@@ -94,6 +94,19 @@ const TermsAndConditions = () => {
         </section>
 
         <section className="space-y-3">
+          <h3 className="text-lg font-semibold">End-User License Agreement (EULA)</h3>
+          <p className="text-muted-foreground leading-relaxed">
+            This Terms of Service serves as the End-User License Agreement (EULA) governing your license to use the App. We grant you a limited, non-exclusive, non-transferable, revocable license to download, install, and use the App on devices you own or control, strictly for personal, non-commercial purposes in accordance with these Terms. The App is licensed, not sold, to you. You may not rent, lease, lend, sell, redistribute, or sublicense the App.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            If you downloaded the App from the Apple App Store, you acknowledge and agree that the App is also subject to Apple's standard Licensed Application End User License Agreement ("Standard EULA"), which can be reviewed at <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/" target="_blank" rel="noopener noreferrer" className="text-primary underline">https://www.apple.com/legal/internet-services/itunes/dev/stdeula/</a>. Where these Terms conflict with Apple's Standard EULA with respect to your use of the App obtained through the Apple App Store, the Standard EULA shall control to the extent of the conflict.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Auto-Renewable Subscriptions: If you purchase an auto-renewable subscription (Weekly, Monthly, or Yearly), payment will be charged to your Apple ID account (or Google account) at confirmation of purchase. Subscriptions automatically renew unless cancelled at least 24 hours before the end of the current billing period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage, change, or cancel your subscription at any time through your device's App Store or Play Store account settings. Cancelling takes effect at the end of the current billing period, and you will retain access to premium features until that period ends.
+          </p>
+        </section>
+
+        <section className="space-y-3">
           <h3 className="text-lg font-semibold">8. No Refund Policy</h3>
           <p className="text-muted-foreground leading-relaxed">
             All subscription payments are final and non-refundable. No refunds will be issued for subscription fees once charged, including partial billing periods. You may cancel your subscription at any time through your app store settings to prevent future charges. Cancellation will take effect at the end of the current billing period, and you will retain access to premium features until that period ends. By subscribing, you explicitly acknowledge and agree to this no-refund policy.
