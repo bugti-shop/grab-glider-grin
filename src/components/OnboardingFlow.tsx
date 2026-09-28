@@ -1299,11 +1299,11 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
             {t('onboarding.continue')}{' '}
             <RouterLink to="/privacy-policy" className="underline text-[#999]">
               {t('privacy.title', 'Privacy Policy')}
-            </Link>
+            </RouterLink>
             {' & '}
             <RouterLink to="/terms-and-conditions" className="underline text-[#999]">
               {t('terms.title', 'Terms & Conditions')}
-            </Link>
+            </RouterLink>
           </p>
           <motion.button
             initial={{ opacity: 0, y: 20 }}
