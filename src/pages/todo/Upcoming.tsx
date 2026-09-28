@@ -160,7 +160,7 @@ const Upcoming = () => {
     // Schedule reminder in background
     if (newItem.reminderTime) {
       import('@/utils/reminderScheduler').then(({ scheduleTaskReminder }) => {
-        scheduleTaskReminder(newItem.id, newItem.text, new Date(newItem.reminderTime!), newItem.isUrgent).catch(console.warn);
+        scheduleTaskReminder(newItem.id, newItem.text, new Date(newItem.reminderTime!), newItem.isUrgent, newItem.priority).catch(console.warn);
       });
     }
   };

@@ -19,7 +19,7 @@ final class FlowistAlarm {
     private FlowistAlarm() {}
 
     static PendingIntent pending(Context ctx, String key) {
-        Intent intent = new Intent(ctx, FlowistAlarmReceiver.class).setAction(ACTION_FIRE).setData(android.net.Uri.parse("flowist-alarm://" + android.net.Uri.encode(key)));
+        Intent intent = new Intent(ctx, FlowistAlarmReceiver.class).setAction(ACTION_FIRE).setData(android.net.Uri.parse("flowist-alarm://alarm/" + android.net.Uri.encode(key)));
         return PendingIntent.getBroadcast(ctx, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 

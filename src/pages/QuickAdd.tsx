@@ -118,6 +118,7 @@ const QuickAdd = () => {
               newItem.text,
               new Date(newItem.reminderTime!),
               newItem.isUrgent,
+              newItem.priority,
             ).catch(() => {});
           });
         }

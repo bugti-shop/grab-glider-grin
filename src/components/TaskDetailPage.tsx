@@ -440,7 +440,7 @@ export const TaskDetailPage = ({
     // Schedule reminder in background (non-blocking)
     if (updatedTask.reminderTime) {
       import('@/utils/reminderScheduler').then(({ scheduleTaskReminder }) => {
-        scheduleTaskReminder(updatedTask.id, updatedTask.text, new Date(updatedTask.reminderTime!), updatedTask.isUrgent).catch(console.warn);
+        scheduleTaskReminder(updatedTask.id, updatedTask.text, new Date(updatedTask.reminderTime!), updatedTask.isUrgent, updatedTask.priority).catch(console.warn);
       });
     } else {
       import('@/utils/reminderScheduler').then(({ cancelTaskReminder }) => {
