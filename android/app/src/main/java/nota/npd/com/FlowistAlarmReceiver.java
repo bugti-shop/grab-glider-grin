@@ -22,6 +22,8 @@ public class FlowistAlarmReceiver extends BroadcastReceiver {
             context.stopService(new Intent(context, FlowistAlarmService.class));
             if (FlowistAlarm.ACTION_SNOOZE.equals(action) && data != null) {
                 try { data.put("when", System.currentTimeMillis() + 5 * 60_000L); data.put("repeatDays", 0); FlowistAlarm.schedule(context, data); } catch (Exception ignored) {}
+            } else if (data != null && data.optInt("repeatDays", 0) == 0) {
+                FlowistAlarm.cancel(context, key);
             }
             return;
         }
@@ -36,8 +38,6 @@ public class FlowistAlarmReceiver extends BroadcastReceiver {
                 do { next.add(Calendar.DAY_OF_YEAR, repeatDays); } while (next.getTimeInMillis() <= System.currentTimeMillis());
                 data.put("when", next.getTimeInMillis());
                 FlowistAlarm.schedule(context, data);
-            } else {
-                FlowistAlarm.cancel(context, key);
             }
             Intent service = new Intent(context, FlowistAlarmService.class).putExtra("key", key)
                 .putExtra("title", data.optString("title", "Reminder"))

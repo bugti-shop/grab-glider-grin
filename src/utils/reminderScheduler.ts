@@ -161,7 +161,7 @@ export const scheduleTaskReminder = async (
   }
 
   // For urgent reminders, ALWAYS set an in-app timer so it shows full-screen automatically
-  if (isUrgent) {
+    if (isUrgent && Capacitor.getPlatform() !== 'android') {
     scheduleUrgentInAppTimer(taskId, taskText, reminderTime);
   }
 
@@ -176,7 +176,7 @@ export const scheduleTaskReminder = async (
   try {
     await cancelTaskReminder(taskId);
     // Re-set the in-app timer since cancelTaskReminder clears it
-    if (isUrgent) {
+    if (isUrgent && Capacitor.getPlatform() !== 'android') {
       scheduleUrgentInAppTimer(taskId, taskText, reminderTime);
     }
 
@@ -195,9 +195,7 @@ export const scheduleTaskReminder = async (
     };
 
     // Android: fullScreenIntent wakes screen & shows app even from background
-    if (Capacitor.getPlatform() === 'android' && isUrgent) {
-      notificationConfig.fullScreenIntent = true;
-    }
+    // The native AlarmClock owns Android's full-screen intent and ringtone.
 
     await LocalNotifications.schedule({ notifications: [notificationConfig] });
     await scheduleNativeAlarm(`task-${taskId}`, taskText, reminderTime, priority || 'None');
@@ -698,7 +696,7 @@ export const initializeReminders = async (): Promise<void> => {
   
   // Listen for notification received events to trigger urgent overlay IMMEDIATELY (full-screen)
   LocalNotifications.addListener('localNotificationReceived', (notification) => {
-    if (notification.extra?.isUrgent === 'true') {
+    if (Capacitor.getPlatform() !== 'android' && notification.extra?.isUrgent === 'true') {
       window.dispatchEvent(new CustomEvent('urgentReminderTriggered', {
         detail: {
           id: notification.extra.taskId,
@@ -711,7 +709,7 @@ export const initializeReminders = async (): Promise<void> => {
 
   // Also listen for notification action (when user taps the notification)
   LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
-    if (action.notification.extra?.isUrgent === 'true') {
+    if (Capacitor.getPlatform() !== 'android' && action.notification.extra?.isUrgent === 'true') {
       window.dispatchEvent(new CustomEvent('urgentReminderTriggered', {
         detail: {
           id: action.notification.extra.taskId,
@@ -725,7 +723,7 @@ export const initializeReminders = async (): Promise<void> => {
   // Listen for app resume — check if any urgent reminders were missed while in background
   App.addListener('appStateChange', ({ isActive }) => {
     if (isActive) {
-      checkMissedUrgentReminders();
+      if (Capacitor.getPlatform() !== 'android') checkMissedUrgentReminders();
       // Also restore any timers that were killed while backgrounded
       restoreUrgentTimers().catch(console.warn);
     }
@@ -748,6 +746,7 @@ export const initializeReminders = async (): Promise<void> => {
 const restoreWebReminderTimers = async (): Promise<void> => {
   if (Capacitor.isNativePlatform()) return;
   
+  if (Capacitor.getPlatform() === 'android') return;
   try {
     const { loadTodoItems } = await import('@/utils/todoItemsStorage');
     const items = await loadTodoItems();
