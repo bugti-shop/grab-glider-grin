@@ -118,14 +118,15 @@ body.flowist-task-dragging [data-flowist-virtual-list="tasks"] {
     --accent-indigo-foreground: 0 0% 100%;
   }
 
-  /* Android edge-to-edge: status bar is now overlay (transparent).
-     Let real safe-area-inset-top work so headers get proper padding.
-     Bottom safe area stays 0 — we handle nav bar via native styles. */
+  /* Android SystemBars measures the real navigation-bar inset in native code.
+     Newer WebViews can also expose it through env(); older WebViews whose
+     content is already inset receive 0 from SystemBars. Never force 0 here:
+     gesture and three-button navigation occupy different heights. */
   body.android-app {
     /* Nudge dashboard headers a touch closer to the status bar — users asked
        for the Notes/Home/Profile/Calendar/Settings headers to sit higher. */
     --safe-top: max(env(safe-area-inset-top, 4px), 4px);
-    --safe-bottom: 0px;
+    --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
   }
 
   /* iOS: respect the notch inset only, minimal cushion. */
