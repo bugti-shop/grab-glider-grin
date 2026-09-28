@@ -21,8 +21,15 @@ public class FlowistAlarmReceiver extends BroadcastReceiver {
             JSONObject data = FlowistAlarm.get(context, key);
             context.stopService(new Intent(context, FlowistAlarmService.class));
             if (FlowistAlarm.ACTION_SNOOZE.equals(action) && data != null) {
-                try { data.put("when", System.currentTimeMillis() + 5 * 60_000L); data.put("repeatDays", 0); FlowistAlarm.schedule(context, data); } catch (Exception ignored) {}
-            } else if (data != null && data.optInt("repeatDays", 0) == 0) FlowistAlarm.cancel(context, key);
+                try {
+                    JSONObject snoozed = new JSONObject(data.toString());
+                    snoozed.put("key", key.endsWith("-snooze") ? key : key + "-snooze");
+                    snoozed.put("when", System.currentTimeMillis() + 5 * 60_000L);
+                    snoozed.put("repeatDays", 0);
+                    FlowistAlarm.schedule(context, snoozed);
+                } catch (Exception ignored) { }
+            }
+            if (key.endsWith("-snooze") || (data != null && data.optInt("repeatDays", 0) == 0)) FlowistAlarm.cancel(context, key);
             return;
         }
         if (!FlowistAlarm.ACTION_FIRE.equals(action)) return;

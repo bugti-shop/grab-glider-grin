@@ -28,6 +28,7 @@ public class FlowistAlarmPlugin extends Plugin {
         String key = call.getString("key");
         if (key == null) { call.reject("Missing alarm key"); return; }
         FlowistAlarm.cancel(getContext(), key);
+        FlowistAlarm.cancel(getContext(), key + "-snooze");
         call.resolve();
     }
 }
