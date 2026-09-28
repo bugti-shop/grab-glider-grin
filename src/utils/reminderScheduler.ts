@@ -34,8 +34,7 @@ const scheduleWebReminderTimer = async (
   type: 'task' | 'note',
   title: string,
   reminderTime: Date,
-  isUrgent?: boolean,
-  priority?: string
+  isUrgent?: boolean
 ) => {
   // Clear existing timer
   cancelWebReminderTimer(id);
@@ -152,7 +151,8 @@ export const scheduleTaskReminder = async (
   taskId: string,
   taskText: string,
   reminderTime: Date,
-  isUrgent?: boolean
+  isUrgent?: boolean,
+  priority?: string
 ): Promise<void> => {
   const now = new Date();
   if (reminderTime <= now) {
