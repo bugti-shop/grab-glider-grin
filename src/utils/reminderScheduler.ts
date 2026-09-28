@@ -745,8 +745,7 @@ export const initializeReminders = async (): Promise<void> => {
  */
 const restoreWebReminderTimers = async (): Promise<void> => {
   if (Capacitor.isNativePlatform()) return;
-  
-  if (Capacitor.getPlatform() === 'android') return;
+
   try {
     const { loadTodoItems } = await import('@/utils/todoItemsStorage');
     const items = await loadTodoItems();
@@ -772,6 +771,7 @@ const restoreWebReminderTimers = async (): Promise<void> => {
 };
 
 const restoreUrgentTimers = async (): Promise<void> => {
+  if (Capacitor.getPlatform() === 'android') return;
   try {
     const { loadTodoItems } = await import('@/utils/todoItemsStorage');
     const items = await loadTodoItems();

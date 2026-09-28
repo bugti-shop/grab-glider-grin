@@ -47,12 +47,12 @@ public class FlowistAlarmService extends Service {
             .setFullScreenIntent(full, true).addAction(R.drawable.ic_stat_notify, "Dismiss", dismiss).build();
         startForeground(NOTIFICATION_ID, notification);
         try {
-            player = MediaPlayer.create(this, R.raw.flowist_alarm);
-            if (player != null) {
-                player.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
-                player.setLooping(true);
-                player.start();
-            }
+            player = new MediaPlayer();
+            player.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
+            player.setDataSource(this, Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.flowist_alarm));
+            player.setLooping(true);
+            player.prepare();
+            player.start();
             vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
             if (vibrator != null && vibrator.hasVibrator()) vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, 550, 350}, 0), new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build());
         } catch (Exception ignored) { }

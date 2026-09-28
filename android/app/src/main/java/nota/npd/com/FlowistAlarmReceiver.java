@@ -15,7 +15,7 @@ public class FlowistAlarmReceiver extends BroadcastReceiver {
             return;
         }
         String key = intent.getStringExtra("key");
-        if (key == null && intent.getData() != null) key = intent.getData().getLastPathSegment();
+        if (key == null && intent.getData() != null) key = intent.getData().getHost();
         if (key == null) return;
         if (FlowistAlarm.ACTION_DISMISS.equals(action) || FlowistAlarm.ACTION_SNOOZE.equals(action)) {
             JSONObject data = FlowistAlarm.get(context, key);
