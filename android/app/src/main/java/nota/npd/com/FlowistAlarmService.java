@@ -23,6 +23,8 @@ public class FlowistAlarmService extends Service {
     @Override public IBinder onBind(Intent intent) { return null; }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
+        if (player != null) { player.stop(); player.release(); player = null; }
+        if (vibrator != null) vibrator.cancel();
         String key = intent == null ? null : intent.getStringExtra("key");
         if (key == null) { stopSelf(); return START_NOT_STICKY; }
         String title = intent.getStringExtra("title");
@@ -54,7 +56,10 @@ public class FlowistAlarmService extends Service {
             player.prepare();
             player.start();
             vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-            if (vibrator != null && vibrator.hasVibrator()) vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, 550, 350}, 0), new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build());
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= 26) vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0, 550, 350}, 0), new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build());
+                else vibrator.vibrate(new long[]{0, 550, 350}, 0);
+            }
         } catch (Exception ignored) { }
         return START_NOT_STICKY;
     }

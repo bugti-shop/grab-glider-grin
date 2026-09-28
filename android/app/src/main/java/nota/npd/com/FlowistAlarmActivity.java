@@ -24,6 +24,12 @@ public class FlowistAlarmActivity extends Activity {
         key = getIntent().getStringExtra("key");
         String title = getIntent().getStringExtra("title");
         String priority = getIntent().getStringExtra("priority");
+        if (key == null) { finish(); return; }
+        org.json.JSONObject stored = FlowistAlarm.get(this, key);
+        if (stored != null) {
+            if (title == null) title = stored.optString("title", "Reminder");
+            if (priority == null) priority = stored.optString("priority", "None");
+        }
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL); root.setGravity(Gravity.CENTER); root.setPadding(dp(30), dp(36), dp(30), dp(36)); root.setBackgroundColor(Color.WHITE);
         ImageView logo = new ImageView(this); logo.setImageResource(R.mipmap.ic_launcher); logo.setContentDescription("Flowist");
