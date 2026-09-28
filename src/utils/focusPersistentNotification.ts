@@ -13,6 +13,7 @@
  */
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { scheduleNativeAlarm, cancelNativeAlarm } from '@/utils/nativeAlarm';
 
 const ONGOING_ID = 918273; // arbitrary stable id
 const COMPLETE_ID = 918274;
@@ -92,6 +93,11 @@ export const showFocusOngoing = async (opts: FocusOngoingOpts) => {
         soundUrl: opts.soundUrl,
         soundVolume: opts.soundVolume,
       });
+      if (opts.running && opts.endAtMs && opts.endAtMs > Date.now()) {
+        await scheduleNativeAlarm('focus-complete', opts.taskTitle || 'Focus complete', new Date(opts.endAtMs));
+      } else {
+        await cancelNativeAlarm('focus-complete');
+      }
       return;
     } catch {}
 
@@ -123,6 +129,7 @@ export const showFocusOngoing = async (opts: FocusOngoingOpts) => {
 
     // Schedule the completion notification for the exact end time
     if (opts.running && opts.endAtMs && opts.endAtMs > Date.now()) {
+      await scheduleNativeAlarm('focus-complete', opts.taskTitle || 'Focus complete', new Date(opts.endAtMs));
       try {
         await LocalNotifications.schedule({
           notifications: [{
@@ -142,6 +149,7 @@ export const showFocusOngoing = async (opts: FocusOngoingOpts) => {
 
 export const hideFocusOngoing = async () => {
   lastPostedLabel = '';
+  await cancelNativeAlarm('focus-complete');
   if (!isNative()) return;
   try {
     try { await FocusTimerNative.stop(); } catch {}
