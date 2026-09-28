@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate, useInRouterContext } from 'react-router-dom';
+import { useNavigate, useInRouterContext, Link } from 'react-router-dom';
 
 // Safe navigate — falls back to window.location when the paywall renders
 // outside <BrowserRouter> (during onboarding/landing).
@@ -391,25 +391,21 @@ function PaywallFooter({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
         </button>
       </div>
       <div className="flex items-center gap-3 mt-3">
-        <a
-          href="https://www.flowist.me/terms-and-conditions"
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          to="/terms-and-conditions"
           className="text-[11px] underline"
           style={{ color: 'hsl(0 0% 45.1%)' }}
         >
           {t('paywall.terms', 'Terms & Conditions')}
-        </a>
+        </Link>
         <span className="text-[11px]" style={{ color: 'hsl(0 0% 45.1%)' }}>•</span>
-        <a
-          href="https://www.flowist.me/privacy-policy"
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          to="/privacy-policy"
           className="text-[11px] underline"
           style={{ color: 'hsl(0 0% 45.1%)' }}
         >
           {t('paywall.privacy', 'Privacy Policy')}
-        </a>
+        </Link>
       </div>
     </div>
   );
@@ -763,15 +759,15 @@ function PaywallScreen({ logic }: { logic: ReturnType<typeof usePaywallLogic> })
           {adminError && <p className="text-xs text-center mt-3" style={{ color: '#f87171' }}>{adminError}</p>}
 
           <div className="flex items-center gap-3 justify-center mt-5">
-            <a href="https://www.flowist.me/terms-and-conditions" target="_blank" rel="noopener noreferrer"
+            <Link to="/terms-and-conditions"
               className="text-[10.5px] underline" style={{ color: '#777' }}>
               {t('paywall.terms', 'Terms & Conditions')}
-            </a>
+            </Link>
             <span className="text-[10.5px]" style={{ color: '#555' }}>•</span>
-            <a href="https://www.flowist.me/privacy-policy" target="_blank" rel="noopener noreferrer"
+            <Link to="/privacy-policy"
               className="text-[10.5px] underline" style={{ color: '#777' }}>
               {t('paywall.privacy', 'Privacy Policy')}
-            </a>
+            </Link>
           </div>
           <p className="text-center text-[11px] font-semibold mt-2" style={{ color: '#9a9a9a' }}>
             No Commitment, Cancel Anytime

@@ -30,7 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Plus, StickyNote, FileText, FileEdit, Pen, ListTodo, Bell, Clock, Repeat, FileCode, GitBranch, Sun, Moon, Receipt, Star, ArrowUpDown, MoreVertical, FolderPlus, CheckSquare, Trash2, Archive, X, RotateCcw, Copy, Folder as FolderIcon, Eye, EyeOff, Mic, Type, LayoutTemplate, Crown, PenTool } from 'lucide-react';
 
 import { format, isToday, isTomorrow, differenceInDays } from 'date-fns';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { AppLogo } from '@/components/AppLogo';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { FeatureGuideButton } from '@/components/tours/FeatureGuideModal';
@@ -1761,9 +1761,9 @@ const Index = () => {
         currentFolderId={notes.find(n => n.id === movingNoteId)?.folderId}
       />
       <div className="text-center py-2 pb-16">
-        <a href="https://www.flowist.me/privacy-policy" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Privacy Policy</a>
+        <Link to="/privacy-policy" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Privacy Policy</Link>
         <span className="text-[10px] text-background mx-1">·</span>
-        <a href="https://www.flowist.me/terms-and-conditions" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Terms</a>
+        <Link to="/terms-and-conditions" className="text-[10px] text-background hover:text-muted-foreground transition-colors">Terms</Link>
       </div>
       </div>
     </div>
