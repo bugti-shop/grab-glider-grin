@@ -32,6 +32,7 @@ public class MainActivity extends BridgeActivity implements ModifiedMainActivity
 
         // FocusTimerPlugin removed on Android to avoid foreground-service permissions.
         registerPlugin(FlowistShareIntentPlugin.class);
+        registerPlugin(FlowistAlarmPlugin.class);
         storeWidgetPath(getIntent());
         // Store the widget target BEFORE BridgeActivity boots the WebView so
         // cold-start taps are available to JS on the first read.
