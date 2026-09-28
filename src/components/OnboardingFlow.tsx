@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Camera, User, Check, PenLine, CheckCircle2, CalendarDays, Target, Lightbulb, Bell, BarChart3, Star, Trophy, FlaskConical, Link, Monitor, Rocket, Heart, TrendingUp, Brain, Zap, Palette, Save, Trash2, BookOpen, Briefcase, Activity, Sparkles, MapPin, Plus, Folder as FolderIcon, Gift, Info, Unlock, Crown } from 'lucide-react';
 import appLogo from '@/assets/app-logo.webp';
 
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Link as RouterLink } from 'react-router-dom';
 
 import { loadTodoItems, saveTodoItems } from '@/utils/todoItemsStorage';
 import type { TodoItem, TaskSection, Folder } from '@/types/note';
@@ -1297,11 +1297,11 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
         <div className="px-6 pb-6 pt-2" style={{ paddingBottom: 'max(var(--safe-bottom, 0px), 12px)' }}>
           <p className="text-center text-[11px] text-[#999] mb-3 px-4">
             {t('onboarding.continue')}{' '}
-            <Link to="/privacy-policy" className="underline text-[#999]">
+            <RouterLink to="/privacy-policy" className="underline text-[#999]">
               {t('privacy.title', 'Privacy Policy')}
             </Link>
             {' & '}
-            <Link to="/terms-and-conditions" className="underline text-[#999]">
+            <RouterLink to="/terms-and-conditions" className="underline text-[#999]">
               {t('terms.title', 'Terms & Conditions')}
             </Link>
           </p>
