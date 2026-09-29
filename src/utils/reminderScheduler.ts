@@ -198,7 +198,7 @@ export const scheduleTaskReminder = async (
     // The native AlarmClock owns Android's full-screen intent and ringtone.
 
     await LocalNotifications.schedule({ notifications: [notificationConfig] });
-    await scheduleNativeAlarm(`task-${taskId}`, taskText, reminderTime, priority || 'None');
+    await scheduleNativeAlarm(`task-${taskId}`, taskText, reminderTime, priority || 'None', 0, notifId);
 
     console.log('[Reminder] Scheduled task reminder:', taskText, 'at', reminderTime.toLocaleString(), isUrgent ? '(URGENT)' : '');
   } catch (e) {
@@ -265,7 +265,7 @@ export const scheduleNoteReminder = async (
         extra: { type: 'note', noteId },
       }],
     });
-    await scheduleNativeAlarm(`note-${noteId}`, noteTitle || 'Note reminder', reminderTime);
+    await scheduleNativeAlarm(`note-${noteId}`, noteTitle || 'Note reminder', reminderTime, 'None', 0, notifId);
 
     console.log('[Reminder] Scheduled note reminder:', noteTitle, 'at', reminderTime.toLocaleString());
   } catch (e) {
@@ -472,7 +472,7 @@ export const scheduleExtraReminder = async (
         extra: { type: 'extra-reminder', taskId },
       }],
     });
-    await scheduleNativeAlarm(`extra-${taskId}`, taskText, next);
+    await scheduleNativeAlarm(`extra-${taskId}`, taskText, next, 'None', 0, notifId);
   } catch (e) {
     console.warn('[Reminder] Failed to schedule native extra reminder:', e);
   }
@@ -557,7 +557,7 @@ export const scheduleExtraRemindersList = async (
             extra: { type: 'extra-reminder', taskId, itemId: it.id },
           }],
         });
-        await scheduleNativeAlarm(extraItemKey(taskId, it.id), taskText, first);
+        await scheduleNativeAlarm(extraItemKey(taskId, it.id), taskText, first, 'None', 0, notifId);
       } catch (e) {
         console.warn('[Reminder] Failed to schedule native extra reminder item:', e);
       }

@@ -137,7 +137,7 @@ export const scheduleHabitReminder = async (habit: Habit): Promise<void> => {
       const days = r.days && r.days.length > 0 ? r.days : [0, 1, 2, 3, 4, 5, 6];
       return days.map((day) => {
         const next = nextOccurrenceOnDays(r.time, [day]);
-        return scheduleNativeAlarm(`habit-${habit.id}-${idx}-${day}`, habit.name, next, 'None', 7);
+        return scheduleNativeAlarm(`habit-${habit.id}-${idx}-${day}`, habit.name, next, 'None', 7, hashStringToId(`habit-${habit.id}-${idx}-${day}`));
       });
     }));
   } catch (e) {

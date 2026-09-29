@@ -137,7 +137,7 @@ export const scheduleCountdownReminders = async (
 
   try {
     await LocalNotifications.schedule({ notifications: toSchedule });
-    await Promise.all(offsets.map((offset) => scheduleNativeAlarm(`countdown-${event.id}-${offset}`, event.name, computeFireTime(event, offset))));
+    await Promise.all(offsets.map((offset) => scheduleNativeAlarm(`countdown-${event.id}-${offset}`, event.name, computeFireTime(event, offset), 'None', 0, reminderKey(event.id, offset))));
   } catch (e) {
     console.warn('[CountdownReminder] schedule failed:', e);
   }
