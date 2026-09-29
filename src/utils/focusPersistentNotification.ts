@@ -94,7 +94,7 @@ export const showFocusOngoing = async (opts: FocusOngoingOpts) => {
         soundVolume: opts.soundVolume,
       });
       if (opts.running && opts.endAtMs && opts.endAtMs > Date.now()) {
-        await scheduleNativeAlarm('focus-complete', opts.taskTitle || 'Focus complete', new Date(opts.endAtMs));
+        await scheduleNativeAlarm('focus-complete', opts.taskTitle || 'Focus complete', new Date(opts.endAtMs), 'None', 0, COMPLETE_ID);
       } else {
         await cancelNativeAlarm('focus-complete');
       }
@@ -129,7 +129,7 @@ export const showFocusOngoing = async (opts: FocusOngoingOpts) => {
 
     // Schedule the completion notification for the exact end time
     if (opts.running && opts.endAtMs && opts.endAtMs > Date.now()) {
-      await scheduleNativeAlarm('focus-complete', opts.taskTitle || 'Focus complete', new Date(opts.endAtMs));
+      await scheduleNativeAlarm('focus-complete', opts.taskTitle || 'Focus complete', new Date(opts.endAtMs), 'None', 0, COMPLETE_ID);
       try {
         await LocalNotifications.schedule({
           notifications: [{
