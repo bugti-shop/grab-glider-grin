@@ -2,6 +2,7 @@ import UIKit
 import Capacitor
 import GoogleSignIn
 import SendIntent
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -13,6 +14,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Manually register the Focus timer plugin (auto-discovery only picks up
         // Objective-C wrapped classes; our Swift plugin is exposed via @objc).
+        FlowistAlarmNotifications.configure()
+        UNUserNotificationCenter.current().delegate = NotificationRouter.shared
         return true
     }
 

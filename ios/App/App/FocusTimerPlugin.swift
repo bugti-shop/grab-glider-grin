@@ -138,7 +138,10 @@ public class FocusTimerPlugin: CAPPlugin {
             intentIdentifiers: [],
             options: []
         )
-        UNUserNotificationCenter.current().setNotificationCategories([category])
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationCategories { existing in
+            center.setNotificationCategories(existing.filter { $0.identifier != Self.categoryId }.union([category]))
+        }
     }
 
     private func requestPermissionAndPost() {
@@ -239,6 +242,7 @@ final class NotificationRouter: NSObject, UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
+        if FlowistAlarmNotifications.handle(response) { completionHandler(); return }
         let id = response.actionIdentifier
         if id != UNNotificationDefaultActionIdentifier && id != UNNotificationDismissActionIdentifier {
             plugin?.handleAction(id)
